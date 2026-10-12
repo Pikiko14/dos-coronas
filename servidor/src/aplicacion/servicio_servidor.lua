@@ -6,6 +6,7 @@
 local Mundo = require("compartido.dominio.mundo")
 local Autoridad = require("src.dominio.autoridad")
 local Cuentas = require("src.aplicacion.cuentas")
+local Ajustes = require("src.aplicacion.ajustes")
 local Log = require("compartido.infraestructura.log")
 
 local Servicio = {}
@@ -14,7 +15,11 @@ local TASA_POR_DEFECTO = 40
 
 -- Mundo nuevo con el puerto de progreso diario enchufado al almacén.
 function Servicio.crearMundo(opciones)
+  -- reglas del .env (antes de crear el mundo: la vida de las criaturas, por ejemplo, se fija al crearlas)
+  local restaurar, cambios
+  if opciones and opciones.ajustes then restaurar, cambios = Ajustes.aplicar(opciones.ajustes) end
   local mundo = Mundo.nuevo()
+  mundo.restaurarAjustes, mundo.ajustesCambiados = restaurar, cambios
   -- los eventos de guerra los lanza el servidor a sus horas
   if opciones and opciones.eventos and opciones.eventos.activos then mundo:programarEventos(opciones.eventos) end
   mundo.puertos.marcarEvento = function(...) return Cuentas.marcarEvento(...) end

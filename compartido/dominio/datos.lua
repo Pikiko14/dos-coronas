@@ -14,6 +14,10 @@ D.NIVEL_MAX = 30
 -- Espacios de la bolsa: sin mochila hay BOLSA_BASE; cada mochila trae su propio total.
 -- BOLSA es el máximo posible (la mejor mochila).
 D.BOLSA_BASE = 8
+-- Tiempos que el servidor puede cambiar desde .env (ver servidor/src/aplicacion/ajustes.lua).
+D.RESPAWN_MONSTRUO = 22
+D.RESPAWN_ELITE = 90
+D.EVENTO_DURACION = { batalla = 300, estandarte = 300 }
 D.BOLSA = 24
 D.JUGADORES_EVENTO = 3
 

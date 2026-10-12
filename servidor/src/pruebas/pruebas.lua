@@ -1134,6 +1134,46 @@ function Pruebas.correr()
     local viejo = Mundo.nuevo()
     fallar(errores, "sin programación no hay horario", viejo.horarioEventos == nil and viejo:programaDe("estandarte") == nil and viejo:claveEdicion("batalla") == "batalla")
   end)
+  paso("ajustes del juego desde el .env", function()
+    local Balance = require("compartido.dominio.balance")
+    local Subastas = require("compartido.dominio.subastas")
+    local Gremios = require("compartido.dominio.gremios")
+    local Ajustes = require("src.aplicacion.ajustes")
+    local Servicio = require("src.aplicacion.servicio_servidor")
+    -- valores por defecto que lee la configuración
+    fallar(errores, "por defecto: experiencia", Config.juego.xpDificultad == 1.8 and Config.juego.monstruoVida == 3.0)
+    fallar(errores, "por defecto: subastas y gremios", Config.juego.subastaComision == 0.05 and Config.juego.gremioCoste == 1500)
+    fallar(errores, "por defecto: eventos", Config.eventos.minJugadores == 1 and Config.eventos.duracionBatalla == 300 and Config.juego.xpMultiplicador == 1)
+    -- lista de horas
+    local h = Ajustes.horas("2, 48 ,x,0,9999")
+    fallar(errores, "las duraciones se leen de una lista", h and #h == 2 and h[1] == 2 and h[2] == 48)
+    fallar(errores, "una lista mala no cambia nada", Ajustes.horas("abc") == nil)
+    -- aplicar valores propios al crear el mundo
+    local gato0 = Datos.statsMonstruo(Datos.monstruo("gato")).hp
+    local xp0 = Balance.xpPara(1)
+    local mundo = Servicio.crearMundo({ ajustes = {
+      juego = { xpDificultad = 3.6, monstruoVida = 6, subastaComision = 0.1, subastaDuraciones = "2,48", gremioCoste = 99,
+        caravanaIntervalo = 10, respawnMonstruo = 5, mascotaDescanso = 7, oficioCosteCambio = 1, xpMultiplicador = 2 },
+      eventos = { minJugadores = 2, duracionBatalla = 600, duracionEstandarte = 120 },
+    } })
+    fallar(errores, "sube la dificultad de experiencia", Balance.xpPara(1) == xp0 * 2, xp0 .. " -> " .. Balance.xpPara(1))
+    fallar(errores, "las criaturas nacen con la vida nueva", math.abs(Datos.statsMonstruo(Datos.monstruo("gato")).hp - gato0 * 2) <= 1)
+    fallar(errores, "subastas ajustadas", Subastas.COMISION == 0.1 and #Subastas.DURACIONES == 2 and Subastas.DURACIONES[2] == 48)
+    fallar(errores, "gremios ajustados", Gremios.COSTE == 99)
+    fallar(errores, "eventos ajustados", Datos.JUGADORES_EVENTO == 2 and mundo.instancia.batalla.duracion == 600 and mundo.instancia.estandarte.duracion == 120)
+    fallar(errores, "informa de lo que cambió", mundo.ajustesCambiados and #mundo.ajustesCambiados >= 8)
+    -- el cliente recibe la experiencia que pide el servidor
+    local p = mundo:crearPersonaje({ nombre = "Ajuste", faccion = "albor", clase = "mago" })
+    fallar(errores, "la foto lleva la experiencia del siguiente nivel", mundo:foto(p.id).tu.xpSig == Balance.xpPara(1))
+    -- experiencia doble desde el .env
+    local xpAntes = p.xp
+    mundo:ganarXp(p, 10)
+    fallar(errores, "con x2 se gana el doble de experiencia", p.xp - xpAntes == 20, tostring(p.xp - xpAntes))
+    -- restaurar deja todo como estaba
+    mundo.restaurarAjustes()
+    fallar(errores, "se restauran los valores", Balance.xpPara(1) == xp0 and Subastas.COMISION == 0.05 and Gremios.COSTE == 1500
+      and Datos.JUGADORES_EVENTO == 3 and #Subastas.DURACIONES == 4 and Balance.XP_MULTIPLICADOR == 1)
+  end)
   paso("equilibrio de combate por nivel", function()
     local Calibracion = require("src.pruebas.calibracion")
     local mundo = Mundo.nuevo()

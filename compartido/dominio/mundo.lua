@@ -45,8 +45,8 @@ function Mundo.nuevo()
   self.gloria = { albor = 0, umbra = 0 }
   self.evento = { tipo = nil, hasta = 0 }
   self.instancia = {
-    batalla = { activa = false, tiempo = 0, duracion = 300, puntos = { albor = 0, umbra = 0 }, fin = nil },
-    estandarte = { activa = false, tiempo = 0, duracion = 300, puntos = { albor = 0, umbra = 0 }, fin = nil },
+    batalla = { activa = false, tiempo = 0, duracion = Datos.EVENTO_DURACION.batalla, puntos = { albor = 0, umbra = 0 }, fin = nil },
+    estandarte = { activa = false, tiempo = 0, duracion = Datos.EVENTO_DURACION.estandarte, puntos = { albor = 0, umbra = 0 }, fin = nil },
   }
   self.mapas = {
     mundo = Mapa.mundo(self.rng),
@@ -732,6 +732,7 @@ end
 
 function Mundo:ganarXp(p, cant)
   if p.kind ~= "jugador" and p.kind ~= "bot" then return end
+  cant = math.floor(cant * Balance.XP_MULTIPLICADOR + 0.5)
   p.xp = (p.xp or 0) + cant
   local subio = false
   while p.nivel < Datos.NIVEL_MAX and p.xp >= Datos.xpPara(p.nivel) do
@@ -812,7 +813,7 @@ function Mundo:morir(e, origen)
       self:avanzarMisiones(origen, e.monstruo)
       if origen.kind == "jugador" then self:soltarBotin(e, origen) end
     end
-    e.respawn = self.tiempo + (e.elite and 90 or 22)
+    e.respawn = self.tiempo + (e.elite and Datos.RESPAWN_ELITE or Datos.RESPAWN_MONSTRUO)
     if e.efimero then e.borrar = true end
     if e.elite then
       self:mensaje("sistema", "", e.nombre .. " ha caído.", origen)
@@ -1556,7 +1557,7 @@ function Mundo:resumenEvento(modo)
     cola = cola,
     dentro = dentro,
     activa = inst and inst.activa and not inst.fin or false,
-    programa = self:programaDe(modo),
+    programa = self:programaDe(modo), min = Datos.JUGADORES_EVENTO,
   }
 end
 
@@ -2435,7 +2436,7 @@ function Mundo:foto(pid)
       misiones = p.misiones, casas = p.casas, sesion = p.sesion, zona = p.zona,
       atk = p.atk, def = p.def, matk = p.matk, mdef = p.mdef, spd = p.spd, clase = p.clase, faccion = p.faccion,
       nombre = p.nombre, modo = p.modo, casaId = p.casaId, objetivo = p.objetivo,
-      z = p.z or 0, habilidades = p.habilidades, encantos = p.encantos,
+      z = p.z or 0, habilidades = p.habilidades, encantos = p.encantos, xpSig = Datos.xpPara(p.nivel),
       mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
       job = p.job, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
       capacidadCarga = p.capacidadCarga, pesoCarga = p.pesoCarga, monturas = p.monturas, montado = p.montado,

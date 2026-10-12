@@ -7,6 +7,8 @@ B.NIVEL_SLOT = { 1, 1, 4, 8, 15, 20 }
 B.XP_CORTE = 7
 -- Cuánta experiencia pide cada nivel respecto a la curva base (subir de nivel cuesta el doble, casi).
 B.XP_DIFICULTAD = 1.8
+-- Multiplicador de la experiencia ganada (el servidor lo toma del .env: 2 = experiencia doble).
+B.XP_MULTIPLICADOR = 1
 
 function B.xpPara(nivel)
   nivel = math.max(1, math.floor(tonumber(nivel) or 1))

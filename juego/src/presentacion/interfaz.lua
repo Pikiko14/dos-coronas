@@ -711,7 +711,7 @@ function I.lateral(mundo, p, x, y, w, h)
   texto(string.format("Vida %d / %d", math.floor(hp), hpMax), ix + 8, cy + 7, { 1, 1, 1 })
   barra(ix + 4, cy + 24, iw - 8, 13, mp / mpMax, 0.25, 0.45, 0.92)
   texto(string.format("Maná %d / %d", math.floor(mp), mpMax), ix + 8, cy + 24, { 1, 1, 1 })
-  local xpN = Datos.xpPara(p.nivel)
+  local xpN = p.xpSig or Datos.xpPara(p.nivel)
   barra(ix + 4, cy + 40, iw - 8, 12, (p.xp or 0) / xpN, 0.85, 0.7, 0.2)
   texto(string.format("Nivel %d   exp %d / %d", p.nivel, math.floor(p.xp or 0), xpN), ix + 8, cy + 39, { 1, 1, 1 })
   cy = cy + 70
@@ -1850,7 +1850,8 @@ function I.panelGuerra(mundo, p, w, h)
     if r.activa then
       return "En curso. Dentro: Albor " .. r.dentro.albor .. " · Umbra " .. r.dentro.umbra
     end
-    local base = string.format("Apuntados: Albor %d/%d · Umbra %d/%d", r.cola.albor, min, r.cola.umbra, min)
+    local rm = r.min or min
+    local base = string.format("Apuntados: Albor %d/%d · Umbra %d/%d", r.cola.albor, rm, r.cola.umbra, rm)
     if r.programa then
       local m = math.ceil(r.programa.restan / 60)
       local falta = m >= 60 and string.format("%d h %02d min", math.floor(m / 60), m % 60) or (m .. " min")
