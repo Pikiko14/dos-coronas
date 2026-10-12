@@ -195,6 +195,10 @@ function D.escena(mundo, jugador, cam, mx, my)
       if e.kind == "monstruo" then
         local resta = (e.respawn or 0) - (mundo.tiempo or 0)
         Objetos.dibujar("restos", 0, sx, sy + 14, nil, math.max(0, math.min(1, resta / 6)))
+      elseif e.kind == "jugador" or e.kind == "bot" then
+        -- el cuerpo del caído queda en gris hasta que reaparece
+        local def = Personajes.de(e)
+        if def then Personajes.dibujarGris(def, e.dir or 1, sx, sy + 14, 0.9) end
       elseif e.kind == "puerta" then
         Objetos.puerta(e.faccion, true, sx, sy + 14, 0.8)
       end

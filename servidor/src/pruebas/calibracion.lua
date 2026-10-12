@@ -37,6 +37,8 @@ local function duelo(mundo, clase, nivel, mon, opciones)
   local p = mundo:crearPersonaje({ nombre = "Sim", faccion = "albor", clase = clase, nivel = nivel })
   gastarPuntos(mundo, p)
   p.hp, p.mp = p.hpMax, p.mpMax
+  local pu = mundo.mapas.mundo.puestos[1]
+  p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo" -- campo abierto: las ciudades son seguras
   local m = mundo:spawnMonstruo(mon.id, p.x + (opciones.distancia or 1.2), p.y, { x = p.x, y = p.y })
   m.agresivo = true
   m.objetivo, m.amenaza = p.id, p.id

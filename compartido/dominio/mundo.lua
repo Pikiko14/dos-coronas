@@ -81,10 +81,12 @@ function Mundo:ciudadEn(x, y)
   end
 end
 
+-- Las ciudades son zonas seguras para todos: dentro nadie puede ser herido (jugadores, bots,
+-- mascotas ni caravanas), ni por criaturas ni por jugadores de ninguna corona. Solo se persigue a
+-- los buscados por robo (guardias y cazadores).
 function Mundo:enSantuario(e)
-  if not e or e.modo ~= "mundo" then return false end
-  local c = self:ciudadEn(e.x, e.y)
-  return c and c.faccion == e.faccion
+  if not e or e.modo ~= "mundo" or (e.z or 0) > 0 then return false end
+  return self:ciudadEn(e.x, e.y) ~= nil
 end
 
 function Mundo:mismoLugar(a, b)
@@ -644,6 +646,12 @@ end
 function Mundo:puedeDanar(origen, objetivo)
   if not origen or not objetivo or not objetivo.vivo then return false end
   local kind = objetivo.kind
+  if (kind == "jugador" or kind == "bot" or kind == "mascota" or kind == "caravana")
+    and (self:enSantuario(objetivo) or (origen.kind ~= "monstruo" and self:enSantuario(origen))) then
+    -- zona segura: solo se persigue al buscado por robo
+    return (kind == "jugador" or kind == "bot") and origen.kind ~= "monstruo" and self:esBuscado(objetivo)
+      and (origen.kind == "guardia" or ((origen.kind == "jugador" or origen.kind == "bot") and origen.job == "hunter")) or false
+  end
   if kind == "mascota" then
     -- solo las criaturas hostiles pueden herir a una mascota
     return origen.kind == "monstruo"
@@ -845,6 +853,15 @@ function Mundo:morir(e, origen)
     end
   elseif e.kind == "jugador" or e.kind == "bot" then
     e.respawn = self.tiempo + 6
+    -- por encima del nivel 10 morir cuesta experiencia (sin bajar de nivel)
+    if e.modo == "mundo" and (e.nivel or 1) > Balance.MUERTE_NIVEL_MIN and Balance.MUERTE_XP_PERDIDA > 0 then
+      local perdida = math.min(e.xp or 0, math.floor(Datos.xpPara(e.nivel) * Balance.MUERTE_XP_PERDIDA))
+      if perdida > 0 then
+        e.xp = e.xp - perdida
+        self:marcarProgreso(e)
+        self:mensaje("sistema", "", "Pierdes " .. perdida .. " de experiencia al morir.", e)
+      end
+    end
     if e.modo == "estandarte" and e.llevaBandera then self:soltarBandera(e) end
     if origen and origen.faccion and origen.faccion ~= e.faccion then
       self.gloria[origen.faccion] = (self.gloria[origen.faccion] or 0) + 8
@@ -1281,11 +1298,11 @@ function Mundo:actualizarMonstruo(e, dt)
     e.sensor = 0.45
     local mejor, md = nil, (e.agresivo and 6.5 or 0)
     local amenaza = e.amenaza and self.entidades[e.amenaza]
-    if amenaza and amenaza.vivo and self:mismoLugar(e, amenaza) and Util.dist(e.x, e.y, amenaza.x, amenaza.y) < 12 then
+    if amenaza and amenaza.vivo and not (amenaza.kind ~= "guardia" and self:enSantuario(amenaza)) and self:mismoLugar(e, amenaza) and Util.dist(e.x, e.y, amenaza.x, amenaza.y) < 12 then
       mejor = amenaza
     else
       for _, o in pairs(self.entidades) do
-        if o.vivo and o.id ~= e.id and self:mismoLugar(e, o)
+        if o.vivo and o.id ~= e.id and self:mismoLugar(e, o) and (o.kind == "guardia" or not self:enSantuario(o))
           and (o.kind == "jugador" or o.kind == "bot" or o.kind == "guardia" or (e.bandido and o.kind == "caravana")) then
           if not (o.kind == "jugador" and o.nivel + 3 < e.nivel and not e.amenaza) then
             local d = Util.dist(e.x, e.y, o.x, o.y)
@@ -1298,6 +1315,7 @@ function Mundo:actualizarMonstruo(e, dt)
     if mejor then e.objetivo = mejor.id end
   end
   local o = e.objetivo and self.entidades[e.objetivo]
+  if o and o.kind ~= "guardia" and o.kind ~= "monstruo" and self:enSantuario(o) then o, e.objetivo = nil, nil end -- zona segura
   local dx, dy = 0, 0
   if o and o.vivo and self:mismoLugar(e, o) then
     local d = Util.dist(e.x, e.y, o.x, o.y)
@@ -1367,7 +1385,8 @@ function Mundo:actualizarGuardia(e, dt)
     local ciudad = self:ciudadEn(e.x, e.y)
     for _, o in pairs(self.entidades) do
       local buscado = (o.kind == "jugador" or o.kind == "bot") and self:esBuscado(o)
-      if o.vivo and o.faccion and (o.faccion ~= e.faccion or buscado) and self:mismoLugar(e, o) and (o.kind == "jugador" or o.kind == "bot" or o.kind == "monstruo") then
+      -- en la ciudad (zona segura) solo se persigue a los buscados; fuera, a los enemigos
+      if o.vivo and o.faccion and ((o.faccion ~= e.faccion and (o.kind == "monstruo" or not self:enSantuario(o))) or buscado) and self:mismoLugar(e, o) and (o.kind == "jugador" or o.kind == "bot" or o.kind == "monstruo") then
         if Util.dist(e.x, e.y, o.x, o.y) < 7 and (not ciudad or self:ciudadEn(o.x, o.y) == ciudad or o.kind == "monstruo") then
           e.objetivo = o.id
         end

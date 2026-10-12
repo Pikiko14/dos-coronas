@@ -9,6 +9,9 @@ B.XP_CORTE = 7
 B.XP_DIFICULTAD = 1.8
 -- Multiplicador de la experiencia ganada (el servidor lo toma del .env: 2 = experiencia doble).
 B.XP_MULTIPLICADOR = 1
+-- Muerte: por encima de este nivel se pierde esa fraccion de la experiencia que pide el nivel actual.
+B.MUERTE_NIVEL_MIN = 10
+B.MUERTE_XP_PERDIDA = 0.10
 
 function B.xpPara(nivel)
   nivel = math.max(1, math.floor(tonumber(nivel) or 1))

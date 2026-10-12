@@ -495,6 +495,9 @@ function Pruebas.correr()
     avanzar(2)
     fallar(errores, "la mascota está junto a su dueño", math.abs(pet.x - dueno.x) < 4 and math.abs(pet.y - dueno.y) < 4)
     -- pelea a su lado y el dueño se lleva la experiencia
+    -- en campo abierto (las ciudades son zonas seguras)
+    local pu0 = mundo.mapas.mundo.puestos[1]
+    dueno.x, dueno.y = pu0.x + 8.5, pu0.y + 8.5
     local blanco = mundo:spawnMonstruo("gato", dueno.x + 1.2, dueno.y, { x = dueno.x, y = dueno.y })
     blanco.hp, blanco.hpMax, blanco.agresivo, blanco.atk, blanco.matk = 400, 400, false, 0, 0
     dueno.objetivo = blanco.id
@@ -1177,6 +1180,54 @@ function Pruebas.correr()
     fallar(errores, "se restauran los valores", Balance.xpPara(1) == xp0 and Subastas.COMISION == 0.05 and Gremios.COSTE == 1500
       and Datos.JUGADORES_EVENTO == 3 and #Subastas.DURACIONES == 4 and Balance.XP_MULTIPLICADOR == 1)
   end)
+  paso("ciudades seguras y pérdida de experiencia al morir", function()
+    local Balance = require("compartido.dominio.balance")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local ciudad = mundo.mapas.mundo.ciudades[1]
+    local afuera = mundo.mapas.mundo.puestos[1]
+    local function jug(nombre, faccion, nivel)
+      local e = mundo:crearPersonaje({ nombre = nombre, faccion = faccion, clase = "guerrero", nivel = nivel })
+      e.modo, e.z = "mundo", 0
+      return e
+    end
+    local function en(e, x, y) e.x, e.y = x, y end
+    local a, rival = jug("SegA", ciudad.faccion, 12), jug("SegR", ciudad.faccion == "albor" and "umbra" or "albor", 12)
+    en(a, ciudad.spawn.x, ciudad.spawn.y)
+    en(rival, ciudad.spawn.x + 1, ciudad.spawn.y)
+    fallar(errores, "toda ciudad es santuario, también para la otra corona", mundo:enSantuario(a) and mundo:enSantuario(rival))
+    fallar(errores, "no se hiere a un rival dentro de la ciudad", not mundo:puedeDanar(a, rival) and not mundo:puedeDanar(rival, a))
+    local fuera = jug("SegF", rival.faccion, 12)
+    en(fuera, afuera.x + 8.5, afuera.y + 8.5)
+    local g2 = jug("SegG2", ciudad.faccion, 12)
+    en(g2, afuera.x + 9.5, afuera.y + 8.5)
+    fallar(errores, "fuera de la ciudad sí hay combate", mundo:puedeDanar(fuera, g2))
+    local troll = mundo:spawnMonstruo("troll", ciudad.spawn.x + 2, ciudad.spawn.y, { x = ciudad.spawn.x, y = ciudad.spawn.y })
+    fallar(errores, "las criaturas no hieren dentro de la ciudad", not mundo:puedeDanar(troll, a))
+    -- el buscado por robo sí puede ser perseguido
+    mundo:marcarBuscado(rival, 60)
+    local guardia = { kind = "guardia", faccion = ciudad.faccion, vivo = true, x = a.x, y = a.y, modo = "mundo", z = 0 }
+    fallar(errores, "los guardias persiguen al buscado en la ciudad", mundo:puedeDanar(guardia, rival))
+    fallar(errores, "pero no a un inocente", not mundo:puedeDanar(guardia, a))
+    -- pérdida de experiencia
+    local v = jug("Vet", ciudad.faccion, 15)
+    en(v, afuera.x + 8.5, afuera.y + 8.5)
+    v.xp = 100000
+    local pierde = math.floor(require("compartido.dominio.datos").xpPara(15) * Balance.MUERTE_XP_PERDIDA)
+    mundo:morir(v, nil)
+    fallar(errores, "sobre el nivel 10 se pierde experiencia al morir", v.xp == 100000 - pierde and v.nivel == 15, tostring(v.xp))
+    local nov = jug("Novato", ciudad.faccion, 10)
+    en(nov, afuera.x + 8.5, afuera.y + 8.5)
+    nov.xp = 50
+    mundo:morir(nov, nil)
+    fallar(errores, "hasta el nivel 10 no se pierde nada", nov.xp == 50)
+    local pobre = jug("Pobre", ciudad.faccion, 20)
+    en(pobre, afuera.x + 8.5, afuera.y + 8.5)
+    pobre.xp = 3
+    mundo:morir(pobre, nil)
+    fallar(errores, "la experiencia no baja de cero ni de nivel", pobre.xp == 0 and pobre.nivel == 20)
+  end)
+
   paso("grupos, experiencia compartida y encuentros", function()
     local Grupos = require("compartido.dominio.grupos")
     local Encuentros = require("compartido.dominio.encuentros")
@@ -1360,9 +1411,12 @@ function Pruebas.correr()
     local mundo = Mundo.nuevo()
     local function avanzar(seg) for _ = 1, math.floor(seg / 0.1) do mundo:actualizar(0.1) end end
     local mago = mundo:crearPersonaje({ nombre = "Estado1", faccion = "albor", clase = "mago", nivel = 10 })
+    mago.x, mago.y = mundo.mapas.mundo.puestos[1].x + 8.5, mundo.mapas.mundo.puestos[1].y + 8.5
     local victima = mundo:spawnMonstruo("oso", mago.x + 2, mago.y, { x = mago.x, y = mago.y })
     victima.hp, victima.hpMax = 5000, 5000
     victima.agresivo, victima.def, victima.mdef = false, 0, 0
+    victima.cds = victima.cds or {}
+    victima.cds.auto = 1e9 -- no devuelve golpes: la prueba mide los estados
     victima.atk, victima.matk = 0, 0 -- que no pegue de vuelta: aquí solo se miden los estados
     victima.golpe, victima.poderes = nil, nil
     victima.cds.auto = 1e9
@@ -1812,6 +1866,10 @@ function Pruebas.correr()
     mundo:accion(j.id, "destino", { x = cx + 5.5, y = cy + 2.5 })
     correr(4)
     fallar(errores, "clic para mover llega", math.floor(j.x) == cx + 5 and math.floor(j.y) == cy + 2, tostring(j.x) .. "," .. tostring(j.y))
+    poner(cx - 6, cy + 2)
+    -- en campo abierto: dentro de la ciudad las criaturas no atacan
+    local pu = mundo.mapas.mundo.puestos[1]
+    cx, cy = pu.x + 14, pu.y + 6
     poner(cx - 6, cy + 2)
     local gato = mundo:spawnMonstruo("gato", cx - 2.5, cy + 2.5, { x = cx - 2.5, y = cy + 2.5 })
     gato.agresivo = true

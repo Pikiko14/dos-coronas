@@ -77,6 +77,8 @@ return {
     xpDificultad = numero("DOSCORONAS_XP_DIFICULTAD", 1.8, 0.1, 20),
     -- multiplicador de la experiencia que se gana (2 = experiencia doble)
     xpMultiplicador = numero("DOSCORONAS_XP_MULTIPLICADOR", 1, 0, 100),
+    muerteNivelMin = numero("DOSCORONAS_MUERTE_NIVEL_MIN", 10, 0, 1000),
+    muerteXpPerdida = numero("DOSCORONAS_MUERTE_XP_PERDIDA", 0.10, 0, 1),
     monstruoVida = numero("DOSCORONAS_MONSTRUO_VIDA", 3.0, 0.1, 50),
     monstruoAtaque = numero("DOSCORONAS_MONSTRUO_ATAQUE", 1.05, 0.1, 20),
     nivelPaso = numero("DOSCORONAS_DIFERENCIA_NIVEL", 0.04, 0, 0.2),

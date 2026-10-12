@@ -144,4 +144,22 @@ function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa)
   return 32
 end
 
+-- Cuerpo de un personaje caÃ­do: la misma imagen, en escala de grises.
+local sombreadorGris
+function P.dibujarGris(def, dir, sx, sy, alfa)
+  if sombreadorGris == nil then
+    local ok, sh = pcall(love.graphics.newShader, [[
+      vec4 effect(vec4 color, Image tex, vec2 uv, vec2 sc) {
+        vec4 p = Texel(tex, uv) * color;
+        float g = dot(p.rgb, vec3(0.299, 0.587, 0.114)) * 0.8;
+        return vec4(g, g, g, p.a);
+      }]])
+    sombreadorGris = ok and sh or false
+  end
+  if sombreadorGris then love.graphics.setShader(sombreadorGris) end
+  local alto = P.dibujar(def, dir, false, 0, sx, sy, sombreadorGris and { 1, 1, 1 } or { 0.5, 0.5, 0.55 }, alfa or 0.9)
+  love.graphics.setShader()
+  return alto
+end
+
 return P

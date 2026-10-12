@@ -271,3 +271,14 @@ NUEVO: GRUPOS (PARTY)
   - Cerca de los grupos que cazan en campo abierto salen criaturas "de grupo" (jefes party, con su
     escolta) y, en grupos grandes, gigantes: mucha vida, mucha experiencia (repartida) y mejor botin.
   - Todo se ajusta en servidor/.env (DOSCORONAS_GRUPO_*, DOSCORONAS_ENCUENTRO*).
+
+NUEVO: CIUDADES SEGURAS Y MUERTE
+  - Todas las ciudades son zonas seguras para las dos coronas: dentro nadie puede ser herido
+    (jugadores, mascotas, caravanas), ni por criaturas ni por otros jugadores, y desde dentro
+    tampoco se ataca a nadie. Las criaturas no persiguen a quien esta en una ciudad. Solo se
+    persigue a los buscados por robo (guardias y cazadores). Los guardias ya no atacan a
+    visitantes de la otra corona que no sean buscados.
+  - Al morir en el mundo, un personaje de nivel MAYOR que 10 pierde el 10% de la experiencia que
+    pide su nivel (nunca baja de nivel ni de cero). Se configura en servidor/.env
+    (DOSCORONAS_MUERTE_NIVEL_MIN, DOSCORONAS_MUERTE_XP_PERDIDA). En las guerras no se pierde.
+  - El cuerpo del personaje caido queda en el suelo en gris (misma imagen, sin color) hasta que reaparece.
