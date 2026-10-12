@@ -97,6 +97,7 @@ local function placa(e, px, py, alto, jugador, tiempo)
   elseif e.kind == "monstruo" then color = e.elite and { 1, 0.8, 0.2 } or { 1, 0.62, 0.45 } end
   local nombre = e.nombre or ""
   if e.llevaBandera then nombre = nombre .. " [estandarte]" end
+  if e.gremio and (e.kind == "jugador" or e.kind == "bot") then nombre = nombre .. " <" .. e.gremio .. ">" end
   local ancho = f:getWidth(nombre)
   local y = py - alto - 15
   local barra = e.hp and e.hpMax and e.kind ~= "altar"
@@ -350,7 +351,7 @@ function D.entidad(e, sx, sy, mundo, jugador)
     love.graphics.draw(img, Arte.quad(img, 0, 0, 32, 32), sx, pies, 0, 1, 1, 16, 20)
   end
   if e.est then
-    -- estados alterados: su animaciÃ³n se repite sobre la criatura
+    -- estados alterados: su animación se repite sobre la criatura
     local esc = (e.tam or 1) > 1 and 1.5 or 1
     local reloj = love.timer.getTime()
     for i, tipo in ipairs(e.est) do

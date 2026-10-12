@@ -13,7 +13,9 @@ local ACCIONES = {
   mision_aceptar = true, mision_entregar = true,
   comercio_invitar = true, comercio_oro = true, comercio_item = true,
   comercio_ok = true, comercio_no = true, mover_bolsa = true, mirar = true,
-  aprender = true, olvidar = true,
+  aprender = true, olvidar = true, encantar = true, mascota_adoptar = true, mascota_invocar = true,
+  gremio_info = true, gremio_crear = true, gremio_invitar = true, gremio_responder = true, gremio_salir = true,
+  gremio_expulsar = true, gremio_rango = true, gremio_disolver = true,
 }
 
 local function finito(n)
@@ -40,8 +42,38 @@ function A.aceptar(mundo, pj, nombre, datos)
   end
   if nombre == "habilidad" then
     local slot = tonumber(datos.slot)
-    if not slot or slot < 1 or slot > 4 then return false end
+    if not slot or slot < 1 or slot > 6 then return false end
     return true, { slot = math.floor(slot) }
+  end
+  if nombre == "gremio_crear" then
+    if type(datos.nombre) ~= "string" or #datos.nombre > 40 or type(datos.etiqueta) ~= "string" or #datos.etiqueta > 8 then return false end
+    return true, { nombre = datos.nombre, etiqueta = datos.etiqueta }
+  end
+  if nombre == "gremio_invitar" or nombre == "gremio_expulsar" or nombre == "gremio_rango" then
+    local id = tonumber(datos.id)
+    if not id or not finito(id) then return false end
+    return true, { id = id, sube = datos.sube and true or false }
+  end
+  if nombre == "gremio_responder" then return true, { acepta = datos.acepta and true or false } end
+  if nombre == "mascota_adoptar" then
+    if type(datos.especie) ~= "string" or #datos.especie > 24 then return false end
+    return true, { especie = datos.especie }
+  end
+  if nombre == "mascota_invocar" then
+    local i = tonumber(datos.idx)
+    if not i or i < 1 or i > 12 then return false end
+    return true, { idx = math.floor(i) }
+  end
+  if nombre == "encantar" then
+    if datos.donde == "equipo" then
+      if type(datos.ref) ~= "string" or #datos.ref > 12 then return false end
+      return true, { donde = "equipo", ref = datos.ref }
+    elseif datos.donde == "bolsa" then
+      local i = tonumber(datos.ref)
+      if not i or i < 1 or i > Datos.BOLSA then return false end
+      return true, { donde = "bolsa", ref = math.floor(i) }
+    end
+    return false
   end
   if nombre == "aprender" then
     if type(datos.id) ~= "string" or #datos.id > 24 then return false end

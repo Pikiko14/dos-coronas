@@ -32,7 +32,8 @@ local function bandera(nombre)
 end
 
 local modoTest = bandera("--test")
-local Consola = not modoTest and require("src.consola") or nil
+local modoCalibrar = bandera("--calibrar")
+local Consola = not (modoTest or modoCalibrar) and require("src.consola") or nil
 local probado = false
 
 function love.load()
@@ -40,6 +41,14 @@ function love.load()
 end
 
 function love.update(dt)
+  if modoCalibrar then
+    if not probado then
+      probado = true
+      require("src.pruebas.calibracion").correr()
+      love.event.quit(0)
+    end
+    return
+  end
   if modoTest then
     if not probado then
       probado = true

@@ -22,7 +22,7 @@ local almacen
 local function leerAlmacen()
   if almacen then return almacen end
   almacen = {
-    sigCuenta = 1, sigPj = 1, cuentas = {}, personajes = {},
+    sigCuenta = 1, sigPj = 1, cuentas = {}, personajes = {}, gremios = {},
     eventos = {}, sesiones = {}, intentos = {},
   }
   if love and love.filesystem and love.filesystem.getInfo(ARCHIVO) then
@@ -183,6 +183,35 @@ function M.marcarEvento(personajeId, tipo)
   local idn = tonumber(personajeId)
   if not idn then return nil, "Sin personaje." end
   leerAlmacen().eventos[idn .. "|" .. tostring(tipo) .. "|" .. os.date("%Y-%m-%d")] = true
+  return volcarAlmacen()
+end
+
+-- Gremios (ver el puerto almacén): una lista dentro de cuentas.json.
+function M.cargarGremios()
+  local copia = {}
+  for _, g in ipairs(leerAlmacen().gremios or {}) do
+    local miembros = {}
+    for _, m in ipairs(g.miembros or {}) do miembros[#miembros + 1] = { id = m.id, nombre = m.nombre, rango = m.rango } end
+    copia[#copia + 1] = { id = g.id, nombre = g.nombre, etiqueta = g.etiqueta, faccion = g.faccion, miembros = miembros }
+  end
+  return copia
+end
+
+function M.guardarGremio(g)
+  local a = leerAlmacen()
+  a.gremios = a.gremios or {}
+  local fila = { id = g.id, nombre = g.nombre, etiqueta = g.etiqueta, faccion = g.faccion, miembros = {} }
+  for dbId, m in pairs(g.miembros) do fila.miembros[#fila.miembros + 1] = { id = dbId, nombre = m.nombre, rango = m.rango } end
+  table.sort(fila.miembros, function(x, y) return x.id < y.id end)
+  local _, i = buscar(a.gremios, "id", g.id)
+  if i then a.gremios[i] = fila else a.gremios[#a.gremios + 1] = fila end
+  return volcarAlmacen()
+end
+
+function M.borrarGremio(id)
+  local a = leerAlmacen()
+  local _, i = buscar(a.gremios or {}, "id", id)
+  if i then table.remove(a.gremios, i) end
   return volcarAlmacen()
 end
 

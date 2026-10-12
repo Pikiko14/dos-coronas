@@ -7,6 +7,7 @@ P.CONTRATO = {
   almacen = {
     "registrar", "entrar", "listar", "crearPersonaje", "cargar",
     "cuentaDeToken", "cargarAutorizado", "guardar", "marcarEvento", "borrarUsuario",
+    "cargarGremios", "guardarGremio", "borrarGremio",
   },
 }
 

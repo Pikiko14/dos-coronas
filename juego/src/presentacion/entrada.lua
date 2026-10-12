@@ -91,6 +91,37 @@ function Entrada.manejar(app, id)
   if id == "hud_bolsa" then Interfaz.panel = "bolsa" return end
   if id == "hud_equipo" then Interfaz.panel = "equipo" return end
   if id == "hud_arbol" then Interfaz.panel = Interfaz.panel == "arbol" and nil or "arbol" return end
+  if id:sub(1, 13) == "masc_adoptar_" then app.actuar("mascota_adoptar", { especie = id:sub(14) }) return end
+  if id:sub(1, 9) == "masc_inv_" then app.actuar("mascota_invocar", { idx = tonumber(id:sub(10)) }) return end
+  if id == "foco_gremio_nombre" then Interfaz.foco = "gremio_nombre" return end
+  if id == "foco_gremio_tag" then Interfaz.foco = "gremio_tag" return end
+  if id == "gr_crear" then
+    app.actuar("gremio_crear", { nombre = Interfaz.gremioNombre or "", etiqueta = Interfaz.gremioTag or "" })
+    Interfaz.foco = nil
+    return
+  end
+  if id == "gr_acepta" then app.actuar("gremio_responder", { acepta = true }) return end
+  if id == "gr_rechaza" then app.actuar("gremio_responder", { acepta = false }) return end
+  if id == "gr_salir" then Interfaz.confirmaDisolver = nil app.actuar("gremio_salir") return end
+  if id == "gr_disolver" then
+    if Interfaz.confirmaDisolver then Interfaz.confirmaDisolver = nil app.actuar("gremio_disolver")
+    else Interfaz.confirmaDisolver = true end
+    return
+  end
+  if id == "gr_invitar" then
+    local o = app.jugador and app.jugador.objetivo
+    if o then app.actuar("gremio_invitar", { id = o }) end
+    return
+  end
+  if id:sub(1, 8) == "gr_sube_" then app.actuar("gremio_rango", { id = tonumber(id:sub(9)), sube = true }) return end
+  if id:sub(1, 8) == "gr_baja_" then app.actuar("gremio_rango", { id = tonumber(id:sub(9)), sube = false }) return end
+  if id:sub(1, 7) == "gr_exp_" then app.actuar("gremio_expulsar", { id = tonumber(id:sub(8)) }) return end
+  if id == "enc_go" then
+    local donde, ref = tostring(Interfaz.encSel or ""):match("^(%a+)_(.+)$")
+    if donde then app.actuar("encantar", { donde = donde, ref = ref }) end
+    return
+  end
+  if id:sub(1, 4) == "enc_" then Interfaz.encSel = id:sub(5) return end
   if id == "arbol_reset" then app.actuar("olvidar") return end
   if id:sub(1, 4) == "arb_" then app.actuar("aprender", { id = id:sub(5) }) return end
   if id == "hud_mapa" then Interfaz.panel = "mapa" return end
@@ -243,6 +274,12 @@ function Entrada.texto(app, t)
     if #app.cuenta.clave < 64 and t:byte() >= 32 then app.cuenta.clave = app.cuenta.clave .. t end
   elseif Interfaz.foco == "chat" then
     if #Interfaz.texto < 120 then Interfaz.texto = Interfaz.texto .. t end
+  elseif Interfaz.foco == "gremio_nombre" then
+    Interfaz.gremioNombre = Interfaz.gremioNombre or ""
+    if #Interfaz.gremioNombre < 24 and t:byte() >= 32 then Interfaz.gremioNombre = Interfaz.gremioNombre .. t end
+  elseif Interfaz.foco == "gremio_tag" then
+    Interfaz.gremioTag = Interfaz.gremioTag or ""
+    if #Interfaz.gremioTag < 4 and t:match("^%w$") then Interfaz.gremioTag = Interfaz.gremioTag .. t:upper() end
   end
 end
 
@@ -278,7 +315,9 @@ function Entrada.tecla(app, tecla)
     if Interfaz.foco == "nombre" then app.creacion.nombre = Util.popUtf8(app.creacion.nombre)
     elseif Interfaz.foco == "usuario" then app.cuenta.usuario = Util.popUtf8(app.cuenta.usuario or "")
     elseif Interfaz.foco == "clave" then app.cuenta.clave = Util.popUtf8(app.cuenta.clave or "")
-    elseif Interfaz.foco == "chat" then Interfaz.texto = Util.popUtf8(Interfaz.texto or "") end
+    elseif Interfaz.foco == "chat" then Interfaz.texto = Util.popUtf8(Interfaz.texto or "")
+    elseif Interfaz.foco == "gremio_nombre" then Interfaz.gremioNombre = Util.popUtf8(Interfaz.gremioNombre or "")
+    elseif Interfaz.foco == "gremio_tag" then Interfaz.gremioTag = Util.popUtf8(Interfaz.gremioTag or "") end
     return
   end
   if tecla == "return" or tecla == "kpenter" then
@@ -287,6 +326,10 @@ function Entrada.tecla(app, tecla)
     if app.estado == "juego" and Interfaz.foco == "chat" then
       app.actuar("chat", { texto = Interfaz.texto })
       Interfaz.texto = ""
+      Interfaz.foco = nil
+      return
+    end
+    if app.estado == "juego" and (Interfaz.foco == "gremio_nombre" or Interfaz.foco == "gremio_tag") then
       Interfaz.foco = nil
       return
     end
@@ -315,17 +358,29 @@ function Entrada.tecla(app, tecla)
   local interactuar = (Ajustes.teclas and Ajustes.teclas.interactuar) or "e"
   if tecla == bolsa then Interfaz.panel = Interfaz.panel == "bolsa" and nil or "bolsa" end
   if tecla == "p" then Interfaz.panel = Interfaz.panel == "equipo" and nil or "equipo" end
+  if tecla == "n" then
+    local p = app.jugador
+    local idx = p and (p.mascotaActiva or (p.mascotas and #p.mascotas > 0 and 1))
+    if idx then app.actuar("mascota_invocar", { idx = idx }) end
+  end
+  if tecla == "g" then
+    if Interfaz.panel == "gremio" then Interfaz.panel = nil
+    else
+      Interfaz.pidiendoGremio = true
+      app.actuar("gremio_info")
+    end
+  end
   if tecla == "k" then Interfaz.panel = Interfaz.panel == "arbol" and nil or "arbol" end
   if tecla == "m" then Interfaz.panel = Interfaz.panel == "mapa" and nil or "mapa" end
   if tecla == "b" then Interfaz.panel = Interfaz.panel == "guerra" and nil or "guerra" end
   if tecla == interactuar then app.actuar("interactuar") end
   if tecla == "t" then Entrada.manejar(app, "hud_comercio") end
   if tecla == "f1" then Interfaz.panel = "ayuda" end
-  if tecla == "1" or tecla == "2" or tecla == "3" or tecla == "4" then
+  if tecla == "1" or tecla == "2" or tecla == "3" or tecla == "4" or tecla == "5" or tecla == "6" then
     app.actuar("habilidad", { slot = tonumber(tecla) })
   end
-  if tecla == "5" then app.actuar("pocion", { id = "pocion_vida" }) end
-  if tecla == "6" then app.actuar("pocion", { id = "pocion_mana" }) end
+  if tecla == "7" then app.actuar("pocion", { id = "pocion_vida" }) end
+  if tecla == "8" then app.actuar("pocion", { id = "pocion_mana" }) end
 end
 
 return Entrada

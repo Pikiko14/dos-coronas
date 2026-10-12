@@ -33,7 +33,9 @@ P.ACCIONES = {
   "casa_comprar", "casa_entrar", "casa_salir", "mueble", "cofre_guardar",
   "cofre_sacar", "mision_aceptar", "mision_entregar", "comercio_invitar",
   "comercio_oro", "comercio_item", "comercio_ok", "comercio_no", "mover_bolsa",
-  "mirar", "aprender", "olvidar",
+  "mirar", "aprender", "olvidar", "encantar", "mascota_adoptar", "mascota_invocar",
+  "gremio_info", "gremio_crear", "gremio_invitar", "gremio_responder", "gremio_salir", "gremio_expulsar",
+  "gremio_rango", "gremio_disolver",
 }
 
 return P

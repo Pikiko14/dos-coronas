@@ -39,7 +39,7 @@ function E.instalar(Mundo)
     if not tipo then tipo = (fuente and fuente.tipoDano) or "fisico" end
     local atk = fuente and ((tipo == "magico") and (fuente.matk or fuente.atk) or fuente.atk) or 0
     if fuente and fuente.buffs then atk = atk * Mundo:buffMul(fuente, "atk") end
-    local v = atk * pct
+    local v = atk * pct * Balance.modNivel(fuente and fuente.nivel, objetivo.nivel)
     if not d.ignora then
       local def = (tipo == "magico") and (objetivo.mdef or 0) or (objetivo.def or 0)
       v = v * (1 - Balance.reduccion(def))

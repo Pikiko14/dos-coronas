@@ -16,6 +16,16 @@ local TASA_POR_DEFECTO = 40
 function Servicio.crearMundo()
   local mundo = Mundo.nuevo()
   mundo.puertos.marcarEvento = function(...) return Cuentas.marcarEvento(...) end
+  -- los gremios se cargan al arrancar y cada cambio se guarda al momento
+  mundo.puertos.guardarGremio = function(g)
+    local ok, err = Cuentas.guardarGremio(g)
+    if not ok then Log.warn("guardado del gremio " .. tostring(g.nombre) .. ": " .. tostring(err)) end
+  end
+  mundo.puertos.borrarGremio = function(id)
+    local ok, err = Cuentas.borrarGremio(id)
+    if not ok then Log.warn("borrado del gremio " .. tostring(id) .. ": " .. tostring(err)) end
+  end
+  mundo:cargarGremios(Cuentas.cargarGremios() or {})
   return mundo
 end
 
@@ -142,7 +152,7 @@ function Servicio.tratar(servidor, mundo, idCon, msg)
     if not ok then return end
     local r = mundo:accion(pid, msg.a, limpio)
     if r and (msg.a == "interactuar" or r.panel ~= nil) then
-      servidor:enviar(idCon, { t = "panel", panel = r.panel, ciudad = r.ciudad })
+      servidor:enviar(idCon, { t = "panel", panel = r.panel, ciudad = r.ciudad, datos = r.datos })
     end
   end
 end

@@ -1,4 +1,4 @@
--- Pruebas del servidor: dominio, cuentas, red, servicio y configuraciÃ³n.
+-- Pruebas del servidor: dominio, cuentas, red, servicio y configuración.
 -- Se ejecutan con: love servidor --test
 local Datos = require("compartido.dominio.datos")
 local Mundo = require("compartido.dominio.mundo")
@@ -288,19 +288,19 @@ function Pruebas.correr()
       return function() i = i + 1 return v[(i - 1) % #v + 1] end
     end
     local mn, mx = Balance.rangoDano(100, 0, 1)
-    fallar(errores, "rango sin defensa: 60 a 120", mn == 60 and mx == 120, mn .. "-" .. mx)
+    fallar(errores, "rango sin defensa: 45 a 90", mn == 45 and mx == 90, mn .. "-" .. mx)
     local dmn, dmx = Balance.rangoDano(100, 40, 1)
-    fallar(errores, "con defensa 40 el rango se reduce a la mitad", dmn == 30 and dmx == 60, dmn .. "-" .. dmx)
+    fallar(errores, "con defensa 40 el rango se reduce a la mitad", dmn == 23 and dmx == 45, dmn .. "-" .. dmx)
     local cm, cmx = Balance.rangoDano(100, 0, 2)
-    fallar(errores, "el poder del golpe multiplica el rango", cm == 120 and cmx == 240, cm .. "-" .. cmx)
+    fallar(errores, "el poder del golpe multiplica el rango", cm == 90 and cmx == 180, cm .. "-" .. cmx)
     local bajo, c1 = Balance.tirarDano(100, 0, 1, secuencia(0, 0, 0.99))
-    fallar(errores, "tirada mínima = mínimo", bajo == 60 and not c1, tostring(bajo))
+    fallar(errores, "tirada mínima = mínimo", bajo == 45 and not c1, tostring(bajo))
     local alto, c2 = Balance.tirarDano(100, 0, 1, secuencia(0.999, 0.999, 0.99))
-    fallar(errores, "tirada máxima = máximo", alto == 120 and not c2, tostring(alto))
+    fallar(errores, "tirada máxima = máximo", alto == 90 and not c2, tostring(alto))
     local medio = Balance.tirarDano(100, 0, 1, secuencia(0.5, 0.5, 0.99))
-    fallar(errores, "tirada media = punto medio", medio == 90, tostring(medio))
+    fallar(errores, "tirada media = punto medio", medio == 68, tostring(medio))
     local crit, c3 = Balance.tirarDano(100, 0, 1, secuencia(0.5, 0.5, 0.01))
-    fallar(errores, "crítico = 1,5 x el máximo", c3 == true and crit == 180, tostring(crit))
+    fallar(errores, "crítico = 1,5 x el máximo", c3 == true and crit == 135, tostring(crit))
     fallar(errores, "nunca menos de 1", Balance.tirarDano(0, 500, 1, secuencia(0, 0, 0.99)) == 1)
     fallar(errores, "más ataque, más daño", Balance.rangoDano(200, 0, 1) > Balance.rangoDano(100, 0, 1))
     local minimo, maximo, suma, distintos, vistos = math.huge, 0, 0, 0, {}
@@ -314,9 +314,9 @@ function Pruebas.correr()
       if not vistos[d] then vistos[d] = true distintos = distintos + 1 end
     end
     fallar(errores, "los golpes varían de verdad", distintos >= 25, tostring(distintos))
-    fallar(errores, "ningún golpe baja del mínimo", minimo >= 60, tostring(minimo))
-    fallar(errores, "ningún golpe pasa del máximo del crítico", maximo <= 180, tostring(maximo))
-    fallar(errores, "media cerca del 90% del ataque", suma / n > 85 and suma / n < 100, tostring(suma / n))
+    fallar(errores, "ningún golpe baja del mínimo", minimo >= 45, tostring(minimo))
+    fallar(errores, "ningún golpe pasa del máximo del crítico", maximo <= 135, tostring(maximo))
+    fallar(errores, "media cerca del 90% del ataque", suma / n > 62 and suma / n < 75, tostring(suma / n))
     fallar(errores, "críticos cerca del 8%", criticos > n * 0.04 and criticos < n * 0.13, tostring(criticos))
     -- en el mundo: un guerrero contra un muñeco sin defensa
     local mundo = Mundo.nuevo()
@@ -374,7 +374,7 @@ function Pruebas.correr()
         end
         if n.requiere then fallar(errores, clase .. " " .. n.id .. " pide un nodo que existe", ids[n.requiere[1]]) end
       end
-      fallar(errores, clase .. " tiene cuatro poderes", activas == 4)
+      fallar(errores, clase .. " tiene seis poderes", activas == 6)
     end
     local m = mundo:crearPersonaje({ nombre = "Arbolito", faccion = "albor", clase = "guerrero" })
     fallar(errores, "empieza con el poder inicial", Arbol.rango(m, "golpe") == 1 and Arbol.rango(m, "tajo") == 0)
@@ -429,6 +429,240 @@ function Pruebas.correr()
     fallar(errores, "autoridad acepta aprender", Autoridad.aceptar(mundo, m, "aprender", { id = "tajo" }) == true)
     fallar(errores, "autoridad rechaza id absurdo", Autoridad.aceptar(mundo, m, "aprender", { id = {} }) == false)
   end)
+  paso("encantamiento de equipo", function()
+    local Encanto = require("compartido.dominio.encanto")
+    local mundo = Mundo.nuevo()
+    local g = mundo:crearPersonaje({ nombre = "Encanta", faccion = "albor", clase = "guerrero", nivel = 10 })
+    g.oro = 100000
+    mundo:darItem(g, "polvo_arcano", 99)
+    local atkAntes = g.atk
+    local azar = math.random
+    math.random = function(a) if a then return 1 end return 0 end
+    local ok, err = pcall(function() return mundo:encantar(g, "equipo", "arma") end)
+    math.random = azar
+    fallar(errores, "encantar sin error", ok and err == nil, tostring(err))
+    fallar(errores, "sube a +1", g.encantos and g.encantos.arma == 1)
+    fallar(errores, "el encantamiento sube el ataque", g.atk > atkAntes, atkAntes .. " -> " .. g.atk)
+    fallar(errores, "cuesta oro y polvo", g.oro < 100000 and mundo:contarItem(g, "polvo_arcano") < 99)
+    -- los primeros niveles no fallan; a partir de +7 un fallo baja un nivel
+    fallar(errores, "los tres primeros son seguros", Encanto.prob(0) == 1 and Encanto.prob(2) == 1)
+    fallar(errores, "la probabilidad baja", Encanto.prob(9) < Encanto.prob(4) and Encanto.prob(4) < 1)
+    g.encantos.arma = 7
+    mundo:recalcular(g)
+    math.random = function(a) if a then return 1 end return 0.999 end
+    ok = pcall(function() mundo:encantar(g, "equipo", "arma") end)
+    math.random = azar
+    fallar(errores, "un fallo alto baja un nivel", ok and g.encantos.arma == 6, tostring(g.encantos.arma))
+    g.encantos.arma = 3
+    math.random = function(a) if a then return 1 end return 0.999 end
+    ok = pcall(function() mundo:encantar(g, "equipo", "arma") end)
+    math.random = azar
+    fallar(errores, "un fallo bajo no quita nivel", ok and g.encantos.arma == 3)
+    -- falta de material u oro
+    g.oro = 0
+    fallar(errores, "sin oro no encanta", mundo:encantar(g, "equipo", "arma") ~= nil)
+    g.oro = 100000
+    for i = #g.bolsa, 1, -1 do if g.bolsa[i].id == "polvo_arcano" then table.remove(g.bolsa, i) end end
+    fallar(errores, "sin polvo no encanta", mundo:encantar(g, "equipo", "arma") ~= nil)
+    -- al desequipar y volver a equipar la pieza conserva su nivel
+    mundo:desequipar(g, "arma")
+    local idx
+    for i, s in ipairs(g.bolsa) do if s.id == "guerrero_arma_3" then idx = i end end
+    fallar(errores, "la pieza guardada lleva su +3", idx and g.bolsa[idx].enc == 3)
+    if idx then mundo:equipar(g, idx) end
+    fallar(errores, "al equiparla vuelve el +3", g.encantos.arma == 3)
+    -- a lo máximo no se pasa
+    g.encantos.arma = Encanto.MAX
+    mundo:darItem(g, "polvo_arcano", 99)
+    fallar(errores, "no pasa del máximo", mundo:encantar(g, "equipo", "arma") ~= nil)
+  end)
+  paso("mascotas", function()
+    local Mascotas = require("compartido.dominio.mascotas")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local function avanzar(seg) for _ = 1, math.floor(seg / 0.1) do mundo:actualizar(0.1) end end
+    local dueno = mundo:crearPersonaje({ nombre = "Criador", faccion = "albor", clase = "guerrero", nivel = 12 })
+    dueno.oro = 20000
+    fallar(errores, "adopta un gatito", mundo:adoptarMascota(dueno, "gatito") == nil and dueno.mascotas[1].nivel == 1)
+    fallar(errores, "no repite especie", mundo:adoptarMascota(dueno, "gatito") ~= nil)
+    fallar(errores, "pide nivel", mundo:adoptarMascota(dueno, "avispa") ~= nil)
+    fallar(errores, "cuesta oro", dueno.oro == 20000 - Mascotas.especies.gatito.precio)
+    fallar(errores, "la invoca", mundo:invocarMascota(dueno, 1) == nil and dueno.mascotaId and mundo.entidades[dueno.mascotaId].kind == "mascota")
+    local pet = mundo.entidades[dueno.mascotaId]
+    -- sigue al dueño
+    avanzar(2)
+    fallar(errores, "la mascota está junto a su dueño", math.abs(pet.x - dueno.x) < 4 and math.abs(pet.y - dueno.y) < 4)
+    -- pelea a su lado y el dueño se lleva la experiencia
+    local blanco = mundo:spawnMonstruo("gato", dueno.x + 1.2, dueno.y, { x = dueno.x, y = dueno.y })
+    blanco.hp, blanco.hpMax, blanco.agresivo, blanco.atk, blanco.matk = 400, 400, false, 0, 0
+    dueno.objetivo = blanco.id
+    local antes = blanco.hp
+    avanzar(8)
+    fallar(errores, "la mascota ataca", blanco.hp < antes, tostring(blanco.hp))
+    local presa = mundo:spawnMonstruo("gargola", dueno.x + 1.2, dueno.y, { x = dueno.x, y = dueno.y })
+    presa.hp = 1
+    local xpAntes = dueno.mascotas[1].xp
+    mundo:danar(presa, 5, dueno)
+    fallar(errores, "la mascota gana experiencia", dueno.mascotas[1].xp > xpAntes or dueno.mascotas[1].nivel > 1)
+    -- no pasa del nivel del dueño
+    dueno.mascotas[1].nivel = dueno.nivel
+    local lv = dueno.mascotas[1].nivel
+    mundo:mascotaGanaXp(dueno, 100000)
+    fallar(errores, "no supera al dueño", dueno.mascotas[1].nivel == lv)
+    -- el limo guardián reduce el daño
+    mundo:adoptarMascota(dueno, "limo")
+    mundo:invocarMascota(dueno, 2)
+    fallar(errores, "el limo da protección", (dueno.mascotaBono or 0) > 0.05, tostring(dueno.mascotaBono))
+    fallar(errores, "solo una mascota fuera a la vez", not mundo.entidades[pet.id] or pet.borrar)
+    dueno.hp = dueno.hpMax
+    local golpe = Mascotas.proteccion("limo", 1)
+    mundo:danar(dueno, 100, nil)
+    fallar(errores, "el daño baja con el limo", dueno.hpMax - dueno.hp < 100 and dueno.hpMax - dueno.hp >= 100 * (1 - golpe - 0.2), tostring(dueno.hpMax - dueno.hp))
+    -- en guerra no hay mascotas; al volver regresa
+    dueno.modo = "batalla"
+    avanzar(0.5)
+    fallar(errores, "en la guerra se retira", dueno.mascotaId == nil)
+    dueno.modo = "mundo"
+    avanzar(3)
+    fallar(errores, "al volver reaparece", dueno.mascotaId ~= nil and mundo.entidades[dueno.mascotaId] ~= nil)
+    -- se guarda y se recupera
+    local ex = mundo:exportar(dueno)
+    local otro = mundo:crearPersonaje({ nombre = "Criador2", faccion = "albor", clase = "guerrero", nivel = 12 })
+    mundo:aplicarGuardado(otro, ex)
+    fallar(errores, "el guardado conserva las mascotas", #otro.mascotas == 2 and otro.mascotaActiva == 2)
+    -- las criaturas hostiles pueden herirlas; los jugadores no
+    local e = mundo.entidades[dueno.mascotaId]
+    fallar(errores, "una criatura puede herir a la mascota", mundo:puedeDanar(blanco, e))
+    fallar(errores, "los jugadores no pueden herirla", not mundo:puedeDanar(dueno, e))
+    local hp0 = e.hp
+    mundo:golpear(blanco, e, 1)
+    blanco.atk = 100
+    mundo:golpear(blanco, e, 1)
+    fallar(errores, "la mascota pierde vida", e.hp < hp0, hp0 .. " -> " .. e.hp)
+    -- si cae, se va y vuelve tras el descanso
+    mundo:danar(e, 99999, blanco)
+    fallar(errores, "al caer se retira", dueno.mascotaId == nil and (dueno.mascotaDescanso or 0) > mundo.tiempo)
+    avanzar(5)
+    fallar(errores, "no vuelve antes de tiempo", dueno.mascotaId == nil)
+    dueno.mascotaDescanso = 0
+    avanzar(3)
+    fallar(errores, "vuelve tras descansar", dueno.mascotaId ~= nil)
+    e = mundo.entidades[dueno.mascotaId]
+    fallar(errores, "vuelve con la vida llena", e and e.hp == e.hpMax)
+    -- guardarla
+    mundo:invocarMascota(dueno, 2)
+    fallar(errores, "se guarda al llamarla otra vez", dueno.mascotaId == nil and dueno.mascotaActiva == nil)
+  end)
+  paso("gremios", function()
+    local Gremios = require("compartido.dominio.gremios")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local function jug(nombre, dbId, faccion)
+      local e = mundo:crearPersonaje({ nombre = nombre, faccion = faccion or "albor", clase = "guerrero", nivel = 10 })
+      e.dbId = dbId
+      e.x, e.y = 50.5, 50.5
+      return e
+    end
+    local a, b, c, rival = jug("Lider", 101), jug("Amigo", 102), jug("Otro", 103), jug("Rival", 104, "umbra")
+    a.oro = 5000
+    fallar(errores, "nombre válido", Gremios.nombreValido("Los Cuervos") and Gremios.nombreValido("Ñandú Rojo") and not Gremios.nombreValido("ab") and not Gremios.nombreValido("x!y"))
+    fallar(errores, "etiqueta válida", Gremios.etiquetaValida("LC") and Gremios.etiquetaValida("A1b2") and not Gremios.etiquetaValida("A") and not Gremios.etiquetaValida("ABCDE"))
+    a.nivel = 3
+    fallar(errores, "pide nivel", mundo:crearGremio(a, "Los Cuervos", "LC") ~= nil)
+    a.nivel = 10
+    fallar(errores, "pide nombre válido", mundo:crearGremio(a, "x", "LC") ~= nil)
+    fallar(errores, "funda el gremio", mundo:crearGremio(a, "Los Cuervos", "lc") == nil and a.gremioRango == "lider" and a.gremioEtiqueta == "LC")
+    fallar(errores, "cuesta oro", a.oro == 5000 - Gremios.COSTE)
+    fallar(errores, "no se repite el nombre", mundo:crearGremio(c, "los cuervos", "XX") ~= nil)
+    -- invitar y aceptar
+    fallar(errores, "un miembro raso no invita", (function() b.gremioId, b.gremioRango = nil, nil return mundo:invitarGremio(b, c.id) end)() ~= nil)
+    fallar(errores, "el líder invita", mundo:invitarGremio(a, b.id) == nil and b.invitacionGremio ~= nil)
+    fallar(errores, "no invita a la otra corona", mundo:invitarGremio(a, rival.id) ~= nil)
+    fallar(errores, "acepta y entra", mundo:responderInvitacionGremio(b, true) == nil and b.gremioId == a.gremioId and b.gremioRango == "miembro")
+    fallar(errores, "no puede invitar a quien ya tiene gremio", mundo:invitarGremio(a, b.id) ~= nil)
+    mundo:invitarGremio(a, c.id)
+    fallar(errores, "rechazar no entra", mundo:responderInvitacionGremio(c, false) == nil and c.gremioId == nil)
+    mundo:invitarGremio(a, c.id)
+    mundo.tiempo = mundo.tiempo + Gremios.INVITACION_SEG + 5
+    fallar(errores, "la invitación caduca", mundo:responderInvitacionGremio(c, true) ~= nil and c.gremioId == nil)
+    -- rangos
+    fallar(errores, "el líder ascende a oficial", mundo:cambiarRangoGremio(a, 102, true) == nil and b.gremioRango == "oficial")
+    fallar(errores, "el oficial invita", mundo:invitarGremio(b, c.id) == nil)
+    fallar(errores, "otro entra", mundo:responderInvitacionGremio(c, true) == nil)
+    fallar(errores, "el oficial no expulsa al líder", mundo:expulsarGremio(b, 101) ~= nil)
+    fallar(errores, "el oficial expulsa a un miembro", mundo:expulsarGremio(b, 103) == nil and c.gremioId == nil)
+    -- chat: solo lo ve el gremio; los avisos de sistema son de cada uno
+    mundo:decir(a, "/g hola gremio")
+    local fa, fb, fc = mundo:foto(a.id), mundo:foto(b.id), mundo:foto(c.id)
+    local function ve(f, texto) for _, m in ipairs(f.msgs) do if m.texto == texto then return true end end return false end
+    fallar(errores, "el gremio ve su chat", ve(fa, "hola gremio") and ve(fb, "hola gremio"))
+    fallar(errores, "los de fuera no lo ven", not ve(fc, "hola gremio"))
+    mundo:mensaje("sistema", "", "secreto de c", c)
+    fallar(errores, "los avisos de sistema son privados", ve(mundo:foto(c.id), "secreto de c") and not ve(mundo:foto(a.id), "secreto de c"))
+    mundo:decir(c, "/g intruso")
+    fallar(errores, "sin gremio no se puede hablar en el gremio", not ve(mundo:foto(a.id), "intruso"))
+    -- bono de experiencia por compañeros cerca
+    fallar(errores, "bono con un compañero", math.abs(mundo:bonoGremio(a) - 1.05) < 1e-6, tostring(mundo:bonoGremio(a)))
+    b.x = 200
+    fallar(errores, "sin compañeros cerca no hay bono", mundo:bonoGremio(a) == 1)
+    b.x = 50.5
+    -- la foto lleva el gremio al cliente
+    fallar(errores, "la foto trae el gremio", fa.tu.gremioNombre == "Los Cuervos" and fa.tu.gremioRango == "lider")
+    local info = mundo:resumenGremio(a)
+    fallar(errores, "resumen del gremio", info and #info.miembros == 2 and info.miembros[1].rango == "lider")
+    -- si se va el líder, manda el oficial
+    fallar(errores, "el líder se va", mundo:salirGremio(a) == nil and a.gremioId == nil)
+    fallar(errores, "el oficial queda de líder", b.gremioRango == "lider")
+    -- disolver
+    fallar(errores, "solo el líder disuelve", mundo:disolverGremio(a) ~= nil)
+    fallar(errores, "el líder disuelve", mundo:disolverGremio(b) == nil and b.gremioId == nil and next(mundo.gremios) == nil)
+    -- el almacén (PostgreSQL o archivo) guarda y devuelve los gremios
+    local usuario = "gr" .. string.format("%06d", os.time() % 1000000)
+    Cuentas.borrarUsuario(usuario)
+    local idCuenta = Cuentas.registrar(usuario, "clave12")
+    local p1 = idCuenta and Cuentas.crearPersonaje(idCuenta, "GrUno" .. string.format("%03d", os.time() % 1000), "albor", "guerrero")
+    local p2 = idCuenta and Cuentas.crearPersonaje(idCuenta, "GrDos" .. string.format("%03d", os.time() % 1000), "albor", "mago")
+    fallar(errores, "personajes de prueba", p1 ~= nil and p2 ~= nil)
+    if p1 and p2 then
+      local idG = 900000 + os.time() % 90000
+      local g = { id = idG, nombre = "Prueba " .. idG, etiqueta = "T" .. (idG % 1000), faccion = "albor",
+        miembros = { [p1] = { nombre = "GrUno", rango = "lider" }, [p2] = { nombre = "GrDos", rango = "oficial" } } }
+      local ok, err = Cuentas.guardarGremio(g)
+      fallar(errores, "guarda el gremio", ok, tostring(err))
+      local lista = Cuentas.cargarGremios() or {}
+      local hallado
+      for _, x in ipairs(lista) do if x.id == idG then hallado = x end end
+      fallar(errores, "lo vuelve a cargar con sus miembros", hallado and #hallado.miembros == 2 and hallado.etiqueta == g.etiqueta, tostring(hallado))
+      local m = Mundo.nuevo()
+      m:cargarGremios(lista)
+      fallar(errores, "el mundo recupera el gremio y su índice", m.gremios[idG] and m.gremioDe[p1] == idG and m.siguienteGremio > idG)
+      g.miembros[p2].rango = "miembro"
+      Cuentas.guardarGremio(g)
+      local otra = Cuentas.cargarGremios() or {}
+      local rango
+      for _, x in ipairs(otra) do if x.id == idG then for _, mm in ipairs(x.miembros) do if mm.id == p2 then rango = mm.rango end end end end
+      fallar(errores, "los cambios de rango se guardan", rango == "miembro", tostring(rango))
+      Cuentas.borrarGremio(idG)
+      local final = Cuentas.cargarGremios() or {}
+      local sigue = false
+      for _, x in ipairs(final) do if x.id == idG then sigue = true end end
+      fallar(errores, "borrar el gremio lo quita", not sigue)
+    end
+    Cuentas.borrarUsuario(usuario)
+  end)
+  paso("equilibrio de combate por nivel", function()
+    local Calibracion = require("src.pruebas.calibracion")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    for _, clase in ipairs({ "guerrero", "mago", "cazador", "clerigo" }) do
+      local igual = Calibracion.duelo(mundo, clase, 10, Calibracion.monstruoDeNivel(10))
+      fallar(errores, clase .. " gana a una criatura de su nivel", igual.gano)
+      fallar(errores, clase .. " no la mata al instante ni tarda una eternidad", igual.t > 5 and igual.t < 60, string.format("%.1f s", igual.t))
+      fallar(errores, clase .. " sufre algo contra su nivel", igual.perdida > 0.03, string.format("%.0f%%", igual.perdida * 100))
+      local alta = Calibracion.duelo(mundo, clase, 8, Calibracion.monstruoDeNivel(21))
+      fallar(errores, clase .. " nivel 8 no puede con una criatura de nivel 21", not alta.gano)
+    end
+  end)
   paso("estados alterados y poderes de criaturas", function()
     local Estados = require("compartido.dominio.estados")
     local Arbol = require("compartido.dominio.arbol")
@@ -438,7 +672,9 @@ function Pruebas.correr()
     local victima = mundo:spawnMonstruo("oso", mago.x + 2, mago.y, { x = mago.x, y = mago.y })
     victima.hp, victima.hpMax = 5000, 5000
     victima.agresivo, victima.def, victima.mdef = false, 0, 0
-    victima.atk, victima.matk = 0, 0 -- que no pegue de vuelta: aquÃ­ solo se miden los estados
+    victima.atk, victima.matk = 0, 0 -- que no pegue de vuelta: aquí solo se miden los estados
+    victima.golpe, victima.poderes = nil, nil
+    victima.cds.auto = 1e9
     victima.x, victima.y = mago.x + 3, mago.y
     -- daño por tics
     local antes = victima.hp
@@ -500,6 +736,7 @@ function Pruebas.correr()
     blanco.hp, blanco.hpMax, blanco.agresivo = 9999, 9999, false
     mago.objetivo = blanco.id
     mago.mp, mago.cds = mago.mpMax, {}
+    mago.aturdido, mago.estados = 0, nil
     local ok, err = pcall(function()
       local e = mundo:usarHabilidad(mago, 2)
       avanzar(1.5)
@@ -661,6 +898,9 @@ function Pruebas.correr()
         mundo:recalcular(pj)
         pj.x, pj.y = 210.5, 236.5
         mundo:darItem(pj, "guerrero_arma_2", 1)
+        pj.encantos = { arma = 4 }
+        pj.mascotas = { { especie = "murcielago", nivel = 3, xp = 11 }, { especie = "gatito", nivel = 2, xp = 5 } }
+        pj.mascotaActiva = 2
         pj.habilidades.vigor = 2
         pj.habilidades.golpe = 2
         pj.equipo.mochila = "mochila_2"
@@ -689,6 +929,10 @@ function Pruebas.correr()
             otra.misiones.q_auroria and otra.misiones.q_auroria.progreso == 3 and otra.misiones.q_auroria.aceptada
               and otra.misiones.q_auroria.cantidad == 6)
           fallar(errores, "recupera la cacería", otra.caceria.gato == 5)
+          fallar(errores, "recupera las mascotas", otra.mascotas and #otra.mascotas == 2 and otra.mascotas[1].especie == "murcielago"
+            and otra.mascotas[1].nivel == 3 and otra.mascotas[2].xp == 5 and otra.mascotaActiva == 2)
+          fallar(errores, "recupera el encantamiento del arma", otra.encantos and otra.encantos.arma == 4,
+            tostring(otra.encantos and otra.encantos.arma))
           fallar(errores, "recupera el árbol de poderes", otra.habilidades and otra.habilidades.vigor == 2
             and otra.habilidades.golpe == 2, tostring(otra.habilidades and otra.habilidades.vigor))
           local casa = otra.casas["9_9"]

@@ -69,15 +69,17 @@ local function sentenciasDe(pid, ex, hp, mp)
 
   local filas = {}
   for _, hueco in ipairs(ordenadas(ex.equipo)) do
-    filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(hueco) .. "," .. Pg.literal(ex.equipo[hueco]) .. ")"
+    filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(hueco) .. "," .. Pg.literal(ex.equipo[hueco]) .. "," ..
+      entero(ex.encantos and ex.encantos[hueco]) .. ")"
   end
-  cada("personaje_equipo", "hueco, item_id", filas)
+  cada("personaje_equipo", "hueco, item_id, enc", filas)
 
   filas = {}
   for i, s in ipairs(ex.bolsa or {}) do
-    filas[#filas + 1] = "(" .. pid .. "," .. i .. "," .. Pg.literal(s.id) .. "," .. math.max(1, entero(s.cant or 1)) .. ")"
+    filas[#filas + 1] = "(" .. pid .. "," .. i .. "," .. Pg.literal(s.id) .. "," .. math.max(1, entero(s.cant or 1)) ..
+      "," .. entero(s.enc) .. ")"
   end
-  cada("personaje_bolsa", "ranura, item_id, cant", filas)
+  cada("personaje_bolsa", "ranura, item_id, cant, enc", filas)
 
   filas = {}
   for _, id in ipairs(ordenadas(ex.misiones)) do
@@ -86,6 +88,15 @@ local function sentenciasDe(pid, ex, hp, mp)
       Pg.literal(m.aceptada and true or false) .. "," .. Pg.literal(m.entregada and true or false) .. ")"
   end
   cada("personaje_mision", "mision_id, progreso, aceptada, entregada", filas)
+
+  if ex.mascotas then
+    filas = {}
+    for i, m in ipairs(ex.mascotas) do
+      filas[#filas + 1] = "(" .. pid .. "," .. i .. "," .. Pg.literal(m.especie) .. "," .. math.max(1, entero(m.nivel)) .. "," ..
+        entero(m.xp) .. "," .. Pg.literal(ex.mascotaActiva == i) .. ")"
+    end
+    cada("personaje_mascota", "slot, especie, nivel, xp, activa", filas)
+  end
 
   if ex.habilidades then
     filas = {}
@@ -113,7 +124,7 @@ local function sentenciasDe(pid, ex, hp, mp)
     end
     for i, s in ipairs(c.cofre or {}) do
       cofres[#cofres + 1] = "(" .. pid .. "," .. Pg.literal(parcela) .. "," .. i .. "," ..
-        Pg.literal(s.id) .. "," .. math.max(1, entero(s.cant or 1)) .. ")"
+        Pg.literal(s.id) .. "," .. math.max(1, entero(s.cant or 1)) .. "," .. entero(s.enc) .. ")"
     end
   end
   if #casas > 0 then
@@ -123,7 +134,7 @@ local function sentenciasDe(pid, ex, hp, mp)
     q[#q + 1] = "INSERT INTO casa_mueble (personaje_id, parcela_id, mueble) VALUES " .. table.concat(muebles, ",")
   end
   if #cofres > 0 then
-    q[#q + 1] = "INSERT INTO casa_cofre (personaje_id, parcela_id, ranura, item_id, cant) VALUES " .. table.concat(cofres, ",")
+    q[#q + 1] = "INSERT INTO casa_cofre (personaje_id, parcela_id, ranura, item_id, cant, enc) VALUES " .. table.concat(cofres, ",")
   end
   return table.concat(q, ";\n")
 end
@@ -225,6 +236,15 @@ function M.abrir()
       rango INT NOT NULL CHECK (rango >= 1),
       PRIMARY KEY (personaje_id, habilidad_id)
     );
+    CREATE TABLE IF NOT EXISTS personaje_mascota (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      slot INT NOT NULL CHECK (slot >= 1),
+      especie TEXT NOT NULL,
+      nivel INT NOT NULL DEFAULT 1,
+      xp INT NOT NULL DEFAULT 0,
+      activa BOOLEAN NOT NULL DEFAULT FALSE,
+      PRIMARY KEY (personaje_id, slot)
+    );
     CREATE TABLE IF NOT EXISTS personaje_caceria (
       personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
       monstruo_id TEXT NOT NULL,
@@ -247,6 +267,21 @@ function M.abrir()
       fallos INT NOT NULL DEFAULT 0,
       hasta TIMESTAMPTZ
     );
+    CREATE TABLE IF NOT EXISTS gremio (
+      id BIGINT PRIMARY KEY,
+      nombre TEXT UNIQUE NOT NULL,
+      etiqueta TEXT UNIQUE NOT NULL,
+      faccion TEXT NOT NULL,
+      creado TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS gremio_miembro (
+      gremio_id BIGINT NOT NULL REFERENCES gremio(id) ON DELETE CASCADE,
+      personaje_id BIGINT PRIMARY KEY REFERENCES personajes(id) ON DELETE CASCADE,
+      rango TEXT NOT NULL CHECK (rango IN ('lider', 'oficial', 'miembro'))
+    );
+    ALTER TABLE personaje_equipo ADD COLUMN IF NOT EXISTS enc INT NOT NULL DEFAULT 0;
+    ALTER TABLE personaje_bolsa ADD COLUMN IF NOT EXISTS enc INT NOT NULL DEFAULT 0;
+    ALTER TABLE casa_cofre ADD COLUMN IF NOT EXISTS enc INT NOT NULL DEFAULT 0;
   ]])
   if e then conn:cerrar() return nil, e end
   M.migrar(conn)
@@ -402,13 +437,14 @@ function M.cargar(personajeId)
         local r = conn:consulta(sql)
         return r or {}
       end
-      datos.equipo = {}
-      for _, r in ipairs(lista("SELECT hueco, item_id FROM personaje_equipo WHERE personaje_id = " .. pid)) do
+      datos.equipo, datos.encantos = {}, {}
+      for _, r in ipairs(lista("SELECT hueco, item_id, enc FROM personaje_equipo WHERE personaje_id = " .. pid)) do
         datos.equipo[r.hueco] = r.item_id
+        if (tonumber(r.enc) or 0) > 0 then datos.encantos[r.hueco] = tonumber(r.enc) end
       end
       datos.bolsa = {}
-      for _, r in ipairs(lista("SELECT item_id, cant FROM personaje_bolsa WHERE personaje_id = " .. pid .. " ORDER BY ranura")) do
-        datos.bolsa[#datos.bolsa + 1] = { id = r.item_id, cant = tonumber(r.cant) or 1 }
+      for _, r in ipairs(lista("SELECT item_id, cant, enc FROM personaje_bolsa WHERE personaje_id = " .. pid .. " ORDER BY ranura")) do
+        datos.bolsa[#datos.bolsa + 1] = { id = r.item_id, cant = tonumber(r.cant) or 1, enc = (tonumber(r.enc) or 0) > 0 and tonumber(r.enc) or nil }
       end
       datos.misiones = {}
       for _, r in ipairs(lista("SELECT mision_id, progreso, aceptada, entregada FROM personaje_mision WHERE personaje_id = " .. pid)) do
@@ -428,6 +464,11 @@ function M.cargar(personajeId)
         datos.habilidades = {}
         for _, r in ipairs(hab) do datos.habilidades[r.habilidad_id] = tonumber(r.rango) or 1 end
       end
+      datos.mascotas = {}
+      for _, r in ipairs(lista("SELECT slot, especie, nivel, xp, activa FROM personaje_mascota WHERE personaje_id = " .. pid .. " ORDER BY slot")) do
+        datos.mascotas[#datos.mascotas + 1] = { especie = r.especie, nivel = tonumber(r.nivel) or 1, xp = tonumber(r.xp) or 0 }
+        if r.activa == "t" then datos.mascotaActiva = #datos.mascotas end
+      end
       datos.caceria = {}
       for _, r in ipairs(lista("SELECT monstruo_id, cantidad FROM personaje_caceria WHERE personaje_id = " .. pid)) do
         datos.caceria[r.monstruo_id] = tonumber(r.cantidad) or 0
@@ -439,9 +480,9 @@ function M.cargar(personajeId)
       for _, r in ipairs(lista("SELECT parcela_id, mueble FROM casa_mueble WHERE personaje_id = " .. pid)) do
         if datos.casas[r.parcela_id] then datos.casas[r.parcela_id].muebles[r.mueble] = true end
       end
-      for _, r in ipairs(lista("SELECT parcela_id, item_id, cant FROM casa_cofre WHERE personaje_id = " .. pid .. " ORDER BY parcela_id, ranura")) do
+      for _, r in ipairs(lista("SELECT parcela_id, item_id, cant, enc FROM casa_cofre WHERE personaje_id = " .. pid .. " ORDER BY parcela_id, ranura")) do
         local c = datos.casas[r.parcela_id]
-        if c then c.cofre[#c.cofre + 1] = { id = r.item_id, cant = tonumber(r.cant) or 1 } end
+        if c then c.cofre[#c.cofre + 1] = { id = r.item_id, cant = tonumber(r.cant) or 1, enc = (tonumber(r.enc) or 0) > 0 and tonumber(r.enc) or nil } end
       end
     end
     local hoy = os.date("%Y-%m-%d")
@@ -514,6 +555,59 @@ function M.marcarEvento(personajeId, tipo)
       tonumber(idn) .. "," .. Pg.literal(tipo) .. "," .. Pg.literal(hoy) ..
       ") ON CONFLICT DO NOTHING"
     )
+    if err then return nil, err end
+    return true
+  end)
+end
+
+-- Gremios: se cargan todos al arrancar y se guardan completos al cambiar.
+function M.cargarGremios()
+  return con(function(conn)
+    local filas, err = conn:consulta(
+      "SELECT g.id, g.nombre, g.etiqueta, g.faccion, m.personaje_id, m.rango, p.nombre AS jugador " ..
+      "FROM gremio g JOIN gremio_miembro m ON m.gremio_id = g.id JOIN personajes p ON p.id = m.personaje_id " ..
+      "ORDER BY g.id, m.personaje_id"
+    )
+    if not filas then return nil, err end
+    local lista, porId = {}, {}
+    for _, r in ipairs(filas) do
+      local id = tonumber(r.id)
+      local g = porId[id]
+      if not g then
+        g = { id = id, nombre = r.nombre, etiqueta = r.etiqueta, faccion = r.faccion, miembros = {} }
+        porId[id] = g
+        lista[#lista + 1] = g
+      end
+      g.miembros[#g.miembros + 1] = { id = tonumber(r.personaje_id), nombre = r.jugador, rango = r.rango }
+    end
+    return lista
+  end)
+end
+
+function M.guardarGremio(g)
+  return con(function(conn)
+    local q = {
+      "INSERT INTO gremio (id, nombre, etiqueta, faccion) VALUES (" .. tonumber(g.id) .. "," .. Pg.literal(g.nombre) .. "," ..
+        Pg.literal(g.etiqueta) .. "," .. Pg.literal(g.faccion) .. ") ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre, " ..
+        "etiqueta = EXCLUDED.etiqueta, faccion = EXCLUDED.faccion",
+      "DELETE FROM gremio_miembro WHERE gremio_id = " .. tonumber(g.id),
+    }
+    local filas = {}
+    for dbId, m in pairs(g.miembros) do
+      filas[#filas + 1] = "(" .. tonumber(g.id) .. "," .. tonumber(dbId) .. "," .. Pg.literal(m.rango) .. ")"
+    end
+    if #filas > 0 then
+      q[#q + 1] = "INSERT INTO gremio_miembro (gremio_id, personaje_id, rango) VALUES " .. table.concat(filas, ",")
+    end
+    local _, err = conn:consulta(table.concat(q, ";\n"))
+    if err then return nil, err end
+    return true
+  end)
+end
+
+function M.borrarGremio(id)
+  return con(function(conn)
+    local _, err = conn:consulta("DELETE FROM gremio WHERE id = " .. tonumber(id))
     if err then return nil, err end
     return true
   end)

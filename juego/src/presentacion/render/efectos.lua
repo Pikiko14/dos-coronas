@@ -31,7 +31,7 @@ E.def = {
   trampa = { "Earth2", 0.6, 4 },
   impacto = { "Attack1", 0.4, 20 },
   nivel = { "Light2", 0.8, 4 },
-  -- estados alterados (tambiÃ©n se dibujan en bucle sobre quien los sufre)
+  -- estados alterados (también se dibujan en bucle sobre quien los sufre)
   quemar = { "Fire2", 0.4, 14 },
   sangrar = { "Attack12", 0.45, 18 },
   veneno = { "State1", 0.45, 10 },
@@ -43,6 +43,15 @@ E.def = {
   maldicion = { "Ice4", 0.35, 4 },
   aliento = { "Fire3", 0.6, 10, "add" },
   pisoton = { "Earth3", 0.35, 4 },
+  -- poderes nuevos de cada oficio
+  desgarro = { "Attack12", 0.7, 18 },
+  furia = { "Special10", 0.6, 6 },
+  sombra = { "Darkness1", 0.45, 16 },
+  meteoro = { "Meteor", 0.55, 8 },
+  flecha_veneno = { "State1", 0.5, 12 },
+  paso_agil = { "Heal5", 0.6, 10 },
+  sanacion = { "Heal2", 0.9, 8 },
+  juicio = { "Light7", 0.7, 12, "add" },
 }
 
 local hojas = {}

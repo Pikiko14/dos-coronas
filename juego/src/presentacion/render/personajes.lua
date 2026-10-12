@@ -40,6 +40,16 @@ P.npc = {
   },
 }
 
+-- Mascotas (compartido/dominio/mascotas.lua): la hoja y la casilla de cada especie.
+P.mascotas = {
+  gatito = { hoja = "Characters/Animal.png", idx = 1 },
+  murcielago = { hoja = "Characters/Monster3.png", idx = 0 },
+  limo = { hoja = "Characters/Monster2.png", idx = 2 },
+  flor = { hoja = "Characters/Monster2.png", idx = 0 },
+  hada = { hoja = "Characters/Monster2.png", idx = 3 },
+  avispa = { hoja = "Characters/Monster3.png", idx = 2 },
+}
+
 P.monstruos = {
   gato = { hoja = "Characters/Animal.png", idx = 1 },
   cuervo = { hoja = "Characters/Monster3.png", idx = 0 },
@@ -85,6 +95,8 @@ function P.de(e)
     return P.npc[e.rol or "mercado"] or P.npc.mercado
   elseif k == "monstruo" then
     return P.monstruos[e.monstruo or ""] or P.monstruos.gato
+  elseif k == "mascota" then
+    return P.mascotas[e.especie or ""] or P.mascotas.gatito
   end
 end
 

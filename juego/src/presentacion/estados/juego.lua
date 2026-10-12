@@ -139,8 +139,20 @@ function Juego.tickCliente(app, dt)
     end
     if msg.t == "ok" then app.miId = msg.id end
     if msg.t == "panel" then
-      Interfaz.panel = msg.panel
-      Interfaz.ciudad = msg.ciudad
+      if msg.panel == "gremio" then
+        -- el servidor responde también a las consultas de actualización: no reabren un panel cerrado
+        if msg.datos then
+          Interfaz.datosGremio = msg.datos
+          if Interfaz.panel == "gremio" or Interfaz.pidiendoGremio then Interfaz.panel = "gremio" end
+          Interfaz.pidiendoGremio = nil
+        else
+          Interfaz.panel = "gremio"
+          app.actuar("gremio_info")
+        end
+      else
+        Interfaz.panel = msg.panel
+        Interfaz.ciudad = msg.ciudad
+      end
     end
     if msg.t == "snap" and app.miId then
       if app.marcaPing then app.ping = love.timer.getTime() - app.marcaPing end
@@ -162,6 +174,14 @@ function Juego.actualizar(app, dt)
     app.mundo:actualizar(dt)
     for _, s in ipairs(app.mundo.sonidos) do Sonido.tocar(s) end
     app.mundo.sonidos = {}
+  end
+  -- con el panel de gremio abierto se pide la lista al servidor cada par de segundos
+  if app.estado == "juego" and app.rol == "cliente" and Interfaz.panel == "gremio" then
+    Interfaz.sondeoGremio = (Interfaz.sondeoGremio or 0) + dt
+    if Interfaz.sondeoGremio > 2 then
+      Interfaz.sondeoGremio = 0
+      app.actuar("gremio_info")
+    end
   end
   Juego.tickCliente(app, dt)
   Juego.predecir(app, dt)

@@ -216,3 +216,22 @@ ARBOL DE PODERES Y MOCHILAS
   - La mochila equipada decide los espacios de la bolsa (8 sin mochila, hasta 24).
   - En Postgres el personaje esta normalizado (personaje_equipo, _bolsa, _mision, _casa,
     casa_mueble, casa_cofre, _caceria, _habilidad); los guardados antiguos se migran solos.
+
+NUEVO: PODERES, EQUIPO, ENCANTOS, MASCOTAS Y GREMIOS
+  Teclas: 1-6 poderes, 7 pocion de vida, 8 pocion de mana, K arbol de poderes, G gremio,
+          N llamar/guardar mascota, P equipo, I bolsa. Chat: /m mundo, /f faccion, /g gremio.
+  - Poderes: 6 por oficio (2 nuevos: guerrero Desgarro y Furia, mago Descarga de sombras y
+    Meteoro, cazador Flecha envenenada y Paso agil, clerigo Luz sanadora y Juicio divino).
+  - Equipo (compartido/dominio/items.lua): 8 escalones (nivel 1 a 30), dos familias de arma por
+    oficio, casillas cabeza/pecho/piernas/pies/escudo/anillo/amuleto/mochila. Armadura por tipo:
+    pesada (guerrero), ligera (cazador), tela (mago y clerigo).
+  - Encantamiento: maestro de encantos en cada ciudad; +1 a +10 con oro y polvo arcano.
+  - Mascotas: criador de mascotas en cada ciudad; 6 especies, suben con su dueño y pueden caer.
+  - Gremios: escribano del gremio en cada ciudad; rangos, chat propio y +5% de experiencia por
+    companero cerca (hasta +15%).
+  - Balance: la diferencia de nivel pesa mucho (un nivel 8 no puede con un nivel 21). Para
+    revisarlo: love servidor --calibrar escribe servidor/calibracion.txt con duelos por oficio.
+    Los ajustes globales estan en compartido/dominio/balance.lua (NIVEL_PASO, XP_DIFICULTAD) y
+    datos.lua (MONSTRUO_HP, MONSTRUO_ATK, danoMul de cada oficio).
+  - Base de datos: el personaje esta normalizado en tablas (equipo, bolsa, misiones, casas,
+    habilidades, mascotas...) y los gremios tienen las suyas (gremio, gremio_miembro).

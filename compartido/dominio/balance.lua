@@ -2,13 +2,15 @@ local B = {}
 
 B.XP_BASE = 40
 B.XP_POR_NIVEL = 32
-B.NIVEL_SLOT = { 1, 1, 4, 8 }
+B.NIVEL_SLOT = { 1, 1, 4, 8, 15, 20 }
 
 B.XP_CORTE = 7
+-- Cuánta experiencia pide cada nivel respecto a la curva base (subir de nivel cuesta el doble, casi).
+B.XP_DIFICULTAD = 1.8
 
 function B.xpPara(nivel)
   nivel = math.max(1, math.floor(tonumber(nivel) or 1))
-  return math.floor(48 + nivel * 22 + nivel * nivel * 8)
+  return math.floor((48 + nivel * 22 + nivel * nivel * 8) * B.XP_DIFICULTAD)
 end
 
 function B.xpMonstruo(nivelJugador, nivelMonstruo, elite)
@@ -30,10 +32,20 @@ end
 -- La tirada es la media de dos dados, así que lo normal queda hacia el centro y
 -- los extremos salen menos. Un golpe crítico (CRITICO_PROB) hace CRITICO_MUL veces
 -- el máximo. Después la defensa del objetivo lo reduce: defensa / (defensa + 40).
-B.DANO_MIN = 0.6
-B.DANO_MAX = 1.2
+B.DANO_MIN = 0.45
+B.DANO_MAX = 0.9
 B.CRITICO_PROB = 0.08
 B.CRITICO_MUL = 1.5
+
+-- Diferencia de nivel: quien pega a alguien de más nivel hace menos daño y quien pega a alguien de
+-- menos nivel hace más (hasta un tope). Así un personaje de nivel 8 no puede con una criatura de
+-- nivel 21 aunque le saque ventaja el equipo, y esa criatura lo destroza.
+B.NIVEL_PASO = 0.04
+B.NIVEL_MOD_MIN, B.NIVEL_MOD_MAX = 0.3, 1.8
+function B.modNivel(nivelAtacante, nivelObjetivo)
+  local d = (tonumber(nivelAtacante) or 1) - (tonumber(nivelObjetivo) or 1)
+  return math.max(B.NIVEL_MOD_MIN, math.min(B.NIVEL_MOD_MAX, 1 + B.NIVEL_PASO * d))
+end
 
 function B.reduccion(defensa)
   defensa = math.max(0, tonumber(defensa) or 0)

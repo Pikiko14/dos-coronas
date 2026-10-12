@@ -323,6 +323,9 @@ local function estamparCiudad(mapa, ciudad)
   npc(medio + 4, medioY, "heraldo", "Heraldo")
   npc(medio - 4, medioY + 3, "mayordomo", "Mayordomo")
   npc(medio + 4, medioY + 3, "encargos", "Tablón de encargos")
+  npc(medio - 4, medioY - 3, "encantador", "Maestro de encantos")
+  npc(medio + 4, medioY - 3, "criador", "Criador de mascotas")
+  npc(medio, medioY - 3, "gremio", "Escribano del gremio")
   local gy = (ciudad.acceso == "norte" and not grande) and 2 or (h - 3)
   npc(medio - 2, gy, "guardia", "Guardia de " .. ciudad.nombre)
   npc(medio + 2, gy, "guardia", "Guardia de " .. ciudad.nombre)
@@ -540,8 +543,8 @@ function M.mundo(rng)
     end
   end
   for _, mon in ipairs(Datos.monstruos) do
-    local camps = mon.elite and 1 or (mon.nivel <= 8 and 3 or 2)
-    local cant = mon.elite and 1 or (mon.nivel >= 20 and 1 or 2)
+    local camps = mon.elite and 1 or (mon.nivel <= 8 and 6 or 4)
+    local cant = mon.elite and 1 or (mon.nivel >= 20 and 2 or 3)
     for _ = 1, camps do
       local x, y = punto(mon.bioma)
       if x then

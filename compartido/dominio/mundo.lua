@@ -4,6 +4,10 @@ local Util = require("compartido.dominio.util")
 local Balance = require("compartido.dominio.balance")
 local Arbol = require("compartido.dominio.arbol")
 local Estados = require("compartido.dominio.estados")
+local Items = require("compartido.dominio.items")
+local Encanto = require("compartido.dominio.encanto")
+local Mascotas = require("compartido.dominio.mascotas")
+local Gremios = require("compartido.dominio.gremios")
 
 local Mundo = {}
 Mundo.__index = Mundo
@@ -30,6 +34,7 @@ function Mundo.nuevo()
   self.sesiones = {}
   -- puertos de salida que la aplicación enchufa (el dominio no conoce la base de datos)
   self.puertos = {}
+  self:iniciarGremios()
   self.gloria = { albor = 0, umbra = 0 }
   self.evento = { tipo = nil, hasta = 0 }
   self.instancia = {
@@ -97,6 +102,9 @@ function Mundo:mensaje(canal, de, texto, origen)
   self.mensajes[#self.mensajes + 1] = {
     canal = canal, de = de or "", texto = texto,
     faccion = origen and origen.faccion or nil,
+    -- los avisos del sistema son de quien los recibe; el chat de gremio, solo de su gremio
+    para = (canal == "sistema" and origen) and origen.id or nil,
+    gremio = (canal == "gremio" and origen) and origen.gremioId or nil,
     x = origen and origen.x or 0, y = origen and origen.y or 0,
     modo = origen and origen.modo or "mundo",
     tiempo = self.tiempo,
@@ -111,8 +119,11 @@ function Mundo:decir(p, texto)
   local canal = "local"
   if texto:sub(1, 3) == "/m " then canal, texto = "mundo", texto:sub(4)
   elseif texto:sub(1, 3) == "/f " then canal, texto = "faccion", texto:sub(4)
+  elseif texto:sub(1, 3) == "/g " then
+    if not p.gremioId then self:mensaje("sistema", "", "No perteneces a ningÃºn gremio.", p) return end
+    canal, texto = "gremio", texto:sub(4)
   elseif texto == "/ayuda" then
-    self:mensaje("sistema", "", "Mover: clic o WASD. Atacar: clic en enemigo. Habilidades: 1-4. Curar: selecciona aliado y pulsa 1. E interactúa. I bolsa, P equipo, T comercio, M mapa, B guerra.", p)
+    self:mensaje("sistema", "", "Mover: clic o WASD. Atacar: clic en enemigo. Poderes: 1-6 (árbol: K). Curar: selecciona aliado y pulsa 1. E interactúa. I bolsa, P equipo, T comercio, M mapa, B guerra.", p)
     return
   end
   self:mensaje(canal, p.nombre, texto, p)
@@ -130,15 +141,16 @@ function Mundo:recalcular(e)
   e.mdef = (c.mdef or 0) + (e.nivel - 1) * (c.mdefN or 0)
   e.spd = c.spd
   e.rango = c.rango
-  for _, itemId in pairs(e.equipo) do
+  for hueco, itemId in pairs(e.equipo) do
     local it = Datos.item(itemId)
     if it then
-      e.atk = e.atk + (it.atk or 0)
-      e.def = e.def + (it.def or 0)
-      e.matk = e.matk + (it.matk or 0)
-      e.mdef = e.mdef + (it.mdef or 0)
-      e.hpMax = e.hpMax + (it.hp or 0)
-      e.mpMax = e.mpMax + (it.mp or 0)
+      local m = Encanto.mult(e.encantos and e.encantos[hueco])
+      e.atk = e.atk + (it.atk or 0) * m
+      e.def = e.def + (it.def or 0) * m
+      e.matk = e.matk + (it.matk or 0) * m
+      e.mdef = e.mdef + (it.mdef or 0) * m
+      e.hpMax = e.hpMax + (it.hp or 0) * m
+      e.mpMax = e.mpMax + (it.mp or 0) * m
       e.spd = e.spd + (it.spd or 0)
     end
   end
@@ -147,7 +159,7 @@ function Mundo:recalcular(e)
   e.mp = math.min(mp or e.mpMax, e.mpMax)
 end
 
-function Mundo:darItem(p, id, cant)
+function Mundo:darItem(p, id, cant, enc)
   local it = Datos.item(id)
   if not it then return false end
   cant = cant or 1
@@ -164,7 +176,7 @@ function Mundo:darItem(p, id, cant)
   while cant > 0 do
     if #p.bolsa >= Datos.capacidadBolsa(p.equipo) then return false end
     local add = it.apila and math.min(cant, it.apila) or 1
-    p.bolsa[#p.bolsa + 1] = { id = id, cant = add }
+    p.bolsa[#p.bolsa + 1] = { id = id, cant = add, enc = (not it.apila and enc and enc > 0) and enc or nil }
     cant = cant - add
     if not it.apila then break end
   end
@@ -172,13 +184,7 @@ function Mundo:darItem(p, id, cant)
 end
 
 function Mundo:equiparInicial(e)
-  e.equipo.arma = e.clase .. "_arma_1"
-  e.equipo.cabeza = e.clase .. "_cabeza_1"
-  e.equipo.pecho = e.clase .. "_pecho_1"
-  e.equipo.pies = e.clase .. "_pies_1"
-  if e.clase == "guerrero" or e.clase == "clerigo" then
-    e.equipo.escudo = e.clase .. "_escudo_1"
-  end
+  for hueco, id in pairs(Items.equipoDe(e.clase, 1)) do e.equipo[hueco] = id end
   self:darItem(e, "pocion_vida", 5)
   self:darItem(e, "pocion_mana", 3)
 end
@@ -218,11 +224,9 @@ function Mundo:crearPersonaje(opts)
   e.hp, e.mp = e.hpMax, e.mpMax
   e.vinculo = { x = e.x, y = e.y, modo = "mundo" }
   if opts.kind ~= "bot" then
-    local tier = math.min(4, math.max(1, math.floor((opts.nivel or 1) / 5) + 1))
+    local tier = Items.tierPara(opts.nivel)
     if tier > 1 then
-      e.equipo.arma = e.clase .. "_arma_" .. tier
-      e.equipo.pecho = e.clase .. "_pecho_" .. tier
-      e.equipo.cabeza = e.clase .. "_cabeza_" .. tier
+      for hueco, id in pairs(Items.equipoDe(e.clase, tier)) do e.equipo[hueco] = id end
       self:recalcular(e)
       e.hp, e.mp = e.hpMax, e.mpMax
     end
@@ -276,7 +280,7 @@ function Mundo:poblar()
         id = self:idNuevo(), kind = n.rol == "guardia" and "guardia" or "npc",
         nombre = n.nombre, rol = n.rol, faccion = n.faccion,
         x = n.x, y = n.y, modo = "mundo", dir = 1, vivo = true,
-        clase = ({ mercado = "mago", heraldo = "clerigo", mayordomo = "guerrero", encargos = "cazador", guardia = "guerrero" })[n.rol] or "guerrero",
+        clase = ({ mercado = "mago", heraldo = "clerigo", mayordomo = "guerrero", encargos = "cazador", guardia = "guerrero", encantador = "mago", criador = "cazador", gremio = "guerrero" })[n.rol] or "guerrero",
         nivel = 12, hp = 400, hpMax = 400, atk = 28, def = 14, matk = 8, mdef = 7, spd = 3.2, rango = 1.4,
         cds = {},
         equipo = { arma = "guerrero_arma_2", pecho = "guerrero_pecho_2", cabeza = "guerrero_cabeza_2" },
@@ -606,6 +610,10 @@ end
 function Mundo:puedeDanar(origen, objetivo)
   if not origen or not objetivo or not objetivo.vivo then return false end
   local kind = objetivo.kind
+  if kind == "mascota" then
+    -- solo las criaturas hostiles pueden herir a una mascota
+    return origen.kind == "monstruo"
+  end
   if kind ~= "jugador" and kind ~= "bot" and kind ~= "guardia" and kind ~= "monstruo" and kind ~= "estatua" and kind ~= "puerta" then
     return false
   end
@@ -647,7 +655,10 @@ function Mundo:golpear(origen, objetivo, coef, mult, tipo)
     atk, def = origen.atk or 0, objetivo.def or 0
   end
   atk = atk * self:buffMul(origen, "atk")
+  local c = Datos.clases[origen.clase]
+  if c and c.danoMul then atk = atk * c.danoMul end
   local dano, critico = Balance.tirarDano(atk, def, coef)
+  dano = math.max(1, math.floor(dano * Balance.modNivel(origen.nivel, objetivo.nivel) + 0.5))
   if mult then dano = math.max(1, math.floor(dano * mult + 0.5)) end
   self:danar(objetivo, dano, origen, critico)
   return dano, critico
@@ -657,6 +668,7 @@ function Mundo:danar(objetivo, cantidad, origen, critico, color)
   if not objetivo or not objetivo.vivo or type(objetivo.hp) ~= "number" then return end
   if origen and not self:puedeDanar(origen, objetivo) then return end
   cantidad = math.max(1, math.floor(cantidad))
+  if (objetivo.mascotaBono or 0) > 0 then cantidad = math.max(1, math.floor(cantidad * (1 - objetivo.mascotaBono))) end
   local esc = self:tieneBuff(objetivo, "escudo")
   if esc and esc.absorbe and esc.absorbe > 0 then
     local uso = math.min(esc.absorbe, cantidad)
@@ -727,13 +739,14 @@ function Mundo:soltarBotin(m, asesino)
     loot.items[#loot.items + 1] = it
   end
   if math.random() < 0.12 then
-    local tier = 1
-    if m.nivel >= 15 then tier = 4 elseif m.nivel >= 10 then tier = 3 elseif m.nivel >= 5 then tier = 2 end
-    local clase = asesino.clase or "guerrero"
-    local huecos = { "arma", "cabeza", "pecho", "pies" }
-    local hueco = huecos[math.random(#huecos)]
-    local id = clase .. "_" .. hueco .. "_" .. tier
+    local tier = Items.tierPara(m.nivel)
+    if tier > 1 and math.random() < 0.35 then tier = tier - 1 end
+    local id = Items.aleatorio(Datos, asesino.clase or "guerrero", tier)
     if Datos.item(id) then loot.items[#loot.items + 1] = { id = id, cant = 1 } end
+  end
+  -- polvo arcano para encantar: casi todas las criaturas lo sueltan, más las de más nivel
+  if math.random() < 0.45 then
+    loot.items[#loot.items + 1] = { id = "polvo_arcano", cant = math.random(1, 1 + math.floor((m.nivel or 1) / 8)) }
   end
   if math.random() < 0.04 then
     local tier = math.min(4, math.floor((m.nivel or 1) / 6) + 1)
@@ -746,10 +759,18 @@ function Mundo:morir(e, origen)
   e.vivo = false
   e.hp = 0
   self:limpiarEstados(e)
+  if e.kind == "mascota" then
+    self:caeMascota(e)
+    return
+  end
   if e.kind == "monstruo" then
     if origen and (origen.kind == "jugador" or origen.kind == "bot") then
       local exp = Balance.xpMonstruo(origen.nivel or 1, e.nivel or 1, e.elite)
-      if exp > 0 then self:ganarXp(origen, exp) end
+      if exp > 0 then
+        exp = math.floor(exp * self:bonoGremio(origen) + 0.5)
+        self:ganarXp(origen, exp)
+        self:mascotaGanaXp(origen, exp)
+      end
       origen.oro = (origen.oro or 0) + math.floor((e.oro or 5) * 0.3)
       origen.caceria = origen.caceria or {}
       origen.caceria[e.monstruo] = (origen.caceria[e.monstruo] or 0) + 1
@@ -914,9 +935,23 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
     if h.cura then self:curar(objetivo, self:potenciaCura(p, h), p) end
     if h.buff == "bendicion" then self:ponerBuff(objetivo, "bendicion", h.dur, { def = 0.18 * h.pot, regen = 4 * h.pot }) end
   elseif h.tipo == "propio" then
-    local abs = (30 + p.nivel * 4) * h.pot
-    self:ponerBuff(p, "escudo", h.dur, { absorbe = abs })
-    self:numero(p, "escudo", { 0.55, 0.7, 1 })
+    if h.buff == "escudo" then
+      local abs = (30 + p.nivel * 4) * h.pot
+      self:ponerBuff(p, "escudo", h.dur, { absorbe = abs })
+      self:numero(p, "escudo", { 0.55, 0.7, 1 })
+    else
+      -- potenciadores propios (furia, paso ágil...): sus cifras crecen con el rango
+      local ef = {}
+      for k, v in pairs(h.efecto or {}) do ef[k] = v * h.pot end
+      self:ponerBuff(p, h.buff, h.dur, ef)
+      self:numero(p, h.nombre, { 1, 0.85, 0.4 })
+    end
+  elseif h.tipo == "aliados" then
+    for _, o in pairs(self.entidades) do
+      if o.vivo and self:mismoLugar(p, o) and self:aliado(p, o) and Util.dist(p.x, p.y, o.x, o.y) <= h.rango then
+        self:curar(o, self:potenciaCura(p, h), p)
+      end
+    end
   elseif h.tipo == "buff_alrededor" then
     for _, o in pairs(self.entidades) do
       if o.vivo and self:aliado(p, o) and Util.dist(p.x, p.y, o.x, o.y) <= h.rango then
@@ -945,11 +980,13 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
     misil = "magia", fuego = "fuego", escudo = "magia", nova = "hielo",
     disparo = "flecha", lluvia = "flecha", preciso = "flecha", trampa = "flecha",
     curar = "cura", bendicion = "sagrado", castigo = "sagrado", consagrar = "sagrado",
+    desgarro = "corte", furia = "grito", sombra = "magia", meteoro = "fuego",
+    flecha_veneno = "flecha", paso_agil = "flecha", sanacion = "cura", juicio = "sagrado",
   }
   self:sonar(sonidos[idh] or "magia")
   local ex = objetivo and objetivo.x or p.x
   local ey = objetivo and objetivo.y or p.y
-  if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" then
+  if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" then
     self:efecto(idh, p.x, p.y, 0.5)
   elseif h.tipo == "punto" then
     self:efecto(idh, tx or ex, ty or ey, 0.55)
@@ -1039,6 +1076,15 @@ function Mundo:actualizarJugador(e, dt)
     if self.tiempo >= (e.respawn or 0) then self:revivir(e) end
     return
   end
+  -- la mascota vuelve sola tras una muerte o una guerra
+  if e.kind == "jugador" and e.mascotaActiva and not e.mascotaId and e.modo ~= "batalla" and e.modo ~= "estandarte"
+    and (e.mascotaDescanso or 0) <= self.tiempo then
+    e.mascotaEspera = (e.mascotaEspera or 0) - dt
+    if e.mascotaEspera <= 0 then
+      e.mascotaEspera = 2
+      self:invocarMascota(e, e.mascotaActiva)
+    end
+  end
   e.buffs = e.buffs or {}
   for i = #e.buffs, 1, -1 do
     e.buffs[i].dur = e.buffs[i].dur - dt
@@ -1057,6 +1103,7 @@ function Mundo:actualizarJugador(e, dt)
   local mul = 1
   if e.lentitud and e.lentitud.hasta > self.tiempo then mul = mul * (1 - e.lentitud.mul) end
   if e.llevaBandera then mul = mul * 0.85 end
+  mul = mul * self:buffMul(e, "vel")
   local ddx, ddy = Util.signo(e.deseoX or 0), Util.signo(e.deseoY or 0)
   if ddx ~= 0 or ddy ~= 0 then
     e.camino = nil
@@ -1163,8 +1210,21 @@ function Mundo:actualizarMonstruo(e, dt)
       if ((e.cds or {}).auto or 0) <= self.tiempo then
         e.cds = e.cds or {}
         e.cds.auto = self.tiempo + 1.3
-        self:golpear(e, o, 1)
-        if o.vivo then self:alGolpear(e, o) end
+        if rango > 2 and e.tipoDano == "magico" then
+          -- los magos de la oscuridad lanzan desde lejos
+          self:proyectil(e, o, { coef = 1, dano = "magico", proyectil = "sombra", estado = nil })
+          if o.vivo then self:alGolpear(e, o) end
+        else
+          -- a veces el golpe se lo lleva la mascota del jugador (el limo guardián atrae más)
+          local blanco = o
+          local pet = o.mascotaId and self.entidades[o.mascotaId]
+          if pet and pet.vivo and Util.dist(e.x, e.y, pet.x, pet.y) <= rango + 0.3
+            and math.random() < (pet.especie == "limo" and 0.5 or 0.3) then
+            blanco = pet
+          end
+          self:golpear(e, blanco, 1)
+          if blanco.vivo then self:alGolpear(e, blanco) end
+        end
       end
     end
   else
@@ -1600,8 +1660,11 @@ function Mundo:equipar(p, index)
     local quedan = previo and #p.bolsa or (#p.bolsa - 1)
     if quedan > it.slots then return "Tu bolsa no cabe en esa mochila: libera espacio." end
   end
+  p.encantos = p.encantos or {}
+  local encPrevio = p.encantos[it.hueco]
   p.equipo[it.hueco] = slot.id
-  if previo then p.bolsa[index] = { id = previo, cant = 1 } else table.remove(p.bolsa, index) end
+  p.encantos[it.hueco] = slot.enc
+  if previo then p.bolsa[index] = { id = previo, cant = 1, enc = encPrevio } else table.remove(p.bolsa, index) end
   self:recalcular(p)
   return nil
 end
@@ -1613,14 +1676,84 @@ function Mundo:desequipar(p, hueco)
   if hueco == "mochila" then
     if #p.bolsa + 1 > Datos.BOLSA_BASE then return "Vacía la bolsa antes de quitarte la mochila." end
     p.equipo[hueco] = nil
-    p.bolsa[#p.bolsa + 1] = { id = id, cant = 1 }
+    p.bolsa[#p.bolsa + 1] = { id = id, cant = 1, enc = p.encantos and p.encantos[hueco] }
+    if p.encantos then p.encantos[hueco] = nil end
     self:recalcular(p)
     return
   end
   if #p.bolsa >= Datos.capacidadBolsa(p.equipo) then return "Bolsa llena." end
   p.equipo[hueco] = nil
-  self:darItem(p, id, 1)
+  self:darItem(p, id, 1, p.encantos and p.encantos[hueco])
+  if p.encantos then p.encantos[hueco] = nil end
   self:recalcular(p)
+end
+
+-- Cuenta el material de encantamiento que lleva el jugador.
+function Mundo:contarItem(p, id)
+  local n = 0
+  for _, s in ipairs(p.bolsa) do
+    if s.id == id then n = n + (s.cant or 1) end
+  end
+  return n
+end
+
+function Mundo:gastarItem(p, id, cant)
+  for i = #p.bolsa, 1, -1 do
+    local s = p.bolsa[i]
+    if s.id == id then
+      local quita = math.min(cant, s.cant or 1)
+      s.cant = (s.cant or 1) - quita
+      cant = cant - quita
+      if s.cant <= 0 then table.remove(p.bolsa, i) end
+      if cant <= 0 then return end
+    end
+  end
+end
+
+-- Intenta subir un nivel de encantamiento a una pieza, equipada (donde = "equipo", ref = hueco)
+-- o en la bolsa (donde = "bolsa", ref = posición). Devuelve un texto de error o nil.
+function Mundo:encantar(p, donde, ref)
+  local id, enc
+  if donde == "equipo" then
+    id, enc = p.equipo[ref], p.encantos and p.encantos[ref]
+  else
+    local slot = p.bolsa[tonumber(ref) or 0]
+    id, enc = slot and slot.id, slot and slot.enc
+  end
+  local it = id and Datos.item(id)
+  if not Encanto.encantable(it) then return "Eso no se puede encantar." end
+  enc = enc or 0
+  if enc >= Encanto.MAX then return "Ya está al máximo (+" .. Encanto.MAX .. ")." end
+  local coste = Encanto.coste(it, enc)
+  if (p.oro or 0) < coste.oro then return "Necesitas " .. coste.oro .. " de oro." end
+  if self:contarItem(p, Encanto.MATERIAL) < coste.polvo then
+    return "Necesitas " .. coste.polvo .. " de polvo arcano."
+  end
+  p.oro = p.oro - coste.oro
+  self:gastarItem(p, Encanto.MATERIAL, coste.polvo)
+  local nuevo = enc
+  if math.random() < Encanto.prob(enc) then
+    nuevo = enc + 1
+    self:mensaje("sistema", "", it.nombre .. " sube a +" .. nuevo .. ".", p)
+    self:sonar("magia")
+    self:numero(p, "+" .. nuevo, { 0.7, 0.9, 1 })
+  elseif Encanto.bajaAlFallar(enc) then
+    nuevo = enc - 1
+    self:mensaje("sistema", "", "El encantamiento falla y " .. it.nombre .. " baja a +" .. nuevo .. ".", p)
+    self:numero(p, "falla", { 1, 0.4, 0.35 })
+  else
+    self:mensaje("sistema", "", "El encantamiento falla; no pierdes el nivel.", p)
+    self:numero(p, "falla", { 1, 0.6, 0.4 })
+  end
+  if donde == "equipo" then
+    p.encantos = p.encantos or {}
+    p.encantos[ref] = nuevo > 0 and nuevo or nil
+    self:recalcular(p)
+  else
+    p.bolsa[tonumber(ref)].enc = nuevo > 0 and nuevo or nil
+  end
+  self:marcarProgreso(p)
+  return nil
 end
 
 function Mundo:usarPocionId(p, id)
@@ -1713,7 +1846,7 @@ function Mundo:ofrecerItem(p, index)
   local slot = p.bolsa[index]
   if not slot then return end
   local of = s.oferta[p.id]
-  of.items[#of.items + 1] = { id = slot.id, cant = slot.cant }
+  of.items[#of.items + 1] = { id = slot.id, cant = slot.cant, enc = slot.enc }
   table.remove(p.bolsa, index)
   s.oferta[s.a].ok = false
   s.oferta[s.b].ok = false
@@ -1737,13 +1870,13 @@ function Mundo:cerrarComercio(s, ok)
   local function devolver(p, of)
     if not p or not of then return end
     p.oro = p.oro + (of.oro or 0)
-    for _, it in ipairs(of.items) do self:darItem(p, it.id, it.cant) end
+    for _, it in ipairs(of.items) do self:darItem(p, it.id, it.cant, it.enc) end
   end
   if ok and a and b then
     local function entra(p, of)
       p.oro = p.oro + (of.oro or 0)
       for _, it in ipairs(of.items) do
-        if not self:darItem(p, it.id, it.cant) then
+        if not self:darItem(p, it.id, it.cant, it.enc) then
           ok = false
         end
       end
@@ -1855,7 +1988,7 @@ function Mundo:sacarDelCofre(p, index)
   if not casa then return end
   local slot = casa.cofre[index]
   if not slot then return end
-  if not self:darItem(p, slot.id, slot.cant) then return "Bolsa llena." end
+  if not self:darItem(p, slot.id, slot.cant, slot.enc) then return "Bolsa llena." end
   table.remove(casa.cofre, index)
 end
 
@@ -1891,6 +2024,16 @@ function Mundo:entregarMision(p, id)
   return nil
 end
 
+-- ¿Hay un PNJ de ese rol a la vista del jugador (a unos pasos)?
+function Mundo:npcCerca(p, rol)
+  for _, e in pairs(self.entidades) do
+    if e.kind == "npc" and e.rol == rol and self:mismoLugar(p, e) and Util.dist(p.x, p.y, e.x, e.y) <= 4 then
+      return true
+    end
+  end
+  return false
+end
+
 function Mundo:interactuar(p)
   if p.modo == "casa" then
     if Util.dist(p.x, p.y, self.mapas.casa.salida.x, self.mapas.casa.salida.y) < 1.3 then
@@ -1922,6 +2065,9 @@ function Mundo:interactuar(p)
   if mejor then
     if mejor.rol == "mercado" then return { panel = "mercado" } end
     if mejor.rol == "heraldo" then return { panel = "guerra" } end
+    if mejor.rol == "encantador" then return { panel = "encantar" } end
+    if mejor.rol == "criador" then return { panel = "mascotas" } end
+    if mejor.rol == "gremio" then return { panel = "gremio" } end
     if mejor.rol == "mayordomo" then return { panel = "vivienda", ciudad = self:ciudadEn(p.x, p.y) and self:ciudadEn(p.x, p.y).id } end
     if mejor.rol == "encargos" then
       local cid = self:ciudadEn(p.x, p.y)
@@ -2020,6 +2166,7 @@ function Mundo:actualizar(dt)
       elseif e.kind == "guardia" then self:actualizarGuardia(e, dt)
       elseif e.kind == "proyectil" then self:actualizarProyectil(e, dt)
       elseif e.kind == "trampa" then self:actualizarTrampa(e, dt)
+      elseif e.kind == "mascota" then self:actualizarMascota(e, dt)
       elseif e.kind == "bandera" then self:actualizarBandera(e)
       elseif e.kind == "loot" and self.tiempo > (e.hasta or 0) then e.borrar = true
       elseif e.estructura and e.vivo and e.modo == "batalla" then
@@ -2085,7 +2232,8 @@ function Mundo:exportar(p)
     x = x, y = y, modo = "mundo",
     equipo = p.equipo, bolsa = p.bolsa, misiones = misiones,
     casas = p.casas, vinculo = p.vinculo, caceria = p.caceria,
-    habilidades = p.habilidades,
+    habilidades = p.habilidades, encantos = p.encantos,
+    mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
     z = z,
   }
 end
@@ -2097,6 +2245,10 @@ function Mundo:aplicarGuardado(p, data)
   p.oro = data.oro or 0
   p.equipo = data.equipo or p.equipo
   p.bolsa = data.bolsa or p.bolsa
+  p.encantos = data.encantos or {}
+  p.mascotas = data.mascotas or {}
+  p.mascotaActiva = data.mascotaActiva
+  self:vincularGremio(p)
   -- Un guardado antiguo con más objetos de los que caben sin mochila recibe la
   -- más pequeña que los aguante.
   if #p.bolsa > Datos.capacidadBolsa(p.equipo) then
@@ -2139,7 +2291,7 @@ function Mundo:compactar(e)
     respawn = (e.kind == "monstruo" or e.kind == "puerta") and e.respawn or nil,
     flash = (e.flash or 0) > 0 and e.flash or nil,
     burbuja = e.burbuja,
-    est = self:estadosVisibles(e),
+    est = self:estadosVisibles(e), especie = e.especie, gremio = e.gremioEtiqueta,
     -- proyectiles: de qué tipo son y a dónde van
     tipo = e.kind == "proyectil" and e.tipo or nil,
     tx = e.kind == "proyectil" and e.tx or nil, ty = e.kind == "proyectil" and e.ty or nil,
@@ -2152,7 +2304,7 @@ function Mundo:foto(pid)
   for _, e in pairs(self.entidades) do
     if p and self:mismoLugar(p, e) then
       local d = Util.dist(p.x, p.y, e.x or p.x, e.y or p.y)
-      if d < 48 or e.kind == "estatua" or e.kind == "puerta" or e.kind == "altar" or e.kind == "bandera" then
+      if d < 28 or e.kind == "estatua" or e.kind == "puerta" or e.kind == "altar" or e.kind == "bandera" then
         ents[#ents + 1] = self:compactar(e)
       end
     end
@@ -2165,14 +2317,27 @@ function Mundo:foto(pid)
       misiones = p.misiones, casas = p.casas, sesion = p.sesion, zona = p.zona,
       atk = p.atk, def = p.def, matk = p.matk, mdef = p.mdef, spd = p.spd, clase = p.clase, faccion = p.faccion,
       nombre = p.nombre, modo = p.modo, casaId = p.casaId, objetivo = p.objetivo,
-      z = p.z or 0, habilidades = p.habilidades,
+      z = p.z or 0, habilidades = p.habilidades, encantos = p.encantos,
+      mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
+      gremioRango = p.gremioRango, gremioEtiqueta = p.gremioEtiqueta,
+      invGremio = (p.invitacionGremio and p.invitacionGremio.hasta > self.tiempo) and p.invitacionGremio or nil,
       estadosResta = {},
     }
+    if p.gremioId and self.gremios[p.gremioId] then tu.gremioNombre = self.gremios[p.gremioId].nombre end
     for tipo, st in pairs(p.estados or {}) do tu.estadosResta[tipo] = math.max(0, st.hasta - self.tiempo) end
     for k, v in pairs(p.cds or {}) do tu.cds[k] = v end
   end
   local msgs = {}
-  for i = math.max(1, #self.mensajes - 12), #self.mensajes do msgs[#msgs + 1] = self.mensajes[i] end
+  for i = #self.mensajes, 1, -1 do
+    local m = self.mensajes[i]
+    local visible = true
+    if m.canal == "sistema" and m.para and m.para ~= pid then visible = false end
+    if m.canal == "gremio" and (not p or m.gremio ~= p.gremioId) then visible = false end
+    if visible then
+      table.insert(msgs, 1, m)
+      if #msgs >= 13 then break end
+    end
+  end
   if not self._resumen or self.tiempo - (self._resumenT or 0) > 0.5 then
     self._resumenT = self.tiempo
     self._resumen = { batalla = self:resumenEvento("batalla"), estandarte = self:resumenEvento("estandarte") }
@@ -2271,6 +2436,22 @@ function Mundo:accion(pid, nombre, datos)
     local err = self:desequipar(p, datos.hueco)
     if err then self:mensaje("sistema", "", err, p) end
   end
+  if nombre == "mascota_adoptar" then
+    local err
+    if self:npcCerca(p, "criador") then err = self:adoptarMascota(p, datos.especie)
+    else err = "Acércate al criador de mascotas." end
+    if err then self:mensaje("sistema", "", err, p) end
+  end
+  if nombre == "mascota_invocar" then
+    local err = self:invocarMascota(p, datos.idx)
+    if err then self:mensaje("sistema", "", err, p) end
+  end
+  if nombre == "encantar" then
+    local err
+    if self:npcCerca(p, "encantador") then err = self:encantar(p, datos.donde, datos.ref)
+    else err = "Acércate al maestro de encantos." end
+    if err then self:mensaje("sistema", "", err, p) end
+  end
   if nombre == "aprender" then
     local err = self:aprenderHabilidad(p, datos.id)
     if err then self:mensaje("sistema", "", err, p) end
@@ -2345,9 +2526,12 @@ function Mundo:accion(pid, nombre, datos)
   if nombre == "comercio_item" then self:ofrecerItem(p, datos.i) end
   if nombre == "comercio_ok" then self:aceptarComercio(p) end
   if nombre == "comercio_no" then self:cancelarComercio(p) return { panel = nil } end
+  if nombre:sub(1, 7) == "gremio_" and p then return self:accionGremio(p, nombre, datos or {}) end
   return nil
 end
 
 Estados.instalar(Mundo)
+Mascotas.instalar(Mundo)
+Gremios.instalar(Mundo)
 
 return Mundo

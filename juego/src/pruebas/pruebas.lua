@@ -57,7 +57,8 @@ function Pruebas.correr()
     end
     fallar(errores, "hay efectos", n >= 20)
     for _, id in ipairs({ "golpe", "tajo", "grito", "carga", "misil", "fuego", "escudo", "nova", "disparo",
-      "lluvia", "trampa", "preciso", "curar", "bendicion", "castigo", "consagrar" }) do
+      "lluvia", "trampa", "preciso", "curar", "bendicion", "castigo", "consagrar", "desgarro", "furia", "sombra",
+      "meteoro", "flecha_veneno", "paso_agil", "sanacion", "juicio" }) do
       fallar(errores, "efecto del poder " .. id, Efectos.def[id] ~= nil)
     end
   end)
@@ -94,7 +95,7 @@ function Pruebas.correr()
     for i = 1, 4 do lista[i] = Interfaz.consumir(1280 - lado + 20 + (i - 1) * 40, 8) end
     local ayuda = Interfaz.consumir(1280 - lado + 118, 160)
     fallar(errores, "los botones del panel lateral reciben clics", ayuda ~= nil and ayuda ~= "panel", tostring(ayuda))
-    fallar(errores, "el hueco de la barra de poderes responde", Interfaz.consumir((1280 - lado) / 2 - 130, 720 - consola - 34) == "hab_1")
+    fallar(errores, "el hueco de la barra de poderes responde", Interfaz.consumir((1280 - lado) / 2 - 175, 720 - consola - 34) == "hab_1")
   end)
   local texto = (#errores == 0) and "OK\n" or ("FALLOS " .. #errores .. "\n" .. table.concat(errores, "\n"))
   Log.volcar("prueba_resultado.txt", texto)
@@ -174,7 +175,7 @@ function Pruebas.bot()
         fallar(errores, "queda centrado en casilla", math.abs((p1.y % 1) - 0.5) < 0.02, tostring(p1.y))
         local tu = ultimoSnap and ultimoSnap.tu
         fallar(errores, "datos propios en la foto", tu and tu.nivel == 1 and tu.hpMax ~= nil)
-        -- un poder sin objetivo (CuraciÃ³n, el poder inicial del clÃ©rigo): el efecto, el enfriamiento y el reloj deben llegar por red
+        -- un poder sin objetivo (Curación, el poder inicial del clérigo): el efecto, el enfriamiento y el reloj deben llegar por red
         cli:enviar({ t = "act", a = "habilidad", p = { slot = 1 } })
         local vioEfecto = false
         local limite = love.timer.getTime() + 1.2
@@ -193,9 +194,9 @@ function Pruebas.bot()
         fallar(errores, "el efecto del poder llega al cliente", vioEfecto)
         local tu2 = ultimoSnap and ultimoSnap.tu
         local resta = tu2 and tu2.cds and tu2.cds.curar and ultimoSnap.tiempo and (tu2.cds.curar - ultimoSnap.tiempo)
-        nota("enfriamiento de CuraciÃ³n visto: " .. tostring(resta and string.format("%.1f", resta)) .. " s")
+        nota("enfriamiento de Curación visto: " .. tostring(resta and string.format("%.1f", resta)) .. " s")
         fallar(errores, "reloj del servidor y enfriamiento coherentes", resta and resta > 0.2 and resta < 2.2, tostring(resta))
-        fallar(errores, "el Ã¡rbol llega al cliente con el poder inicial", tu2 and tu2.habilidades and tu2.habilidades.curar == 1)
+        fallar(errores, "el árbol llega al cliente con el poder inicial", tu2 and tu2.habilidades and tu2.habilidades.curar == 1)
         cli:enviar({ t = "act", a = "chat", p = { texto = "hola desde el bot" } })
         esperar("nada", 0.5)
         local oyo = false
@@ -446,10 +447,52 @@ local function avanzarFoto(app)
     j.nivel = 8
     j.habilidades = { curar = 3, bendicion = 1, castigo = 2, fe = 1 }
   elseif foto.paso == "arbol" then
+    foto.paso = "mercado"
+    Interfaz.panel = "mercado"
+    app.jugador.habilidades = nil
+    app.jugador.nivel = 9
+    Interfaz.scroll = 0
+  elseif foto.paso == "mercado" then
+    foto.paso = "encantar"
+    Interfaz.panel = "encantar"
+    Interfaz.encSel = nil
+    local j = app.jugador
+    j.encantos = { arma = 3, pecho = 1 }
+    j.oro = 500
+    app.mundo:darItem(j, "polvo_arcano", 12)
+  elseif foto.paso == "encantar" then
+    foto.paso = "mascotas"
+    Interfaz.panel = "mascotas"
+    local j = app.jugador
+    j.encantos = nil
+    j.nivel = 14
+    j.oro = 3000
+    j.mascotas = { { especie = "gatito", nivel = 6, xp = 120 }, { especie = "murcielago", nivel = 3, xp = 40 } }
+    j.mascotaActiva = 1
+  elseif foto.paso == "mascotas" then
+    foto.paso = "gremio"
+    Interfaz.panel = "gremio"
+    Interfaz.datosGremio = {
+      id = 1, nombre = "Los Cuervos", etiqueta = "LC", max = 25,
+      miembros = {
+        { id = 1, nombre = "Liora", rango = "lider", conectado = true, nivel = 14 },
+        { id = 2, nombre = "Kael", rango = "oficial", conectado = true, nivel = 12 },
+        { id = 3, nombre = "Mira", rango = "miembro", conectado = false },
+        { id = 4, nombre = "Dante", rango = "miembro", conectado = true, nivel = 9 },
+      },
+    }
+    app.jugador.gremioRango = "lider"
+    app.jugador.invGremio = { de = "Kael", nombre = "Los Lobos" }
+  elseif foto.paso == "gremio" then
     foto.paso = "batalla"
     Interfaz.panel = nil
+    Interfaz.datosGremio = nil
+    app.jugador.gremioRango = nil
+    app.jugador.invGremio = nil
+    Interfaz.panel = nil
+    app.jugador.mascotas = nil
+    app.jugador.mascotaActiva = nil
     app.jugador.nivel = 1
-    app.jugador.habilidades = nil
     app.mundo.tiempo = app.mundo.tiempo + 8
     app.jugador.ultimoGolpe = 0
     local mundoFoto = app.mundo
@@ -490,7 +533,7 @@ function Pruebas.tickFoto(app, dt)
   if foto.espera > 0.35 and not app.capturando and foto.paso ~= "fin" then
     app.capturando = true
     local nombre = foto.paso
-    if nombre ~= "equipo" and nombre ~= "arbol" then Interfaz.panel = nil end
+    if nombre ~= "equipo" and nombre ~= "arbol" and nombre ~= "mercado" and nombre ~= "encantar" and nombre ~= "mascotas" and nombre ~= "gremio" then Interfaz.panel = nil end
     Log.info(string.format("foto %s fps=%d panel=%s", nombre, love.timer.getFPS(), tostring(Interfaz.panel)))
     love.graphics.captureScreenshot(function(img)
       local fd = img:encode("png")

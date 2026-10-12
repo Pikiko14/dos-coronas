@@ -34,7 +34,7 @@ D.clases = {
     id = "guerrero", nombre = "Guerrero", rol = "Tanque y daño cuerpo a cuerpo",
     hp = 160, mp = 50, atk = 15, def = 9, spd = 4.4,
     hpN = 24, mpN = 4, atkN = 2.3, defN = 1.5,
-    matk = 4, mdef = 3, matkN = 0.5, mdefN = 0.6, danoBasico = "fisico",
+    matk = 4, mdef = 3, matkN = 0.5, mdefN = 0.6, danoBasico = "fisico", danoMul = 1.0,
     rango = 1.35, cuerpo = "cuerpo", arma = "espada",
     hoja = "humanos", base = 0, cuadros = 1, porDir = 1,
     recorte = { x = 52, y = 124, w = 68, h = 84, mano = { x = 14, y = 34 } },
@@ -42,9 +42,9 @@ D.clases = {
   },
   mago = {
     id = "mago", nombre = "Mago", rol = "Daño mágico a distancia",
-    hp = 96, mp = 150, atk = 5, def = 3, spd = 4.5,
-    hpN = 11, mpN = 18, atkN = 0.7, defN = 0.5,
-    matk = 17, mdef = 8, matkN = 2.7, mdefN = 1.3, danoBasico = "magico",
+    hp = 100, mp = 150, atk = 5, def = 3, spd = 4.5,
+    hpN = 13, mpN = 18, atkN = 0.7, defN = 0.5,
+    matk = 17, mdef = 8, matkN = 2.7, mdefN = 1.3, danoBasico = "magico", danoMul = 0.75,
     rango = 6.6, cuerpo = "cuerpo", arma = "baston",
     hoja = "humanos", base = 0, cuadros = 1, porDir = 1,
     recorte = { x = 340, y = 20, w = 68, h = 84, mano = { x = 50, y = 40 } },
@@ -54,7 +54,7 @@ D.clases = {
     id = "cazador", nombre = "Cazador", rol = "Daño físico a distancia",
     hp = 118, mp = 90, atk = 16, def = 5, spd = 4.9,
     hpN = 15, mpN = 8, atkN = 2.5, defN = 0.8,
-    matk = 5, mdef = 4, matkN = 0.6, mdefN = 0.7, danoBasico = "fisico",
+    matk = 5, mdef = 4, matkN = 0.6, mdefN = 0.7, danoBasico = "fisico", danoMul = 0.8,
     rango = 6.8, cuerpo = "cuerpo", arma = "arco",
     hoja = "humanos", base = 0, cuadros = 1, porDir = 1,
     recorte = { x = 228, y = 24, w = 96, h = 84, mano = { x = 52, y = 50 } },
@@ -64,7 +64,7 @@ D.clases = {
     id = "clerigo", nombre = "Clérigo", rol = "Curación, apoyo y castigo",
     hp = 128, mp = 140, atk = 5, def = 6, spd = 4.55,
     hpN = 17, mpN = 15, atkN = 0.6, defN = 1.2,
-    matk = 11, mdef = 8, matkN = 1.8, mdefN = 1.4, danoBasico = "magico",
+    matk = 11, mdef = 8, matkN = 1.8, mdefN = 1.4, danoBasico = "magico", danoMul = 1.0,
     rango = 5.8, cuerpo = "cuerpo", arma = "maza", proyectil = true,
     hoja = "humanos", base = 0, cuadros = 1, porDir = 1,
     recorte = { x = 56, y = 220, w = 68, h = 88, mano = { x = 58, y = 56 } },
@@ -76,26 +76,34 @@ D.habilidades = {
   golpe = { nombre = "Golpe", clase = "guerrero", cd = 1.6, mana = 0, tipo = "enemigo", coef = 1.15, rango = 1.45, desc = "Un golpe firme con el arma." },
   tajo = { nombre = "Tajo", clase = "guerrero", cd = 7, mana = 14, tipo = "alrededor", coef = 0.9, rango = 2.1, desc = "Golpea a todos los enemigos cercanos." },
   grito = { nombre = "Grito de guerra", clase = "guerrero", cd = 16, mana = 18, tipo = "buff_alrededor", buff = "grito", dur = 8, rango = 4.5, desc = "Aumenta el ataque de los aliados cercanos." },
+  desgarro = { nombre = "Desgarro", clase = "guerrero", cd = 9, mana = 20, tipo = "enemigo", coef = 1.6, rango = 1.45, desc = "Un tajo profundo que abre una herida." },
+  furia = { nombre = "Furia", clase = "guerrero", cd = 32, mana = 28, tipo = "propio", buff = "furia", dur = 10, efecto = { atk = 0.3 }, desc = "Tu ataque crece mucho durante un rato." },
   carga = { nombre = "Carga", clase = "guerrero", cd = 11, mana = 12, tipo = "enemigo", coef = 0.75, rango = 5.5, dash = true, aturde = 0.8, desc = "Te lanzas al objetivo y lo aturdes un instante." },
 
   misil = { nombre = "Misil arcano", clase = "mago", cd = 1.0, mana = 8, tipo = "enemigo", coef = 1.25, rango = 7.2, proyectil = "misil", dano = "magico", desc = "Un dardo de energía." },
   fuego = { nombre = "Bola de fuego", clase = "mago", cd = 3, mana = 24, tipo = "enemigo", coef = 1.55, rango = 7.2, proyectil = "fuego", aoe = 1.8, dano = "magico", desc = "Estalla al impactar." },
   escudo = { nombre = "Escudo arcano", clase = "mago", cd = 14, mana = 20, tipo = "propio", buff = "escudo", dur = 8, desc = "Absorbe parte del daño." },
+  sombra = { nombre = "Descarga de sombras", clase = "mago", cd = 6, mana = 26, tipo = "enemigo", coef = 1.2, rango = 7, proyectil = "sombra", dano = "magico", desc = "Una descarga oscura que drena vida." },
+  meteoro = { nombre = "Meteoro", clase = "mago", cd = 22, mana = 45, tipo = "punto", coef = 2.3, rango = 8, aoe = 2.6, dano = "magico", desc = "Una roca en llamas cae sobre la zona." },
   nova = { nombre = "Nova de hielo", clase = "mago", cd = 10, mana = 22, tipo = "alrededor", coef = 0.85, rango = 2.8, lentitud = 0.45, dano = "magico", desc = "Hiela y ralentiza alrededor." },
 
   disparo = { nombre = "Disparo", clase = "cazador", cd = 1.05, mana = 6, tipo = "enemigo", coef = 1.15, rango = 7.4, proyectil = "flecha", desc = "Una flecha rápida." },
   lluvia = { nombre = "Lluvia de flechas", clase = "cazador", cd = 8, mana = 22, tipo = "punto", coef = 0.8, rango = 7.4, aoe = 2.2, desc = "Flechas sobre una zona." },
+  flecha_veneno = { nombre = "Flecha envenenada", clase = "cazador", cd = 7, mana = 16, tipo = "enemigo", coef = 1.0, rango = 7.4, proyectil = "flecha", desc = "Una flecha untada que envenena." },
+  paso_agil = { nombre = "Paso ágil", clase = "cazador", cd = 18, mana = 14, tipo = "propio", buff = "agil", dur = 5, efecto = { vel = 0.5 }, desc = "Corres mucho más rápido un momento." },
   trampa = { nombre = "Trampa", clase = "cazador", cd = 14, mana = 16, tipo = "suelo", rango = 1.2, desc = "Inmoviliza al primer enemigo que la pisa." },
   preciso = { nombre = "Tiro preciso", clase = "cazador", cd = 8, mana = 18, tipo = "enemigo", coef = 2.05, rango = 8.2, proyectil = "flecha", desc = "Un disparo devastador." },
 
   curar = { nombre = "Curación", clase = "clerigo", cd = 2.1, mana = 16, tipo = "aliado", cura = 28, curaN = 5, rango = 6.5, desc = "Restaura vida a un aliado o a ti." },
   bendicion = { nombre = "Bendición", clase = "clerigo", cd = 12, mana = 20, tipo = "aliado", buff = "bendicion", dur = 10, rango = 6.5, desc = "Sube la defensa y regenera." },
   castigo = { nombre = "Castigo", clase = "clerigo", cd = 1.35, mana = 10, tipo = "enemigo", coef = 1.12, rango = 6.4, proyectil = "sagrado", dano = "magico", desc = "Luz que hiere. El clérigo también ataca." },
+  sanacion = { nombre = "Luz sanadora", clase = "clerigo", cd = 15, mana = 38, tipo = "aliados", cura = 22, curaN = 4, rango = 4.5, desc = "Cura a todos los aliados cercanos." },
+  juicio = { nombre = "Juicio divino", clase = "clerigo", cd = 16, mana = 34, tipo = "enemigo", coef = 2.3, rango = 6.4, proyectil = "sagrado", dano = "magico", aturde = 1.2, desc = "Un haz de luz que hiere y aturde." },
   consagrar = { nombre = "Consagración", clase = "clerigo", cd = 10, mana = 28, tipo = "mixto", coef = 0.9, cura = 18, curaN = 2, rango = 2.8, dano = "magico", desc = "Daña enemigos y cura aliados a tu alrededor." },
 }
 
--- Estado que cada poder puede aplicar al golpear y con quÃ© probabilidad (sube con el rango).
--- Los valores no puestos (duraciÃ³n, fuerza) salen de Estados.def.
+-- Estado que cada poder puede aplicar al golpear y con qué probabilidad (sube con el rango).
+-- Los valores no puestos (duración, fuerza) salen de Estados.def.
 local ESTADO_PODER = {
   golpe = { tipo = "sangrar", prob = 0.12 },
   tajo = { tipo = "sangrar", prob = 0.30 },
@@ -106,13 +114,17 @@ local ESTADO_PODER = {
   preciso = { tipo = "sangrar", prob = 0.40, dur = 6 },
   castigo = { tipo = "quemar", prob = 0.20 },
   consagrar = { tipo = "aturdir", prob = 0.15, dur = 1.0 },
+  desgarro = { tipo = "sangrar", prob = 0.85, dur = 6 },
+  sombra = { tipo = "drenar_vida", prob = 0.9 },
+  meteoro = { tipo = "quemar", prob = 0.6, dur = 5 },
+  flecha_veneno = { tipo = "veneno", prob = 1, dur = 7 },
 }
 for id, ef in pairs(ESTADO_PODER) do D.habilidades[id].estado = ef end
 D.barra = {
-  guerrero = { "golpe", "tajo", "grito", "carga" },
-  mago = { "misil", "fuego", "escudo", "nova" },
-  cazador = { "disparo", "lluvia", "trampa", "preciso" },
-  clerigo = { "curar", "bendicion", "castigo", "consagrar" },
+  guerrero = { "golpe", "tajo", "grito", "carga", "desgarro", "furia" },
+  mago = { "misil", "fuego", "escudo", "nova", "sombra", "meteoro" },
+  cazador = { "disparo", "lluvia", "trampa", "preciso", "flecha_veneno", "paso_agil" },
+  clerigo = { "curar", "bendicion", "castigo", "consagrar", "sanacion", "juicio" },
 }
 
 -- Continente 720×520. Arterias en y=168 y y=292, de x=144 a x=576.
@@ -278,6 +290,10 @@ D.props = {
   altar = { hoja = "town", indice = 22 },
 }
 
+-- Ajustes globales de las criaturas (ver servidor --calibrar): vida y ataque respecto a la fórmula base.
+D.MONSTRUO_HP = 3.0
+D.MONSTRUO_ATK = 1.05
+
 function D.statsMonstruo(m)
   local n = m.nivel
   local elite = m.elite and 6 or 1
@@ -285,11 +301,11 @@ function D.statsMonstruo(m)
   local curva = n * n
   -- Un monstruo físico pega con atk y se defiende sobre todo con def; uno mágico,
   -- al revés. Lo que no es lo suyo vale el 30% (ataque) o el 50% (defensa).
-  local atk0 = math.floor((4 + n * 1.45 + curva * 0.035) * (m.elite and 2.1 or 1))
+  local atk0 = math.floor((4 + n * 1.45 + curva * 0.035) * D.MONSTRUO_ATK * (m.elite and 2.1 or 1))
   local def0 = math.floor((n * 0.9 + curva * 0.02) * (m.elite and 1.4 or 1))
   local magico = m.magico and true or false
   return {
-    hp = math.floor((28 + n * 16 + curva * 0.85) * elite * (m.elite and 1 or grande)),
+    hp = math.floor((28 + n * 16 + curva * 0.85) * D.MONSTRUO_HP * elite * (m.elite and 1 or grande)),
     atk = magico and math.floor(atk0 * 0.3) or atk0,
     matk = magico and atk0 or math.floor(atk0 * 0.3),
     def = magico and math.floor(def0 * 0.5) or def0,
@@ -297,8 +313,8 @@ function D.statsMonstruo(m)
     dano = magico and "magico" or "fisico",
     xp = Balance.xpMonstruo(n, n, m.elite),
     oro = math.floor((4 + n * 3 + curva * 0.08) * (m.elite and 4 or 1)),
-    rango = m.vuela and 5.5 or 1.25,
-    velocidad = m.elite and 2.3 or (1.7 + math.min(1.15, n * 0.035)),
+    rango = m.vuela and 5.5 or (magico and 4.5 or 1.25),
+    velocidad = m.elite and 3.4 or (2.5 + math.min(1.6, n * 0.055)),
   }
 end
 
@@ -306,95 +322,13 @@ function D.xpPara(nivel)
   return Balance.xpPara(nivel)
 end
 
-local function colorTier(tier)
-  if tier == 1 then return nil end
-  if tier == 2 then return nil end
-  if tier == 3 then return nil end
-  return nil
-end
-
-local TIER = {
-  { nombre = "tosco", nivel = 1, mul = 1, tela = 512, metal = 4 },
-  { nombre = "de soldado", nivel = 5, mul = 2, tela = 518, metal = 37 },
-  { nombre = "de veterano", nivel = 10, mul = 3.2, tela = 528, metal = 86 },
-  { nombre = "de corona", nivel = 15, mul = 4.6, tela = 544, metal = 165 },
-}
-
-local ARMAS = {
-  guerrero = { tipo = "espada", nombre = "Espada", sprites = { 4, 37, 86, 165 } },
-  mago = { tipo = "baston", nombre = "Bastón", sprites = { 352, 359, 368, 381 } },
-  cazador = { tipo = "arco", nombre = "Arco", sprites = { 304, 307, 322, 323 } },
-  clerigo = { tipo = "maza", nombre = "Maza", sprites = { 178, 188, 191, 200 } },
-}
-
-local YELMOS = { 449, 455, 464, 485 }
-local PETOS = { 512, 518, 528, 544 }
-local BOTAS = { 656, 660, 668, 674 }
-local ESCUDOS = { 384, 391, 398, 399 }
-local ANILLOS = { 736, 741, 743, 744 }
-
 D.items = {}
-
-local function precio(base, tier)
-  return math.floor(base * tier * tier * 0.85)
-end
-
 local function add(it)
   D.items[it.id] = it
 end
 
--- Los oficios mágicos suben ataque y defensa mágicos con su equipo; los demás, físicos.
-local function esMagica(clase) return clase == "mago" or clase == "clerigo" end
-local function defensaMagica(clase, def)
-  return math.max(1, math.floor(def * (esMagica(clase) and 1.2 or 0.4)))
-end
-
-for clase, arma in pairs(ARMAS) do
-  for tier, t in ipairs(TIER) do
-    add({
-      id = clase .. "_arma_" .. tier, nombre = arma.nombre .. " " .. t.nombre,
-      hueco = "arma", clase = clase, tier = tier, nivel = t.nivel,
-      atk = math.floor((esMagica(clase) and 1 or 6) * t.mul),
-      matk = esMagica(clase) and math.floor(6 * t.mul) or nil, precio = precio(70, tier),
-      hoja = "equipment", sprite = arma.sprites[tier], arma = arma.tipo,
-    })
-    add({
-      id = clase .. "_cabeza_" .. tier, nombre = "Yelmo " .. t.nombre,
-      hueco = "cabeza", clase = clase, tier = tier, nivel = t.nivel,
-      def = math.floor(2 * t.mul), mdef = defensaMagica(clase, math.floor(2 * t.mul)), hp = 6 * tier, precio = precio(40, tier),
-      hoja = "equipment", sprite = YELMOS[tier],
-    })
-    add({
-      id = clase .. "_pecho_" .. tier, nombre = "Peto " .. t.nombre,
-      hueco = "pecho", clase = clase, tier = tier, nivel = t.nivel,
-      def = math.floor(3 * t.mul), mdef = defensaMagica(clase, math.floor(3 * t.mul)), hp = 10 * tier, precio = precio(64, tier),
-      hoja = "equipment", sprite = PETOS[tier],
-    })
-    add({
-      id = clase .. "_pies_" .. tier, nombre = "Botas " .. t.nombre,
-      hueco = "pies", clase = clase, tier = tier, nivel = t.nivel,
-      def = tier, mdef = defensaMagica(clase, tier), spd = 0.08 * tier, precio = precio(32, tier),
-      hoja = "equipment", sprite = BOTAS[tier],
-    })
-  end
-end
-
-for tier, t in ipairs(TIER) do
-  for _, clase in ipairs({ "guerrero", "clerigo" }) do
-    add({
-      id = clase .. "_escudo_" .. tier, nombre = "Escudo " .. t.nombre,
-      hueco = "escudo", clase = clase, tier = tier, nivel = t.nivel,
-      def = math.floor(3 * t.mul), mdef = defensaMagica(clase, math.floor(3 * t.mul)), precio = precio(48, tier),
-      hoja = "equipment", sprite = ESCUDOS[tier],
-    })
-  end
-  add({
-    id = "anillo_" .. tier, nombre = "Anillo " .. t.nombre,
-    hueco = "anillo", tier = tier, nivel = t.nivel,
-    mp = 8 * tier, atk = tier, matk = tier, precio = precio(50, tier),
-    hoja = "equipment", sprite = ANILLOS[tier],
-  })
-end
+-- Armas, armaduras, escudos, anillos y amuletos: ver items.lua.
+require("compartido.dominio.items").generar(D)
 
 -- Mochilas: el tipo de mochila equipada decide cuántos espacios tiene la bolsa.
 local MOCHILAS = {
@@ -420,6 +354,7 @@ end
 add({ id = "pocion_vida", nombre = "Poción de vida", apila = 20, precio = 18, cura = 0.42, hoja = "equipment", sprite = 704 })
 add({ id = "pocion_mana", nombre = "Poción de maná", apila = 20, precio = 16, mana = 0.42, hoja = "equipment", sprite = 711 })
 add({ id = "cristal", nombre = "Cristal enemigo", apila = 20, precio = 1, hoja = "equipment", sprite = 359, quest = true })
+add({ id = "polvo_arcano", nombre = "Polvo arcano", apila = 99, precio = 6, hoja = "equipment", sprite = 699, texto = "Material para encantar el equipo." })
 
 D.muebles = {
   cama = { nombre = "Cama", precio = 80, sprite = { hoja = "town", indice = 18 }, texto = "Al dormir aquí fijas tu retorno." },
@@ -461,6 +396,5 @@ function D.cuadro(def, dir, frame)
   return def.base + n * paso
 end
 
-colorTier = colorTier
 
 return D

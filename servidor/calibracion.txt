@@ -1,0 +1,38 @@
+Calibración de combate (sin pociones, sin moverse, puntos del árbol gastados, equipo del escalón)
+oficio    nv  criatura                nv | tiempo  vida- resultado
+guerrero   5  Escarabajo de seto       5 |   7.6s     9%  gana
+guerrero  10  Gárgola                10 |  10.9s    16%  gana
+guerrero  20  Quimera menor           19 |  10.9s    19%  gana
+guerrero  30  Liche de Eclipse        27 |  13.1s    16%  gana
+guerrero   8  Alma pálida            11 |  17.5s    42%  gana
+guerrero   8  Cultista de Umbra       13 |  24.9s    89%  gana
+guerrero   8  Hidra sombría          21 |  10.9s   100%  PIERDE
+guerrero  12  Demonio de marea        17 |  27.3s    85%  gana
+guerrero  20  Titán de escoria       25 |  68.0s   100%  PIERDE
+mago       5  Escarabajo de seto       5 |   9.1s    43%  gana
+mago      10  Gárgola                10 |  10.6s    49%  gana
+mago      20  Quimera menor           19 |  11.6s    23%  gana
+mago      30  Liche de Eclipse        27 |  11.0s     8%  gana
+mago       8  Alma pálida            11 |  18.0s    78%  gana
+mago       8  Cultista de Umbra       13 |  17.1s   100%  PIERDE
+mago       8  Hidra sombría          21 |   5.2s   100%  PIERDE
+mago      12  Demonio de marea        17 |  17.1s   100%  PIERDE
+mago      20  Titán de escoria       25 |  14.9s   100%  PIERDE
+cazador    5  Escarabajo de seto       5 |   7.5s    16%  gana
+cazador   10  Gárgola                10 |  13.2s    36%  gana
+cazador   20  Quimera menor           19 |  10.3s    30%  gana
+cazador   30  Liche de Eclipse        27 |   9.7s    21%  gana
+cazador    8  Alma pálida            11 |  15.2s    69%  gana
+cazador    8  Cultista de Umbra       13 |  17.1s   100%  PIERDE
+cazador    8  Hidra sombría          21 |   7.6s   100%  PIERDE
+cazador   12  Demonio de marea        17 |  19.7s   100%  PIERDE
+cazador   20  Titán de escoria       25 |  25.5s   100%  PIERDE
+clerigo    5  Escarabajo de seto       5 |  11.0s    25%  gana
+clerigo   10  Gárgola                10 |  13.4s    36%  gana
+clerigo   20  Quimera menor           19 |  21.0s    14%  gana
+clerigo   30  Liche de Eclipse        27 |  21.3s     8%  gana
+clerigo    8  Alma pálida            11 |  32.7s    58%  gana
+clerigo    8  Cultista de Umbra       13 |  39.9s    55%  gana
+clerigo    8  Hidra sombría          21 |  34.9s   100%  PIERDE
+clerigo   12  Demonio de marea        17 |  46.1s    45%  gana
+clerigo   20  Titán de escoria       25 |  67.4s    35%  gana
