@@ -18,6 +18,7 @@ local ACCIONES = {
   gremio_expulsar = true, gremio_rango = true, gremio_disolver = true,
   oficio_elegir = true, oficio_info = true, mercancia_info = true, mercancia_comprar = true, mercancia_vender = true,
   robar = true, perista_vender = true, montura_comprar = true, montura_alternar = true, montura_info = true, escoltar = true,
+  subasta_info = true, subasta_publicar = true, subasta_pujar = true, subasta_comprar = true, subasta_cancelar = true, subasta_cobrar = true,
 }
 
 local function finito(n)
@@ -57,6 +58,26 @@ function A.aceptar(mundo, pj, nombre, datos)
     return true, { id = id, sube = datos.sube and true or false }
   end
   if nombre == "gremio_responder" then return true, { acepta = datos.acepta and true or false } end
+  if nombre:sub(1, 8) == "subasta_" then
+    local function num(v, max)
+      v = tonumber(v)
+      if not v or not finito(v) or v < 0 or v > (max or 1e9) then return nil end
+      return math.floor(v)
+    end
+    local limpio = { cat = type(datos.cat) == "string" and #datos.cat <= 12 and datos.cat or "todo", pagina = num(datos.pagina, 1000) or 1 }
+    if nombre == "subasta_publicar" then
+      limpio.idx, limpio.cant, limpio.salida = num(datos.idx, 64), num(datos.cant, 9999), num(datos.salida, 1e8)
+      limpio.compra, limpio.horas = num(datos.compra, 1e8) or 0, num(datos.horas, 48)
+      if not (limpio.idx and limpio.cant and limpio.salida and limpio.horas) then return false end
+    elseif nombre == "subasta_pujar" then
+      limpio.id, limpio.oferta = num(datos.id, 1e12), num(datos.oferta, 1e9)
+      if not (limpio.id and limpio.oferta) then return false end
+    elseif nombre == "subasta_comprar" or nombre == "subasta_cancelar" then
+      limpio.id = num(datos.id, 1e12)
+      if not limpio.id then return false end
+    end
+    return true, limpio
+  end
   if nombre == "oficio_elegir" then
     if type(datos.job) ~= "string" or #datos.job > 12 then return false end
     return true, { job = datos.job }

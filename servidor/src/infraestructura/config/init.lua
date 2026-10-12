@@ -59,4 +59,12 @@ return {
     tasa_mensajes = entero("DOSCORONAS_TASA_MENSAJES", 40, 5, 1000),
     fotos_por_segundo = numero("DOSCORONAS_FOTOS_POR_SEGUNDO", 15, 2, 60),
   },
+  -- Eventos de guerra que lanza el servidor (ver programacion.lua).
+  eventos = {
+    activos = texto("DOSCORONAS_EVENTOS", "si"):lower() ~= "no",
+    estandarteCadaHoras = entero("DOSCORONAS_ESTANDARTE_CADA_HORAS", 4, 1, 24),
+    batallaHora = entero("DOSCORONAS_BATALLA_HORA", 21, 0, 23),
+    batallaMinuto = entero("DOSCORONAS_BATALLA_MINUTO", 0, 0, 59),
+    avisoMinutos = entero("DOSCORONAS_EVENTOS_AVISO_MINUTOS", 5, 0, 60),
+  },
 }

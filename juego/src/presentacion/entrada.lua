@@ -108,6 +108,51 @@ function Entrada.manejar(app, id)
   end
   if id:sub(1, 7) == "mt_alt_" then app.actuar("montura_alternar", { especie = id:sub(8) }) return end
   if id:sub(1, 7) == "mt_buy_" then app.actuar("montura_comprar", { especie = id:sub(8) }) return end
+  if id:sub(1, 5) == "foco_" and id:sub(1, 9) == "foco_sub_" then Interfaz.foco = id:sub(6) return end
+  if id:sub(1, 3) == "sb_" then
+    local function vista()
+      local c = Interfaz.subCat
+      if c == "vender" or c == "mias" or c == "buzon" then c = "todo" end
+      return { cat = c or "todo", pagina = Interfaz.subPag or 1 }
+    end
+    local function con(datos)
+      local v = vista()
+      datos.cat, datos.pagina = v.cat, v.pagina
+      return datos
+    end
+    local campos = Interfaz.subCampos or { oferta = "", cant = "1", salida = "", compra = "" }
+    Interfaz.subCampos = campos
+    if id:sub(1, 7) == "sb_tab_" then
+      Interfaz.subCat, Interfaz.subPag, Interfaz.foco = id:sub(8), 1, nil
+      app.actuar("subasta_info", vista())
+    elseif id:sub(1, 8) == "sb_fila_" then Interfaz.subSel = tonumber(id:sub(9))
+    elseif id == "sb_prev" then Interfaz.subPag = math.max(1, (Interfaz.subPag or 1) - 1) app.actuar("subasta_info", vista())
+    elseif id == "sb_next" then Interfaz.subPag = (Interfaz.subPag or 1) + 1 app.actuar("subasta_info", vista())
+    elseif id == "sb_pujar" then
+      local d = Interfaz.datosPanel.subastas
+      local minima
+      for _, s in ipairs(d and d.lista or {}) do if s.id == Interfaz.subSel then minima = s.minima end end
+      local oferta = tonumber(campos.oferta) or minima
+      if Interfaz.subSel and oferta then app.actuar("subasta_pujar", con({ id = Interfaz.subSel, oferta = oferta })) end
+      campos.oferta, Interfaz.foco = "", nil
+    elseif id == "sb_comprar" then
+      if Interfaz.subSel then app.actuar("subasta_comprar", con({ id = Interfaz.subSel })) end
+    elseif id == "sb_pub" then
+      app.actuar("subasta_publicar", con({
+        idx = Interfaz.subIdx, cant = tonumber(campos.cant) or 1, salida = tonumber(campos.salida) or 0,
+        compra = tonumber(campos.compra) or 0, horas = Interfaz.subHoras or 12,
+      }))
+      Interfaz.subIdx, campos.salida, campos.compra, campos.cant, Interfaz.foco = nil, "", "", "1", nil
+    elseif id:sub(1, 8) == "sb_item_" then
+      Interfaz.subIdx = tonumber(id:sub(9))
+      local slot = app.jugador and app.jugador.bolsa[Interfaz.subIdx]
+      campos.cant = tostring(slot and slot.cant or 1)
+    elseif id:sub(1, 7) == "sb_dur_" then Interfaz.subHoras = tonumber(id:sub(8))
+    elseif id:sub(1, 10) == "sb_cancel_" then app.actuar("subasta_cancelar", con({ id = tonumber(id:sub(11)) }))
+    elseif id == "sb_cobrar" then app.actuar("subasta_cobrar", vista())
+    end
+    return
+  end
   if id == "foco_gremio_nombre" then Interfaz.foco = "gremio_nombre" return end
   if id == "foco_gremio_tag" then Interfaz.foco = "gremio_tag" return end
   if id == "gr_crear" then
@@ -289,6 +334,10 @@ function Entrada.texto(app, t)
     if #app.cuenta.clave < 64 and t:byte() >= 32 then app.cuenta.clave = app.cuenta.clave .. t end
   elseif Interfaz.foco == "chat" then
     if #Interfaz.texto < 120 then Interfaz.texto = Interfaz.texto .. t end
+  elseif Interfaz.foco and Interfaz.foco:sub(1, 4) == "sub_" then
+    local clave = Interfaz.foco:sub(5)
+    Interfaz.subCampos = Interfaz.subCampos or { oferta = "", cant = "1", salida = "", compra = "" }
+    if t:match("^%d$") and #(Interfaz.subCampos[clave] or "") < 9 then Interfaz.subCampos[clave] = (Interfaz.subCampos[clave] or "") .. t end
   elseif Interfaz.foco == "gremio_nombre" then
     Interfaz.gremioNombre = Interfaz.gremioNombre or ""
     if #Interfaz.gremioNombre < 24 and t:byte() >= 32 then Interfaz.gremioNombre = Interfaz.gremioNombre .. t end
@@ -331,6 +380,9 @@ function Entrada.tecla(app, tecla)
     elseif Interfaz.foco == "usuario" then app.cuenta.usuario = Util.popUtf8(app.cuenta.usuario or "")
     elseif Interfaz.foco == "clave" then app.cuenta.clave = Util.popUtf8(app.cuenta.clave or "")
     elseif Interfaz.foco == "chat" then Interfaz.texto = Util.popUtf8(Interfaz.texto or "")
+    elseif Interfaz.foco and Interfaz.foco:sub(1, 4) == "sub_" then
+      local clave = Interfaz.foco:sub(5)
+      if Interfaz.subCampos then Interfaz.subCampos[clave] = Util.popUtf8(Interfaz.subCampos[clave] or "") end
     elseif Interfaz.foco == "gremio_nombre" then Interfaz.gremioNombre = Util.popUtf8(Interfaz.gremioNombre or "")
     elseif Interfaz.foco == "gremio_tag" then Interfaz.gremioTag = Util.popUtf8(Interfaz.gremioTag or "") end
     return
@@ -344,7 +396,7 @@ function Entrada.tecla(app, tecla)
       Interfaz.foco = nil
       return
     end
-    if app.estado == "juego" and (Interfaz.foco == "gremio_nombre" or Interfaz.foco == "gremio_tag") then
+    if app.estado == "juego" and (Interfaz.foco == "gremio_nombre" or Interfaz.foco == "gremio_tag" or (Interfaz.foco and Interfaz.foco:sub(1, 4) == "sub_")) then
       Interfaz.foco = nil
       return
     end

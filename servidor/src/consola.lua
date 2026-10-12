@@ -17,7 +17,12 @@ end
 function Consola.cargar()
   nota("Dos Coronas — servidor")
   nota("Configuración: " .. (Config.origen or "valores por defecto (no hay .env)"))
-  estado.mundo = Servicio.crearMundo()
+  estado.mundo = Servicio.crearMundo({ eventos = Config.eventos })
+  if estado.mundo.horarioEventos then
+    local c = estado.mundo.horarioEventos
+    nota("Eventos programados: estandarte cada " .. c.estandarteCadaHoras .. " h, batalla por cristales a las " ..
+      string.format("%02d:%02d", c.batallaHora, c.batallaMinuto))
+  end
   local srv, err = Red.escuchar(Config.red.puerto)
   if not srv then
     nota("No se pudo abrir el puerto " .. Config.red.puerto .. ": " .. tostring(err))

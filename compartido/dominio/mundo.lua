@@ -12,6 +12,8 @@ local Oficios = require("compartido.dominio.oficios")
 local Ley = require("compartido.dominio.ley")
 local Caravanas = require("compartido.dominio.caravanas")
 local Monturas = require("compartido.dominio.monturas")
+local Subastas = require("compartido.dominio.subastas")
+local Programacion = require("compartido.dominio.programacion")
 
 local Mundo = {}
 Mundo.__index = Mundo
@@ -39,6 +41,7 @@ function Mundo.nuevo()
   -- puertos de salida que la aplicación enchufa (el dominio no conoce la base de datos)
   self.puertos = {}
   self:iniciarGremios()
+  self:iniciarSubastas()
   self.gloria = { albor = 0, umbra = 0 }
   self.evento = { tipo = nil, hasta = 0 }
   self.instancia = {
@@ -284,7 +287,7 @@ function Mundo:poblar()
         id = self:idNuevo(), kind = n.rol == "guardia" and "guardia" or "npc",
         nombre = n.nombre, rol = n.rol, faccion = n.faccion,
         x = n.x, y = n.y, modo = "mundo", dir = 1, vivo = true,
-        clase = ({ mercado = "mago", heraldo = "clerigo", mayordomo = "guerrero", encargos = "cazador", guardia = "guerrero", encantador = "mago", criador = "cazador", gremio = "guerrero", oficios = "guerrero", comercio = "guerrero", establo = "cazador" })[n.rol] or "guerrero",
+        clase = ({ mercado = "mago", heraldo = "clerigo", mayordomo = "guerrero", encargos = "cazador", guardia = "guerrero", encantador = "mago", criador = "cazador", gremio = "guerrero", oficios = "guerrero", comercio = "guerrero", establo = "cazador", subastas = "mago" })[n.rol] or "guerrero",
         nivel = 12, hp = 400, hpMax = 400, atk = 28, def = 14, matk = 8, mdef = 7, spd = 3.2, rango = 1.4,
         cds = {},
         equipo = { arma = "guerrero_arma_2", pecho = "guerrero_pecho_2", cabeza = "guerrero_cabeza_2" },
@@ -1553,6 +1556,7 @@ function Mundo:resumenEvento(modo)
     cola = cola,
     dentro = dentro,
     activa = inst and inst.activa and not inst.fin or false,
+    programa = self:programaDe(modo),
   }
 end
 
@@ -1568,13 +1572,14 @@ function Mundo:meterEnCampo(p, modo)
   p.zona = nombre
   if p.kind == "jugador" then
     local hoy = os.date("%Y-%m-%d")
+    local clave = self:claveEdicion(modo)
     p.eventosDia = p.eventosDia or {}
-    p.eventosDia[modo] = hoy
+    p.eventosDia[clave] = hoy
     if p.dbId then
-      if self.puertos.marcarEvento then self.puertos.marcarEvento(p.dbId, modo) end
+      if self.puertos.marcarEvento then self.puertos.marcarEvento(p.dbId, clave) end
     end
   end
-  self:mensaje("sistema", "", p.nombre .. " entra en " .. nombre .. ". Hoy ya no podrás repetirlo.", p)
+  self:mensaje("sistema", "", p.nombre .. " entra en " .. nombre .. ". No podrás repetir esta edición.", p)
 end
 
 function Mundo:empezarEvento(modo)
@@ -1600,8 +1605,8 @@ function Mundo:entrarGuerra(p, modo)
   if p.colaGuerra and p.colaGuerra ~= modo then return "Sal de la otra cola antes de apuntarte." end
   local hoy = os.date("%Y-%m-%d")
   p.eventosDia = p.eventosDia or {}
-  if p.eventosDia[modo] == hoy then
-    return "Ya jugaste " .. self:nombreEvento(modo) .. " hoy. Cada evento es una vez al día."
+  if p.eventosDia[self:claveEdicion(modo)] == hoy then
+    return "Ya participaste en esta edición de " .. self:nombreEvento(modo) .. ". Espera a la siguiente."
   end
   if (p.ultimoGolpe or 0) + 4 > self.tiempo and p.modo == "mundo" then
     return "Sal del combate antes de entrar."
@@ -1614,6 +1619,13 @@ function Mundo:entrarGuerra(p, modo)
   p.colaGuerra = modo
   local n = self:contarCola(modo)
   local min = Datos.JUGADORES_EVENTO
+  local programa = self:programaDe(modo)
+  if programa then
+    -- el servidor lo lanza a su hora: aquí solo queda inscrito
+    self:mensaje("sistema", "", string.format("Quedas inscrito en %s: empieza a las %s si hay %d jugadores por corona (ahora Albor %d, Umbra %d).",
+      self:nombreEvento(modo), programa.hora, min, n.albor, n.umbra), p)
+    return nil
+  end
   self:mensaje("sistema", "", string.format(
     "Te apuntas a %s. Albor %d/%d, Umbra %d/%d.",
     self:nombreEvento(modo), n.albor, min, n.umbra, min
@@ -2155,6 +2167,7 @@ function Mundo:interactuar(p)
     if mejor.rol == "oficios" or mejor.rol == "capitan" or mejor.rol == "contacto" then return { panel = "oficios" } end
     if mejor.rol == "comercio" then return { panel = "mercancias" } end
     if mejor.rol == "establo" then return { panel = "establo" } end
+    if mejor.rol == "subastas" then return { panel = "subastas" } end
     if mejor.rol == "criador" then return { panel = "mascotas" } end
     if mejor.rol == "gremio" then return { panel = "gremio" } end
     if mejor.rol == "mayordomo" then return { panel = "vivienda", ciudad = self:ciudadEn(p.x, p.y) and self:ciudadEn(p.x, p.y).id } end
@@ -2277,6 +2290,8 @@ function Mundo:actualizar(dt)
     if e and e.estados then self:actualizarEstados(e) end
   end
   self:actualizarCaravanas(dt)
+  self:actualizarSubastas(dt)
+  self:actualizarProgramacion(dt)
   self._presionT = (self._presionT or 0) + dt
   if self._presionT >= 5 then
     self:recuperarPresion(self._presionT)
@@ -2639,6 +2654,7 @@ function Mundo:accion(pid, nombre, datos)
   if nombre == "comercio_ok" then self:aceptarComercio(p) end
   if nombre == "comercio_no" then self:cancelarComercio(p) return { panel = nil } end
   if nombre:sub(1, 7) == "gremio_" and p then return self:accionGremio(p, nombre, datos or {}) end
+  if nombre:sub(1, 8) == "subasta_" and p then return self:accionSubasta(p, nombre, datos or {}) end
   if p and (nombre:sub(1, 7) == "oficio_" or nombre:sub(1, 10) == "mercancia_" or nombre:sub(1, 8) == "montura_"
     or nombre == "robar" or nombre == "perista_vender" or nombre == "escoltar") then
     return self:accionOficio(p, nombre, datos or {})
@@ -2653,5 +2669,7 @@ Oficios.instalar(Mundo)
 Ley.instalar(Mundo)
 Caravanas.instalar(Mundo)
 Monturas.instalar(Mundo)
+Subastas.instalar(Mundo)
+Programacion.instalar(Mundo)
 
 return Mundo

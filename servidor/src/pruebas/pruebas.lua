@@ -895,6 +895,245 @@ function Pruebas.correr()
     mundo:recalcularCarga(mc)
     fallar(errores, "ir montado reduce el freno de la carga", montado < mc.penalCarga, montado .. " vs " .. mc.penalCarga)
   end)
+  paso("casa de subastas", function()
+    local Subastas = require("compartido.dominio.subastas")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local reloj = 1000000
+    mundo.relojSubastas = function() return reloj end
+    local function jug(nombre, dbId)
+      local e = mundo:crearPersonaje({ nombre = nombre, faccion = "albor", clase = "guerrero", nivel = 10 })
+      e.dbId, e.oro = dbId, 10000
+      return e
+    end
+    local v, a, b = jug("Vende", 201), jug("Pujo1", 202), jug("Pujo2", 203)
+    v.bolsa = { { id = "guerrero_arma_2", cant = 1, enc = 3 }, { id = "pocion_vida", cant = 10 } }
+    -- publicar
+    fallar(errores, "elige objeto válido", mundo:publicarSubasta(v, 9, 1, 100, nil, 6) ~= nil)
+    fallar(errores, "precio de salida válido", mundo:publicarSubasta(v, 1, 1, 0, nil, 6) ~= nil)
+    fallar(errores, "la compra supera a la salida", mundo:publicarSubasta(v, 1, 1, 100, 50, 6) ~= nil)
+    fallar(errores, "duración válida", mundo:publicarSubasta(v, 1, 1, 100, nil, 5) ~= nil)
+    local oro0 = v.oro
+    fallar(errores, "publica con compra", mundo:publicarSubasta(v, 1, 1, 100, 500, 6) == nil)
+    fallar(errores, "cobra comisión y retira el objeto", v.oro == oro0 - math.max(5, math.floor(100 * Subastas.COMISION)) and #v.bolsa == 1)
+    fallar(errores, "publica parte de una pila", mundo:publicarSubasta(v, 1, 4, 20, nil, 1) == nil and v.bolsa[1].cant == 6)
+    local primera, segunda
+    for id, s in pairs(mundo.subastas) do if s.item == "guerrero_arma_2" then primera = s else segunda = s end end
+    fallar(errores, "el encantamiento viaja con el objeto", primera.enc == 3)
+    fallar(errores, "dura lo que dijo", primera.termina - primera.creada == 6 * 3600)
+    -- pujar
+    fallar(errores, "no se puja por lo propio", mundo:pujarSubasta(v, primera.id, 200) ~= nil)
+    fallar(errores, "puja mínima", mundo:pujarSubasta(a, primera.id, 99) ~= nil)
+    fallar(errores, "puja", mundo:pujarSubasta(a, primera.id, 100) == nil and a.oro == 9900 and primera.postor == 202)
+    fallar(errores, "el mejor postor no puja otra vez", mundo:pujarSubasta(a, primera.id, 200) ~= nil)
+    fallar(errores, "la siguiente puja sube un 5%", mundo:pujarSubasta(b, primera.id, 104) ~= nil and mundo:pujarSubasta(b, primera.id, 105) == nil)
+    fallar(errores, "al ser superado recupera el oro", a.oro == 10000 and b.oro == 9895)
+    fallar(errores, "sin oro no puja", (function() b.oro = 1 return mundo:pujarSubasta(b, primera.id, 500) end)() ~= nil)
+    b.oro = 9895
+    -- antibotes: pujar al final alarga
+    reloj = primera.termina - 30
+    fallar(errores, "puja de última hora", mundo:pujarSubasta(a, primera.id, 120) == nil)
+    fallar(errores, "alarga la subasta", primera.termina >= reloj + Subastas.TIEMPO_EXTRA)
+    -- comprar ya
+    local oroB = b.oro
+    fallar(errores, "compra inmediata", mundo:comprarSubasta(b, primera.id) == nil and mundo.subastas[primera.id] == nil)
+    fallar(errores, "paga el precio de compra", b.oro == oroB - 500)
+    fallar(errores, "el anterior postor recupera su puja", a.oro == 10000)
+    local bz = mundo.buzones[203]
+    fallar(errores, "el comprador tiene el objeto en el buzón", bz and bz[1].item == "guerrero_arma_2" and bz[1].enc == 3)
+    local bv = mundo.buzones[201]
+    local neto = 500 - math.floor(500 * Subastas.IMPUESTO)
+    fallar(errores, "el vendedor cobra menos el impuesto", bv and bv[1].oro == neto, tostring(bv and bv[1].oro))
+    -- recoger el buzón
+    fallar(errores, "recoge el buzón", mundo:cobrarBuzon(b) == nil and mundo:contarBuzon(b) == 0)
+    local tiene = false
+    for _, s in ipairs(b.bolsa) do if s.id == "guerrero_arma_2" and s.enc == 3 then tiene = true end end
+    fallar(errores, "el objeto llega con su +3", tiene)
+    local oroV = v.oro
+    mundo:cobrarBuzon(v)
+    fallar(errores, "el vendedor recibe el oro", v.oro == oroV + neto)
+    fallar(errores, "buzón vacío", mundo:cobrarBuzon(v) ~= nil)
+    -- sin pujas el objeto vuelve
+    reloj = reloj + 10
+    reloj = segunda.termina + 1
+    mundo._subT = 10
+    mundo:actualizarSubastas(1)
+    fallar(errores, "la subasta sin pujas termina", mundo.subastas[segunda.id] == nil)
+    fallar(errores, "el objeto vuelve a su dueño", mundo:contarBuzon(v) == 1)
+    mundo:cobrarBuzon(v)
+    local pociones = 0
+    for _, s in ipairs(v.bolsa) do if s.id == "pocion_vida" then pociones = pociones + s.cant end end
+    fallar(errores, "recupera las pociones", pociones == 10, tostring(pociones))
+    -- ganar al terminar el tiempo
+    mundo:publicarSubasta(v, 1, 1, 50, nil, 1)
+    local s3
+    for _, s in pairs(mundo.subastas) do s3 = s end
+    mundo:pujarSubasta(a, s3.id, 60)
+    reloj = s3.termina + 1
+    mundo._subT = 10
+    mundo:actualizarSubastas(1)
+    fallar(errores, "gana el mejor postor", mundo.subastas[s3.id] == nil and mundo:contarBuzon(a) == 1 and mundo:contarBuzon(v) >= 1)
+    -- cancelar
+    mundo:cobrarBuzon(a)
+    mundo:cobrarBuzon(v)
+    v.bolsa = { { id = "pocion_mana", cant = 3 } }
+    mundo:publicarSubasta(v, 1, 3, 10, nil, 12)
+    local s4
+    for _, s in pairs(mundo.subastas) do s4 = s end
+    fallar(errores, "otro no cancela", mundo:cancelarSubasta(a, s4.id) ~= nil)
+    mundo:pujarSubasta(a, s4.id, 10)
+    fallar(errores, "con pujas no se cancela", mundo:cancelarSubasta(v, s4.id) ~= nil)
+    s4.postor = nil
+    fallar(errores, "sin pujas se cancela", mundo:cancelarSubasta(v, s4.id) == nil and mundo:contarBuzon(v) == 1)
+    -- límite por jugador
+    v.bolsa = {}
+    for i = 1, 10 do v.bolsa[i] = { id = "guerrero_arma_" .. (i % 4 + 1), cant = 1 } end
+    v.oro = 100000
+    local publicadas = 0
+    for _ = 1, 10 do if mundo:publicarSubasta(v, 1, 1, 10, nil, 1) == nil then publicadas = publicadas + 1 end end
+    fallar(errores, "máximo de subastas por jugador", publicadas == Subastas.MAX_POR_JUGADOR, tostring(publicadas))
+    -- lo que ve el panel: categorías y páginas
+    local info = mundo:infoSubastas(a, "arma", 1)
+    fallar(errores, "el panel filtra por categoría", info.total == publicadas and #info.lista <= Subastas.POR_PAGINA)
+    fallar(errores, "el panel pagina", info.paginas == math.ceil(publicadas / Subastas.POR_PAGINA))
+    fallar(errores, "otras categorías vacías", mundo:infoSubastas(a, "armadura", 1).total == 0)
+    fallar(errores, "mis subastas", #mundo:infoSubastas(v, "todo", 1).mias == publicadas)
+    -- el almacén guarda subastas y buzones
+    local usuario = "su" .. string.format("%06d", os.time() % 1000000)
+    Cuentas.borrarUsuario(usuario)
+    local idCuenta = Cuentas.registrar(usuario, "clave12")
+    local p1 = idCuenta and Cuentas.crearPersonaje(idCuenta, "SubUno" .. string.format("%03d", os.time() % 1000), "albor", "guerrero")
+    local p2 = idCuenta and Cuentas.crearPersonaje(idCuenta, "SubDos" .. string.format("%03d", os.time() % 1000), "albor", "mago")
+    fallar(errores, "personajes de prueba", p1 ~= nil and p2 ~= nil)
+    if p1 and p2 then
+      local id = 800000 + os.time() % 90000
+      local s = { id = id, vendedor = p1, vendedorNombre = "SubUno", item = "guerrero_arma_3", cant = 1, enc = 2, salida = 90, compra = 400,
+        oferta = 120, postor = p2, postorNombre = "SubDos", creada = os.time(), termina = os.time() + 3600 }
+      local ok, err = Cuentas.guardarSubasta(s)
+      fallar(errores, "guarda la subasta", ok, tostring(err))
+      s.oferta = 150
+      Cuentas.guardarSubasta(s)
+      local ok2 = Cuentas.guardarBuzon(p2, { { item = "pocion_vida", cant = 3, oro = 0, nota = "prueba" }, { oro = 77, nota = "oro" } })
+      fallar(errores, "guarda el buzón", ok2)
+      local lista, buzones = Cuentas.cargarSubastas()
+      local hallada
+      for _, x in ipairs(lista or {}) do if x.id == id then hallada = x end end
+      fallar(errores, "recupera la subasta con su puja", hallada and hallada.oferta == 150 and hallada.postor == p2 and hallada.enc == 2 and hallada.compra == 400)
+      fallar(errores, "recupera el buzón", buzones and buzones[p2] and #buzones[p2] == 2 and buzones[p2][2].oro == 77)
+      local m2 = Mundo.nuevo()
+      m2:cargarSubastas(lista, buzones)
+      fallar(errores, "el mundo retoma las subastas", m2.subastas[id] ~= nil and m2.siguienteSubasta > id)
+      Cuentas.borrarSubasta(id)
+      Cuentas.guardarBuzon(p2, {})
+      local l2, b2 = Cuentas.cargarSubastas()
+      local sigue = false
+      for _, x in ipairs(l2 or {}) do if x.id == id then sigue = true end end
+      fallar(errores, "borrar quita la subasta y el buzón", not sigue and not (b2 and b2[p2]))
+    end
+    Cuentas.borrarUsuario(usuario)
+  end)
+  paso("eventos programados por el servidor", function()
+    local Programacion = require("compartido.dominio.programacion")
+    local function hora(h, m, dia)
+      return os.time({ year = 2030, month = 3, day = dia or 10, hour = h, min = m or 0, sec = 0 })
+    end
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local reloj = hora(10, 30)
+    mundo.relojEventos = function() return reloj end
+    mundo:programarEventos({ estandarteCadaHoras = 4, batallaHora = 21, batallaMinuto = 0, avisoMinutos = 5 })
+    -- próximas ediciones
+    fallar(errores, "estandarte: a las 10:30 toca a las 12", mundo:proximaEdicion("estandarte", hora(10, 30)) == hora(12))
+    fallar(errores, "estandarte: justo a las 12 toca a las 16", mundo:proximaEdicion("estandarte", hora(12)) == hora(16))
+    fallar(errores, "estandarte: de noche pasa al día siguiente", mundo:proximaEdicion("estandarte", hora(23, 59)) == hora(0, 0, 11))
+    fallar(errores, "batalla: antes de las 21 es hoy", mundo:proximaEdicion("batalla", hora(15)) == hora(21))
+    fallar(errores, "batalla: después de las 21 es mañana", mundo:proximaEdicion("batalla", hora(21, 1)) == hora(21, 0, 11))
+    fallar(errores, "el panel sabe la hora", mundo:programaDe("estandarte").hora == "12:00" and mundo:programaDe("batalla").hora == "21:00")
+    local function equipo(cuantos, faccion, pref)
+      local lista = {}
+      for i = 1, cuantos do
+        lista[i] = mundo:crearPersonaje({ nombre = pref .. i, faccion = faccion, clase = "guerrero", nivel = 10 })
+        lista[i].ultimoGolpe = -100
+      end
+      return lista
+    end
+    local albor, umbra = equipo(3, "albor", "Al"), equipo(3, "umbra", "Um")
+    local function seg(n) for _ = 1, n do mundo:actualizar(1) end end
+    -- inscripción: queda apuntado pero NO empieza solo aunque haya jugadores de sobra
+    for _, e in ipairs(albor) do fallar(errores, "se apunta " .. e.nombre, mundo:entrarGuerra(e, "estandarte") == nil) end
+    for _, e in ipairs(umbra) do mundo:entrarGuerra(e, "estandarte") end
+    fallar(errores, "con la programación no empieza solo", not mundo.instancia.estandarte.activa and albor[1].colaGuerra == "estandarte")
+    -- aviso antes de la hora
+    local avisos = 0
+    local function contarAvisos()
+      avisos = 0
+      for _, m in ipairs(mundo.mensajes) do
+        if m.canal == "mundo" and m.texto:find("empieza a las 12:00", 1, true) then avisos = avisos + 1 end
+      end
+    end
+    reloj = hora(11, 53)
+    seg(3)
+    contarAvisos()
+    fallar(errores, "aún no avisa fuera del margen", avisos == 0)
+    reloj = hora(11, 56)
+    seg(3)
+    contarAvisos()
+    fallar(errores, "avisa a todos al abrir la inscripción", avisos == 1, tostring(avisos))
+    seg(3)
+    contarAvisos()
+    fallar(errores, "el aviso sale una sola vez", avisos == 1)
+    -- a la hora: lo lanza el servidor
+    reloj = hora(12, 0)
+    seg(2)
+    fallar(errores, "a las 12 empieza el estandarte", mundo.instancia.estandarte.activa and albor[1].modo == "estandarte" and umbra[2].modo == "estandarte")
+    fallar(errores, "la próxima edición pasa a las 16", mundo:programaDe("estandarte").hora == "16:00")
+    fallar(errores, "se marca la edición en la que juegan", albor[1].eventosDia["estandarte@2030031012"] ~= nil)
+    -- no se repite la misma edición pero un recién llegado puede entrar con el evento en marcha
+    local tarde = mundo:crearPersonaje({ nombre = "Tarde", faccion = "albor", clase = "mago", nivel = 10 })
+    tarde.ultimoGolpe = -100
+    fallar(errores, "entra tarde en el campo", mundo:entrarGuerra(tarde, "estandarte") == nil and tarde.modo == "estandarte")
+    mundo:cerrarInstancia("estandarte", "albor")
+    fallar(errores, "los jugadores vuelven al mundo", albor[1].modo == "mundo")
+    local err = mundo:entrarGuerra(albor[1], "estandarte")
+    fallar(errores, "la nueva edición aún no ha abierto: queda inscrito para la 16:00", err == nil and albor[1].colaGuerra == "estandarte")
+    albor[1].colaGuerra = nil
+    -- cuatro horas después, otra edición: se puede volver a jugar
+    reloj = hora(16, 0)
+    for _, e in ipairs(albor) do e.colaGuerra = nil end
+    for _, e in ipairs(umbra) do e.colaGuerra = nil end
+    for _, e in ipairs(albor) do mundo:entrarGuerra(e, "estandarte") end
+    for _, e in ipairs(umbra) do mundo:entrarGuerra(e, "estandarte") end
+    seg(2)
+    fallar(errores, "a las 16 se juega otra edición", mundo.instancia.estandarte.activa and albor[2].modo == "estandarte")
+    fallar(errores, "la siguiente es a las 20", mundo:programaDe("estandarte").hora == "20:00")
+    mundo:cerrarInstancia("estandarte", "umbra")
+    -- sin jugadores suficientes se cancela y se suelta la cola
+    local solo = mundo:crearPersonaje({ nombre = "Solo", faccion = "albor", clase = "mago", nivel = 10 })
+    solo.ultimoGolpe = -100
+    mundo:entrarGuerra(solo, "estandarte")
+    reloj = hora(20, 0)
+    seg(2)
+    fallar(errores, "sin suficientes no empieza", not mundo.instancia.estandarte.activa)
+    fallar(errores, "se suelta la cola", solo.colaGuerra == nil)
+    fallar(errores, "pasa a la siguiente edición", mundo:programaDe("estandarte").hora == "00:00")
+    -- batalla por cristales: una vez al día a las 21
+    reloj = hora(21, 0)
+    for _, e in ipairs(albor) do e.colaGuerra = nil mundo:entrarGuerra(e, "batalla") end
+    for _, e in ipairs(umbra) do e.colaGuerra = nil mundo:entrarGuerra(e, "batalla") end
+    seg(2)
+    fallar(errores, "a las 21 empieza la batalla por cristales", mundo.instancia.batalla.activa and albor[1].modo == "batalla")
+    fallar(errores, "la siguiente batalla es mañana a las 21", mundo:programaDe("batalla").hora == "21:00" and mundo.eventos.batalla.proxima == hora(21, 0, 11))
+    fallar(errores, "la batalla se marca por día", albor[1].eventosDia["batalla@20300310"] ~= nil)
+    -- sin programación todo sigue como antes (mundos locales y pruebas)
+    local Servicio = require("src.aplicacion.servicio_servidor")
+    local real = Servicio.crearMundo({ eventos = Config.eventos })
+    fallar(errores, "el servidor programa los eventos con su configuración",
+      real.horarioEventos and real.horarioEventos.estandarteCadaHoras == 4 and real.horarioEventos.batallaHora == 21,
+      tostring(real.horarioEventos and real.horarioEventos.estandarteCadaHoras))
+    fallar(errores, "el servidor sin opciones no programa", Servicio.crearMundo().horarioEventos == nil)
+    local viejo = Mundo.nuevo()
+    fallar(errores, "sin programación no hay horario", viejo.horarioEventos == nil and viejo:programaDe("estandarte") == nil and viejo:claveEdicion("batalla") == "batalla")
+  end)
   paso("equilibrio de combate por nivel", function()
     local Calibracion = require("src.pruebas.calibracion")
     local mundo = Mundo.nuevo()

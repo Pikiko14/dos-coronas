@@ -532,6 +532,22 @@ local function avanzarFoto(app)
       },
     }
   elseif foto.paso == "establo" then
+    foto.paso = "subastas"
+    Interfaz.panel = "subastas"
+    Interfaz.subCat = "todo"
+    Interfaz.subSel = 2
+    Interfaz.datosPanel.subastas = {
+      cat = "todo", pagina = 1, paginas = 2, total = 11, cerca = true, comision = 0.05, impuesto = 0.08, duraciones = { 1, 6, 12, 24 }, maxPropias = 8,
+      mias = { { id = 9, item = "pocion_vida", cant = 5, salida = 40, oferta = 0, resta = 5400 } },
+      buzon = { { item = "cazador_arma_3", cant = 1, enc = 2, oro = 0, nota = "Ganas la subasta." }, { oro = 460, nota = "Vendes." } },
+      lista = {
+        { id = 1, item = "guerrero_arma_4", cant = 1, enc = 3, vendedor = "Kael", salida = 500, compra = 1800, oferta = 640, postor = "Mira", resta = 1500, minima = 672 },
+        { id = 2, item = "mago_pecho_5", cant = 1, vendedor = "Liora", salida = 900, oferta = 0, resta = 7300, minima = 900 },
+        { id = 3, item = "anillo_3", cant = 1, enc = 1, vendedor = "Dante", salida = 120, compra = 600, oferta = 130, postor = "Tú", lider = true, resta = 20000, minima = 137 },
+        { id = 4, item = "polvo_arcano", cant = 40, vendedor = "Ana", salida = 200, oferta = 0, resta = 43000, minima = 200 },
+      },
+    }
+  elseif foto.paso == "subastas" then
     foto.paso = "batalla"
     Interfaz.panel = nil
     local j = app.jugador
@@ -583,7 +599,7 @@ function Pruebas.tickFoto(app, dt)
   if foto.espera > 0.35 and not app.capturando and foto.paso ~= "fin" then
     app.capturando = true
     local nombre = foto.paso
-    if nombre ~= "equipo" and nombre ~= "arbol" and nombre ~= "mercado" and nombre ~= "encantar" and nombre ~= "mascotas" and nombre ~= "gremio" and nombre ~= "mapa" and nombre ~= "oficios" and nombre ~= "mercancias" and nombre ~= "establo" then Interfaz.panel = nil end
+    if nombre ~= "equipo" and nombre ~= "arbol" and nombre ~= "mercado" and nombre ~= "encantar" and nombre ~= "mascotas" and nombre ~= "gremio" and nombre ~= "mapa" and nombre ~= "oficios" and nombre ~= "mercancias" and nombre ~= "establo" and nombre ~= "subastas" then Interfaz.panel = nil end
     Log.info(string.format("foto %s fps=%d panel=%s", nombre, love.timer.getFPS(), tostring(Interfaz.panel)))
     love.graphics.captureScreenshot(function(img)
       local fd = img:encode("png")

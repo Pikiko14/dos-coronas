@@ -323,6 +323,30 @@ function M.abrir()
       personaje_id BIGINT PRIMARY KEY REFERENCES personajes(id) ON DELETE CASCADE,
       rango TEXT NOT NULL CHECK (rango IN ('lider', 'oficial', 'miembro'))
     );
+    CREATE TABLE IF NOT EXISTS subasta (
+      id BIGINT PRIMARY KEY,
+      vendedor_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      vendedor_nombre TEXT NOT NULL,
+      item_id TEXT NOT NULL,
+      cant INT NOT NULL CHECK (cant >= 1),
+      enc INT NOT NULL DEFAULT 0,
+      salida BIGINT NOT NULL,
+      compra BIGINT,
+      oferta BIGINT NOT NULL DEFAULT 0,
+      postor_id BIGINT,
+      postor_nombre TEXT,
+      creada BIGINT NOT NULL,
+      termina BIGINT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS subasta_buzon (
+      id BIGSERIAL PRIMARY KEY,
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      item_id TEXT,
+      cant INT,
+      enc INT NOT NULL DEFAULT 0,
+      oro BIGINT NOT NULL DEFAULT 0,
+      nota TEXT
+    );
     ALTER TABLE personaje_equipo ADD COLUMN IF NOT EXISTS enc INT NOT NULL DEFAULT 0;
     ALTER TABLE personaje_bolsa ADD COLUMN IF NOT EXISTS enc INT NOT NULL DEFAULT 0;
     ALTER TABLE casa_cofre ADD COLUMN IF NOT EXISTS enc INT NOT NULL DEFAULT 0;
@@ -665,6 +689,76 @@ end
 function M.borrarGremio(id)
   return con(function(conn)
     local _, err = conn:consulta("DELETE FROM gremio WHERE id = " .. tonumber(id))
+    if err then return nil, err end
+    return true
+  end)
+end
+
+-- Subastas y buzones: se cargan todos al arrancar y se guardan al cambiar.
+function M.cargarSubastas()
+  return con(function(conn)
+    local filas, err = conn:consulta("SELECT * FROM subasta ORDER BY id")
+    if not filas then return nil, err end
+    local lista = {}
+    for _, r in ipairs(filas) do
+      lista[#lista + 1] = {
+        id = tonumber(r.id), vendedor = tonumber(r.vendedor_id), vendedorNombre = r.vendedor_nombre, item = r.item_id,
+        cant = tonumber(r.cant) or 1, enc = (tonumber(r.enc) or 0) > 0 and tonumber(r.enc) or nil,
+        salida = tonumber(r.salida), compra = r.compra and tonumber(r.compra) or nil, oferta = tonumber(r.oferta) or 0,
+        postor = r.postor_id and tonumber(r.postor_id) or nil, postorNombre = r.postor_nombre,
+        creada = tonumber(r.creada), termina = tonumber(r.termina),
+      }
+    end
+    local buzones = {}
+    local filasB = conn:consulta("SELECT * FROM subasta_buzon ORDER BY id") or {}
+    for _, r in ipairs(filasB) do
+      local dbId = tonumber(r.personaje_id)
+      buzones[dbId] = buzones[dbId] or {}
+      local b = buzones[dbId]
+      b[#b + 1] = {
+        item = r.item_id, cant = r.cant and tonumber(r.cant) or nil, enc = (tonumber(r.enc) or 0) > 0 and tonumber(r.enc) or nil,
+        oro = tonumber(r.oro) or 0, nota = r.nota,
+      }
+    end
+    return lista, buzones
+  end)
+end
+
+function M.guardarSubasta(s)
+  return con(function(conn)
+    local _, err = conn:consulta(
+      "INSERT INTO subasta (id, vendedor_id, vendedor_nombre, item_id, cant, enc, salida, compra, oferta, postor_id, postor_nombre, creada, termina) VALUES (" ..
+      tonumber(s.id) .. "," .. tonumber(s.vendedor) .. "," .. Pg.literal(s.vendedorNombre) .. "," .. Pg.literal(s.item) .. "," ..
+      entero(s.cant) .. "," .. entero(s.enc) .. "," .. entero(s.salida) .. "," .. (s.compra and entero(s.compra) or "NULL") .. "," ..
+      entero(s.oferta) .. "," .. (s.postor and tonumber(s.postor) or "NULL") .. "," .. Pg.literal(s.postorNombre) .. "," ..
+      entero(s.creada) .. "," .. entero(s.termina) .. ") ON CONFLICT (id) DO UPDATE SET oferta = EXCLUDED.oferta, " ..
+      "postor_id = EXCLUDED.postor_id, postor_nombre = EXCLUDED.postor_nombre, termina = EXCLUDED.termina"
+    )
+    if err then return nil, err end
+    return true
+  end)
+end
+
+function M.borrarSubasta(id)
+  return con(function(conn)
+    local _, err = conn:consulta("DELETE FROM subasta WHERE id = " .. tonumber(id))
+    if err then return nil, err end
+    return true
+  end)
+end
+
+function M.guardarBuzon(dbId, lista)
+  return con(function(conn)
+    local q = { "DELETE FROM subasta_buzon WHERE personaje_id = " .. tonumber(dbId) }
+    local filas = {}
+    for _, e in ipairs(lista or {}) do
+      filas[#filas + 1] = "(" .. tonumber(dbId) .. "," .. (e.item and Pg.literal(e.item) or "NULL") .. "," ..
+        (e.cant and entero(e.cant) or "NULL") .. "," .. entero(e.enc) .. "," .. entero(e.oro) .. "," .. Pg.literal(e.nota) .. ")"
+    end
+    if #filas > 0 then
+      q[#q + 1] = "INSERT INTO subasta_buzon (personaje_id, item_id, cant, enc, oro, nota) VALUES " .. table.concat(filas, ",")
+    end
+    local _, err = conn:consulta(table.concat(q, ";\n"))
     if err then return nil, err end
     return true
   end)

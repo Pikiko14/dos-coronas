@@ -13,8 +13,10 @@ local Servicio = {}
 local TASA_POR_DEFECTO = 40
 
 -- Mundo nuevo con el puerto de progreso diario enchufado al almacén.
-function Servicio.crearMundo()
+function Servicio.crearMundo(opciones)
   local mundo = Mundo.nuevo()
+  -- los eventos de guerra los lanza el servidor a sus horas
+  if opciones and opciones.eventos and opciones.eventos.activos then mundo:programarEventos(opciones.eventos) end
   mundo.puertos.marcarEvento = function(...) return Cuentas.marcarEvento(...) end
   -- los gremios se cargan al arrancar y cada cambio se guarda al momento
   mundo.puertos.guardarGremio = function(g)
@@ -26,6 +28,24 @@ function Servicio.crearMundo()
     if not ok then Log.warn("borrado del gremio " .. tostring(id) .. ": " .. tostring(err)) end
   end
   mundo:cargarGremios(Cuentas.cargarGremios() or {})
+  -- subastas y buzones: se cargan al arrancar y cada cambio se guarda al momento
+  local subastas, buzones = Cuentas.cargarSubastas()
+  mundo:cargarSubastas(subastas or {}, buzones or {})
+  mundo.puertos.guardarSubasta = function(s)
+    local ok, err = Cuentas.guardarSubasta(s)
+    if not ok then Log.warn("guardado de la subasta " .. tostring(s.id) .. ": " .. tostring(err)) end
+  end
+  mundo.puertos.borrarSubasta = function(id)
+    local ok, err = Cuentas.borrarSubasta(id)
+    if not ok then Log.warn("borrado de la subasta " .. tostring(id) .. ": " .. tostring(err)) end
+  end
+  mundo.puertos.guardarBuzon = function(dbId, lista)
+    local ok, err = Cuentas.guardarBuzon(dbId, lista)
+    if not ok then Log.warn("guardado del buzón " .. tostring(dbId) .. ": " .. tostring(err)) end
+  end
+  mundo.puertos.guardarJugador = function(p)
+    if p.remoto then Servicio.guardarUno(mundo, p) end
+  end
   return mundo
 end
 

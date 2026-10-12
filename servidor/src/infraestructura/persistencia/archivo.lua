@@ -22,7 +22,7 @@ local almacen
 local function leerAlmacen()
   if almacen then return almacen end
   almacen = {
-    sigCuenta = 1, sigPj = 1, cuentas = {}, personajes = {}, gremios = {},
+    sigCuenta = 1, sigPj = 1, cuentas = {}, personajes = {}, gremios = {}, subastas = {}, buzones = {},
     eventos = {}, sesiones = {}, intentos = {},
   }
   if love and love.filesystem and love.filesystem.getInfo(ARCHIVO) then
@@ -212,6 +212,50 @@ function M.borrarGremio(id)
   local a = leerAlmacen()
   local _, i = buscar(a.gremios or {}, "id", id)
   if i then table.remove(a.gremios, i) end
+  return volcarAlmacen()
+end
+
+-- Subastas y buzones (ver el puerto almacén). Los buzones se guardan como lista { id, entregas }.
+function M.cargarSubastas()
+  local a = leerAlmacen()
+  local lista = {}
+  for _, s in ipairs(a.subastas or {}) do
+    local c = {}
+    for k, v in pairs(s) do c[k] = v end
+    lista[#lista + 1] = c
+  end
+  local buzones = {}
+  for _, b in ipairs(a.buzones or {}) do buzones[b.id] = b.lista end
+  return lista, buzones
+end
+
+function M.guardarSubasta(s)
+  local a = leerAlmacen()
+  a.subastas = a.subastas or {}
+  local fila = {}
+  for k, v in pairs(s) do fila[k] = v end
+  local _, i = buscar(a.subastas, "id", s.id)
+  if i then a.subastas[i] = fila else a.subastas[#a.subastas + 1] = fila end
+  return volcarAlmacen()
+end
+
+function M.borrarSubasta(id)
+  local a = leerAlmacen()
+  local _, i = buscar(a.subastas or {}, "id", id)
+  if i then table.remove(a.subastas, i) end
+  return volcarAlmacen()
+end
+
+function M.guardarBuzon(dbId, lista)
+  local a = leerAlmacen()
+  a.buzones = a.buzones or {}
+  local _, i = buscar(a.buzones, "id", dbId)
+  if #lista == 0 then
+    if i then table.remove(a.buzones, i) end
+  else
+    local fila = { id = dbId, lista = lista }
+    if i then a.buzones[i] = fila else a.buzones[#a.buzones + 1] = fila end
+  end
   return volcarAlmacen()
 end
 

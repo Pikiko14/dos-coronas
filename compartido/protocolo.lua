@@ -37,6 +37,7 @@ P.ACCIONES = {
   "gremio_info", "gremio_crear", "gremio_invitar", "gremio_responder", "gremio_salir", "gremio_expulsar",
   "gremio_rango", "gremio_disolver", "oficio_elegir", "oficio_info", "mercancia_info", "mercancia_comprar",
   "mercancia_vender", "robar", "perista_vender", "montura_comprar", "montura_alternar", "montura_info", "escoltar",
+  "subasta_info", "subasta_publicar", "subasta_pujar", "subasta_comprar", "subasta_cancelar", "subasta_cobrar",
 }
 
 return P

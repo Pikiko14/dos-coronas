@@ -6,6 +6,7 @@ local Estados = require("compartido.dominio.estados")
 local Encanto = require("compartido.dominio.encanto")
 local Mascotas = require("compartido.dominio.mascotas")
 local Monturas = require("compartido.dominio.monturas")
+local Subastas = require("compartido.dominio.subastas")
 local Ajustes = require("src.presentacion.ajustes")
 local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
@@ -452,6 +453,7 @@ function I.hud(mundo, p, w, h)
   elseif I.panel == "oficios" then I.panelOficios(mundo, p, vw, h)
   elseif I.panel == "mercancias" then I.panelMercancias(mundo, p, vw, h)
   elseif I.panel == "establo" then I.panelEstablo(mundo, p, vw, h)
+  elseif I.panel == "subastas" then I.panelSubastas(mundo, p, vw, h)
   elseif I.panel == "mercado" then I.panelMercado(p, vw, h)
   elseif I.panel == "comercio" then I.panelComercio(mundo, p, vw, h)
   elseif I.panel == "guerra" then I.panelGuerra(mundo, p, vw, h)
@@ -563,9 +565,10 @@ local ICONO_NPC = {
   establo = { "triangulo", { 0.72, 0.52, 0.3 }, "Cuadra (monturas)" },
   capitan = { "rombo", { 0.2, 0.85, 0.5 }, "Capitán de cazadores" },
   contacto = { "triangulo", { 0.85, 0.12, 0.2 }, "Contacto de ladrones" },
+  subastas = { "estrella", { 1, 0.75, 0.15 }, "Casa de subastas" },
 }
 I.ICONO_NPC = ICONO_NPC
-I.ORDEN_ICONOS = { "mercado", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "criador", "gremio", "oficios", "establo", "capitan", "contacto" }
+I.ORDEN_ICONOS = { "mercado", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "criador", "gremio", "oficios", "establo", "capitan", "contacto", "subastas" }
 
 function I.iconoNpc(rol, x, y, r)
   local d = ICONO_NPC[rol]
@@ -716,9 +719,9 @@ function I.lateral(mundo, p, x, y, w, h)
   -- Equipo (cuadrícula de 3x3) y cifras
   local ec = 40
   local huecos = {
-    { "anillo", 0, 0 }, { "cabeza", 1, 0 }, { "mochila", 2, 0 }, { "arma", 0, 1 }, { "pecho", 1, 1 }, { "escudo", 2, 1 }, { "piernas", 0, 2 }, { "pies", 1, 2 }, { "amuleto", 2, 2 },
+    { "amuleto", 0, 0 }, { "cabeza", 1, 0 }, { "mochila", 2, 0 }, { "arma", 0, 1 }, { "pecho", 1, 1 }, { "escudo", 2, 1 }, { "anillo", 0, 2 }, { "piernas", 1, 2 }, { "pies", 1, 3 },
   }
-  marco(ix - 4, cy, iw + 8, ec * 3 + 14, true)
+  marco(ix - 4, cy, iw + 8, ec * 4 + 14, true)
   local gx, gy = ix + 2, cy + 7
   for _, hh in ipairs(huecos) do
     local sx, sy = gx + hh[2] * (ec + 2), gy + hh[3] * (ec + 2)
@@ -756,7 +759,7 @@ function I.lateral(mundo, p, x, y, w, h)
     I.pista = "Atq: ataque físico. Mág: ataque mágico. Def: defensa física. Res: defensa mágica (resistencia). "
       .. "Los golpes físicos se reducen con Def y los mágicos con Res."
   end
-  cy = cy + ec * 3 + 20
+  cy = cy + ec * 4 + 20
 
   -- Mochila: la guardamos para calcular lo que cabe
   local cols, filas = 6, math.ceil(Datos.BOLSA / 6)
@@ -1320,6 +1323,207 @@ function I.panelEstablo(mundo, p, w, h)
     px + 14, py + ph - 58, pw - 28, "left")
 end
 
+-- ---------------------------------------------------------------------------------------
+-- Casa de subastas
+-- ---------------------------------------------------------------------------------------
+local function tiempoRestante(s)
+  s = math.floor(s)
+  if s >= 3600 then return string.format("%d h %02d m", math.floor(s / 3600), math.floor((s % 3600) / 60)) end
+  if s >= 60 then return string.format("%d min", math.floor(s / 60)) end
+  return s .. " s"
+end
+
+local function numero(c)
+  return tonumber(c) and math.floor(tonumber(c)) or nil
+end
+
+function I.panelSubastas(mundo, p, w, h)
+  local px, py, pw, ph = w / 2 - 390, 50, 780, 540
+  caja(px, py, pw, ph, "Casa de subastas")
+  I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
+  local d = I.datosPanel.subastas
+  I.subCat = I.subCat or "todo"
+  I.subCampos = I.subCampos or { oferta = "", cant = "1", salida = "", compra = "" }
+  I.subHoras = I.subHoras or 12
+  if not d then
+    love.graphics.setColor(0.7, 0.68, 0.6)
+    love.graphics.print("Consultando...", px + 14, py + 50)
+    return
+  end
+  love.graphics.setColor(0.9, 0.82, 0.5)
+  love.graphics.print("Oro: " .. math.floor(p.oro or 0) .. (d.cerca and "" or "     (acércate al subastador para operar)"), px + 150, py + 12)
+  -- pestañas
+  local pestanas = {}
+  for _, c in ipairs(Subastas.ORDEN_CATEGORIAS) do pestanas[#pestanas + 1] = { c, Subastas.CATEGORIAS[c].nombre } end
+  pestanas[#pestanas + 1] = { "vender", "Vender" }
+  pestanas[#pestanas + 1] = { "mias", "Mis subastas (" .. #d.mias .. ")" }
+  pestanas[#pestanas + 1] = { "buzon", "Buzón (" .. #d.buzon .. ")" }
+  local x = px + 12
+  for _, t in ipairs(pestanas) do
+    local ancho = love.graphics.getFont():getWidth(t[2]) + 20
+    local activa = I.subCat == t[1]
+    love.graphics.setColor(activa and 0.42 or 0.2, activa and 0.32 or 0.16, activa and 0.14 or 0.1, 0.95)
+    love.graphics.rectangle("fill", x, py + 44, ancho, 24, 3, 3)
+    love.graphics.setColor(0.8, 0.68, 0.38)
+    love.graphics.rectangle("line", x + 0.5, py + 44.5, ancho - 1, 23, 3, 3)
+    love.graphics.setColor(1, 0.95, 0.85)
+    love.graphics.print(t[2], x + 10, py + 48)
+    I.registrar(x, py + 44, ancho, 24, "sb_tab_" .. t[1])
+    x = x + ancho + 4
+  end
+  local y0 = py + 80
+
+  -- una fila de objeto con su icono y nombre
+  local function filaObjeto(item, cant, enc, x1, y1)
+    local it = Datos.item(item)
+    if it then Atlas.dibujar(it.hoja, it.sprite, x1 + 18, y1 + 20, 1, 16, 16) end
+    if enc and enc > 0 then texto("+" .. enc, x1 + 2, y1 + 2, { 0.6, 0.95, 1 }) end
+    love.graphics.setColor(0.95, 0.9, 0.75)
+    love.graphics.print((it and it.nombre or item) .. (cant > 1 and ("  x" .. cant) or ""), x1 + 42, y1 + 4)
+    if it and sobre(x1, y1, 40, 40) then I.pista = I.nombreItem(it, enc) .. " — " .. I.statsTexto(it, enc) end
+    return it
+  end
+
+  if I.subCat == "vender" then
+    love.graphics.setColor(0.85, 0.8, 0.65)
+    love.graphics.print("1. Elige el objeto de tu bolsa", px + 14, y0)
+    local cols, lado = 8, 40
+    for i = 1, Datos.capacidadBolsa(p.equipo) do
+      local col, fila = (i - 1) % cols, math.floor((i - 1) / cols)
+      local sx, sy = px + 14 + col * (lado + 4), y0 + 24 + fila * (lado + 4)
+      casilla(sx, sy, lado)
+      local slot = p.bolsa[i]
+      if I.subIdx == i then
+        love.graphics.setColor(0.9, 0.75, 0.3, 0.4)
+        love.graphics.rectangle("fill", sx, sy, lado, lado)
+      end
+      if slot then
+        iconoItem(slot, sx, sy, lado)
+        if slot.cant and slot.cant > 1 then texto(tostring(slot.cant), sx + lado - 14, sy + lado - 14, { 1, 1, 1 }) end
+        local it = Datos.item(slot.id)
+        if it and sobre(sx, sy, lado, lado) then I.pista = I.nombreItem(it, slot.enc) .. " — " .. I.statsTexto(it, slot.enc) end
+        I.registrar(sx, sy, lado, lado, "sb_item_" .. i)
+      end
+    end
+    local fx = px + 14 + 8 * 44 + 20
+    local function campo(etiqueta, clave, y1, ancho)
+      love.graphics.setColor(0.8, 0.78, 0.65)
+      love.graphics.print(etiqueta, fx, y1 + 6)
+      love.graphics.setColor(0.12, 0.1, 0.08)
+      love.graphics.rectangle("fill", fx + 130, y1, ancho, 28, 3, 3)
+      local foco = "sub_" .. clave
+      love.graphics.setColor(I.foco == foco and 0.95 or 0.5, I.foco == foco and 0.8 or 0.42, I.foco == foco and 0.35 or 0.25)
+      love.graphics.rectangle("line", fx + 130.5, y1 + 0.5, ancho - 1, 27, 3, 3)
+      love.graphics.setColor(1, 0.95, 0.85)
+      love.graphics.print(I.subCampos[clave] .. (I.foco == foco and "_" or ""), fx + 138, y1 + 6)
+      I.registrar(fx + 130, y1, ancho, 28, "foco_" .. foco)
+    end
+    love.graphics.setColor(0.85, 0.8, 0.65)
+    love.graphics.print("2. Precios y duración", fx, y0)
+    campo("Cantidad", "cant", y0 + 24, 90)
+    campo("Precio de salida", "salida", y0 + 60, 130)
+    campo("Compra ya (opcional)", "compra", y0 + 96, 130)
+    love.graphics.setColor(0.8, 0.78, 0.65)
+    love.graphics.print("Duración", fx, y0 + 138)
+    for i, hh in ipairs(d.duraciones) do
+      local activo = I.subHoras == hh
+      I.boton(fx + 130 + (i - 1) * 56, y0 + 132, 52, 26, hh .. " h", "sb_dur_" .. hh, true)
+      if activo then
+        love.graphics.setColor(1, 0.85, 0.3, 0.9)
+        love.graphics.rectangle("line", fx + 130 + (i - 1) * 56, y0 + 132, 52, 26, 4, 4)
+      end
+    end
+    local salida = numero(I.subCampos.salida) or 0
+    love.graphics.setColor(0.7, 0.68, 0.6)
+    love.graphics.printf("Publicar cuesta una comisión del " .. math.floor(d.comision * 100) .. "% del precio de salida (mínimo 5), que no se devuelve. Al vender, el impuesto es del " ..
+      math.floor(d.impuesto * 100) .. "%.", fx, y0 + 170, 290, "left")
+    local valido = d.cerca and p.bolsa[I.subIdx or 0] and salida > 0
+    I.boton(fx, y0 + 232, 220, 32, "Publicar (comisión " .. math.max(5, math.floor(salida * d.comision)) .. ")", "sb_pub", valido and true or false)
+  elseif I.subCat == "mias" then
+    if #d.mias == 0 then
+      love.graphics.setColor(0.7, 0.68, 0.6)
+      love.graphics.print("No tienes subastas activas.", px + 14, y0)
+    end
+    for i, s in ipairs(d.mias) do
+      local y = y0 + (i - 1) * 46
+      love.graphics.setColor(0.13, 0.11, 0.14)
+      love.graphics.rectangle("fill", px + 12, y, pw - 24, 42, 4, 4)
+      filaObjeto(s.item, s.cant, s.enc, px + 16, y + 1)
+      love.graphics.setColor(0.7, 0.9, 1)
+      love.graphics.print(s.oferta > 0 and ("Puja: " .. s.oferta .. " (" .. (s.postor or "") .. ")") or ("Salida: " .. s.salida .. " (sin pujas)"), px + 330, y + 4)
+      love.graphics.setColor(0.8, 0.8, 0.7)
+      love.graphics.print("Termina en " .. tiempoRestante(s.resta), px + 330, y + 22)
+      I.boton(px + pw - 24 - 110, y + 7, 110, 28, "Cancelar", "sb_cancel_" .. s.id, d.cerca and s.oferta == 0)
+    end
+  elseif I.subCat == "buzon" then
+    if #d.buzon == 0 then
+      love.graphics.setColor(0.7, 0.68, 0.6)
+      love.graphics.print("Tu buzón está vacío.", px + 14, y0)
+    end
+    for i, e in ipairs(d.buzon) do
+      if i > 9 then break end
+      local y = y0 + (i - 1) * 40
+      love.graphics.setColor(0.13, 0.11, 0.14)
+      love.graphics.rectangle("fill", px + 12, y, pw - 24, 36, 4, 4)
+      if e.item then filaObjeto(e.item, e.cant or 1, e.enc, px + 16, y - 2) end
+      love.graphics.setColor(1, 0.9, 0.4)
+      if (e.oro or 0) > 0 then love.graphics.print(e.oro .. " de oro", px + 300, y + 9) end
+      love.graphics.setColor(0.75, 0.75, 0.68)
+      love.graphics.print(e.nota or "", px + 400, y + 9)
+    end
+    I.boton(px + 14, py + ph - 52, 220, 34, "Recoger todo", "sb_cobrar", d.cerca and (#d.buzon > 0))
+  else
+    -- listado de subastas de la categoría
+    if #d.lista == 0 then
+      love.graphics.setColor(0.7, 0.68, 0.6)
+      love.graphics.print("No hay subastas en esta categoría.", px + 14, y0)
+    end
+    for i, s in ipairs(d.lista) do
+      local y = y0 + (i - 1) * 46
+      local elegida = I.subSel == s.id
+      love.graphics.setColor(elegida and 0.2 or 0.13, elegida and 0.17 or 0.11, elegida and 0.12 or 0.14)
+      love.graphics.rectangle("fill", px + 12, y, pw - 24, 42, 4, 4)
+      if elegida then
+        love.graphics.setColor(0.9, 0.75, 0.3)
+        love.graphics.rectangle("line", px + 12.5, y + 0.5, pw - 25, 41, 4, 4)
+      end
+      filaObjeto(s.item, s.cant, s.enc, px + 16, y + 1)
+      love.graphics.setColor(0.7, 0.75, 0.65)
+      love.graphics.print("de " .. s.vendedor, px + 58, y + 22)
+      love.graphics.setColor(s.lider and 0.5 or 0.9, s.lider and 1 or 0.85, s.lider and 0.5 or 0.45)
+      love.graphics.print(s.oferta > 0 and ("Puja: " .. s.oferta .. (s.lider and "  (tuya)" or "")) or ("Salida: " .. s.salida), px + 330, y + 4)
+      love.graphics.setColor(0.8, 0.8, 0.7)
+      love.graphics.print((s.compra and ("Compra: " .. s.compra .. "   ") or "") .. tiempoRestante(s.resta), px + 330, y + 22)
+      I.registrar(px + 12, y, pw - 24, 42, "sb_fila_" .. s.id)
+    end
+    -- paginación y acciones
+    local yb = py + ph - 52
+    I.boton(px + 14, yb, 36, 32, "<", "sb_prev", d.pagina > 1)
+    love.graphics.setColor(0.85, 0.82, 0.7)
+    love.graphics.print(d.pagina .. "/" .. d.paginas, px + 58, yb + 8)
+    I.boton(px + 100, yb, 36, 32, ">", "sb_next", d.pagina < d.paginas)
+    local sel
+    for _, s in ipairs(d.lista) do if s.id == I.subSel then sel = s end end
+    love.graphics.setColor(0.8, 0.78, 0.65)
+    love.graphics.print("Tu puja:", px + 170, yb + 8)
+    love.graphics.setColor(0.12, 0.1, 0.08)
+    love.graphics.rectangle("fill", px + 236, yb + 2, 110, 28, 3, 3)
+    love.graphics.setColor(I.foco == "sub_oferta" and 0.95 or 0.5, I.foco == "sub_oferta" and 0.8 or 0.42, I.foco == "sub_oferta" and 0.35 or 0.25)
+    love.graphics.rectangle("line", px + 236.5, yb + 2.5, 109, 27, 3, 3)
+    love.graphics.setColor(1, 0.95, 0.85)
+    love.graphics.print((I.subCampos.oferta or "") .. (I.foco == "sub_oferta" and "_" or ""), px + 244, yb + 8)
+    I.registrar(px + 236, yb + 2, 110, 28, "foco_sub_oferta")
+    local puja = numero(I.subCampos.oferta) or (sel and sel.minima) or 0
+    I.boton(px + 356, yb, 150, 32, "Pujar" .. (sel and (" " .. puja) or ""), "sb_pujar", d.cerca and sel and not sel.mia and not sel.lider and true or false)
+    I.boton(px + 514, yb, 170, 32, "Comprar ya" .. ((sel and sel.compra) and (" " .. sel.compra) or ""), "sb_comprar",
+      d.cerca and sel and sel.compra and not sel.mia and true or false)
+    if sel then
+      love.graphics.setColor(0.65, 0.65, 0.58)
+      love.graphics.print("Mínimo: " .. sel.minima, px + 236, yb - 18)
+    end
+  end
+end
+
 function I.panelMascotas(mundo, p, w, h)
   local px, py, pw, ph = w / 2 - 400, 60, 800, 520
   caja(px, py, pw, ph, "Criador de mascotas")
@@ -1640,16 +1844,22 @@ function I.panelGuerra(mundo, p, w, h)
   I.boton(w / 2 + 210, 78, 60, 28, "Cerrar", "cerrar")
   local min = Datos.JUGADORES_EVENTO
   love.graphics.setColor(0.9, 0.86, 0.75)
-  love.graphics.printf("Los eventos se juegan entre jugadores. Empiezan con al menos " .. min .. " de Albor y " .. min .. " de Umbra. El día se gasta al empezar, no al apuntarte.", w / 2 - 250, 120, 500, "left")
+  love.graphics.printf("Los eventos los lanza el servidor a sus horas. Apúntate antes y empiezan si hay al menos " .. min .. " jugadores de Albor y " .. min .. " de Umbra. Puedes participar una vez por edición.", w / 2 - 250, 120, 500, "left")
   local function estado(modo)
     local r = mundo:resumenEvento(modo)
     if r.activa then
       return "En curso. Dentro: Albor " .. r.dentro.albor .. " · Umbra " .. r.dentro.umbra
     end
-    return string.format("En cola: Albor %d/%d · Umbra %d/%d", r.cola.albor, min, r.cola.umbra, min)
+    local base = string.format("Apuntados: Albor %d/%d · Umbra %d/%d", r.cola.albor, min, r.cola.umbra, min)
+    if r.programa then
+      local m = math.ceil(r.programa.restan / 60)
+      local falta = m >= 60 and string.format("%d h %02d min", math.floor(m / 60), m % 60) or (m .. " min")
+      return "Próxima: " .. r.programa.hora .. " (en " .. falta .. ")   " .. base
+    end
+    return base
   end
   love.graphics.setColor(0.95, 0.9, 0.75)
-  love.graphics.printf("Batalla por cristales. Derribad estatuas y puertas enemigas, recoged el cristal y llevadlo a vuestro altar.", w / 2 - 250, 180, 500, "left")
+  love.graphics.printf("Batalla por cristales (una vez al día). Derribad estatuas y puertas enemigas, recoged el cristal y llevadlo a vuestro altar.", w / 2 - 250, 180, 500, "left")
   love.graphics.setColor(0.8, 0.78, 0.65)
   love.graphics.print(estado("batalla"), w / 2 - 250, 248)
   if p.modo == "batalla" then
@@ -1660,7 +1870,7 @@ function I.panelGuerra(mundo, p, w, h)
     I.boton(w / 2 - 240, 274, 240, 36, "Apuntarse a la batalla", "guerra_batalla")
   end
   love.graphics.setColor(0.95, 0.9, 0.75)
-  love.graphics.printf("Captura el estandarte. Roba la bandera enemiga y tráela a la tuya. Tres capturas ganan.", w / 2 - 250, 330, 500, "left")
+  love.graphics.printf("Captura del estandarte (cada pocas horas). Roba la bandera enemiga y tráela a la tuya. Tres capturas ganan.", w / 2 - 250, 330, 500, "left")
   love.graphics.setColor(0.8, 0.78, 0.65)
   love.graphics.print(estado("estandarte"), w / 2 - 250, 390)
   if p.modo == "estandarte" then

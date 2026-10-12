@@ -42,6 +42,7 @@ P.npc = {
   establo = { hoja = "Characters/People7.png", idx = 6 },
   capitan = { hoja = "Characters/People4.png", idx = 7 },
   contacto = { hoja = "Characters/Evil.png", idx = 3 },
+  subastas = { hoja = "Characters/People2.png", idx = 5 },
   guardia = {
     albor = { hoja = "Characters/People4.png", idx = 6 },
     umbra = { hoja = "Characters/Evil.png", idx = 7 },

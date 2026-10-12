@@ -251,3 +251,14 @@ NUEVO: MAPA GRANDE, PUESTOS, OFICIOS Y MONTURAS
     (cazarrecompensas) y contacto de ladrones (ladron). Cada oficio conserva su nivel.
   - Caravanas de PNJ salen cada poco entre ciudades por los caminos; bandidos pueden emboscarlas.
   - Monturas (O para montar): buey (carga), caballo (velocidad) y carreta (solo comerciantes).
+
+NUEVO: CASA DE SUBASTAS Y EVENTOS PROGRAMADOS
+  - Casa de subastas: subastador en cada ciudad. Publica objetos (precio de salida y, si quieres,
+    compra inmediata; 1, 6, 12 o 24 h), puja, compra ya y cancela si no hay pujas. Comision 5% al
+    publicar e impuesto 8% al vender; el oro de las pujas queda en deposito y se devuelve si te
+    superan. Lo ganado, lo vendido y lo no vendido espera en el buzon. Sigue corriendo con el
+    servidor apagado (usa el reloj real) y se guarda en PostgreSQL (subasta, subasta_buzon).
+  - Eventos de guerra: ahora los lanza el servidor. Captura del estandarte cada 4 h en punto y
+    batalla por cristales una vez al dia (21:00). Cinco minutos antes hay aviso e inscripcion;
+    si falta gente (3 por corona) se cancela. Cada jugador participa una vez por edicion.
+    Se configura en servidor/.env (DOSCORONAS_ESTANDARTE_CADA_HORAS, DOSCORONAS_BATALLA_HORA...).
