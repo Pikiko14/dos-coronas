@@ -149,6 +149,16 @@ function Juego.tickCliente(app, dt)
           Interfaz.panel = "gremio"
           app.actuar("gremio_info")
         end
+      elseif msg.panel == "oficios" or msg.panel == "mercancias" or msg.panel == "establo" then
+        -- estos paneles piden sus datos al servidor; las respuestas posteriores solo los actualizan
+        if msg.datos then
+          Interfaz.datosPanel[msg.panel] = msg.datos
+          if Interfaz.panel == msg.panel then Interfaz.pidiendoPanel = nil end
+        else
+          Interfaz.panel = msg.panel
+          Interfaz.datosPanel[msg.panel] = nil
+          app.actuar(({ oficios = "oficio_info", mercancias = "mercancia_info", establo = "montura_info" })[msg.panel])
+        end
       else
         Interfaz.panel = msg.panel
         Interfaz.ciudad = msg.ciudad

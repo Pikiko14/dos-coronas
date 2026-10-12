@@ -3,8 +3,11 @@ local Balance = require("compartido.dominio.balance")
 local D = {}
 
 D.SEMILLA = 20261011
-D.MAPA_W = 720
-D.MAPA_H = 520
+-- El continente se dibuja sobre un lienzo de 720x520 que se amplía por ESCALA: las ciudades
+-- se separan (conservan su tamaño) y entre ellas queda mucho más camino que recorrer.
+D.ESCALA = 1.6
+D.MAPA_W = math.floor(720 * D.ESCALA)
+D.MAPA_H = math.floor(520 * D.ESCALA)
 D.TILE = 32
 D.ZOOM = 2
 D.NIVEL_MAX = 30
@@ -127,7 +130,7 @@ D.barra = {
   clerigo = { "curar", "bendicion", "castigo", "consagrar", "sanacion", "juicio" },
 }
 
--- Continente 720×520. Arterias en y=168 y y=292, de x=144 a x=576.
+-- Continente ampliado (ver ESCALA). Las arterias de camino unen las ciudades de cada fila.
 -- Cada ciudad trae su bioma: el halo alrededor y los monstruos que lo habitan.
 D.ciudades = {
   { id = "auroria", nombre = "Auroria", faccion = "albor", x = 168, y = 190, capital = true, bioma = "trigal" },
@@ -141,6 +144,17 @@ D.ciudades = {
   { id = "nox", nombre = "Nox", faccion = "umbra", x = 430, y = 312, acceso = "norte", bioma = "pinar" },
   { id = "eclipse", nombre = "Bastión del Eclipse", faccion = "umbra", x = 552, y = 312, acceso = "norte", bioma = "eclipse" },
 }
+
+-- Aleja las ciudades: la posición de cada centro se amplía respecto al centro del mapa.
+for _, c in ipairs(D.ciudades) do
+  local ancho = c.capital and 72 or 48
+  local alto = c.capital and 56 or 36
+  local cx0, cy0 = c.x + ancho / 2, c.y + alto / 2
+  local ncx = D.MAPA_W / 2 + (cx0 - 360) * D.ESCALA
+  local ncy = D.MAPA_H / 2 + (cy0 - 260) * D.ESCALA
+  c.x = math.floor(ncx - ancho / 2)
+  c.y = math.floor(ncy - alto / 2)
+end
 
 D.biomas = {
   trigal = { suelo = "hierba", nombre = "Trigal de Auroria" },
@@ -242,6 +256,21 @@ for _, m in ipairs(D.monstruos) do
   local x = EFECTOS_MONSTRUO[m.id]
   if x then m.golpe, m.poderes = x.golpe, x.poderes end
 end
+-- Bandidos: no tienen campamento; salen a emboscar caravanas (ver caravanas.lua).
+for _, b in ipairs({
+  { id = "bandido", nombre = "Bandido del camino", nivel = 8, desc = "Asalta caravanas con un cuchillo oxidado." },
+  { id = "asaltante", nombre = "Asaltante", nivel = 16, desc = "Curtido en cien emboscadas." },
+  { id = "saqueador", nombre = "Saqueador de rutas", nivel = 24, desc = "Lidera bandas que arrasan los convoyes." },
+}) do
+  b.hoja, b.base, b.cuadros, b.agresivo, b.bandido, b.noCampamento = "creatures_01", 0, 4, true, true, true
+  b.golpe = ({
+    bandido = { { tipo = "sangrar", prob = 0.20 } },
+    asaltante = { { tipo = "sangrar", prob = 0.25 }, { tipo = "aturdir", prob = 0.10 } },
+    saqueador = { { tipo = "sangrar", prob = 0.30 }, { tipo = "aturdir", prob = 0.15 } },
+  })[b.id]
+  D.monstruos[#D.monstruos + 1] = b
+end
+
 -- Criaturas que pegan con magia: tienen más ataque y defensa mágicos que físicos.
 local MAGICOS = {
   espectro = true, alma = true, alma_verde = true, alma_hielo = true, cultista = true,

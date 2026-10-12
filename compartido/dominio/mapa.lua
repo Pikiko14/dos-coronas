@@ -319,13 +319,23 @@ local function estamparCiudad(mapa, ciudad)
       rol = rol, nombre = nombre, faccion = ciudad.faccion,
     }
   end
-  npc(medio - 4, medioY, "mercado", "Mercader de " .. ciudad.nombre)
-  npc(medio + 4, medioY, "heraldo", "Heraldo")
-  npc(medio - 4, medioY + 3, "mayordomo", "Mayordomo")
-  npc(medio + 4, medioY + 3, "encargos", "Tablón de encargos")
-  npc(medio - 4, medioY - 3, "encantador", "Maestro de encantos")
-  npc(medio + 4, medioY - 3, "criador", "Criador de mascotas")
-  npc(medio, medioY - 3, "gremio", "Escribano del gremio")
+  -- Los PNJ se reparten por las avenidas de la ciudad, no en el centro de la plaza.
+  local k = grande and 1.5 or 1
+  local function en(dx, dy) return medio + math.floor(dx * k), medioY + math.floor(dy * k) end
+  local function npcEn(dx, dy, rol, nombre)
+    local nx, ny = en(dx, dy)
+    npc(nx, ny, rol, nombre)
+  end
+  npcEn(-11, 0, "mercado", "Mercader de " .. ciudad.nombre)
+  npcEn(11, 0, "heraldo", "Heraldo")
+  npcEn(-7, 0, "comercio", "Mercader mayor")
+  npcEn(7, 0, "establo", "Mozo de cuadra")
+  npcEn(-2, -9, "mayordomo", "Mayordomo")
+  npcEn(2, -9, "encargos", "Tablón de encargos")
+  npcEn(-2, 9, "encantador", "Maestro de encantos")
+  npcEn(2, 9, "criador", "Criador de mascotas")
+  npcEn(-17, 0, "gremio", "Escribano del gremio")
+  npcEn(17, 0, "oficios", "Maestro de oficios")
   local gy = (ciudad.acceso == "norte" and not grande) and 2 or (h - 3)
   npc(medio - 2, gy, "guardia", "Guardia de " .. ciudad.nombre)
   npc(medio + 2, gy, "guardia", "Guardia de " .. ciudad.nombre)
@@ -335,15 +345,37 @@ function M.mundo(rng)
   local mapa = M.nuevo(Datos.MAPA_W, Datos.MAPA_H)
   local cx, cy = mapa.w / 2, mapa.h / 2
   local rx, ry = mapa.w * 0.46, mapa.h * 0.46
-  local ARTERIA_N, ARTERIA_S = 168, 292
-  local CAMINO_O, CAMINO_E = 144, 576
+  local E = Datos.ESCALA
+  -- Arterias: entre la fila norte de ciudades y las capitales, y entre las capitales y la fila sur.
+  local norteAbajo, surArriba, capArriba, capAbajo = 0, math.huge, math.huge, 0
+  local oeste, este = math.huge, 0
+  local capX = {}
+  for _, c in ipairs(Datos.ciudades) do
+    if c.capital then
+      capArriba, capAbajo = math.min(capArriba, c.y), math.max(capAbajo, c.y + 56)
+      capX[#capX + 1] = math.floor(c.x + 36)
+    end
+  end
+  for _, c in ipairs(Datos.ciudades) do
+    local alto = c.capital and 56 or 36
+    local ancho = c.capital and 72 or 48
+    if not c.capital then
+      if c.y + alto <= capArriba then norteAbajo = math.max(norteAbajo, c.y + alto)
+      else surArriba = math.min(surArriba, c.y) end
+    end
+    oeste, este = math.min(oeste, c.x + ancho / 2), math.max(este, c.x + ancho / 2)
+  end
+  local ARTERIA_N = math.floor((norteAbajo + capArriba) / 2)
+  local ARTERIA_S = math.floor((capAbajo + surArriba) / 2)
+  local CAMINO_O, CAMINO_E = math.floor(oeste), math.floor(este)
+  mapa.arterias = { norte = ARTERIA_N, sur = ARTERIA_S, oeste = CAMINO_O, este = CAMINO_E, verticales = capX }
   for y = 0, mapa.h - 1 do
     for x = 0, mapa.w - 1 do
       local d = math.sqrt(((x - cx) / rx) ^ 2 + ((y - cy) / ry) ^ 2) + ruido(x, y)
       local lado = x < cx and "albor" or "umbra"
-      local onda = math.sin(x * 0.04) * 10
-      local claro = math.sin(x * 0.05 + 1.2) * math.sin(y * 0.05)
-      local cicatriz = math.abs(x - cx) < (12 + math.sin(y * 0.08) * 3)
+      local onda = math.sin(x * 0.04 / E) * 10 * E
+      local claro = math.sin(x * 0.05 / E + 1.2) * math.sin(y * 0.05 / E)
+      local cicatriz = math.abs(x - cx) < (12 * E + math.sin(y * 0.08 / E) * 3 * E)
       if d > 0.97 then
         setSuelo(mapa, x, y, "agua", "agua", nil)
         setBloque(mapa, x, y, true)
@@ -351,7 +383,7 @@ function M.mundo(rng)
         setSuelo(mapa, x, y, "arena", "costa", lado)
       elseif cicatriz and d < 0.90 then
         setSuelo(mapa, x, y, "cicatriz", "cicatriz", nil)
-      elseif d < 0.86 and (y > cy + 70 + onda or claro > 0.62) then
+      elseif d < 0.86 and (y > cy + 70 * E + onda or claro > 0.62) then
         setSuelo(mapa, x, y, "bosque", "bosque", lado)
       elseif lado == "umbra" then
         setSuelo(mapa, x, y, "hierba_osc", "umbra", "umbra")
@@ -376,7 +408,7 @@ function M.mundo(rng)
           local d2 = dx * dx + dy * dy
           if not md or d2 < md then mejor, md = c, d2 end
         end
-        if mejor and md <= 110 * 110 and Datos.biomas[mejor.bioma] then
+        if mejor and md <= (110 * E) ^ 2 and Datos.biomas[mejor.bioma] then
           local def = Datos.biomas[mejor.bioma]
           setSuelo(mapa, x, y, def.suelo, mejor.bioma, mejor.faccion)
         end
@@ -435,8 +467,7 @@ function M.mundo(rng)
   end
   linea(CAMINO_O, ARTERIA_N, CAMINO_E, ARTERIA_N)
   linea(CAMINO_O, ARTERIA_S, CAMINO_E, ARTERIA_S)
-  linea(204, ARTERIA_N, 204, ARTERIA_S)
-  linea(516, ARTERIA_N, 516, ARTERIA_S)
+  for _, vx in ipairs(capX) do linea(vx, ARTERIA_N, vx, ARTERIA_S) end
   linea(cx, ARTERIA_N, cx, ARTERIA_S)
   for _, c in ipairs(mapa.ciudades) do
     for _, a in ipairs(c.accesos) do
@@ -444,7 +475,7 @@ function M.mundo(rng)
       local paso = meta > a.y and 1 or -1
       local y = a.y + paso
       local guardia = 0
-      while guardia < 80 do
+      while guardia < 260 do
         guardia = guardia + 1
         pintar(a.x, y)
         if y == meta then break end
@@ -531,6 +562,105 @@ function M.mundo(rng)
       end
     end
   end
+  -- Puestos y refugios repartidos por el mapa, cada uno con sus PNJ y lejos del centro de las
+  -- ciudades: puestos de comercio junto a los caminos, campamentos de cazadores, refugios de
+  -- ladrones, torres de magos y ermitas de criadores.
+  mapa.puestos = {}
+  local BUENO = { hierba = true, hierba_osc = true, bosque = true, arena = true, tierra = true, camino = true }
+  local function areaBuena(px, py, r)
+    for y = py - r, py + r do
+      for x = px - r, px + r do
+        local s = M.get(mapa, x, y)
+        if not s or not BUENO[s] then return false end
+        local b = mapa.bioma[x] and mapa.bioma[x][y]
+        if b == "ciudad" then return false end
+      end
+    end
+    return true
+  end
+  local function cercaDePuesto(x, y, d)
+    for _, pu in ipairs(mapa.puestos) do
+      if math.abs(pu.x - x) < d and math.abs(pu.y - y) < d then return true end
+    end
+    return false
+  end
+  local function limpiar(px, py, r)
+    for y = py - r, py + r do
+      for x = px - r, px + r do
+        if mapa.bloque[x] and mapa.bloque[x][y] then setBloque(mapa, x, y, false) end
+      end
+    end
+    for i = #mapa.props, 1, -1 do
+      local p = mapa.props[i]
+      if p.x >= px - r and p.x <= px + r and p.y >= py - r and p.y <= py + r then table.remove(mapa.props, i) end
+    end
+  end
+  local function nuevoPuesto(tipo, nombre, px, py, roles)
+    limpiar(px, py, 4)
+    local lado = px < cx and "albor" or "umbra"
+    local pu = { id = #mapa.puestos + 1, tipo = tipo, nombre = nombre, x = px, y = py, npcs = {} }
+    local sitios = { { -2, -1 }, { 2, -1 }, { -2, 2 }, { 2, 2 } }
+    for i, r in ipairs(roles) do
+      local o = sitios[i] or { 0, 3 }
+      pu.npcs[#pu.npcs + 1] = { x = px + o[1] + 0.5, y = py + o[2] + 0.5, rol = r[1], nombre = r[2], faccion = lado }
+    end
+    mapa.props[#mapa.props + 1] = { x = px, y = py, tipo = "fogata" }
+    mapa.props[#mapa.props + 1] = { x = px - 3, y = py - 2, tipo = "cartel" }
+    mapa.props[#mapa.props + 1] = { x = px + 3, y = py + 1, tipo = "barril" }
+    mapa.props[#mapa.props + 1] = { x = px - 3, y = py + 2, tipo = "caja" }
+    mapa.puestos[#mapa.puestos + 1] = pu
+    return pu
+  end
+  local function buscarSitio(biomas, minCiudad, minPuesto)
+    for _ = 1, 800 do
+      local x = rng:int(12, mapa.w - 13)
+      local y = rng:int(12, mapa.h - 13)
+      local b = mapa.bioma[x] and mapa.bioma[x][y]
+      local ok = false
+      for _, bb in ipairs(biomas) do if b == bb then ok = true end end
+      if ok and areaBuena(x, y, 4) and not cercaCiudad(x, y, minCiudad) and not cercaDePuesto(x, y, minPuesto) then
+        return x, y
+      end
+    end
+  end
+  -- 1) puestos de comercio a lo largo de las dos arterias
+  for _, y0 in ipairs({ ARTERIA_N, ARTERIA_S }) do
+    for _, f in ipairs({ 0.1, 0.28, 0.46, 0.64, 0.82 }) do
+      local x = math.floor(CAMINO_O + (CAMINO_E - CAMINO_O) * f)
+      for _, dy in ipairs({ -7, 7, -10, 10 }) do
+        local y = y0 + dy
+        if areaBuena(x, y, 4) and not cercaCiudad(x, y, 16) and not cercaDePuesto(x, y, 30) and math.abs(x - cx) > 24 then
+          nuevoPuesto("comercio", "Puesto del camino", x, y, { { "comercio", "Mercader del camino" }, { "establo", "Mozo de posta" } })
+          break
+        end
+      end
+    end
+  end
+  -- 2) los demás, escondidos por el territorio
+  local function repartir(cant, biomas, tipo, nombre, roles, minCiudad)
+    for _ = 1, cant do
+      local x, y = buscarSitio(biomas, minCiudad, 60)
+      if x then nuevoPuesto(tipo, nombre, x, y, roles) end
+    end
+  end
+  repartir(4, { "senda", "pinar", "colina", "campos", "bosque" }, "cazadores", "Campamento de cazadores",
+    { { "capitan", "Capitán de cazadores" }, { "comercio", "Proveedor del campamento" } }, 30)
+  repartir(4, { "marea", "cienaga", "eclipse", "muelle", "velo" }, "ladrones", "Refugio de ladrones",
+    { { "contacto", "Contacto en las sombras" } }, 40)
+  repartir(2, { "velo", "campos", "colina" }, "torre", "Torre de encantos",
+    { { "encantador", "Maestro de encantos" } }, 40)
+  repartir(2, { "trigal", "senda", "cienaga" }, "ermita", "Ermita del criador",
+    { { "criador", "Criador de mascotas" }, { "establo", "Mozo de cuadra" } }, 40)
+  -- 3) lista de todos los PNJ para los iconos del mapa
+  mapa.npcsMapa = {}
+  for _, c in ipairs(mapa.ciudades) do
+    for _, n in ipairs(c.npcs) do
+      if n.rol ~= "guardia" then mapa.npcsMapa[#mapa.npcsMapa + 1] = { x = n.x, y = n.y, rol = n.rol, nombre = n.nombre } end
+    end
+  end
+  for _, pu in ipairs(mapa.puestos) do
+    for _, n in ipairs(pu.npcs) do mapa.npcsMapa[#mapa.npcsMapa + 1] = { x = n.x, y = n.y, rol = n.rol, nombre = n.nombre } end
+  end
   local function punto(bioma)
     for _ = 1, 400 do
       local x = rng:int(2, mapa.w - 3)
@@ -539,11 +669,13 @@ function M.mundo(rng)
       local s = M.get(mapa, x, y)
       local ok = M.transitable(mapa, x, y) and b == bioma and b ~= "ciudad" and s ~= "camino" and s ~= "plaza"
       if ok and cercaCiudad(x, y, 8) then ok = false end
+      if ok and cercaDePuesto(x, y, 14) then ok = false end
       if ok and not dentroCiudad(mapa.ciudades, x, y) then return x + 0.5, y + 0.5 end
     end
   end
   for _, mon in ipairs(Datos.monstruos) do
-    local camps = mon.elite and 1 or (mon.nivel <= 8 and 6 or 4)
+    if mon.noCampamento then goto siguiente end
+    local camps = mon.elite and 1 or (mon.nivel <= 8 and 11 or 7)
     local cant = mon.elite and 1 or (mon.nivel >= 20 and 2 or 3)
     for _ = 1, camps do
       local x, y = punto(mon.bioma)
@@ -553,6 +685,7 @@ function M.mundo(rng)
         }
       end
     end
+    ::siguiente::
   end
   mapa.escaleras = {}
   mapa.alto = {}

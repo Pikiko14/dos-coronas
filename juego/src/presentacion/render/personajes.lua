@@ -34,6 +34,14 @@ P.npc = {
   heraldo = { hoja = "Characters/People4.png", idx = 0 },
   mayordomo = { hoja = "Characters/People4.png", idx = 5 },
   encargos = { hoja = "Characters/People1.png", idx = 4 },
+  encantador = { hoja = "Characters/Actor2.png", idx = 7 },
+  criador = { hoja = "Characters/People1.png", idx = 2 },
+  gremio = { hoja = "Characters/People2.png", idx = 3 },
+  oficios = { hoja = "Characters/People3.png", idx = 1 },
+  comercio = { hoja = "Characters/People3.png", idx = 3 },
+  establo = { hoja = "Characters/People7.png", idx = 6 },
+  capitan = { hoja = "Characters/People4.png", idx = 7 },
+  contacto = { hoja = "Characters/Evil.png", idx = 3 },
   guardia = {
     albor = { hoja = "Characters/People4.png", idx = 6 },
     umbra = { hoja = "Characters/Evil.png", idx = 7 },
@@ -50,7 +58,17 @@ P.mascotas = {
   avispa = { hoja = "Characters/Monster3.png", idx = 2 },
 }
 
+-- Monturas de transporte (compartido/dominio/monturas.lua).
+P.monturas = {
+  buey = { hoja = "Characters/Animal.png", idx = 4 },
+  caballo = { hoja = "Characters/Animal.png", idx = 5 },
+  carreta = { vehiculo = true },
+}
+
 P.monstruos = {
+  bandido = { hoja = "Characters/People7.png", idx = 1, tinte = { 0.85, 0.75, 0.75 } },
+  asaltante = { hoja = "Characters/Actor3.png", idx = 6 },
+  saqueador = { hoja = "Characters/Evil.png", idx = 6, tinte = { 0.9, 0.8, 0.8 } },
   gato = { hoja = "Characters/Animal.png", idx = 1 },
   cuervo = { hoja = "Characters/Monster3.png", idx = 0 },
   jabali = { hoja = "Characters/Animal.png", idx = 6 },

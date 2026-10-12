@@ -8,6 +8,10 @@ local Items = require("compartido.dominio.items")
 local Encanto = require("compartido.dominio.encanto")
 local Mascotas = require("compartido.dominio.mascotas")
 local Gremios = require("compartido.dominio.gremios")
+local Oficios = require("compartido.dominio.oficios")
+local Ley = require("compartido.dominio.ley")
+local Caravanas = require("compartido.dominio.caravanas")
+local Monturas = require("compartido.dominio.monturas")
 
 local Mundo = {}
 Mundo.__index = Mundo
@@ -262,7 +266,7 @@ function Mundo:spawnMonstruo(idMon, x, y, hogar)
     tam = def.tam, paso = def.paso, porDir = def.porDir,
     sensor = math.random(),
     respawn = 0,
-    golpe = def.golpe, poderes = def.poderes,
+    golpe = def.golpe, poderes = def.poderes, bandido = def.bandido,
   }
   -- que no lancen todos sus poderes a la vez al aparecer
   for _, id in ipairs(def.poderes or {}) do
@@ -280,10 +284,22 @@ function Mundo:poblar()
         id = self:idNuevo(), kind = n.rol == "guardia" and "guardia" or "npc",
         nombre = n.nombre, rol = n.rol, faccion = n.faccion,
         x = n.x, y = n.y, modo = "mundo", dir = 1, vivo = true,
-        clase = ({ mercado = "mago", heraldo = "clerigo", mayordomo = "guerrero", encargos = "cazador", guardia = "guerrero", encantador = "mago", criador = "cazador", gremio = "guerrero" })[n.rol] or "guerrero",
+        clase = ({ mercado = "mago", heraldo = "clerigo", mayordomo = "guerrero", encargos = "cazador", guardia = "guerrero", encantador = "mago", criador = "cazador", gremio = "guerrero", oficios = "guerrero", comercio = "guerrero", establo = "cazador" })[n.rol] or "guerrero",
         nivel = 12, hp = 400, hpMax = 400, atk = 28, def = 14, matk = 8, mdef = 7, spd = 3.2, rango = 1.4,
         cds = {},
         equipo = { arma = "guerrero_arma_2", pecho = "guerrero_pecho_2", cabeza = "guerrero_cabeza_2" },
+      }
+      self.entidades[e.id] = e
+    end
+  end
+  -- puestos del camino y refugios repartidos por el mapa
+  for _, pu in ipairs(self.mapas.mundo.puestos or {}) do
+    for _, n in ipairs(pu.npcs) do
+      local e = {
+        id = self:idNuevo(), kind = "npc", nombre = n.nombre, rol = n.rol, faccion = n.faccion,
+        x = n.x, y = n.y, modo = "mundo", dir = 1, vivo = true, clase = "guerrero",
+        nivel = 12, hp = 400, hpMax = 400, atk = 28, def = 14, matk = 8, mdef = 7, spd = 3.2, rango = 1.4,
+        cds = {}, equipo = {},
       }
       self.entidades[e.id] = e
     end
@@ -614,6 +630,13 @@ function Mundo:puedeDanar(origen, objetivo)
     -- solo las criaturas hostiles pueden herir a una mascota
     return origen.kind == "monstruo"
   end
+  if kind == "caravana" then
+    -- a una caravana solo la atacan los bandidos
+    return origen.kind == "monstruo" and origen.bandido == true
+  end
+  if (kind == "jugador" or kind == "bot") and origen.kind ~= "monstruo" and self:legitimoPorOficio(origen, objetivo) then
+    return true
+  end
   if kind ~= "jugador" and kind ~= "bot" and kind ~= "guardia" and kind ~= "monstruo" and kind ~= "estatua" and kind ~= "puerta" then
     return false
   end
@@ -763,6 +786,15 @@ function Mundo:morir(e, origen)
     self:caeMascota(e)
     return
   end
+  if e.kind == "caravana" then
+    self:cayeCaravana(e, origen)
+    return
+  end
+  if (e.kind == "jugador" or e.kind == "bot") then
+    e.robo = nil
+    if e.escolta then e.escolta = nil end
+    self:caeBuscado(e, origen)
+  end
   if e.kind == "monstruo" then
     if origen and (origen.kind == "jugador" or origen.kind == "bot") then
       local exp = Balance.xpMonstruo(origen.nivel or 1, e.nivel or 1, e.elite)
@@ -778,6 +810,7 @@ function Mundo:morir(e, origen)
       if origen.kind == "jugador" then self:soltarBotin(e, origen) end
     end
     e.respawn = self.tiempo + (e.elite and 90 or 22)
+    if e.efimero then e.borrar = true end
     if e.elite then
       self:mensaje("sistema", "", e.nombre .. " ha caído.", origen)
     end
@@ -866,6 +899,33 @@ function Mundo:recoger(p, loot)
   end
   if (loot.oro or 0) > 0 then
     self:mensaje("sistema", "", "Recoges " .. loot.oro .. " de oro.", p)
+  end
+  loot.items, loot.oro = {}, 0
+  -- mercancías de una caravana caída: las llevan comerciantes y ladrones
+  if loot.bienes and next(loot.bienes) then
+    loot.aviso = loot.aviso or {}
+    local avisar = (self.tiempo - (loot.aviso[p.id] or -10)) > 3
+    if avisar then loot.aviso[p.id] = self.tiempo end
+    if p.job ~= "trader" and p.job ~= "thief" then
+      if avisar then self:mensaje("sistema", "", "Solo comerciantes y ladrones pueden cargar mercancías.", p) end
+      return
+    end
+    local destino = p.job == "thief" and "cargaRobada" or "carga"
+    p[destino] = p[destino] or {}
+    local libre = self:capacidadCarga(p) - self:pesoCarga(p)
+    local tomadas = 0
+    for bien, c in pairs(loot.bienes) do
+      local n = math.min(c, libre)
+      if n > 0 then
+        p[destino][bien] = (p[destino][bien] or 0) + n
+        loot.bienes[bien] = c - n > 0 and (c - n) or nil
+        libre = libre - n
+        tomadas = tomadas + n
+      end
+    end
+    self:recalcularCarga(p)
+    if tomadas > 0 then self:mensaje("sistema", "", "Recoges " .. tomadas .. " unidades de mercancía.", p) end
+    if next(loot.bienes) then return end
   end
   loot.borrar = true
 end
@@ -1104,6 +1164,17 @@ function Mundo:actualizarJugador(e, dt)
   if e.lentitud and e.lentitud.hasta > self.tiempo then mul = mul * (1 - e.lentitud.mul) end
   if e.llevaBandera then mul = mul * 0.85 end
   mul = mul * self:buffMul(e, "vel")
+  -- montura y carga: la montura acelera y ir cargado frena
+  if e.montado and (e.modo ~= "mundo" or (e.z or 0) > 0) then
+    e.montado = nil
+    self:recalcularCarga(e)
+  end
+  if e.job or e.montado then
+    local vel = self:bonoMontura(e)
+    mul = mul * (1 + vel) * (1 - (e.penalCarga or 0))
+  end
+  if e.robo then self:actualizarRobo(e) end
+  if e.buscado then self:actualizarLey(e) end
   local ddx, ddy = Util.signo(e.deseoX or 0), Util.signo(e.deseoY or 0)
   if ddx ~= 0 or ddy ~= 0 then
     e.camino = nil
@@ -1173,6 +1244,7 @@ function Mundo:actualizarMonstruo(e, dt)
     if self.tiempo >= (e.respawn or 0) then self:revivir(e) end
     return
   end
+  if e.efimero and self.tiempo > e.efimero then e.borrar = true return end
   if (e.aturdido or 0) > 0 then e.aturdido = e.aturdido - dt return end
   e.sensor = (e.sensor or 0) - dt
   if e.sensor <= 0 then
@@ -1183,7 +1255,8 @@ function Mundo:actualizarMonstruo(e, dt)
       mejor = amenaza
     else
       for _, o in pairs(self.entidades) do
-        if o.vivo and o.id ~= e.id and self:mismoLugar(e, o) and (o.kind == "jugador" or o.kind == "bot" or o.kind == "guardia") then
+        if o.vivo and o.id ~= e.id and self:mismoLugar(e, o)
+          and (o.kind == "jugador" or o.kind == "bot" or o.kind == "guardia" or (e.bandido and o.kind == "caravana")) then
           if not (o.kind == "jugador" and o.nivel + 3 < e.nivel and not e.amenaza) then
             local d = Util.dist(e.x, e.y, o.x, o.y)
             local limite = e.agresivo and 6.2 or 1.2
@@ -1263,7 +1336,8 @@ function Mundo:actualizarGuardia(e, dt)
     e.sensor = 0.4
     local ciudad = self:ciudadEn(e.x, e.y)
     for _, o in pairs(self.entidades) do
-      if o.vivo and o.faccion and o.faccion ~= e.faccion and self:mismoLugar(e, o) and (o.kind == "jugador" or o.kind == "bot" or o.kind == "monstruo") then
+      local buscado = (o.kind == "jugador" or o.kind == "bot") and self:esBuscado(o)
+      if o.vivo and o.faccion and (o.faccion ~= e.faccion or buscado) and self:mismoLugar(e, o) and (o.kind == "jugador" or o.kind == "bot" or o.kind == "monstruo") then
         if Util.dist(e.x, e.y, o.x, o.y) < 7 and (not ciudad or self:ciudadEn(o.x, o.y) == ciudad or o.kind == "monstruo") then
           e.objetivo = o.id
         end
@@ -2051,6 +2125,18 @@ function Mundo:interactuar(p)
       end
     end
   end
+  -- una caravana a la vista: un cazarrecompensas se ofrece a escoltarla
+  for _, e in pairs(self.entidades) do
+    if e.kind == "caravana" and e.vivo and self:mismoLugar(p, e) and Util.dist(p.x, p.y, e.x, e.y) < 3 then
+      if p.job == "hunter" then
+        local err = self:escoltarCaravana(p, e.id)
+        if err then self:mensaje("sistema", "", err, p) end
+      else
+        self:mensaje("sistema", "", e.nombre .. " va a " .. e.nombreDestino .. ". Solo los cazarrecompensas la escoltan.", p)
+      end
+      return { panel = nil }
+    end
+  end
   local mejor, md = nil, 1.8
   for _, e in pairs(self.entidades) do
     if e.vivo and e.kind == "npc" or (e.kind == "guardia") then
@@ -2066,6 +2152,9 @@ function Mundo:interactuar(p)
     if mejor.rol == "mercado" then return { panel = "mercado" } end
     if mejor.rol == "heraldo" then return { panel = "guerra" } end
     if mejor.rol == "encantador" then return { panel = "encantar" } end
+    if mejor.rol == "oficios" or mejor.rol == "capitan" or mejor.rol == "contacto" then return { panel = "oficios" } end
+    if mejor.rol == "comercio" then return { panel = "mercancias" } end
+    if mejor.rol == "establo" then return { panel = "establo" } end
     if mejor.rol == "criador" then return { panel = "mascotas" } end
     if mejor.rol == "gremio" then return { panel = "gremio" } end
     if mejor.rol == "mayordomo" then return { panel = "vivienda", ciudad = self:ciudadEn(p.x, p.y) and self:ciudadEn(p.x, p.y).id } end
@@ -2167,6 +2256,7 @@ function Mundo:actualizar(dt)
       elseif e.kind == "proyectil" then self:actualizarProyectil(e, dt)
       elseif e.kind == "trampa" then self:actualizarTrampa(e, dt)
       elseif e.kind == "mascota" then self:actualizarMascota(e, dt)
+      elseif e.kind == "caravana" then self:actualizarCaravana(e, dt)
       elseif e.kind == "bandera" then self:actualizarBandera(e)
       elseif e.kind == "loot" and self.tiempo > (e.hasta or 0) then e.borrar = true
       elseif e.estructura and e.vivo and e.modo == "batalla" then
@@ -2185,6 +2275,12 @@ function Mundo:actualizar(dt)
   for i = 1, n do
     local e = self.entidades[ids[i]]
     if e and e.estados then self:actualizarEstados(e) end
+  end
+  self:actualizarCaravanas(dt)
+  self._presionT = (self._presionT or 0) + dt
+  if self._presionT >= 5 then
+    self:recuperarPresion(self._presionT)
+    self._presionT = 0
   end
   for id, e in pairs(self.entidades) do
     if e.borrar then self.entidades[id] = nil end
@@ -2234,6 +2330,8 @@ function Mundo:exportar(p)
     casas = p.casas, vinculo = p.vinculo, caceria = p.caceria,
     habilidades = p.habilidades, encantos = p.encantos,
     mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
+    job = p.job, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
+    monturas = p.monturas, monturaPreferida = p.monturaPreferida,
     z = z,
   }
 end
@@ -2248,6 +2346,10 @@ function Mundo:aplicarGuardado(p, data)
   p.encantos = data.encantos or {}
   p.mascotas = data.mascotas or {}
   p.mascotaActiva = data.mascotaActiva
+  p.job, p.oficios = data.job, data.oficios or {}
+  p.carga, p.cargaRobada = data.carga or {}, data.cargaRobada or {}
+  p.monturas, p.monturaPreferida = data.monturas or {}, data.monturaPreferida
+  self:recalcularCarga(p)
   self:vincularGremio(p)
   -- Un guardado antiguo con más objetos de los que caben sin mochila recibe la
   -- más pequeña que los aguante.
@@ -2292,6 +2394,7 @@ function Mundo:compactar(e)
     flash = (e.flash or 0) > 0 and e.flash or nil,
     burbuja = e.burbuja,
     est = self:estadosVisibles(e), especie = e.especie, gremio = e.gremioEtiqueta,
+    montado = e.montado, buscado = (e.kind == "jugador" and self:esBuscado(e)) and true or nil,
     -- proyectiles: de qué tipo son y a dónde van
     tipo = e.kind == "proyectil" and e.tipo or nil,
     tx = e.kind == "proyectil" and e.tx or nil, ty = e.kind == "proyectil" and e.ty or nil,
@@ -2319,11 +2422,20 @@ function Mundo:foto(pid)
       nombre = p.nombre, modo = p.modo, casaId = p.casaId, objetivo = p.objetivo,
       z = p.z or 0, habilidades = p.habilidades, encantos = p.encantos,
       mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
+      job = p.job, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
+      capacidadCarga = p.capacidadCarga, pesoCarga = p.pesoCarga, monturas = p.monturas, montado = p.montado,
+      buscadoResta = self:esBuscado(p) and (p.buscado - self.tiempo) or nil, recompensa = self:esBuscado(p) and p.recompensa or nil,
+      escolta = p.escolta,
+      robo = p.robo and { desde = p.robo.desde, hasta = p.robo.hasta } or nil,
       gremioRango = p.gremioRango, gremioEtiqueta = p.gremioEtiqueta,
       invGremio = (p.invitacionGremio and p.invitacionGremio.hasta > self.tiempo) and p.invitacionGremio or nil,
       estadosResta = {},
     }
     if p.gremioId and self.gremios[p.gremioId] then tu.gremioNombre = self.gremios[p.gremioId].nombre end
+    if p.job then
+      tu.caravanas = self:caravanasVisibles()
+      if p.job == "hunter" then tu.buscados = self:buscadosVisibles(p) end
+    end
     for tipo, st in pairs(p.estados or {}) do tu.estadosResta[tipo] = math.max(0, st.hasta - self.tiempo) end
     for k, v in pairs(p.cds or {}) do tu.cds[k] = v end
   end
@@ -2527,11 +2639,19 @@ function Mundo:accion(pid, nombre, datos)
   if nombre == "comercio_ok" then self:aceptarComercio(p) end
   if nombre == "comercio_no" then self:cancelarComercio(p) return { panel = nil } end
   if nombre:sub(1, 7) == "gremio_" and p then return self:accionGremio(p, nombre, datos or {}) end
+  if p and (nombre:sub(1, 7) == "oficio_" or nombre:sub(1, 10) == "mercancia_" or nombre:sub(1, 8) == "montura_"
+    or nombre == "robar" or nombre == "perista_vender" or nombre == "escoltar") then
+    return self:accionOficio(p, nombre, datos or {})
+  end
   return nil
 end
 
 Estados.instalar(Mundo)
 Mascotas.instalar(Mundo)
 Gremios.instalar(Mundo)
+Oficios.instalar(Mundo)
+Ley.instalar(Mundo)
+Caravanas.instalar(Mundo)
+Monturas.instalar(Mundo)
 
 return Mundo

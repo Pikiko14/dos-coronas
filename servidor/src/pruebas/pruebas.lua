@@ -27,7 +27,9 @@ function Pruebas.correr()
     fallar(errores, "json lista", d and d.lista and d.lista[2] == 2)
   end)
   paso("datos", function()
-    fallar(errores, "30 monstruos", #Datos.monstruos == 30, tostring(#Datos.monstruos))
+    local silvestres = 0
+    for _, m in ipairs(Datos.monstruos) do if not m.noCampamento then silvestres = silvestres + 1 end end
+    fallar(errores, "30 monstruos", silvestres == 30, tostring(silvestres))
     fallar(errores, "10 ciudades", #Datos.ciudades == 10)
     fallar(errores, "mapa extenso", Datos.MAPA_W >= 700 and Datos.MAPA_H >= 500)
     fallar(errores, "nivel maximo", Datos.NIVEL_MAX == 30)
@@ -650,6 +652,249 @@ function Pruebas.correr()
     end
     Cuentas.borrarUsuario(usuario)
   end)
+  paso("mapa ampliado y PNJ repartidos", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.mundo
+    fallar(errores, "el mapa es más grande que antes", mapa.w >= 1100 and mapa.h >= 800, mapa.w .. "x" .. mapa.h)
+    -- las ciudades están más lejos que en el mapa viejo (la menor distancia entre dos era ~95)
+    local minimo = math.huge
+    for i, a in ipairs(mapa.ciudades) do
+      for j = i + 1, #mapa.ciudades do
+        local b = mapa.ciudades[j]
+        minimo = math.min(minimo, math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2))
+      end
+    end
+    fallar(errores, "las ciudades están más separadas", minimo > 140, string.format("%.0f", minimo))
+    fallar(errores, "hay puestos repartidos", #mapa.puestos >= 18, tostring(#mapa.puestos))
+    local roles = {}
+    for _, n in ipairs(mapa.npcsMapa) do
+      roles[n.rol] = (roles[n.rol] or 0) + 1
+      fallar(errores, "PNJ " .. n.nombre .. " en suelo transitable", Mapa.transitable(mapa, math.floor(n.x), math.floor(n.y)))
+    end
+    for _, rol in ipairs({ "mercado", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "criador", "gremio", "oficios", "establo", "capitan", "contacto" }) do
+      fallar(errores, "hay PNJ de " .. rol, (roles[rol] or 0) >= 2, tostring(roles[rol]))
+    end
+    -- en las ciudades no se amontonan en el centro de la plaza
+    local lejos = 0
+    for _, c in ipairs(mapa.ciudades) do
+      local cx, cy = c.x + c.w / 2, c.y + c.h / 2
+      for _, n in ipairs(c.npcs) do
+        if n.rol ~= "guardia" and math.abs(n.x - cx) + math.abs(n.y - cy) > 6 then lejos = lejos + 1 end
+      end
+    end
+    fallar(errores, "los PNJ de ciudad se reparten por las avenidas", lejos >= #mapa.ciudades * 9, tostring(lejos))
+    -- los puestos se alcanzan por tierra
+    local a = mapa.ciudades[1]
+    local alcanzados = 0
+    for _, pu in ipairs(mapa.puestos) do
+      local ruta = Mapa.buscar(mapa, a.x + a.w / 2, a.y + a.h + 2, pu.x, pu.y)
+      if ruta and #ruta > 0 then alcanzados = alcanzados + 1 end
+    end
+    fallar(errores, "los puestos son alcanzables", alcanzados >= #mapa.puestos - 2, alcanzados .. "/" .. #mapa.puestos)
+  end)
+  paso("oficios, comercio, robos y recompensas", function()
+    local mundo = Mundo.nuevo()
+    local function npcDe(rol, ciudadId)
+      for _, e in pairs(mundo.entidades) do
+        if e.kind == "npc" and e.rol == rol then
+          local ci = mundo:ciudadEn(e.x, e.y)
+          if (not ciudadId) or (ci and ci.id == ciudadId) then return e end
+        end
+      end
+    end
+    local function irA(p, e) p.x, p.y, p.z = e.x + 1, e.y, 0 p.tramo = nil end
+    local mapa = mundo.mapas.mundo
+    -- elegir oficio
+    local t = mundo:crearPersonaje({ nombre = "Mercader1", faccion = "albor", clase = "guerrero", nivel = 12 })
+    t.oro = 50000
+    local maestro = npcDe("oficios", mapa.ciudades[1].id)
+    irA(t, maestro)
+    fallar(errores, "hay maestro de oficios", maestro ~= nil)
+    fallar(errores, "elige comerciante gratis", mundo:elegirOficio(t, "trader", "ciudad") == nil and t.job == "trader" and t.oro == 50000)
+    fallar(errores, "el ladrón no se aprende en la ciudad", mundo:elegirOficio(t, "thief", "ciudad") ~= nil)
+    -- comprar y vender entre dos ciudades
+    local a, b, bien
+    for _, ca in ipairs(mapa.ciudades) do
+      for _, cb in ipairs(mapa.ciudades) do
+        if ca ~= cb and not bien then
+          local sa, sb = mundo:sitioPorId(ca.id), mundo:sitioPorId(cb.id)
+          for _, g in ipairs(sa.perfil.produce) do
+            for _, d in ipairs(sb.perfil.demanda) do if g == d then a, b, bien = ca, cb, g end end
+          end
+        end
+      end
+    end
+    fallar(errores, "hay un par de ciudades con comercio provechoso", bien ~= nil)
+    if bien then
+      local nA = npcDe("comercio", a.id)
+      local nB = npcDe("comercio", b.id)
+      irA(t, nA)
+      local sitioA = mundo:sitioCerca(t)
+      fallar(errores, "el mercader mayor da su sitio", sitioA and sitioA.id == a.id, sitioA and sitioA.id)
+      local antes = mundo:precioBien(sitioA, bien, true)
+      local oro0 = t.oro
+      fallar(errores, "compra", mundo:comprarBien(t, bien, 10) == nil and t.carga[bien] == 10)
+      fallar(errores, "la compra sube el precio", mundo:precioBien(sitioA, bien, true) > antes)
+      fallar(errores, "ir cargado frena", t.penalCarga > 0)
+      irA(t, nB)
+      fallar(errores, "vende en otra ciudad", mundo:venderBien(t, bien, 10) == nil and not t.carga[bien])
+      fallar(errores, "gana oro con el viaje", t.oro > oro0, oro0 .. " -> " .. t.oro)
+      fallar(errores, "gana experiencia de oficio", t.oficios.trader.xp > 0 or t.oficios.trader.nivel > 1)
+      irA(t, nA)
+      fallar(errores, "no carga más de lo que cabe", mundo:comprarBien(t, bien, 1000) == nil and mundo:pesoCarga(t) == mundo:capacidadCarga(t))
+      fallar(errores, "ya no cabe más", mundo:comprarBien(t, bien, 1) ~= nil)
+      mundo:venderBien(t, bien, t.carga[bien])
+    end
+    local x = mundo:crearPersonaje({ nombre = "Normal", faccion = "albor", clase = "mago" })
+    irA(x, npcDe("comercio", a.id))
+    fallar(errores, "solo los comerciantes comercian", mundo:comprarBien(x, "trigo", 1) ~= nil)
+    -- robo: fuera de la ciudad
+    local afuera = mapa.puestos[1]
+    local ladron = mundo:crearPersonaje({ nombre = "Sombra", faccion = "albor", clase = "cazador", nivel = 12 })
+    ladron.oro = 5000
+    local hunter = mundo:crearPersonaje({ nombre = "Cazador1", faccion = "albor", clase = "guerrero", nivel = 12 })
+    local contacto = npcDe("contacto")
+    irA(ladron, contacto)
+    fallar(errores, "un ladrón se hace en un refugio", mundo:elegirOficio(ladron, "thief", "ladron") == nil and ladron.job == "thief")
+    fallar(errores, "el cazarrecompensas se hace en su campamento", mundo:elegirOficio(hunter, "hunter", "capitan") == nil)
+    local victima = mundo:crearPersonaje({ nombre = "Mercader2", faccion = "albor", clase = "mago", nivel = 12 })
+    victima.job, victima.oficios = "trader", { trader = { nivel = 1, xp = 0 } }
+    victima.carga = { vino = 12, gemas = 4 }
+    mundo:recalcularCarga(victima)
+    for _, e in pairs({ ladron, victima, hunter }) do e.x, e.y, e.z, e.modo = afuera.x + 8.5, afuera.y + 8.5, 0, "mundo" end
+    hunter.x = afuera.x + 40
+    victima.x = ladron.x + 1
+    fallar(errores, "el punto de prueba está fuera de ciudades", not mundo:ciudadEn(ladron.x, ladron.y))
+    fallar(errores, "el ladrón empieza un robo", mundo:iniciarRobo(ladron, victima.id) == nil and ladron.robo ~= nil)
+    local azarOriginal = math.random
+    math.random = function(a2) if a2 then return 1 end return 0 end
+    local ok2, err2 = pcall(function() for _ = 1, 60 do mundo:actualizar(0.1) end end)
+    math.random = azarOriginal
+    fallar(errores, "el robo se resuelve sin errores", ok2, tostring(err2))
+    local robado = 0
+    for _, c in pairs(ladron.cargaRobada or {}) do robado = robado + c end
+    fallar(errores, "el ladrón se lleva mercancía", robado > 0, tostring(robado))
+    fallar(errores, "al comerciante le falta", mundo:pesoCarga(victima) < 16)
+    fallar(errores, "el ladrón queda buscado", mundo:esBuscado(ladron) and (ladron.recompensa or 0) > 0)
+    fallar(errores, "la víctima puede defenderse", mundo:puedeDanar(victima, ladron) and mundo:puedeDanar(ladron, victima))
+    fallar(errores, "el cazarrecompensas puede herir al buscado", mundo:puedeDanar(hunter, ladron))
+    local otro = mundo:crearPersonaje({ nombre = "Pasante", faccion = "albor", clase = "guerrero" })
+    fallar(errores, "otro jugador de su corona no puede", not mundo:puedeDanar(otro, ladron))
+    -- no se roba dentro de una ciudad
+    local ciudad = mapa.ciudades[1]
+    local dentro1 = mundo:crearPersonaje({ nombre = "Mercader3", faccion = "albor", clase = "mago" })
+    dentro1.job, dentro1.oficios, dentro1.carga = "trader", { trader = { nivel = 1, xp = 0 } }, { vino = 5 }
+    dentro1.x, dentro1.y = ciudad.spawn.x, ciudad.spawn.y
+    ladron.robo, ladron.x, ladron.y = nil, ciudad.spawn.x + 1, ciudad.spawn.y
+    fallar(errores, "en la ciudad no se roba", mundo:iniciarRobo(ladron, dentro1.id) ~= nil)
+    -- el contacto compra lo robado
+    irA(ladron, contacto)
+    local oroAntes = ladron.oro
+    fallar(errores, "el contacto compra lo robado", mundo:venderRobado(ladron) == nil and ladron.oro > oroAntes and mundo:pesoCarga(ladron) == 0)
+    -- recompensa
+    ladron.cargaRobada = { vino = 5 }
+    mundo:recalcularCarga(ladron)
+    ladron.buscado, ladron.recompensa = mundo.tiempo + 100, 300
+    local oroH = hunter.oro
+    mundo:danar(ladron, 99999, hunter)
+    fallar(errores, "el cazarrecompensas cobra la recompensa", hunter.oro >= oroH + 300, oroH .. " -> " .. hunter.oro)
+    fallar(errores, "el buscado pierde lo robado y la búsqueda", not mundo:esBuscado(ladron) and mundo:pesoCarga(ladron) == 0)
+    -- un robo fallido no da nada pero marca como buscado
+    mundo:revivir(ladron)
+    ladron.job = "thief"
+    victima.carga = { vino = 12 }
+    mundo:recalcularCarga(victima)
+    ladron.x, ladron.y, victima.x, victima.y = afuera.x + 8.5, afuera.y + 8.5, afuera.x + 9.5, afuera.y + 8.5
+    mundo:iniciarRobo(ladron, victima.id)
+    math.random = function(a2) if a2 then return 1 end return 0.9999 end
+    pcall(function() for _ = 1, 60 do mundo:actualizar(0.1) end end)
+    math.random = azarOriginal
+    fallar(errores, "un robo fallido no da nada pero busca", mundo:pesoCarga(ladron) == 0 and mundo:esBuscado(ladron))
+  end)
+  paso("caravanas, bandidos y monturas", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local mapa = mundo.mapas.mundo
+    local a, b = mapa.ciudades[1], mapa.ciudades[2]
+    local c = mundo:salirCaravana(a, b)
+    fallar(errores, "sale una caravana con ruta y carga", c and #c.ruta >= 4 and c.valor > 0 and next(c.carga) ~= nil)
+    -- la caravana recorre el camino de verdad hasta el destino
+    local hunter = mundo:crearPersonaje({ nombre = "Escolta", faccion = "albor", clase = "guerrero", nivel = 12 })
+    hunter.job, hunter.oficios = "hunter", { hunter = { nivel = 1, xp = 0 } }
+    hunter.x, hunter.y = c.x + 1, c.y
+    fallar(errores, "el cazarrecompensas se une a la escolta", mundo:escoltarCaravana(hunter, c.id) == nil)
+    local oro0 = hunter.oro
+    c.emboscada = nil
+    local llego = false
+    for _ = 1, 9000 do
+      mundo:actualizar(0.1)
+      if c.borrar then llego = true break end
+      hunter.x, hunter.y = c.x + 1, c.y
+    end
+    fallar(errores, "la caravana llega a su destino", llego, string.format("paso %d de %d, en %.0f,%.0f", c.paso, #c.ruta, c.x, c.y))
+    fallar(errores, "la escolta cobra", hunter.oro > oro0, oro0 .. " -> " .. hunter.oro)
+    -- emboscada: los bandidos van a por la caravana
+    local c2 = mundo:salirCaravana(a, b)
+    mundo:emboscar(c2)
+    local bandidos = 0
+    for _, e in pairs(mundo.entidades) do if e.bandido then bandidos = bandidos + 1 end end
+    fallar(errores, "salen bandidos", bandidos >= 2, tostring(bandidos))
+    local hp0 = c2.hp
+    for _ = 1, 150 do mundo:actualizar(0.1) end
+    fallar(errores, "los bandidos atacan a la caravana", c2.hp < hp0 or c2.borrar, hp0 .. " -> " .. c2.hp)
+    fallar(errores, "los jugadores no pueden herir caravanas", not mundo:puedeDanar(hunter, c2))
+    -- si cae, deja mercancías que recoge un comerciante
+    local c3 = mundo:salirCaravana(a, b)
+    c3.hp = 1
+    local bandido = mundo:spawnMonstruo("bandido", c3.x + 1, c3.y, { x = c3.x, y = c3.y })
+    mundo:danar(c3, 99999, bandido)
+    local botin
+    for _, e in pairs(mundo.entidades) do if e.kind == "loot" and e.bienes then botin = e end end
+    fallar(errores, "la caravana destruida deja mercancías", botin ~= nil)
+    local t = mundo:crearPersonaje({ nombre = "Recoge", faccion = "albor", clase = "mago", nivel = 12 })
+    t.job, t.oficios = "trader", { trader = { nivel = 1, xp = 0 } }
+    if botin then
+      t.x, t.y = botin.x, botin.y
+      mundo:recoger(t, botin)
+      fallar(errores, "el comerciante recoge la carga", mundo:pesoCarga(t) > 0, tostring(mundo:pesoCarga(t)))
+    end
+    -- monturas
+    local m = mundo:crearPersonaje({ nombre = "Jinete", faccion = "albor", clase = "cazador", nivel = 15 })
+    m.oro = 20000
+    fallar(errores, "compra un caballo", mundo:comprarMontura(m, "caballo") == nil)
+    fallar(errores, "no repite", mundo:comprarMontura(m, "caballo") ~= nil)
+    fallar(errores, "la carreta es de comerciantes", mundo:comprarMontura(m, "carreta") ~= nil)
+    local vel0, car0 = mundo:bonoMontura(m)
+    fallar(errores, "sin montar no hay bono", vel0 == 0 and car0 == 0)
+    fallar(errores, "monta", mundo:alternarMontura(m, "caballo") == nil and m.montado == "caballo")
+    local vel, car = mundo:bonoMontura(m)
+    fallar(errores, "el caballo da velocidad", vel >= 0.3 and car > 0)
+    mundo:alternarMontura(m)
+    fallar(errores, "baja", m.montado == nil)
+    -- dentro de una casa se baja solo
+    mundo:alternarMontura(m, "caballo")
+    m.modo = "casa"
+    mundo:actualizar(0.1)
+    fallar(errores, "se baja sola en una casa", m.montado == nil)
+    m.modo = "mundo"
+    -- una montura de carga sube la capacidad del comerciante y frena menos
+    local mc = mundo:crearPersonaje({ nombre = "Carretero", faccion = "albor", clase = "mago", nivel = 20 })
+    mc.oro = 20000
+    mc.job, mc.oficios = "trader", { trader = { nivel = 1, xp = 0 } }
+    mundo:recalcularCarga(mc)
+    local base = mundo:capacidadCarga(mc)
+    fallar(errores, "compra la carreta", mundo:comprarMontura(mc, "carreta") == nil)
+    mundo:alternarMontura(mc, "carreta")
+    fallar(errores, "la carreta carga mucho más", mundo:capacidadCarga(mc) >= base + 80, base .. " -> " .. mundo:capacidadCarga(mc))
+    mc.carga = { vino = base }
+    mundo:recalcularCarga(mc)
+    local montado = mc.penalCarga
+    mundo:alternarMontura(mc)
+    mc.carga = { vino = base }
+    mundo:recalcularCarga(mc)
+    fallar(errores, "ir montado reduce el freno de la carga", montado < mc.penalCarga, montado .. " vs " .. mc.penalCarga)
+  end)
   paso("equilibrio de combate por nivel", function()
     local Calibracion = require("src.pruebas.calibracion")
     local mundo = Mundo.nuevo()
@@ -899,6 +1144,9 @@ function Pruebas.correr()
         pj.x, pj.y = 210.5, 236.5
         mundo:darItem(pj, "guerrero_arma_2", 1)
         pj.encantos = { arma = 4 }
+        pj.job, pj.oficios = "trader", { trader = { nivel = 3, xp = 40 }, thief = { nivel = 2, xp = 5 } }
+        pj.carga, pj.cargaRobada = { vino = 7 }, { gemas = 2 }
+        pj.monturas, pj.monturaPreferida = { "buey", "caballo" }, "caballo"
         pj.mascotas = { { especie = "murcielago", nivel = 3, xp = 11 }, { especie = "gatito", nivel = 2, xp = 5 } }
         pj.mascotaActiva = 2
         pj.habilidades.vigor = 2
@@ -929,6 +1177,10 @@ function Pruebas.correr()
             otra.misiones.q_auroria and otra.misiones.q_auroria.progreso == 3 and otra.misiones.q_auroria.aceptada
               and otra.misiones.q_auroria.cantidad == 6)
           fallar(errores, "recupera la cacería", otra.caceria.gato == 5)
+          fallar(errores, "recupera el oficio y su nivel", otra.job == "trader" and otra.oficios.trader.nivel == 3 and otra.oficios.trader.xp == 40
+            and otra.oficios.thief and otra.oficios.thief.nivel == 2)
+          fallar(errores, "recupera la carga y lo robado", otra.carga.vino == 7 and otra.cargaRobada.gemas == 2)
+          fallar(errores, "recupera las monturas", #otra.monturas == 2 and otra.monturaPreferida == "caballo")
           fallar(errores, "recupera las mascotas", otra.mascotas and #otra.mascotas == 2 and otra.mascotas[1].especie == "murcielago"
             and otra.mascotas[1].nivel == 3 and otra.mascotas[2].xp == 5 and otra.mascotaActiva == 2)
           fallar(errores, "recupera el encantamiento del arma", otra.encantos and otra.encantos.arma == 4,

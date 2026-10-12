@@ -74,7 +74,13 @@ C.duelo = duelo
 C.monstruoDeNivel = monstruoDeNivel
 
 function C.correr()
+  collectgarbage()
+  local m0, t0 = collectgarbage("count"), os.clock()
   local mundo = Mundo.nuevo()
+  collectgarbage()
+  local n = 0
+  for _ in pairs(mundo.entidades) do n = n + 1 end
+  Log.info(string.format("generar el mundo: %.2f s, %.0f MB, %d entidades", os.clock() - t0, (collectgarbage("count") - m0) / 1024, n))
   -- mundo vacío: sin guardias ni criaturas que estorben el duelo
   mundo.entidades = {}
   local lineas = {}

@@ -16,6 +16,8 @@ local ACCIONES = {
   aprender = true, olvidar = true, encantar = true, mascota_adoptar = true, mascota_invocar = true,
   gremio_info = true, gremio_crear = true, gremio_invitar = true, gremio_responder = true, gremio_salir = true,
   gremio_expulsar = true, gremio_rango = true, gremio_disolver = true,
+  oficio_elegir = true, oficio_info = true, mercancia_info = true, mercancia_comprar = true, mercancia_vender = true,
+  robar = true, perista_vender = true, montura_comprar = true, montura_alternar = true, montura_info = true, escoltar = true,
 }
 
 local function finito(n)
@@ -55,6 +57,24 @@ function A.aceptar(mundo, pj, nombre, datos)
     return true, { id = id, sube = datos.sube and true or false }
   end
   if nombre == "gremio_responder" then return true, { acepta = datos.acepta and true or false } end
+  if nombre == "oficio_elegir" then
+    if type(datos.job) ~= "string" or #datos.job > 12 then return false end
+    return true, { job = datos.job }
+  end
+  if nombre == "mercancia_comprar" or nombre == "mercancia_vender" then
+    local cant = tonumber(datos.cant)
+    if type(datos.bien) ~= "string" or #datos.bien > 16 or not cant or not finito(cant) or cant < 1 or cant > 200 then return false end
+    return true, { bien = datos.bien, cant = math.floor(cant) }
+  end
+  if nombre == "montura_comprar" or nombre == "montura_alternar" then
+    if datos.especie ~= nil and (type(datos.especie) ~= "string" or #datos.especie > 16) then return false end
+    return true, { especie = datos.especie }
+  end
+  if nombre == "robar" or nombre == "escoltar" then
+    local id = tonumber(datos.id)
+    if not id or not finito(id) then return false end
+    return true, { id = id }
+  end
   if nombre == "mascota_adoptar" then
     if type(datos.especie) ~= "string" or #datos.especie > 24 then return false end
     return true, { especie = datos.especie }

@@ -484,8 +484,58 @@ local function avanzarFoto(app)
     app.jugador.gremioRango = "lider"
     app.jugador.invGremio = { de = "Kael", nombre = "Los Lobos" }
   elseif foto.paso == "gremio" then
+    foto.paso = "mapa"
+    Interfaz.panel = "mapa"
+    Interfaz.datosGremio = nil
+  elseif foto.paso == "mapa" then
+    foto.paso = "oficios"
+    Interfaz.panel = "oficios"
+    local j = app.jugador
+    j.job = "trader"
+    j.oficios = { trader = { nivel = 3, xp = 120 } }
+    j.capacidadCarga, j.pesoCarga = 32, 14
+    j.buscadoResta, j.recompensa = 90, 420
+    Interfaz.datosPanel.oficios = {
+      lugar = "capitan", job = "trader", coste = 300,
+      oficios = { trader = { nivel = 3, xp = 120, sig = 1050 }, hunter = { nivel = 1, xp = 0, sig = 250 } },
+      buscados = { { id = 9, nombre = "Sombra", x = 412, y = 301, recompensa = 420 } },
+      buscado = { resta = 90, recompensa = 420 },
+    }
+  elseif foto.paso == "oficios" then
+    foto.paso = "mercancias"
+    Interfaz.panel = "mercancias"
+    Interfaz.datosPanel.mercancias = {
+      sitio = "Auroria", job = "trader", nivel = 3, peso = 14, capacidad = 32,
+      bienes = {
+        { id = "trigo", nombre = "Trigo", compra = 19, venta = 17, tengo = 0, etiqueta = "sobra" },
+        { id = "pescado", nombre = "Pescado", compra = 40, venta = 35, tengo = 0 },
+        { id = "madera", nombre = "Madera", compra = 47, venta = 41, tengo = 6 },
+        { id = "tela", nombre = "Telas", compra = 74, venta = 64, tengo = 0 },
+        { id = "vino", nombre = "Vino", compra = 142, venta = 124, tengo = 8, etiqueta = "falta" },
+        { id = "hierro", nombre = "Hierro", compra = 126, venta = 110, tengo = 0 },
+        { id = "especias", nombre = "Especias", compra = 88, venta = 76, tengo = 0, etiqueta = "sobra" },
+        { id = "gemas", nombre = "Gemas", compra = 274, venta = 240, tengo = 0 },
+      },
+    }
+  elseif foto.paso == "mercancias" then
+    foto.paso = "establo"
+    Interfaz.panel = "establo"
+    app.jugador.montado = "caballo"
+    app.jugador.nivel = 14
+    app.jugador.oro = 3000
+    Interfaz.datosPanel.establo = {
+      montado = "caballo", cerca = true,
+      catalogo = {
+        { id = "buey", nombre = "Buey de carga", nivel = 5, precio = 900, vel = 0.10, carga = 22, desc = "Lento pero fuerte: carga mucho más.", tengo = true },
+        { id = "caballo", nombre = "Caballo", nivel = 10, precio = 2400, vel = 0.40, carga = 6, desc = "El más rápido para cruzar el mapa.", tengo = true },
+        { id = "carreta", nombre = "Carreta cubierta", nivel = 14, precio = 4500, vel = 0.06, carga = 90, oficio = "trader", desc = "Una carreta de mercader: carga enorme. Solo para comerciantes.", tengo = false },
+      },
+    }
+  elseif foto.paso == "establo" then
     foto.paso = "batalla"
     Interfaz.panel = nil
+    local j = app.jugador
+    j.montado, j.job, j.oficios, j.buscadoResta = nil, nil, nil, nil
     Interfaz.datosGremio = nil
     app.jugador.gremioRango = nil
     app.jugador.invGremio = nil
@@ -533,7 +583,7 @@ function Pruebas.tickFoto(app, dt)
   if foto.espera > 0.35 and not app.capturando and foto.paso ~= "fin" then
     app.capturando = true
     local nombre = foto.paso
-    if nombre ~= "equipo" and nombre ~= "arbol" and nombre ~= "mercado" and nombre ~= "encantar" and nombre ~= "mascotas" and nombre ~= "gremio" then Interfaz.panel = nil end
+    if nombre ~= "equipo" and nombre ~= "arbol" and nombre ~= "mercado" and nombre ~= "encantar" and nombre ~= "mascotas" and nombre ~= "gremio" and nombre ~= "mapa" and nombre ~= "oficios" and nombre ~= "mercancias" and nombre ~= "establo" then Interfaz.panel = nil end
     Log.info(string.format("foto %s fps=%d panel=%s", nombre, love.timer.getFPS(), tostring(Interfaz.panel)))
     love.graphics.captureScreenshot(function(img)
       local fd = img:encode("png")

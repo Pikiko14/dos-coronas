@@ -35,7 +35,8 @@ P.ACCIONES = {
   "comercio_oro", "comercio_item", "comercio_ok", "comercio_no", "mover_bolsa",
   "mirar", "aprender", "olvidar", "encantar", "mascota_adoptar", "mascota_invocar",
   "gremio_info", "gremio_crear", "gremio_invitar", "gremio_responder", "gremio_salir", "gremio_expulsar",
-  "gremio_rango", "gremio_disolver",
+  "gremio_rango", "gremio_disolver", "oficio_elegir", "oficio_info", "mercancia_info", "mercancia_comprar",
+  "mercancia_vender", "robar", "perista_vender", "montura_comprar", "montura_alternar", "montura_info", "escoltar",
 }
 
 return P

@@ -93,6 +93,21 @@ function Entrada.manejar(app, id)
   if id == "hud_arbol" then Interfaz.panel = Interfaz.panel == "arbol" and nil or "arbol" return end
   if id:sub(1, 13) == "masc_adoptar_" then app.actuar("mascota_adoptar", { especie = id:sub(14) }) return end
   if id:sub(1, 9) == "masc_inv_" then app.actuar("mascota_invocar", { idx = tonumber(id:sub(10)) }) return end
+  if id:sub(1, 10) == "of_elegir_" then app.actuar("oficio_elegir", { job = id:sub(11) }) return end
+  if id == "perista_vender" then app.actuar("perista_vender") return end
+  if id:sub(1, 6) == "mc_c1_" then app.actuar("mercancia_comprar", { bien = id:sub(7), cant = 1 }) return end
+  if id:sub(1, 6) == "mc_c5_" then app.actuar("mercancia_comprar", { bien = id:sub(7), cant = 5 }) return end
+  if id:sub(1, 6) == "mc_v1_" then app.actuar("mercancia_vender", { bien = id:sub(7), cant = 1 }) return end
+  if id:sub(1, 6) == "mc_vt_" then
+    local bien = id:sub(7)
+    local d = Interfaz.datosPanel.mercancias
+    local n = 0
+    for _, b in ipairs(d and d.bienes or {}) do if b.id == bien then n = b.tengo end end
+    if n > 0 then app.actuar("mercancia_vender", { bien = bien, cant = n }) end
+    return
+  end
+  if id:sub(1, 7) == "mt_alt_" then app.actuar("montura_alternar", { especie = id:sub(8) }) return end
+  if id:sub(1, 7) == "mt_buy_" then app.actuar("montura_comprar", { especie = id:sub(8) }) return end
   if id == "foco_gremio_nombre" then Interfaz.foco = "gremio_nombre" return end
   if id == "foco_gremio_tag" then Interfaz.foco = "gremio_tag" return end
   if id == "gr_crear" then
@@ -362,6 +377,23 @@ function Entrada.tecla(app, tecla)
     local p = app.jugador
     local idx = p and (p.mascotaActiva or (p.mascotas and #p.mascotas > 0 and 1))
     if idx then app.actuar("mascota_invocar", { idx = idx }) end
+  end
+  if tecla == "o" then app.actuar("montura_alternar", {}) end
+  if tecla == "r" then
+    -- robar: el objetivo elegido o la caravana / comerciante más cercano
+    local p = app.jugador
+    local mejor, md
+    local o = p and p.objetivo and app.mundo.entidades[p.objetivo]
+    if o and (o.kind == "caravana" or o.kind == "jugador") then mejor = o end
+    if p and not mejor then
+      for _, e in pairs(app.mundo.entidades) do
+        if e.kind == "caravana" and e.vivo ~= false then
+          local d = math.sqrt((e.x - p.x) ^ 2 + (e.y - p.y) ^ 2)
+          if d < 4 and (not md or d < md) then mejor, md = e, d end
+        end
+      end
+    end
+    if mejor then app.actuar("robar", { id = mejor.id }) end
   end
   if tecla == "g" then
     if Interfaz.panel == "gremio" then Interfaz.panel = nil

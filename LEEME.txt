@@ -235,3 +235,19 @@ NUEVO: PODERES, EQUIPO, ENCANTOS, MASCOTAS Y GREMIOS
     datos.lua (MONSTRUO_HP, MONSTRUO_ATK, danoMul de cada oficio).
   - Base de datos: el personaje esta normalizado en tablas (equipo, bolsa, misiones, casas,
     habilidades, mascotas...) y los gremios tienen las suyas (gremio, gremio_miembro).
+
+NUEVO: MAPA GRANDE, PUESTOS, OFICIOS Y MONTURAS
+  - El mapa es mas grande (ESCALA en datos.lua) y las ciudades estan mas lejos. Los PNJ ya no se
+    amontonan en la plaza: se reparten por las avenidas y por puestos del camino, campamentos de
+    cazadores, refugios de ladrones, torres de encantos y ermitas. Cada PNJ sale con su icono en el
+    minimapa y en el mapa grande (tecla M), con leyenda.
+  - Oficios (compartido/dominio/oficios.lua, ley.lua, caravanas.lua):
+      Comerciante: compra mercancias donde sobran y las vende donde faltan (mercader mayor de
+        ciudades y puestos). Carga limitada; ir cargado frena salvo con montura.
+      Cazarrecompensas: escolta caravanas (pulsa E junto a una) y caza ladrones buscados.
+      Ladron: roba (tecla R) a comerciantes y caravanas fuera de las ciudades y vende lo robado al
+        contacto de un refugio. Robar le pone una recompensa en la cabeza.
+    Se aprenden en: maestro de oficios (comerciante y cazarrecompensas), capitan de cazadores
+    (cazarrecompensas) y contacto de ladrones (ladron). Cada oficio conserva su nivel.
+  - Caravanas de PNJ salen cada poco entre ciudades por los caminos; bandidos pueden emboscarlas.
+  - Monturas (O para montar): buey (carga), caballo (velocidad) y carreta (solo comerciantes).

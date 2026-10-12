@@ -95,7 +95,13 @@ local function placa(e, px, py, alto, jugador, tiempo)
   local color = { 0.92, 0.9, 0.84 }
   if TINTES_FACCION[e.faccion] and e.kind ~= "monstruo" then color = TINTES_FACCION[e.faccion]
   elseif e.kind == "monstruo" then color = e.elite and { 1, 0.8, 0.2 } or { 1, 0.62, 0.45 } end
+  if e.kind == "caravana" then color = { 0.95, 0.8, 0.45 } end
   local nombre = e.nombre or ""
+  if e.buscado then
+    -- los ladrones buscados se ven de rojo y marcados
+    color = { 1, 0.3, 0.25 }
+    nombre = "☠ " .. nombre
+  end
   if e.llevaBandera then nombre = nombre .. " [estandarte]" end
   if e.gremio and (e.kind == "jugador" or e.kind == "bot") then nombre = nombre .. " <" .. e.gremio .. ">" end
   local ancho = f:getWidth(nombre)
@@ -324,11 +330,34 @@ function D.entidad(e, sx, sy, mundo, jugador)
   local def = Personajes.de(e)
   love.graphics.setColor(0, 0, 0, 0.3)
   love.graphics.ellipse("fill", sx, pies - 1, def and def.fila and 20 or 11, def and def.fila and 7 or 4)
-  if def then
+  if e.kind == "caravana" then
+    -- carreta cubierta de las hojas de vehículos
+    local img = Arte.img("Characters/Vehicle.png")
+    local fila = ({ [1] = 0, [4] = 1, [3] = 2, [2] = 3 })[e.dir or 1] or 0
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(img, Arte.quad(img, 128, 128 + fila * 32, 32, 32), sx, pies, 0, 1.5, 1.5, 16, 28)
+    alto = 52
+  elseif def then
     local reloj = (e.anim or 0) / 8
     local rojo = (e.flash or 0) > 0
-    alto = Personajes.dibujar(def, e.dir or 1, e.mov or (math.abs(e.velx or 0) + math.abs(e.vely or 0) > 0.08), reloj,
-      sx, pies, rojo and { 1, 0.6, 0.6 } or nil)
+    local anda = e.mov or (math.abs(e.velx or 0) + math.abs(e.vely or 0) > 0.08)
+    local piesJinete = pies
+    if e.montado then
+      -- la montura va debajo y el jinete algo más arriba
+      local m = Personajes.monturas[e.montado]
+      if m and m.vehiculo then
+        local img = Arte.img("Characters/Vehicle.png")
+        local fila = ({ [1] = 0, [4] = 1, [3] = 2, [2] = 3 })[e.dir or 1] or 0
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(img, Arte.quad(img, 128, 128 + fila * 32, 32, 32), sx, pies, 0, 1.25, 1.25, 16, 28)
+        piesJinete = pies - 14
+      elseif m then
+        Personajes.dibujar(m, e.dir or 1, anda, reloj, sx, pies)
+        piesJinete = pies - 10
+      end
+    end
+    alto = Personajes.dibujar(def, e.dir or 1, anda, reloj, sx, piesJinete, rojo and { 1, 0.6, 0.6 } or nil)
+    if e.montado then alto = alto + 10 end
   elseif e.kind == "estatua" then
     Objetos.dibujar(e.faccion == "umbra" and "estatua_umbra" or "estatua_albor", 0, sx, pies)
     alto = 64

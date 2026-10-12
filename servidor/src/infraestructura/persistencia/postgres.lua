@@ -98,6 +98,29 @@ local function sentenciasDe(pid, ex, hp, mp)
     cada("personaje_mascota", "slot, especie, nivel, xp, activa", filas)
   end
 
+  if ex.oficios or ex.job then
+    filas = {}
+    for _, id in ipairs(ordenadas(ex.oficios)) do
+      local o = ex.oficios[id]
+      filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(id) .. "," .. math.max(1, entero(o.nivel)) .. "," .. entero(o.xp) .. "," ..
+        Pg.literal(ex.job == id) .. ")"
+    end
+    cada("personaje_oficio", "oficio, nivel, xp, actual", filas)
+    filas = {}
+    for _, bien in ipairs(ordenadas(ex.carga)) do
+      if entero(ex.carga[bien]) > 0 then filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(bien) .. "," .. entero(ex.carga[bien]) .. ",FALSE)" end
+    end
+    for _, bien in ipairs(ordenadas(ex.cargaRobada)) do
+      if entero(ex.cargaRobada[bien]) > 0 then filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(bien) .. "," .. entero(ex.cargaRobada[bien]) .. ",TRUE)" end
+    end
+    cada("personaje_carga", "bien, cant, robado", filas)
+    filas = {}
+    for _, tipo in ipairs(ex.monturas or {}) do
+      filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(tipo) .. "," .. Pg.literal(ex.monturaPreferida == tipo) .. ")"
+    end
+    cada("personaje_montura", "tipo, preferida", filas)
+  end
+
   if ex.habilidades then
     filas = {}
     for _, id in ipairs(ordenadas(ex.habilidades)) do
@@ -244,6 +267,27 @@ function M.abrir()
       xp INT NOT NULL DEFAULT 0,
       activa BOOLEAN NOT NULL DEFAULT FALSE,
       PRIMARY KEY (personaje_id, slot)
+    );
+    CREATE TABLE IF NOT EXISTS personaje_oficio (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      oficio TEXT NOT NULL CHECK (oficio IN ('trader', 'hunter', 'thief')),
+      nivel INT NOT NULL DEFAULT 1,
+      xp INT NOT NULL DEFAULT 0,
+      actual BOOLEAN NOT NULL DEFAULT FALSE,
+      PRIMARY KEY (personaje_id, oficio)
+    );
+    CREATE TABLE IF NOT EXISTS personaje_carga (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      bien TEXT NOT NULL,
+      cant INT NOT NULL CHECK (cant >= 1),
+      robado BOOLEAN NOT NULL DEFAULT FALSE,
+      PRIMARY KEY (personaje_id, bien, robado)
+    );
+    CREATE TABLE IF NOT EXISTS personaje_montura (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      tipo TEXT NOT NULL,
+      preferida BOOLEAN NOT NULL DEFAULT FALSE,
+      PRIMARY KEY (personaje_id, tipo)
     );
     CREATE TABLE IF NOT EXISTS personaje_caceria (
       personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
@@ -463,6 +507,19 @@ function M.cargar(personajeId)
       if #hab > 0 then
         datos.habilidades = {}
         for _, r in ipairs(hab) do datos.habilidades[r.habilidad_id] = tonumber(r.rango) or 1 end
+      end
+      datos.oficios, datos.carga, datos.cargaRobada, datos.monturas = {}, {}, {}, {}
+      for _, r in ipairs(lista("SELECT oficio, nivel, xp, actual FROM personaje_oficio WHERE personaje_id = " .. pid)) do
+        datos.oficios[r.oficio] = { nivel = tonumber(r.nivel) or 1, xp = tonumber(r.xp) or 0 }
+        if r.actual == "t" then datos.job = r.oficio end
+      end
+      for _, r in ipairs(lista("SELECT bien, cant, robado FROM personaje_carga WHERE personaje_id = " .. pid)) do
+        local destino = r.robado == "t" and datos.cargaRobada or datos.carga
+        destino[r.bien] = tonumber(r.cant) or 0
+      end
+      for _, r in ipairs(lista("SELECT tipo, preferida FROM personaje_montura WHERE personaje_id = " .. pid .. " ORDER BY tipo")) do
+        datos.monturas[#datos.monturas + 1] = r.tipo
+        if r.preferida == "t" then datos.monturaPreferida = r.tipo end
       end
       datos.mascotas = {}
       for _, r in ipairs(lista("SELECT slot, especie, nivel, xp, activa FROM personaje_mascota WHERE personaje_id = " .. pid .. " ORDER BY slot")) do
