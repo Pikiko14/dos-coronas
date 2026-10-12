@@ -78,6 +78,48 @@ function Pruebas.correr()
     fallar(errores, "terreno de una ciudad", ok, tostring(err))
     Terreno.olvidar(mapa)
   end)
+  paso("todos los objetos tienen icono visible", function()
+    local datos = {}
+    local function celda(hoja, idx)
+      if not datos[hoja] then
+        local archivo = hoja == "equipment" and "otsp_equipment_01.png" or (hoja .. ".png")
+        datos[hoja] = love.image.newImageData(love.filesystem.newFileData(Atlas.carpeta .. "/" .. archivo))
+      end
+      local d = datos[hoja]
+      local cols = math.floor(d:getWidth() / 32)
+      local cx, cy = (idx % cols) * 32, math.floor(idx / cols) * 32
+      if cy + 32 > d:getHeight() then return false end
+      local n = 0
+      for y = cy, cy + 31 do
+        for x = cx, cx + 31 do
+          local r, g, b, a = d:getPixel(x, y)
+          if a > 0.1 and not (r > 0.95 and g < 0.05 and b > 0.95) then n = n + 1 end
+        end
+      end
+      return n > 20
+    end
+    local vacios = {}
+    for id, it in pairs(Datos.items) do
+      if not it.hoja or not it.sprite or not celda(it.hoja, it.sprite) then vacios[#vacios + 1] = id .. "@" .. tostring(it.sprite) end
+    end
+    table.sort(vacios)
+    fallar(errores, "objetos sin icono visible", #vacios == 0, table.concat(vacios, ", "))
+  end)
+  paso("dibujo del botín en el suelo", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Suelo", faccion = "albor", clase = "guerrero" })
+    local ejemplos = {
+      { id = "e17", kind = "loot", x = 5, y = 5, vivo = true, item = "pocion_vida" },
+      { id = "e18", kind = "loot", x = 5, y = 5, vivo = true, bien = "trigo" },
+      { id = "e19", kind = "loot", x = 5, y = 5, vivo = true, oroSuelo = true },
+      { id = "e20", kind = "loot", x = 5, y = 5, vivo = true },
+    }
+    for i, e in ipairs(ejemplos) do
+      local ok, err = pcall(Dibujo.entidad, e, 100, 100, mundo, pj)
+      fallar(errores, "se dibuja el botín " .. i, ok, tostring(err))
+    end
+  end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Clic", faccion = "albor", clase = "mago" })

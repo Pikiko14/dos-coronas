@@ -227,7 +227,7 @@ function M.instalar(Mundo)
     return nil
   end
 
-  -- Mensaje de error: si el oficio es el tuyo pero no estÃ¡ activo, di como activarlo.
+  -- Mensaje de error: si el oficio es el tuyo pero no está activo, di como activarlo.
   function Mundo:avisoOficio(p, job, texto)
     if p.oficioElegido == job and not p.job then return "Activa tu oficio con la tecla Y." end
     return texto
@@ -239,15 +239,15 @@ function M.instalar(Mundo)
     if p.kind ~= "jugador" then return "Solo los jugadores tienen oficio." end
     if p.job then
       if self:pesoCarga(p) > 0 then return "Vende o suelta tu carga antes de desactivar el oficio." end
-      if self:esBuscado(p) then return "Con la ley detrÃ¡s de ti, no puedes dejar el oficio." end
+      if self:esBuscado(p) then return "Con la ley detrás de ti, no puedes dejar el oficio." end
       if p.robo then return "No puedes dejar el oficio en pleno robo." end
       p.job, p.contrato, p.escolta = nil, nil, nil
       self:recalcularCarga(p)
       self:mensaje("sistema", "", "Oficio desactivado. Pulsa Y para activarlo de nuevo.", p)
       return nil
     end
-    if not p.oficioElegido then return "AÃºn no tienes oficio: aprende uno con un maestro de oficios." end
-    if p.modo ~= "mundo" then return "AquÃ­ no puedes activar el oficio." end
+    if not p.oficioElegido then return "Aún no tienes oficio: aprende uno con un maestro de oficios." end
+    if p.modo ~= "mundo" then return "Aquí no puedes activar el oficio." end
     p.job = p.oficioElegido
     self:recalcularCarga(p)
     self:marcarProgreso(p)
@@ -255,8 +255,8 @@ function M.instalar(Mundo)
     return nil
   end
 
-  -- Al morir, la mercancÃ­a que llevabas cae al suelo (una pieza por tipo) y cualquier comerciante
-  -- o ladrÃ³n puede cargarla. Lo robado que llevaba un ladrÃ³n se pierde con la ley (ver caeBuscado).
+  -- Al morir, la mercancía que llevabas cae al suelo (una pieza por tipo) y cualquier comerciante
+  -- o ladrón puede cargarla. Lo robado que llevaba un ladrón se pierde con la ley (ver caeBuscado).
   function Mundo:soltarCargaMuerto(p)
     if p.kind ~= "jugador" and p.kind ~= "bot" then return end
     local cargada = false
@@ -264,7 +264,7 @@ function M.instalar(Mundo)
       if c > 0 then
         cargada = true
         self:dejarEnSuelo({
-          nombre = M.BIENES[bien] and M.BIENES[bien].nombre or "MercancÃ­a", bien = bien, oro = 0, items = {},
+          nombre = M.BIENES[bien] and M.BIENES[bien].nombre or "Mercancía", bien = bien, oro = 0, items = {},
           bienes = { [bien] = c }, hasta = self.tiempo + 90,
         }, p.x, p.y, p.modo, p.z)
       end
@@ -272,7 +272,7 @@ function M.instalar(Mundo)
     if cargada then
       p.carga = {}
       self:recalcularCarga(p)
-      self:mensaje("sistema", "", "Tu mercancÃ­a cae al suelo: otros pueden llevÃ¡rsela.", p)
+      self:mensaje("sistema", "", "Tu mercancía cae al suelo: otros pueden llevársela.", p)
     end
   end
 

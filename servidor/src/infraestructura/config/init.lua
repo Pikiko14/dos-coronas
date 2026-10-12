@@ -109,7 +109,7 @@ return {
     gremioTopeCompaneros = entero("DOSCORONAS_GREMIO_TOPE_COMPANEROS", 3, 0, 20),
     -- oficios y caravanas
     caravanaIntervalo = numero("DOSCORONAS_CARAVANA_INTERVALO_SEG", 70, 5, 86400),
-    caravanaMax = entero("DOSCORONAS_CARAVANA_MAX", 8, 0, 100),
+    caravanaMax = entero("DOSCORONAS_CARAVANA_MAX", 0, 0, 100),
     caravanaVelocidad = numero("DOSCORONAS_CARAVANA_VELOCIDAD", 2.4, 0.5, 10),
     oficioCosteCambio = entero("DOSCORONAS_OFICIO_COSTE_CAMBIO", 300, 0, 10000000),
     buscadoSeg = numero("DOSCORONAS_LADRON_BUSCADO_SEG", 240, 10, 86400),

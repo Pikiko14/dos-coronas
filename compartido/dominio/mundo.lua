@@ -138,7 +138,7 @@ function Mundo:decir(p, texto)
     if not p.grupoId then self:mensaje("sistema", "", "No estás en ningún grupo.", p) return end
     canal, texto = "grupo", texto:sub(4)
   elseif texto:sub(1, 3) == "/g " then
-    if not p.gremioId then self:mensaje("sistema", "", "No perteneces a ningÃºn gremio.", p) return end
+    if not p.gremioId then self:mensaje("sistema", "", "No perteneces a ningún gremio.", p) return end
     canal, texto = "gremio", texto:sub(4)
   elseif texto == "/ayuda" then
     self:mensaje("sistema", "", "Mover: clic o WASD. Atacar: clic en enemigo. Poderes: 1-6 (árbol: K). Curar: selecciona aliado y pulsa 1. E interactúa. I bolsa, P equipo, T comercio, M mapa, B guerra.", p)
@@ -778,7 +778,7 @@ function Mundo:ganarXp(p, cant)
   end
 end
 
--- Deja una pieza en el suelo cerca de (x, y): cada objeto, montÃ³n de oro o mercancÃ­a cae por
+-- Deja una pieza en el suelo cerca de (x, y): cada objeto, montón de oro o mercancía cae por
 -- separado, repartido alrededor, y se recoge pasando por encima.
 function Mundo:dejarEnSuelo(pieza, x, y, modo, z)
   local px, py = x, y
@@ -793,7 +793,7 @@ function Mundo:dejarEnSuelo(pieza, x, y, modo, z)
   end
   pieza.id = self:idNuevo()
   pieza.kind, pieza.vivo, pieza.x, pieza.y, pieza.modo, pieza.z = "loot", true, px, py, modo or "mundo", z or 0
-  pieza.nombre = pieza.nombre or "BotÃ­n"
+  pieza.nombre = pieza.nombre or "Botín"
   self.entidades[pieza.id] = pieza
   return pieza
 end

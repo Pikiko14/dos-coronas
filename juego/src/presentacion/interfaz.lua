@@ -1138,8 +1138,8 @@ end
 local NOMBRES_OFICIO = { trader = "Comerciante", hunter = "Cazarrecompensas", thief = "Ladrón" }
 local DESC_OFICIO = {
   trader = "Compra mercancías donde sobran y véndelas donde faltan. Cuanto más lejos, más ganas. Con una montura llevas más y vas más rápido.",
-  hunter = "Escolta caravanas y caza a los ladrones buscados: cobras una recompensa por cada uno.",
-  thief = "Roba mercancías de comerciantes y caravanas fuera de las ciudades (tecla R) y véndelas a un contacto.",
+  hunter = "Caza a los ladrones buscados (los que roban a los comerciantes): cobras una recompensa por cada uno.",
+  thief = "Roba la mercancía de los comerciantes (jugadores) fuera de las ciudades (tecla R) y véndelas a un contacto.",
 }
 
 -- Franja de estado del oficio en la esquina del mundo.
@@ -1224,7 +1224,7 @@ function I.panelOficios(mundo, p, w, h)
       love.graphics.setColor(0.35, 0.8, 0.85)
       love.graphics.rectangle("fill", x + 10, y + 148, (cw - 20) * math.min(1, o.xp / math.max(1, o.sig)), 8)
     end
-    I.boton(x + 10, y + ch - 32, cw - 20, 26, actual and "En ejercicio" or (o and "Volver a este oficio" or "Aprender"), "of_elegir_" .. id,
+    I.boton(x + 10, y + ch - 32, cw - 20, 26, actual and "Elegido" or (not permitido[id] and (id == "thief" and "Solo en un refugio de ladrones" or "Solo en su campamento") or (o and "Volver a este oficio" or "Aprender")), "of_elegir_" .. id,
       (not actual) and permitido[id] and true or false)
   end
   love.graphics.setColor(0.7, 0.68, 0.6)

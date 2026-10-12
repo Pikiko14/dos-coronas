@@ -7,7 +7,7 @@ local Datos = require("compartido.dominio.datos")
 
 local M = {}
 
-M.MAX = 8
+M.MAX = 0            -- caravanas automáticas del servidor: ninguna (las caravanas son los comerciantes jugadores)
 M.INTERVALO = 70        -- segundos entre salidas
 M.VELOCIDAD = 2.4
 M.RADIO_ESCOLTA = 22    -- hasta dónde cuenta la escolta al llegar

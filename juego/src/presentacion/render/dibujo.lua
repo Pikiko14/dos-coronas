@@ -363,7 +363,8 @@ function D.entidad(e, sx, sy, mundo, jugador)
         piesJinete = pies - 10
       end
     end
-    alto = Personajes.dibujar(def, e.dir or 1, anda, reloj, sx, piesJinete, rojo and { 1, 0.6, 0.6 } or nil)
+    -- montado, la que camina es la montura: el jinete va quieto (sin mover los pies)
+    alto = Personajes.dibujar(def, e.dir or 1, anda and not e.montado, reloj, sx, piesJinete, rojo and { 1, 0.6, 0.6 } or nil)
     if e.montado then alto = alto + 10 end
   elseif e.kind == "estatua" then
     Objetos.dibujar(e.faccion == "umbra" and "estatua_umbra" or "estatua_albor", 0, sx, pies)
@@ -378,9 +379,9 @@ function D.entidad(e, sx, sy, mundo, jugador)
     if not e.portador then Objetos.dibujar(e.faccion == "umbra" and "bandera_umbra" or "bandera_albor", 0, sx, pies) end
     alto = 64
   elseif e.kind == "loot" then
-    -- cada objeto, montÃ³n de oro o fardo de mercancÃ­a cae al suelo por separado
+    -- cada objeto, montón de oro o fardo de mercancía cae al suelo por separado
     local def = e.item and Datos.item(e.item)
-    local brillo = 0.5 + math.sin((mundo.tiempo or 0) * 5 + e.id) * 0.25
+    local brillo = 0.5 + math.sin((mundo.tiempo or 0) * 5 + (e.x or 0) * 3) * 0.25
     love.graphics.setColor(0, 0, 0, 0.3)
     love.graphics.ellipse("fill", sx, pies - 2, 9, 4)
     if def then

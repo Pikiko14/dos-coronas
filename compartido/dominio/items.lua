@@ -68,7 +68,7 @@ local ICONO = {
   tela = {
     cabeza = { 481, 492, 504, 445, 438, 436, 468, 495 },
     pecho = { 519, 527, 540, 522, 539, 567, 566, 568 },
-    piernas = { 625, 641, 649, 647, 645, 646, 651, 655 },
+    piernas = { 625, 641, 629, 638, 631, 627, 626, 630 },
     pies = { 658, 661, 656, 660, 659, 665, 664, 662 },
   },
 }
@@ -80,11 +80,11 @@ local ARMAS = {
     { id = "hacha", nombre = "Hacha", g = "f", arma = "espada", atk = 6.9, hp = -1.5, iconos = { 224, 225, 241, 247, 251, 259, 262, 260 } },
   },
   cazador = {
-    { id = "arma", nombre = "Arco", g = "m", arma = "arco", atk = 5.8, spd = 0.01, iconos = { 288, 290, 296, 300, 301, 303, 323, 324 } },
+    { id = "arma", nombre = "Arco", g = "m", arma = "arco", atk = 5.8, spd = 0.01, iconos = { 288, 290, 296, 300, 301, 303, 302, 319 } },
     { id = "ballesta", nombre = "Ballesta", g = "f", arma = "arco", atk = 7.0, spd = -0.012, iconos = { 304, 305, 306, 307, 308, 319, 321, 322 } },
   },
   mago = {
-    { id = "arma", nombre = "Bastón", g = "m", arma = "baston", atk = 0.8, matk = 6.0, mp = 4, iconos = { 352, 359, 375, 342, 364, 380, 368, 381 } },
+    { id = "arma", nombre = "Bastón", g = "m", arma = "baston", atk = 0.8, matk = 6.0, mp = 4, iconos = { 352, 359, 367, 342, 364, 365, 368, 366 } },
     { id = "vara", nombre = "Vara", g = "f", arma = "baston", atk = 0.8, matk = 6.9, iconos = { 343, 344, 345, 346, 347, 363, 362, 361 } },
   },
   clerigo = {

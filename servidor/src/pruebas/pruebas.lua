@@ -1293,6 +1293,14 @@ function Pruebas.correr()
     end
     fallar(errores, "otro oficio no la carga", next(pasante.carga or {}) == nil and next(pasante.cargaRobada or {}) == nil)
   end)
+  paso("sin caravanas automáticas", function()
+    local Servicio = require("src.aplicacion.servicio_servidor")
+    local mundo = Servicio.crearMundo({ ajustes = { juego = require("src.infraestructura.config").juego, eventos = require("src.infraestructura.config").eventos } })
+    mundo.entidades = {}
+    for _ = 1, 400 do mundo:actualizarCaravanas(1) end
+    fallar(errores, "el servidor no lanza caravanas por su cuenta", mundo:contarCaravanas() == 0, tostring(mundo:contarCaravanas()))
+    mundo.restaurarAjustes()
+  end)
   paso("comandos de administrador", function()
     local mundo = Mundo.nuevo()
     mundo.entidades = {}

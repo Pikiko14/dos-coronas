@@ -152,7 +152,7 @@ function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa)
   return 32
 end
 
--- Cuerpo de un personaje caÃ­do: la misma imagen, en escala de grises.
+-- Cuerpo de un personaje caído: la misma imagen, en escala de grises.
 local sombreadorGris
 function P.dibujarGris(def, dir, sx, sy, alfa)
   if sombreadorGris == nil then
