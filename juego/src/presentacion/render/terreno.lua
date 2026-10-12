@@ -1,0 +1,422 @@
+-- Dibuja el suelo con las láminas nuevas. El mapa se pinta en bloques de
+-- 16x16 casillas dentro de canvas que se guardan, así cada fotograma solo
+-- coloca unos pocos bloques en pantalla.
+local Arte = require("src.presentacion.render.arte")
+local Auto = require("src.presentacion.render.autotile")
+local Objetos = require("src.presentacion.render.objetos")
+
+local T = {}
+
+local TILE = 32
+local BLOQUE = 16
+local LIMITE_BLOQUES = 70
+local TINTE_UMBRA = { 0.66, 0.58, 0.92 }
+local TINTE_CICATRIZ = { 0.62, 0.42, 0.40 }
+
+-- Familias de suelo: lo que cuenta como "lo mismo" para unir bordes.
+local FAMILIA = {
+  hierba = "hierba", hierba_osc = "hierba", bosque = "hierba", adoquin = "hierba",
+  arena = "arena", tierra = "tierra", cicatriz = "tierra", montana = "tierra",
+  camino = "pavimento", calle = "pavimento", plaza = "pavimento",
+  agua = "agua", muralla = "muralla", teja = "edificio", teja_umbra = "edificio",
+  fachada = "edificio", empedrado = "empedrado", madera = "madera", tejado = "edificio",
+}
+
+local img
+
+local function imagenes()
+  if img then return img end
+  img = {
+    a1 = Arte.img("Tilesets/Outside_A1.png"),
+    a2 = Arte.img("Tilesets/Outside_A2.png"),
+    a3 = Arte.img("Tilesets/Outside_A3.png"),
+    a5 = Arte.img("Tilesets/Outside_A5.png"),
+    b = Arte.img("Tilesets/Outside_B.png"),
+    ia5 = Arte.img("Tilesets/Inside_A5.png"),
+    ib = Arte.img("Tilesets/Inside_B.png"),
+  }
+  return img
+end
+
+local function hash(x, y, sal)
+  local n = (x * 73856093 + y * 19349663 + (sal or 0) * 83492791) % 2147483647
+  n = (n * 1103515245 + 12345) % 2147483647
+  return (n % 10007) / 10007
+end
+
+local function suelo(mapa, x, y)
+  return mapa.suelo[x] and mapa.suelo[x][y]
+end
+
+local function familia(mapa, x, y)
+  if x < 0 or y < 0 or x >= mapa.w or y >= mapa.h then return nil end
+  return FAMILIA[suelo(mapa, x, y) or ""]
+end
+
+local function lado(mapa, x, y)
+  return mapa.lado[x] and mapa.lado[x][y]
+end
+
+-- Base de suelo (fila del bloque A2) a la que pertenece una casilla.
+local function baseDe(mapa, x, y)
+  local f = familia(mapa, x, y)
+  if f == "arena" then return 2 end
+  if f == "tierra" then return 1 end
+  if f == "hierba" then return 0 end
+  -- pavimento y demás: vota la base de los vecinos
+  local votos = { [0] = 0, 0, 0 }
+  for dy = -1, 1 do
+    for dx = -1, 1 do
+      local g = familia(mapa, x + dx, y + dy)
+      if g == "arena" then votos[2] = votos[2] + 1
+      elseif g == "tierra" then votos[1] = votos[1] + 1
+      elseif g == "hierba" then votos[0] = votos[0] + 1 end
+    end
+  end
+  local mejor, mv = 0, votos[0]
+  if votos[1] > mv then mejor, mv = 1, votos[1] end
+  if votos[2] > mv then mejor, mv = 2, votos[2] end
+  return mejor
+end
+
+-- Color de una casilla: la hierba y la tierra del lado de Umbra se oscurecen y la
+-- cicatriz se tiñe de rojizo. fam es la familia de suelo a la que se pinta.
+local function tinte(mapa, x, y, fam)
+  local tipo = suelo(mapa, x, y)
+  if tipo == "cicatriz" then return TINTE_CICATRIZ end
+  if (fam == "hierba" or fam == "tierra") and (tipo == "hierba_osc" or lado(mapa, x, y) == "umbra") then
+    return TINTE_UMBRA
+  end
+  return nil
+end
+
+local function color(c)
+  if c then love.graphics.setColor(c[1], c[2], c[3], 1) else love.graphics.setColor(1, 1, 1, 1) end
+end
+
+local NOMBRE_FAMILIA_BASE = { [0] = "hierba", [1] = "tierra", [2] = "arena" }
+
+local function hayVecino(mapa, x, y, fam)
+  for dy = -1, 1 do
+    for dx = -1, 1 do
+      if (dx ~= 0 or dy ~= 0) and familia(mapa, x + dx, y + dy) == fam then return true end
+    end
+  end
+  return false
+end
+
+-- Suelo base de una casilla. Los cambios de terreno no se hacen cortando de golpe
+-- de un tile a otro: la hierba junto a la arena y la tierra sobre la hierba se
+-- pintan como parches con bordes redondeados (autotiles A2) sobre el suelo de abajo.
+-- Devuelve la fila de base (0 hierba, 1 tierra, 2 arena) para los caminos.
+local function dibujarBase(mapa, x, y, px, py)
+  local im = imagenes()
+  local f = familia(mapa, x, y)
+  local v = math.floor(hash(x, y, 1) * 4)
+  local function plano(fila)
+    love.graphics.draw(im.a2, Arte.quad(im.a2, (v % 2) * 32, fila * 96 + math.floor(v / 2) * 32, 32, 32), px, py)
+  end
+  if f == "hierba" then
+    color(tinte(mapa, x, y, "hierba"))
+    if hayVecino(mapa, x, y, "arena") then
+      plano(2)
+      local m = Auto.mascara(function(dx, dy)
+        local g = familia(mapa, x + dx, y + dy)
+        return g ~= "arena" and g ~= "agua"
+      end)
+      Auto.suelo(im.a2, 64, 2 * 96, m, px, py) -- "Grass (Sand)"
+    else
+      plano(0)
+    end
+    return 0
+  elseif f == "tierra" then
+    color(tinte(mapa, x, y, "tierra"))
+    plano(0)
+    local m = Auto.mascara(function(dx, dy)
+      local g = familia(mapa, x + dx, y + dy)
+      return g ~= "hierba"
+    end)
+    Auto.suelo(im.a2, 64, 0, m, px, py) -- "Dirt (Meadow)"
+    return 1
+  elseif f == "arena" then
+    color(nil)
+    plano(2)
+    return 2
+  end
+  local base = baseDe(mapa, x, y)
+  color(tinte(mapa, x, y, NOMBRE_FAMILIA_BASE[base]))
+  plano(base)
+  return base
+end
+
+local function dibujarPavimento(mapa, x, y, px, py, base)
+  local im = imagenes()
+  local m = Auto.mascara(function(dx, dy)
+    local g = familia(mapa, x + dx, y + dy)
+    return g == "pavimento" or g == nil
+  end)
+  color(tinte(mapa, x, y, NOMBRE_FAMILIA_BASE[base]))
+  Auto.suelo(im.a2, 128, base * 96, m, px, py)
+end
+
+-- Decoración repartida por biomas: cada bioma tiene su lista de objetos y la
+-- probabilidad de cada uno por casilla. Así ningún sitio queda pelado.
+local DECORADO = {
+  trigal = { { "flor_amarilla", 0.03 }, { "flor_blanca", 0.015 }, { "matas", 0.03 }, { "heno", 0.004 }, { "flores_mixtas", 0.01 } },
+  campos = { { "flor_roja", 0.012 }, { "matas", 0.025 }, { "heno", 0.01 }, { "piedra", 0.008 }, { "hierba_alta", 0.02 } },
+  muelle = { { "hierba_seca", 0.035 }, { "piedra", 0.012 }, { "tronco", 0.008 }, { "cubo", 0.004 }, { "madera_apilada", 0.003 } },
+  marea = { { "hierba_seca", 0.035 }, { "piedra", 0.014 }, { "tronco", 0.007 }, { "seta_roja", 0.004 } },
+  senda = { { "seta_marron", 0.02 }, { "seta_roja", 0.012 }, { "tocon", 0.014 }, { "tronco", 0.01 }, { "helecho", 0.05 }, { "matas", 0.035 }, { "hojas", 0.015 } },
+  pinar = { { "seta_marron", 0.012 }, { "seta_roja", 0.012 }, { "tocon", 0.012 }, { "tronco", 0.012 }, { "helecho", 0.05 }, { "hojas", 0.025 }, { "piedra", 0.008 } },
+  colina = { { "piedra", 0.025 }, { "flor_amarilla", 0.03 }, { "hierba_alta", 0.03 }, { "matas", 0.025 }, { "arbusto", 0.01 } },
+  velo = { { "seta_roja", 0.022 }, { "hierba_seca", 0.04 }, { "hojas", 0.025 }, { "rafflesia", 0.004 }, { "piedra", 0.008 } },
+  cienaga = { { "seta_roja", 0.028 }, { "rafflesia", 0.009 }, { "hierba_alta", 0.045 }, { "hojas", 0.03 }, { "helecho", 0.035 } },
+  eclipse = { { "grieta", 0.04 }, { "restos", 0.007 }, { "piedra", 0.025 }, { "hierba_seca", 0.025 } },
+  cicatriz = { { "grieta", 0.045 }, { "restos", 0.008 }, { "piedra", 0.025 } },
+  costa = { { "hierba_seca", 0.03 }, { "piedra", 0.014 }, { "tronco", 0.006 } },
+  albor = { { "flor_amarilla", 0.022 }, { "flor_blanca", 0.018 }, { "flor_roja", 0.008 }, { "matas", 0.035 }, { "hierba_alta", 0.02 }, { "piedra", 0.005 } },
+  umbra = { { "seta_roja", 0.012 }, { "hierba_seca", 0.03 }, { "matas", 0.025 }, { "piedra", 0.007 }, { "flor_blanca", 0.012 }, { "hojas", 0.012 } },
+  ciudad = { { "flor_amarilla", 0.03 }, { "flor_roja", 0.02 }, { "flores_mixtas", 0.025 }, { "matas", 0.025 }, { "jarron", 0.004 }, { "cubo", 0.004 } },
+}
+-- Lo que se queda tal cual, sin teñir con el color de la zona.
+local SIN_TINTE = { piedra = true, grieta = true, restos = true, fogata = true, cubo = true, jarron = true, madera_apilada = true, tronco = true, tocon = true }
+
+-- Campos de cultivo: parches de 8x6 casillas con hortalizas y un espantapájaros.
+local function cultivo(mapa, x, y, bioma)
+  if bioma ~= "campos" and bioma ~= "trigal" then return nil end
+  local bx, by = math.floor(x / 8), math.floor(y / 6)
+  if hash(bx, by, 9) > 0.3 then return nil end
+  local lx, ly = x - bx * 8, y - by * 6
+  if lx < 1 or lx > 6 or ly < 1 or ly > 4 then return nil end
+  if lx == 3 and ly == 2 then return "espantapajaros", 0 end
+  return "cultivo", math.floor(hash(bx, by, 10) * 4)
+end
+
+local function decorar(mapa, x, y, px, py, tipo, fam)
+  if fam ~= "hierba" and fam ~= "tierra" and fam ~= "arena" then return end
+  if mapa.bloque[x] and mapa.bloque[x][y] then return end
+  if tipo == "montana" or tipo == "adoquin" then return end
+  local bioma = mapa.bioma[x] and mapa.bioma[x][y]
+  local nombre, variante = cultivo(mapa, x, y, bioma)
+  if not nombre then
+    local lista = DECORADO[bioma or ""]
+    if not lista then return end
+    local r = hash(x, y, 7)
+    local acum = 0
+    for _, d in ipairs(lista) do
+      acum = acum + d[2]
+      if r < acum then nombre = d[1] break end
+    end
+    if not nombre then return end
+    variante = math.floor(hash(x, y, 8) * 4)
+  end
+  Objetos.dibujar(nombre, variante, px + 16, py + 31, (not SIN_TINTE[nombre]) and tinte(mapa, x, y, fam) or nil)
+end
+
+-- Mar: autotile A1 tipo 10 (agua con su orilla de arena), tres cuadros de oleaje.
+local function dibujarAgua(mapa, x, y, px, py, cuadro)
+  local im = imagenes()
+  local m = Auto.mascara(function(dx, dy)
+    local g = familia(mapa, x + dx, y + dy)
+    return g == "agua" or g == nil
+  end)
+  love.graphics.setColor(1, 1, 1, 1)
+  Auto.suelo(im.a1, cuadro * 64, 288, m, px, py)
+end
+
+local function dibujarMuralla(mapa, x, y, px, py)
+  local im = imagenes()
+  local v = math.floor(hash(x, y, 2) * 3)
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.draw(im.a5, Arte.quad(im.a5, v * 32, 8 * 32, 32, 32), px, py)
+  if familia(mapa, x, y - 1) ~= "muralla" then
+    -- remate más claro en el borde superior
+    love.graphics.setColor(1, 1, 1, 0.22)
+    love.graphics.rectangle("fill", px, py, 32, 3)
+    love.graphics.setColor(0, 0, 0, 0.35)
+    love.graphics.rectangle("fill", px, py + 3, 32, 2)
+  end
+  if familia(mapa, x, y + 1) ~= "muralla" then
+    love.graphics.setColor(0, 0, 0, 0.3)
+    love.graphics.rectangle("fill", px, py + 28, 32, 4)
+  end
+end
+
+local function dibujarInterior(mapa, x, y, px, py)
+  local im = imagenes()
+  local tipo = suelo(mapa, x, y)
+  love.graphics.setColor(1, 1, 1, 1)
+  if tipo == "madera" then
+    -- parquet de la lámina interior (A5, fila 2)
+    love.graphics.draw(im.ia5, Arte.quad(im.ia5, 0, 2 * 32, 32, 32), px, py)
+  else
+    -- muro de piedra
+    love.graphics.draw(im.ia5, Arte.quad(im.ia5, (2 + (x + y) % 2) * 32, 0, 32, 32), px, py)
+    love.graphics.setColor(0, 0, 0, 0.18)
+    love.graphics.rectangle("fill", px, py + 28, 32, 4)
+  end
+end
+
+function T.dibujarSuelo(mapa, x, y, px, py, cuadroAgua)
+  local tipo = suelo(mapa, x, y)
+  if not tipo then
+    love.graphics.setColor(0.04, 0.05, 0.07, 1)
+    love.graphics.rectangle("fill", px, py, TILE, TILE)
+    return
+  end
+  local f = FAMILIA[tipo]
+  if f == "agua" then
+    dibujarAgua(mapa, x, y, px, py, cuadroAgua)
+  elseif f == "muralla" then
+    dibujarMuralla(mapa, x, y, px, py)
+  elseif f == "empedrado" or f == "madera" then
+    dibujarInterior(mapa, x, y, px, py)
+  elseif f == "edificio" then
+    -- el edificio se pinta aparte; debajo va el patio
+    dibujarBase(mapa, x, y, px, py)
+  else
+    local base = dibujarBase(mapa, x, y, px, py)
+    if f == "pavimento" then dibujarPavimento(mapa, x, y, px, py, base) end
+    if f ~= "pavimento" then
+      decorar(mapa, x, y, px, py, tipo, NOMBRE_FAMILIA_BASE[base])
+    end
+  end
+end
+
+-- Edificios: tejado (autotile A3 por filas) y fachada con puerta y ventanas.
+local TEJADO = { albor = { 0, 0 }, umbra = { 3, 0 } }
+local PARED = { albor = { 4, 1 }, umbra = { 3, 1 } }
+
+local function dibujarEdificio(e, ox, oy)
+  local im = imagenes()
+  local roja = TEJADO[e.faccion] or TEJADO.albor
+  local pared = PARED[e.faccion] or PARED.albor
+  local filasTecho = 2
+  for fy = 0, e.h - 1 do
+    for fx = 0, e.w - 1 do
+      local px = (e.x + fx) * TILE - ox
+      local py = (e.y + fy) * TILE - oy
+      local techo = fy < filasTecho
+      local m = Auto.mascara(function(dx, dy)
+        if dx ~= 0 and dy ~= 0 then return false end
+        local nx, ny = fx + dx, fy + dy
+        if nx < 0 or nx >= e.w or ny < 0 or ny >= e.h then return false end
+        return (ny < filasTecho) == techo
+      end)
+      love.graphics.setColor(1, 1, 1, 1)
+      local k = techo and roja or pared
+      Auto.muro(im.a3, k[1] * 64, k[2] * 64, m, px, py)
+    end
+  end
+  -- ventanas y puerta
+  love.graphics.setColor(1, 1, 1, 1)
+  local filaPared = e.y + filasTecho
+  for _, fx in ipairs({ 1, e.w - 2 }) do
+    if fx ~= e.puertaX - e.x then
+      love.graphics.draw(im.b, Arte.quad(im.b, 32, 4 * 32, 32, 32), (e.x + fx) * TILE - ox, filaPared * TILE - oy)
+    end
+  end
+  love.graphics.draw(im.b, Arte.quad(im.b, 64, 6 * 32, 32, 64), e.puertaX * TILE - ox, filaPared * TILE - oy)
+  -- sombra bajo el alero
+  love.graphics.setColor(0, 0, 0, 0.18)
+  love.graphics.rectangle("fill", e.x * TILE - ox, (e.y + e.h) * TILE - oy, e.w * TILE, 4)
+end
+
+-- Bloques cacheados ----------------------------------------------------
+local function clave(cx, cy, cuadro) return cx .. "," .. cy .. "," .. cuadro end
+
+local function tieneAgua(mapa, cx, cy)
+  local clavec = cx .. "," .. cy
+  mapa._aguaBloque = mapa._aguaBloque or {}
+  local v = mapa._aguaBloque[clavec]
+  if v ~= nil then return v end
+  v = false
+  for y = cy * BLOQUE, cy * BLOQUE + BLOQUE - 1 do
+    for x = cx * BLOQUE, cx * BLOQUE + BLOQUE - 1 do
+      if FAMILIA[suelo(mapa, x, y) or ""] == "agua" then v = true break end
+    end
+    if v then break end
+  end
+  mapa._aguaBloque[clavec] = v
+  return v
+end
+
+local function construir(mapa, cx, cy, cuadro)
+  local canvas = love.graphics.newCanvas(BLOQUE * TILE, BLOQUE * TILE)
+  canvas:setFilter("nearest", "nearest")
+  local previo = { love.graphics.getCanvas() }
+  love.graphics.setCanvas(canvas)
+  love.graphics.clear(0, 0, 0, 0)
+  love.graphics.push("all")
+  love.graphics.origin()
+  for ty = 0, BLOQUE - 1 do
+    for tx = 0, BLOQUE - 1 do
+      local x, y = cx * BLOQUE + tx, cy * BLOQUE + ty
+      T.dibujarSuelo(mapa, x, y, tx * TILE, ty * TILE, cuadro)
+    end
+  end
+  for _, e in ipairs(mapa.edificios or {}) do
+    if e.x + e.w > cx * BLOQUE and e.x < (cx + 1) * BLOQUE and e.y + e.h > cy * BLOQUE and e.y < (cy + 1) * BLOQUE then
+      dibujarEdificio(e, cx * BLOQUE * TILE, cy * BLOQUE * TILE)
+    end
+  end
+  love.graphics.pop()
+  love.graphics.setCanvas(previo[1])
+  return canvas
+end
+
+local function bloque(mapa, cx, cy, cuadro)
+  mapa._bloques = mapa._bloques or { mapa = {}, n = 0, orden = 0 }
+  local c = mapa._bloques
+  local k = clave(cx, cy, cuadro)
+  local b = c.mapa[k]
+  c.orden = c.orden + 1
+  if not b then
+    if c.n >= LIMITE_BLOQUES then
+      local viejo, vk
+      for kk, bb in pairs(c.mapa) do
+        if not vk or bb.uso < viejo.uso then viejo, vk = bb, kk end
+      end
+      if vk then
+        viejo.canvas:release()
+        c.mapa[vk] = nil
+        c.n = c.n - 1
+      end
+    end
+    b = { canvas = construir(mapa, cx, cy, cuadro), uso = c.orden }
+    c.mapa[k] = b
+    c.n = c.n + 1
+  end
+  b.uso = c.orden
+  return b.canvas
+end
+
+-- Dibuja el suelo visible. (camX, camY) en píxeles de mundo; la escala la
+-- pone quien llama con love.graphics.scale.
+function T.dibujar(mapa, camX, camY, vw, vh, tiempo, alfa)
+  local cuadro = ({ 0, 1, 2, 1 })[(math.floor((tiempo or 0) * 3) % 4) + 1]
+  local x0 = math.floor(camX / (BLOQUE * TILE))
+  local y0 = math.floor(camY / (BLOQUE * TILE))
+  local x1 = math.floor((camX + vw) / (BLOQUE * TILE))
+  local y1 = math.floor((camY + vh) / (BLOQUE * TILE))
+  love.graphics.setColor(1, 1, 1, alfa or 1)
+  local maxX = math.floor((mapa.w - 1) / BLOQUE)
+  local maxY = math.floor((mapa.h - 1) / BLOQUE)
+  for cy = math.max(0, y0), math.min(maxY, y1) do
+    for cx = math.max(0, x0), math.min(maxX, x1) do
+      local f = tieneAgua(mapa, cx, cy) and cuadro or 0
+      local canvas = bloque(mapa, cx, cy, f)
+      love.graphics.draw(canvas, cx * BLOQUE * TILE - camX, cy * BLOQUE * TILE - camY)
+    end
+  end
+end
+
+function T.olvidar(mapa)
+  if mapa._bloques then
+    for _, b in pairs(mapa._bloques.mapa) do b.canvas:release() end
+  end
+  mapa._bloques = nil
+  mapa._aguaBloque = nil
+end
+
+return T

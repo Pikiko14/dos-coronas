@@ -1,0 +1,528 @@
+-- Adaptador de PostgreSQL para el puerto de almacén (cuentas y personajes).
+local Pg = require("src.infraestructura.persistencia.pg")
+local Util = require("compartido.dominio.util")
+local Datos = require("compartido.dominio.datos")
+local Config = require("src.infraestructura.config")
+local Credenciales = require("src.aplicacion.credenciales")
+local aleatorio = require("src.infraestructura.aleatorio")
+
+local M = { nombre = "postgres" }
+
+M.host = Config.postgres.host
+M.puerto = Config.postgres.puerto
+M.usuario = Config.postgres.usuario
+M.base = Config.postgres.base
+M.clave = Config.postgres.clave
+
+local usuarioValido, nombreValido = Credenciales.usuarioValido, Credenciales.nombreValido
+
+local function salNueva()
+  return aleatorio(16)
+end
+
+-- ---------------------------------------------------------------------------
+-- Personaje normalizado: una fila en `personajes` y una tabla por cada lista
+-- (equipo, bolsa, misiones, casas, cofres, cacería). Se guarda entero en un solo
+-- mensaje a Postgres, que lo ejecuta como una transacción: o queda todo o nada.
+-- ---------------------------------------------------------------------------
+local function entero(v)
+  v = tonumber(v) or 0
+  if v ~= v or v == math.huge or v == -math.huge then return 0 end
+  return math.floor(v)
+end
+
+local function real(v)
+  v = tonumber(v) or 0
+  if v ~= v or v == math.huge or v == -math.huge then return 0 end
+  return string.format("%.4f", v)
+end
+
+local function ordenadas(t)
+  local claves = {}
+  for k in pairs(t or {}) do claves[#claves + 1] = tostring(k) end
+  table.sort(claves)
+  return claves
+end
+
+-- `ex` es lo que exporta el mundo (Mundo:exportar); hp y mp pueden faltar.
+local function sentenciasDe(pid, ex, hp, mp)
+  pid = tonumber(pid)
+  local q = {}
+  local function cada(tabla, columnas, filas)
+    q[#q + 1] = "DELETE FROM " .. tabla .. " WHERE personaje_id = " .. pid
+    if #filas > 0 then
+      q[#q + 1] = "INSERT INTO " .. tabla .. " (personaje_id, " .. columnas .. ") VALUES " .. table.concat(filas, ",")
+    end
+  end
+  local v = type(ex.vinculo) == "table" and ex.vinculo or {}
+  local sets = {
+    "nivel=" .. entero(ex.nivel or 1), "xp=" .. entero(ex.xp), "oro=" .. entero(ex.oro),
+    "x=" .. real(ex.x), "y=" .. real(ex.y), "z=" .. entero(ex.z),
+    "modo=" .. Pg.literal(ex.modo or "mundo"),
+    "vinculo_modo=" .. (v.x and Pg.literal(v.modo or "mundo") or "NULL"),
+    "vinculo_x=" .. (v.x and real(v.x) or "NULL"), "vinculo_y=" .. (v.y and real(v.y) or "NULL"),
+    "guardado=TRUE",
+  }
+  if hp then sets[#sets + 1] = "hp=" .. entero(hp) end
+  if mp then sets[#sets + 1] = "mp=" .. entero(mp) end
+  q[#q + 1] = "UPDATE personajes SET " .. table.concat(sets, ", ") .. " WHERE id=" .. pid
+
+  local filas = {}
+  for _, hueco in ipairs(ordenadas(ex.equipo)) do
+    filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(hueco) .. "," .. Pg.literal(ex.equipo[hueco]) .. ")"
+  end
+  cada("personaje_equipo", "hueco, item_id", filas)
+
+  filas = {}
+  for i, s in ipairs(ex.bolsa or {}) do
+    filas[#filas + 1] = "(" .. pid .. "," .. i .. "," .. Pg.literal(s.id) .. "," .. math.max(1, entero(s.cant or 1)) .. ")"
+  end
+  cada("personaje_bolsa", "ranura, item_id, cant", filas)
+
+  filas = {}
+  for _, id in ipairs(ordenadas(ex.misiones)) do
+    local m = ex.misiones[id]
+    filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(id) .. "," .. entero(m.progreso) .. "," ..
+      Pg.literal(m.aceptada and true or false) .. "," .. Pg.literal(m.entregada and true or false) .. ")"
+  end
+  cada("personaje_mision", "mision_id, progreso, aceptada, entregada", filas)
+
+  if ex.habilidades then
+    filas = {}
+    for _, id in ipairs(ordenadas(ex.habilidades)) do
+      filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(id) .. "," .. math.max(1, entero(ex.habilidades[id])) .. ")"
+    end
+    cada("personaje_habilidad", "habilidad_id, rango", filas)
+  end
+
+  filas = {}
+  for id, n in pairs(ex.caceria or {}) do
+    filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(id) .. "," .. entero(n) .. ")"
+  end
+  cada("personaje_caceria", "monstruo_id, cantidad", filas)
+
+  -- Las casas se reescriben enteras; borrar personaje_casa arrastra muebles y cofre.
+  q[#q + 1] = "DELETE FROM personaje_casa WHERE personaje_id = " .. pid
+  local muebles, cofres = {}, {}
+  local casas = {}
+  for _, parcela in ipairs(ordenadas(ex.casas)) do
+    local c = ex.casas[parcela]
+    casas[#casas + 1] = "(" .. pid .. "," .. Pg.literal(parcela) .. ")"
+    for _, mueble in ipairs(ordenadas(c.muebles)) do
+      muebles[#muebles + 1] = "(" .. pid .. "," .. Pg.literal(parcela) .. "," .. Pg.literal(mueble) .. ")"
+    end
+    for i, s in ipairs(c.cofre or {}) do
+      cofres[#cofres + 1] = "(" .. pid .. "," .. Pg.literal(parcela) .. "," .. i .. "," ..
+        Pg.literal(s.id) .. "," .. math.max(1, entero(s.cant or 1)) .. ")"
+    end
+  end
+  if #casas > 0 then
+    q[#q + 1] = "INSERT INTO personaje_casa (personaje_id, parcela_id) VALUES " .. table.concat(casas, ",")
+  end
+  if #muebles > 0 then
+    q[#q + 1] = "INSERT INTO casa_mueble (personaje_id, parcela_id, mueble) VALUES " .. table.concat(muebles, ",")
+  end
+  if #cofres > 0 then
+    q[#q + 1] = "INSERT INTO casa_cofre (personaje_id, parcela_id, ranura, item_id, cant) VALUES " .. table.concat(cofres, ",")
+  end
+  return table.concat(q, ";\n")
+end
+
+-- Personajes guardados con la versión antigua (todo en la columna `datos`, en JSON)
+-- se pasan a las tablas la primera vez. La columna `datos` se deja como copia.
+local migrado = false
+function M.migrar(conn)
+  if migrado then return end
+  local filas = conn:consulta("SELECT id, datos FROM personajes WHERE guardado = FALSE AND datos <> '{}' AND datos <> ''")
+  if not filas then return end
+  for _, row in ipairs(filas) do
+    local ex = Util.jsonDec(row.datos)
+    if type(ex) == "table" and next(ex) then
+      local _, err = conn:consulta(sentenciasDe(row.id, ex))
+      if err then require("compartido.infraestructura.log").warn("migración del personaje " .. row.id .. ": " .. err) end
+    end
+  end
+  migrado = true
+end
+function M.abrir()
+  local conn, err = Pg.conectar(M.host, M.puerto, M.usuario, M.base, M.clave)
+  if not conn then return nil, err end
+  local _, e = conn:consulta([[
+    CREATE TABLE IF NOT EXISTS cuentas (
+      id BIGSERIAL PRIMARY KEY,
+      usuario TEXT UNIQUE NOT NULL,
+      sal TEXT NOT NULL,
+      clave TEXT NOT NULL,
+      creada TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    CREATE TABLE IF NOT EXISTS personajes (
+      id BIGSERIAL PRIMARY KEY,
+      cuenta_id BIGINT NOT NULL REFERENCES cuentas(id) ON DELETE CASCADE,
+      nombre TEXT UNIQUE NOT NULL,
+      faccion TEXT NOT NULL,
+      clase TEXT NOT NULL,
+      nivel INT NOT NULL DEFAULT 1,
+      xp INT NOT NULL DEFAULT 0,
+      oro INT NOT NULL DEFAULT 140,
+      x DOUBLE PRECISION NOT NULL DEFAULT 0,
+      y DOUBLE PRECISION NOT NULL DEFAULT 0,
+      hp INT NOT NULL DEFAULT 1,
+      mp INT NOT NULL DEFAULT 1,
+      datos TEXT NOT NULL DEFAULT '{}',
+      creada TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS guardado BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS modo TEXT NOT NULL DEFAULT 'mundo';
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS z INT NOT NULL DEFAULT 0;
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS vinculo_modo TEXT;
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS vinculo_x DOUBLE PRECISION;
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS vinculo_y DOUBLE PRECISION;
+    CREATE TABLE IF NOT EXISTS personaje_equipo (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      hueco TEXT NOT NULL,
+      item_id TEXT NOT NULL,
+      PRIMARY KEY (personaje_id, hueco)
+    );
+    CREATE TABLE IF NOT EXISTS personaje_bolsa (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      ranura INT NOT NULL CHECK (ranura >= 1),
+      item_id TEXT NOT NULL,
+      cant INT NOT NULL DEFAULT 1 CHECK (cant >= 1),
+      PRIMARY KEY (personaje_id, ranura)
+    );
+    CREATE TABLE IF NOT EXISTS personaje_mision (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      mision_id TEXT NOT NULL,
+      progreso INT NOT NULL DEFAULT 0,
+      aceptada BOOLEAN NOT NULL DEFAULT TRUE,
+      entregada BOOLEAN NOT NULL DEFAULT FALSE,
+      PRIMARY KEY (personaje_id, mision_id)
+    );
+    CREATE TABLE IF NOT EXISTS personaje_casa (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      parcela_id TEXT NOT NULL,
+      PRIMARY KEY (personaje_id, parcela_id)
+    );
+    CREATE TABLE IF NOT EXISTS casa_mueble (
+      personaje_id BIGINT NOT NULL,
+      parcela_id TEXT NOT NULL,
+      mueble TEXT NOT NULL,
+      PRIMARY KEY (personaje_id, parcela_id, mueble),
+      FOREIGN KEY (personaje_id, parcela_id) REFERENCES personaje_casa ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS casa_cofre (
+      personaje_id BIGINT NOT NULL,
+      parcela_id TEXT NOT NULL,
+      ranura INT NOT NULL CHECK (ranura >= 1),
+      item_id TEXT NOT NULL,
+      cant INT NOT NULL DEFAULT 1 CHECK (cant >= 1),
+      PRIMARY KEY (personaje_id, parcela_id, ranura),
+      FOREIGN KEY (personaje_id, parcela_id) REFERENCES personaje_casa ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS personaje_habilidad (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      habilidad_id TEXT NOT NULL,
+      rango INT NOT NULL CHECK (rango >= 1),
+      PRIMARY KEY (personaje_id, habilidad_id)
+    );
+    CREATE TABLE IF NOT EXISTS personaje_caceria (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      monstruo_id TEXT NOT NULL,
+      cantidad INT NOT NULL DEFAULT 0,
+      PRIMARY KEY (personaje_id, monstruo_id)
+    );
+    CREATE TABLE IF NOT EXISTS evento_diario (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      tipo TEXT NOT NULL,
+      dia DATE NOT NULL,
+      PRIMARY KEY (personaje_id, tipo, dia)
+    );
+    CREATE TABLE IF NOT EXISTS sesion_juego (
+      token TEXT PRIMARY KEY,
+      cuenta_id BIGINT NOT NULL REFERENCES cuentas(id) ON DELETE CASCADE,
+      expira TIMESTAMPTZ NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS intento_login (
+      usuario TEXT PRIMARY KEY,
+      fallos INT NOT NULL DEFAULT 0,
+      hasta TIMESTAMPTZ
+    );
+  ]])
+  if e then conn:cerrar() return nil, e end
+  M.migrar(conn)
+  return conn
+end
+
+local function con(fn)
+  local conn, err = M.abrir()
+  if not conn then return nil, err end
+  local a, b = fn(conn)
+  conn:cerrar()
+  return a, b
+end
+
+local function tokenNuevo()
+  return aleatorio(24)
+end
+
+local function abrirSesion(conn, cuentaId)
+  local token = tokenNuevo()
+  local filas, err = conn:consulta(
+    "INSERT INTO sesion_juego (token, cuenta_id, expira) VALUES (" ..
+    Pg.literal(token) .. "," .. tonumber(cuentaId) .. ", now() + interval '12 hours')"
+  )
+  if not filas then return nil, err end
+  return token
+end
+
+function M.registrar(usuario, clave)
+  if not usuarioValido(usuario) then return nil, "El usuario usa 3 a 16 letras, números o _." end
+  if type(clave) ~= "string" or #clave < 4 or #clave > 64 then return nil, "La clave necesita entre 4 y 64 caracteres." end
+  return con(function(conn)
+    local ya = conn:consulta("SELECT id FROM cuentas WHERE usuario = " .. Pg.literal(usuario))
+    if not ya then return nil, "No se pudo crear la cuenta." end
+    if ya[1] then return nil, "Ese usuario ya está registrado." end
+    local sal = salNueva()
+    local hash = Credenciales.cifrar(clave, sal)
+    local filas, err = conn:consulta(
+      "INSERT INTO cuentas (usuario, sal, clave) VALUES (" ..
+      Pg.literal(usuario) .. "," .. Pg.literal(sal) .. "," .. Pg.literal(hash) .. ") RETURNING id"
+    )
+    if not filas or not filas[1] then return nil, err or "No se pudo crear la cuenta." end
+    local token, terr = abrirSesion(conn, filas[1].id)
+    if not token then return nil, terr or "No se pudo abrir la sesión." end
+    return tonumber(filas[1].id), token
+  end)
+end
+
+function M.entrar(usuario, clave)
+  if not usuarioValido(usuario) then return nil, "Usuario o clave incorrectos." end
+  return con(function(conn)
+    local bloque = conn:consulta(
+      "SELECT fallos FROM intento_login WHERE usuario = " .. Pg.literal(usuario) ..
+      " AND fallos >= 5 AND hasta IS NOT NULL AND hasta > now()"
+    )
+    if not bloque then return nil, "No se pudo comprobar la cuenta." end
+    if bloque[1] then return nil, "Demasiados intentos. Espera un minuto." end
+    local filas, err = conn:consulta("SELECT id, sal, clave FROM cuentas WHERE usuario = " .. Pg.literal(usuario))
+    if not filas then return nil, err end
+    local row = filas[1]
+    local acepta, migrar = false, false
+    if row then acepta, migrar = Credenciales.acepta(row.clave, row.sal, clave or "") end
+    if not acepta then
+      conn:consulta(
+        "INSERT INTO intento_login (usuario, fallos, hasta) VALUES (" .. Pg.literal(usuario) .. [[, 1, NULL)
+        ON CONFLICT (usuario) DO UPDATE SET
+          fallos = intento_login.fallos + 1,
+          hasta = CASE WHEN intento_login.fallos + 1 >= 5 THEN now() + interval '60 seconds' ELSE NULL END]]
+      )
+      return nil, "Usuario o clave incorrectos."
+    end
+    conn:consulta(
+      "INSERT INTO intento_login (usuario, fallos, hasta) VALUES (" .. Pg.literal(usuario) ..
+      ", 0, NULL) ON CONFLICT (usuario) DO UPDATE SET fallos = 0, hasta = NULL"
+    )
+    if migrar then
+      conn:consulta("UPDATE cuentas SET clave = " .. Pg.literal(Credenciales.cifrar(clave, row.sal)) .. " WHERE id = " .. tonumber(row.id))
+    end
+    local token, terr = abrirSesion(conn, row.id)
+    if not token then return nil, terr or "No se pudo abrir la sesión." end
+    return tonumber(row.id), token
+  end)
+end
+
+function M.listar(cuentaId)
+  return con(function(conn)
+    local filas, err = conn:consulta(
+      "SELECT id, nombre, faccion, clase, nivel FROM personajes WHERE cuenta_id = " ..
+      tonumber(cuentaId) .. " ORDER BY id"
+    )
+    if not filas then return nil, err end
+    local lista = {}
+    for _, row in ipairs(filas) do
+      lista[#lista + 1] = {
+        id = tonumber(row.id), nombre = row.nombre, faccion = row.faccion,
+        clase = row.clase, nivel = tonumber(row.nivel) or 1,
+      }
+    end
+    return lista
+  end)
+end
+
+function M.crearPersonaje(cuentaId, nombre, faccion, clase)
+  if not nombreValido(nombre) then
+    return nil, "El nombre del personaje usa 3 a 16 letras."
+  end
+  if faccion ~= "albor" and faccion ~= "umbra" then return nil, "Elige una facción." end
+  if clase ~= "guerrero" and clase ~= "mago" and clase ~= "cazador" and clase ~= "clerigo" then
+    return nil, "Elige un oficio."
+  end
+  return con(function(conn)
+    local cuenta = tonumber(cuentaId)
+    if not cuenta then return nil, "Sesión no válida." end
+    local n = conn:consulta("SELECT count(*) AS n FROM personajes WHERE cuenta_id = " .. cuenta)
+    if n and n[1] and tonumber(n[1].n) >= 4 then return nil, "Esta cuenta ya tiene 4 personajes." end
+    local filas, err = conn:consulta(
+      "INSERT INTO personajes (cuenta_id, nombre, faccion, clase) VALUES (" ..
+      tonumber(cuenta) .. "," .. Pg.literal(nombre) .. "," .. Pg.literal(faccion) .. "," .. Pg.literal(clase) ..
+      ") RETURNING id"
+    )
+    if not filas or not filas[1] then
+      if err and err:find("personajes_nombre") then return nil, "Ese nombre ya existe." end
+      return nil, err or "No se pudo crear el personaje."
+    end
+    return tonumber(filas[1].id)
+  end)
+end
+
+function M.cargar(personajeId)
+  return con(function(conn)
+    local filas, err = conn:consulta(
+      "SELECT id, nombre, faccion, clase, nivel, xp, oro, x, y, z, modo, hp, mp, guardado, " ..
+      "vinculo_modo, vinculo_x, vinculo_y FROM personajes WHERE id = " .. tonumber(personajeId)
+    )
+    if not filas or not filas[1] then return nil, err or "No está ese personaje." end
+    local row = filas[1]
+    local pid = tonumber(row.id)
+    local datos = {
+      nombre = row.nombre, faccion = row.faccion, clase = row.clase,
+      nivel = tonumber(row.nivel) or 1, xp = tonumber(row.xp) or 0, oro = tonumber(row.oro) or 0,
+      x = tonumber(row.x), y = tonumber(row.y),
+      hp = tonumber(row.hp), mp = tonumber(row.mp), dbId = pid,
+    }
+    -- Un personaje recién creado aún no se guardó: conserva el equipo inicial del mundo.
+    if row.guardado == "t" then
+      datos.guardado = true
+      datos.z = tonumber(row.z) or 0
+      datos.modo = row.modo or "mundo"
+      if row.vinculo_x and row.vinculo_y then
+        datos.vinculo = { x = tonumber(row.vinculo_x), y = tonumber(row.vinculo_y), modo = row.vinculo_modo or "mundo" }
+      end
+      local function lista(sql)
+        local r = conn:consulta(sql)
+        return r or {}
+      end
+      datos.equipo = {}
+      for _, r in ipairs(lista("SELECT hueco, item_id FROM personaje_equipo WHERE personaje_id = " .. pid)) do
+        datos.equipo[r.hueco] = r.item_id
+      end
+      datos.bolsa = {}
+      for _, r in ipairs(lista("SELECT item_id, cant FROM personaje_bolsa WHERE personaje_id = " .. pid .. " ORDER BY ranura")) do
+        datos.bolsa[#datos.bolsa + 1] = { id = r.item_id, cant = tonumber(r.cant) or 1 }
+      end
+      datos.misiones = {}
+      for _, r in ipairs(lista("SELECT mision_id, progreso, aceptada, entregada FROM personaje_mision WHERE personaje_id = " .. pid)) do
+        for _, def in ipairs(Datos.misiones) do
+          if def.id == r.mision_id then
+            datos.misiones[def.id] = {
+              titulo = def.titulo, monstruo = def.monstruo, cantidad = def.cantidad,
+              oro = def.oro, xp = def.xp, ciudad = def.ciudad,
+              progreso = tonumber(r.progreso) or 0, aceptada = r.aceptada == "t", entregada = r.entregada == "t",
+            }
+          end
+        end
+      end
+      -- sin filas = personaje anterior al árbol: el mundo le da el poder inicial
+      local hab = lista("SELECT habilidad_id, rango FROM personaje_habilidad WHERE personaje_id = " .. pid)
+      if #hab > 0 then
+        datos.habilidades = {}
+        for _, r in ipairs(hab) do datos.habilidades[r.habilidad_id] = tonumber(r.rango) or 1 end
+      end
+      datos.caceria = {}
+      for _, r in ipairs(lista("SELECT monstruo_id, cantidad FROM personaje_caceria WHERE personaje_id = " .. pid)) do
+        datos.caceria[r.monstruo_id] = tonumber(r.cantidad) or 0
+      end
+      datos.casas = {}
+      for _, r in ipairs(lista("SELECT parcela_id FROM personaje_casa WHERE personaje_id = " .. pid)) do
+        datos.casas[r.parcela_id] = { muebles = {}, cofre = {} }
+      end
+      for _, r in ipairs(lista("SELECT parcela_id, mueble FROM casa_mueble WHERE personaje_id = " .. pid)) do
+        if datos.casas[r.parcela_id] then datos.casas[r.parcela_id].muebles[r.mueble] = true end
+      end
+      for _, r in ipairs(lista("SELECT parcela_id, item_id, cant FROM casa_cofre WHERE personaje_id = " .. pid .. " ORDER BY parcela_id, ranura")) do
+        local c = datos.casas[r.parcela_id]
+        if c then c.cofre[#c.cofre + 1] = { id = r.item_id, cant = tonumber(r.cant) or 1 } end
+      end
+    end
+    local hoy = os.date("%Y-%m-%d")
+    local ev = conn:consulta(
+      "SELECT tipo FROM evento_diario WHERE personaje_id = " .. tonumber(personajeId) .. " AND dia = " .. Pg.literal(hoy)
+    )
+    datos.eventosDia = {}
+    for _, e in ipairs(ev or {}) do datos.eventosDia[e.tipo] = hoy end
+    return datos
+  end)
+end
+
+function M.cuentaDeToken(token)
+  if type(token) ~= "string" or #token < 16 then return nil, "Falta la sesión." end
+  return con(function(conn)
+    local ses, e = conn:consulta(
+      "SELECT s.cuenta_id, c.usuario FROM sesion_juego s JOIN cuentas c ON c.id = s.cuenta_id " ..
+      "WHERE s.token = " .. Pg.literal(token) .. " AND s.expira > now()"
+    )
+    if not ses then return nil, e end
+    if not ses[1] then return nil, "La sesión caducó. Entra de nuevo." end
+    return tonumber(ses[1].cuenta_id), ses[1].usuario
+  end)
+end
+
+function M.cargarAutorizado(token, personajeId)
+  if type(token) ~= "string" or #token < 16 then return nil, "Falta la sesión." end
+  local pid = tonumber(personajeId)
+  if not pid then return nil, "Falta el personaje." end
+  local ok, err = con(function(conn)
+    local ses, e = conn:consulta(
+      "SELECT cuenta_id FROM sesion_juego WHERE token = " .. Pg.literal(token) .. " AND expira > now()"
+    )
+    if not ses then return nil, e end
+    if not ses[1] then return nil, "La sesión caducó. Entra de nuevo." end
+    local due, e2 = conn:consulta("SELECT cuenta_id FROM personajes WHERE id = " .. pid)
+    if not due then return nil, e2 end
+    if not due[1] or tonumber(due[1].cuenta_id) ~= tonumber(ses[1].cuenta_id) then
+      return nil, "Ese personaje no es de esta cuenta."
+    end
+    return true
+  end)
+  if not ok then return nil, err end
+  return M.cargar(pid)
+end
+
+function M.guardar(p, exportado)
+  if not p or not p.dbId then return nil, "Sin personaje." end
+  exportado = exportado or {}
+  return con(function(conn)
+    -- La posición sale de lo exportado (dentro de una casa o un campo de batalla es
+    -- la del mundo al que volvería), no de las coordenadas del mapa interior.
+    local ex = {}
+    for k, v in pairs(exportado) do ex[k] = v end
+    ex.nivel, ex.xp, ex.oro = p.nivel, p.xp, p.oro
+    ex.x, ex.y = exportado.x or p.x, exportado.y or p.y
+    local _, err = conn:consulta(sentenciasDe(p.dbId, ex, p.hp or 1, p.mp or 1))
+    if err then return nil, err end
+    return true
+  end)
+end
+
+function M.marcarEvento(personajeId, tipo)
+  local idn = tonumber(personajeId)
+  if not idn then return nil, "Sin personaje." end
+  local hoy = os.date("%Y-%m-%d")
+  return con(function(conn)
+    local _, err = conn:consulta(
+      "INSERT INTO evento_diario (personaje_id, tipo, dia) VALUES (" ..
+      tonumber(idn) .. "," .. Pg.literal(tipo) .. "," .. Pg.literal(hoy) ..
+      ") ON CONFLICT DO NOTHING"
+    )
+    if err then return nil, err end
+    return true
+  end)
+end
+
+function M.borrarUsuario(usuario)
+  return con(function(conn)
+    return conn:consulta("DELETE FROM cuentas WHERE usuario = " .. Pg.literal(usuario))
+  end)
+end
+
+return M

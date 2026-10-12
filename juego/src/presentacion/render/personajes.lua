@@ -1,0 +1,110 @@
+-- Personajes y criaturas con las hojas "Characters" del pack nuevo.
+-- Hoja normal: 4x2 personajes, cada uno de 3 cuadros x 4 filas (abajo, izquierda,
+-- derecha, arriba) con cuadros de 32x32. Hoja "$": un solo personaje o una criatura
+-- grande por fila, con cuadros de 64x64.
+local Arte = require("src.presentacion.render.arte")
+
+local P = {}
+
+local FILA_DIR = { [1] = 0, [2] = 3, [3] = 2, [4] = 1 } -- sur, norte, este, oeste
+local CICLO = { 0, 1, 2, 1 }
+
+-- Qué personaje usa cada oficio y facción.
+P.clases = {
+  guerrero = {
+    albor = { hoja = "Characters/Actor3.png", idx = 6 },
+    umbra = { hoja = "Characters/Evil.png", idx = 7 },
+  },
+  mago = {
+    albor = { hoja = "Characters/Actor2.png", idx = 7 },
+    umbra = { hoja = "Characters/Evil.png", idx = 3 },
+  },
+  cazador = {
+    albor = { hoja = "Characters/Actor5.png", idx = 2 },
+    umbra = { hoja = "Characters/Evil.png", idx = 0 },
+  },
+  clerigo = {
+    albor = { hoja = "Characters/Actor5.png", idx = 5 },
+    umbra = { hoja = "Characters/Actor5.png", idx = 6 },
+  },
+}
+
+P.npc = {
+  mercado = { hoja = "Characters/Actor1.png", idx = 7 },
+  heraldo = { hoja = "Characters/People4.png", idx = 0 },
+  mayordomo = { hoja = "Characters/People4.png", idx = 5 },
+  encargos = { hoja = "Characters/People1.png", idx = 4 },
+  guardia = {
+    albor = { hoja = "Characters/People4.png", idx = 6 },
+    umbra = { hoja = "Characters/Evil.png", idx = 7 },
+  },
+}
+
+P.monstruos = {
+  gato = { hoja = "Characters/Animal.png", idx = 1 },
+  cuervo = { hoja = "Characters/Monster3.png", idx = 0 },
+  jabali = { hoja = "Characters/Animal.png", idx = 6 },
+  rata = { hoja = "Characters/Monster3.png", idx = 4 },
+  escarabajo = { hoja = "Characters/Monster3.png", idx = 7 },
+  jabali_fuego = { hoja = "Characters/Animal.png", idx = 6, tinte = { 1, 0.55, 0.45 } },
+  aguila = { hoja = "Characters/Monster3.png", idx = 2 },
+  oso = { hoja = "Characters/$BigMonster1.png", fila = 2 },
+  elefante = { hoja = "Characters/$BigMonster1.png", fila = 0 },
+  espectro = { hoja = "Characters/Monster1.png", idx = 0 },
+  gargola = { hoja = "Characters/Monster1.png", idx = 3 },
+  automata = { hoja = "Characters/Monster1.png", idx = 7 },
+  alma = { hoja = "Characters/Monster1.png", idx = 5 },
+  troll = { hoja = "Characters/Monster1.png", idx = 2 },
+  caballero = { hoja = "Characters/People4.png", idx = 7, tinte = { 0.62, 0.62, 0.78 } },
+  alma_verde = { hoja = "Characters/Monster2.png", idx = 6 },
+  cultista = { hoja = "Characters/Monster1.png", idx = 6 },
+  alma_hielo = { hoja = "Characters/Monster2.png", idx = 2 },
+  demonio_musgo = { hoja = "Characters/Monster2.png", idx = 1 },
+  saurio = { hoja = "Characters/Monster3.png", idx = 6 },
+  bruja = { hoja = "Characters/Monster2.png", idx = 3 },
+  demonio_marea = { hoja = "Characters/Monster3.png", idx = 5 },
+  quimera = { hoja = "Characters/Monster3.png", idx = 1 },
+  hidra = { hoja = "Characters/$BigMonster1.png", fila = 3 },
+  golem = { hoja = "Characters/Monster1.png", idx = 4 },
+  demonio_foso = { hoja = "Characters/Monster2.png", idx = 5 },
+  titan = { hoja = "Characters/$BigMonster1.png", fila = 1 },
+  dragon = { hoja = "Characters/$BigMonster2.png", fila = 1 },
+  liche = { hoja = "Characters/Evil.png", idx = 5 },
+  behemot = { hoja = "Characters/$BigMonster2.png", fila = 2 },
+}
+
+-- Definición de dibujo de una entidad, o nil si no es una criatura.
+function P.de(e)
+  local k = e.kind
+  if k == "jugador" or k == "bot" then
+    local c = P.clases[e.clase or "guerrero"] or P.clases.guerrero
+    return c[e.faccion or "albor"] or c.albor
+  elseif k == "guardia" then
+    return P.npc.guardia[e.faccion or "albor"] or P.npc.guardia.albor
+  elseif k == "npc" then
+    return P.npc[e.rol or "mercado"] or P.npc.mercado
+  elseif k == "monstruo" then
+    return P.monstruos[e.monstruo or ""] or P.monstruos.gato
+  end
+end
+
+-- Dibuja la criatura con los pies en (sx, sy). mov: está andando; reloj: segundos.
+function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa)
+  local img = Arte.img(def.hoja)
+  local col = mov and CICLO[(math.floor(reloj * 8) % 4) + 1] or 1
+  local c = tinte or def.tinte
+  if c then love.graphics.setColor(c[1], c[2], c[3], alfa or 1)
+  else love.graphics.setColor(1, 1, 1, alfa or 1) end
+  if def.fila then
+    local q = Arte.quad(img, col * 64, def.fila * 64, 64, 64)
+    love.graphics.draw(img, q, sx, sy, 0, 1, 1, 32, 62)
+    return 64
+  end
+  local ox = (def.idx % 4) * 96
+  local oy = math.floor(def.idx / 4) * 128
+  local fila = FILA_DIR[dir or 1] or 0
+  love.graphics.draw(img, Arte.quad(img, ox + col * 32, oy + fila * 32, 32, 32), sx, sy, 0, 1, 1, 16, 30)
+  return 32
+end
+
+return P

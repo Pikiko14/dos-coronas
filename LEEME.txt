@@ -1,0 +1,218 @@
+Dos Coronas
+===========
+
+MMORPG 2.5D en Lua para LÖVE 11, con el manejo de Tibia: se camina casilla a
+casilla, hay lista de batalla, panel lateral y consola. Dos facciones, Albor y
+Umbra, en un continente abierto con diez ciudades, casas, comercio, encargos y
+dos eventos de guerra.
+
+Tres proyectos en un repositorio
+--------------------------------
+  servidor/     Servidor de consola (sin ventana): cuentas, mundo, reglas y guardado.
+  juego/        El juego (cliente): ventana, arte, sonido e interfaz.
+  compartido/   Código que usan los dos: reglas del dominio y protocolo de red.
+
+Cada proyecto de LÖVE se abre por su carpeta (love servidor, love juego) y lleva
+su propio .env. compartido/ no se ejecuta solo: main.lua de cada proyecto lo
+carga desde la carpeta hermana ../compartido, o desde una copia interna si la hay
+(la deja construir.bat al empaquetar).
+
+Jugar
+-----
+Hace falta LÖVE 11 (https://love2d.org). Los .bat lo buscan en el PATH y, si no
+está, en ..\love\love.exe.
+
+  jugar.bat      Juega en esta máquina: abre el servidor si no está
+                 escuchando y luego el juego.
+  servidor.bat   Solo el servidor (consola). Para un servidor propio o remoto.
+  juego.bat      Solo el juego; se conecta al servidor que diga juego\.env.
+  construir.bat  Empaqueta dist\servidor.love y dist\juego.love.
+
+Después: Crear cuenta o Iniciar sesión, elegir o crear personaje (facción,
+oficio y nombre) y Jugar.
+
+Configuración (.env)
+--------------------
+Cada proyecto lee su propio .env junto a su main.lua. Si no existe, cópialo desde
+.env.example. Las variables de entorno del sistema tienen prioridad sobre el .env
+y los valores que falten usan los de por defecto. No subas tus .env a un
+repositorio: pueden llevar claves.
+
+servidor\.env
+  DOSCORONAS_PUERTO              puerto donde escucha (30555)
+  DOSCORONAS_ALMACEN             auto | postgres | archivo
+  DOSCORONAS_PG_HOST / _PORT / _USER / _DB / _PASSWORD   PostgreSQL
+  DOSCORONAS_GUARDADO_SEGUNDOS   guardado general de todos los conectados (600 = 10 min)
+  DOSCORONAS_REINTENTO_SEGUNDOS  reintento si falla el guardado (5)
+  DOSCORONAS_TASA_MENSAJES       mensajes por segundo y conexión (40)
+  DOSCORONAS_FOTOS_POR_SEGUNDO   estados del mundo que se mandan por segundo (15)
+
+juego\.env
+  DOSCORONAS_SERVIDOR_HOST       servidor al que se conecta (127.0.0.1)
+  DOSCORONAS_PUERTO              puerto del servidor (30555)
+
+Para jugar contra un servidor de otra máquina: pon su IP en
+DOSCORONAS_SERVIDOR_HOST de juego\.env y abre el puerto en su cortafuegos.
+Tras cambiar un .env, reinicia ese programa. El servidor escribe al arrancar qué
+archivo de configuración leyó y qué almacén usa.
+
+Cuentas y personajes
+--------------------
+Por defecto el servidor usa PostgreSQL si responde en 127.0.0.1:5433 (base
+doscoronas, usuario doscoronas) y, si no, guarda todo en cuentas.json, en la
+carpeta de guardado de LÖVE (%APPDATA%\LOVE\doscoronas). No hace falta instalar
+nada para jugar. PostgreSQL solo admite autenticación trust o password.
+
+El guardado es automático y no hay botón de guardar:
+  - cada jugador se guarda al instante cuando se desconecta o cierra el juego;
+  - cada 10 minutos el servidor hace un guardado general de todos los conectados;
+  - al cerrar el servidor se guardan todos.
+Si el almacén falla, el personaje sigue en memoria y se reintenta cada pocos
+segundos hasta guardarlo.
+
+Controles
+---------
+WASD o flechas: moverte casilla a casilla (con diagonales). También clic en el
+suelo. Dos criaturas no pueden ocupar la misma casilla.
+Clic en un enemigo, o en la Lista de batalla: lo eliges y lo persigues.
+Tab pasa al siguiente enemigo. Esc suelta el objetivo.
+Shift + clic sobre una criatura: la miras y la consola te cuenta qué es.
+1-4 poderes (el tercero desde el nivel 4, el cuarto desde el 8).
+5 poción de vida, 6 poción de maná.
+E interactuar. I mochila, P equipo, M mapa, T comercio, B guerra, F1 ayuda.
+Enter chat: escribe /m para el mundo y /f para tu facción.
+F3 muestra FPS, entes, ping y piso. F11 pantalla completa.
+Esc abre el menú y desde ahí Ajustes (resolución, volumen y teclas).
+Los ajustes quedan en ajustes.json, en la carpeta de guardado de LÖVE.
+
+Pantalla
+--------
+Panel derecho: minimapa local, vida, maná y experiencia, equipo (clic para quitar
+una pieza), lista de batalla y mochila (un clic elige, otro clic en la misma
+casilla equipa, otro clic en otra casilla intercambia). Abajo: consola con
+pestañas, y sobre el mundo la barra de poderes, con los iconos de sus
+animaciones y el enfriamiento.
+
+Arquitectura
+------------
+Hexagonal: las dependencias apuntan hacia el dominio.
+
+compartido/
+  dominio/            mundo, mapa, datos, balance y util (JSON, azar...). Sin
+                      LÖVE, red ni base de datos.
+  infraestructura/    red.lua (sockets), log.lua y env.lua (lector de .env).
+  protocolo.lua       mensajes entre servidor y juego. Si cambia, cambia para ambos.
+
+servidor/src/
+  dominio/            autoridad.lua: valida lo que manda un cliente.
+  aplicacion/         puertos.lua (contrato del almacén), cuentas.lua,
+                      credenciales.lua (hash PBKDF2) y servicio_servidor.lua
+                      (mensajes, guardado y estado del mundo).
+  infraestructura/    config/ (.env), persistencia/ (postgres, archivo, pg),
+                      aleatorio.lua y mapas/tiled.lua.
+  consola.lua         ejecución en consola.   arranque.lua  raíz de composición.
+  pruebas/            pruebas del servidor.
+
+juego/src/
+  presentacion/       app, entrada, interfaz, ajustes, sonido, estados/ (menú,
+                      cuenta, personajes, crear, juego) y render/ (terreno,
+                      personajes, efectos, objetos, dibujo, autotile, atlas, arte).
+  infraestructura/    config.lua (.env del juego).
+  pruebas/            pruebas del juego, capturas, cliente de red y juego solo.
+
+Para guardar en otro sitio (por ejemplo SQLite) basta con escribir un adaptador
+que implemente los métodos de Puertos.CONTRATO.almacen y elegirlo en
+servidor/src/infraestructura/persistencia/init.lua. El dominio no cambia.
+
+Pruebas
+-------
+love servidor --test   Reglas, cuentas, red, servicio, configuración y arquitectura.
+love juego --test      Arte: iconos, sprites de criaturas, efectos, objetos y terreno.
+love juego --foto      Capturas en juego\capturas (menú, cuentas, ciudad, costa,
+                       bosque, poderes, equipo, batalla y casa). Con la ventana
+                       al frente, no toques el teclado.
+love juego --bot       Cliente de red de prueba: crea cuenta y personaje, entra,
+                       camina y chatea. Resultado en prueba_bot.txt. Necesita el
+                       servidor en marcha. Deja su cuenta de prueba en el almacén.
+love juego --auto      Juega solo 60 s con la ventana dibujando. Sirve para cazar
+                       cierres. Resultado en prueba_auto.txt. Necesita servidor.
+Cada --test escribe prueba_resultado.txt y sale con código 1 si algo falla.
+
+Distribuir el juego
+-------------------
+El servidor corre en tu máquina; los jugadores solo reciben el cliente.
+
+1. Servidor accesible desde internet (en tu máquina):
+   - Pon una IP fija a tu PC en la red local y, en el router, abre el puerto TCP
+     30555 hacia ella. Permite el puerto en el cortafuegos de Windows.
+   - Usa un nombre fijo para que los jugadores no dependan de tu IP: un dominio
+     o un servicio gratuito de DNS dinámico (DuckDNS, No-IP).
+   - Alternativa sin tocar el router: una VPN privada (Tailscale, ZeroTier) o un
+     túnel TCP. Es lo más seguro mientras el tráfico no vaya cifrado.
+   - Deja el servidor encendido (servidor.bat) y haz copia de PostgreSQL o de
+     cuentas.json.
+2. Generar el cliente para Windows:
+     construir.ps1 -Servidor "tu.dominio.com" -Puerto 30555
+   Crea dist\DosCoronas-Windows\ con DosCoronas.exe, las DLL de LÖVE y un .env ya
+   apuntando a tu servidor. Comprime esa carpeta en un .zip y compártela. El
+   jugador la descomprime y abre DosCoronas.exe. Sin parámetros apunta a 127.0.0.1.
+3. Cada versión nueva: vuelve a ejecutar construir y reparte el .zip.
+Ojo: la red del juego usa winsock, así que de momento el cliente es solo Windows.
+El tráfico va sin cifrar (incluida la clave al iniciar sesión): úsalo con amigos
+sobre VPN, o añade cifrado antes de abrirlo a desconocidos. Y revisa la licencia del
+arte antes de repartirlo.
+
+construir.bat deja además dist\servidor.love y dist\juego.love.
+Cómo ampliar
+------------
+El continente mide 720x520. Cada ciudad tiene su bioma y sus monstruos. El nivel
+máximo es 30. La experiencia del monstruo depende de su nivel y del tuyo: si le
+sacas siete veces el nivel, no da experiencia.
+
+Monstruo: una fila en D.monstruos (compartido/dominio/datos.lua) y su dibujo en
+juego/src/presentacion/render/personajes.lua (P.monstruos). El botín opcional va
+en compartido/dominio/balance.lua.
+Objeto: se genera con el resto del equipo en compartido/dominio/datos.lua (los
+iconos salen de la lámina antigua en juego/arte/hojas).
+Ciudad: una fila en D.ciudades, alineada con las avenidas de
+compartido/dominio/mapa.lua.
+Encargo: una fila en D.misiones. siguiente y requiere encadenan dos.
+Mapa de Tiled: exporta a Lua y cárgalo con
+servidor/src/infraestructura/mapas/tiled.lua (servidor/mapas/atalaya.lua).
+Habilidades por nivel y curva de experiencia: compartido/dominio/balance.lua.
+
+Arte
+----
+Todo el mundo, los personajes y los poderes salen de juego/arte/hojas/new-sprites
+(casillas de 32 px):
+  Tilesets/    suelos con bordes automáticos (autotiles), tejados, muros y
+               objetos: render/autotile.lua, render/terreno.lua y render/objetos.lua.
+  Characters/  jugadores, NPC y criaturas con ciclo de caminar en cuatro
+               direcciones: render/personajes.lua.
+  Animations/  efectos de los poderes, cuadro a cuadro: render/efectos.lua.
+  Titles1/2    ilustraciones del menú y de las pantallas de cuenta.
+Los iconos de objetos del equipo y la mochila siguen saliendo de la lámina antigua
+(juego/arte/hojas, OpenTibia Sprite Pack, CC BY 4.0; créditos en
+juego/arte/AUTHORS.md y juego/arte/LICENCIA.txt). La fuente de la interfaz es
+Source Sans 3 (SIL Open Font License), en juego/arte/fuentes.
+Comprueba la licencia del pack new-sprites antes de publicar el juego.
+
+MAPA Y DECORACION
+  - Los cambios de terreno (hierba/arena/tierra) usan bordes redondeados (autotiles A2).
+  - Cordilleras de montañas separan las zonas de ciudades vecinas, con huecos y sin
+    cortar los caminos; se vuelven translucidas si el jugador queda detras.
+  - Cada bioma reparte decoracion (flores, setas, troncos, piedras, cultivos...).
+  - juego --foto genera tambien capturas/montana.png.
+
+APAGADO Y GUARDADO
+  - detener.bat pide al servidor que guarde a todos y se cierre.
+  - Guardado automatico: al desconectarse cada jugador, al ocurrir hechos importantes
+    (compras, nivel, misiones...) y general cada 10 minutos.
+
+ARBOL DE PODERES Y MOCHILAS
+  - K abre el arbol de poderes: cada nivel da un punto para aprender un poder de la barra
+    (1-4) o una pasiva, y para subirlos hasta rango 5 (mas dano/curacion, menos
+    enfriamiento y mana). Reiniciar los puntos cuesta oro. Datos en compartido/dominio/arbol.lua.
+  - La mochila equipada decide los espacios de la bolsa (8 sin mochila, hasta 24).
+  - En Postgres el personaje esta normalizado (personaje_equipo, _bolsa, _mision, _casa,
+    casa_mueble, casa_cofre, _caceria, _habilidad); los guardados antiguos se migran solos.

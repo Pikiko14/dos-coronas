@@ -1,0 +1,13 @@
+# Generado
+dist/
+*.love
+log.txt
+prueba_*.txt
+detener.txt
+cuentas.json
+juego/capturas/
+juego/preview/
+servidor/mapas/*.tmp
+# Configuración local (la plantilla es .env.example)
+.env
+error_log.txt
