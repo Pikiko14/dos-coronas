@@ -16,6 +16,7 @@ local Subastas = require("compartido.dominio.subastas")
 local Programacion = require("compartido.dominio.programacion")
 local Grupos = require("compartido.dominio.grupos")
 local Encuentros = require("compartido.dominio.encuentros")
+local Admin = require("compartido.dominio.admin")
 
 local Mundo = {}
 Mundo.__index = Mundo
@@ -129,6 +130,7 @@ end
 function Mundo:decir(p, texto)
   texto = Util.limpiar(texto)
   if texto == "" then return end
+  if texto:sub(1, 6) == "/admin" and (#texto == 6 or texto:sub(7, 7) == " ") then return self:comandoAdmin(p, texto) end
   local canal = "local"
   if texto:sub(1, 3) == "/m " then canal, texto = "mundo", texto:sub(4)
   elseif texto:sub(1, 3) == "/f " then canal, texto = "faccion", texto:sub(4)
@@ -715,6 +717,7 @@ end
 
 function Mundo:danar(objetivo, cantidad, origen, critico, color)
   if not objetivo or not objetivo.vivo or type(objetivo.hp) ~= "number" then return end
+  if objetivo.invulnerable then return end
   if origen and not self:puedeDanar(origen, objetivo) then return end
   cantidad = math.max(1, math.floor(cantidad))
   if (objetivo.mascotaBono or 0) > 0 then cantidad = math.max(1, math.floor(cantidad * (1 - objetivo.mascotaBono))) end
@@ -775,16 +778,32 @@ function Mundo:ganarXp(p, cant)
   end
 end
 
+-- Deja una pieza en el suelo cerca de (x, y): cada objeto, montÃ³n de oro o mercancÃ­a cae por
+-- separado, repartido alrededor, y se recoge pasando por encima.
+function Mundo:dejarEnSuelo(pieza, x, y, modo, z)
+  local px, py = x, y
+  for _ = 1, 8 do
+    local ang, d = math.random() * math.pi * 2, 0.5 + math.random() * 1.1
+    local cx, cy = x + math.cos(ang) * d, y + math.sin(ang) * d
+    if (modo or "mundo") == "mundo" and (z or 0) == 0 then
+      if require("compartido.dominio.mapa").transitable(self.mapas.mundo, math.floor(cx), math.floor(cy)) then px, py = cx, cy break end
+    else
+      px, py = cx, cy break
+    end
+  end
+  pieza.id = self:idNuevo()
+  pieza.kind, pieza.vivo, pieza.x, pieza.y, pieza.modo, pieza.z = "loot", true, px, py, modo or "mundo", z or 0
+  pieza.nombre = pieza.nombre or "BotÃ­n"
+  self.entidades[pieza.id] = pieza
+  return pieza
+end
+
 function Mundo:soltarBotin(m, asesino)
   if not asesino or asesino.kind == "bot" then
     if asesino and asesino.kind == "bot" then asesino.oro = (asesino.oro or 0) + m.oro end
     return
   end
-  local loot = {
-    id = self:idNuevo(), kind = "loot", nombre = "Botín",
-    x = m.x, y = m.y,     modo = m.modo, vivo = true, z = m.z or 0,
-    oro = m.oro, items = {}, dueno = asesino.id, grupo = asesino.grupoId, hasta = self.tiempo + 45,
-  }
+  local loot = { oro = m.oro, items = {} }
   for _, it in ipairs(Balance.tirar(m)) do
     loot.items[#loot.items + 1] = it
   end
@@ -810,7 +829,19 @@ function Mundo:soltarBotin(m, asesino)
     local tier = math.min(4, math.floor((m.nivel or 1) / 6) + 1)
     loot.items[#loot.items + 1] = { id = "mochila_" .. tier, cant = 1 }
   end
-  self.entidades[loot.id] = loot
+  -- cada cosa cae al suelo por separado
+  local base = { dueno = asesino.id, grupo = asesino.grupoId, hasta = self.tiempo + 45 }
+  local function pieza(extra)
+    local t = {}
+    for k, v in pairs(base) do t[k] = v end
+    for k, v in pairs(extra) do t[k] = v end
+    self:dejarEnSuelo(t, m.x, m.y, m.modo, m.z)
+  end
+  if (loot.oro or 0) > 0 then pieza({ oro = loot.oro, items = {}, nombre = "Oro" }) end
+  for _, it in ipairs(loot.items) do
+    local d = Datos.item(it.id)
+    pieza({ oro = 0, items = { it }, item = it.id, nombre = d and d.nombre or "Objeto" })
+  end
 end
 
 function Mundo:morir(e, origen)
@@ -826,6 +857,7 @@ function Mundo:morir(e, origen)
     return
   end
   if (e.kind == "jugador" or e.kind == "bot") then
+    self:soltarCargaMuerto(e)
     e.robo = nil
     if e.escolta then e.escolta = nil end
     self:caeBuscado(e, origen)
@@ -978,6 +1010,7 @@ end
 
 function Mundo:usarHabilidad(p, slot, tx, ty)
   if not p.vivo or (p.aturdido or 0) > 0 then return "No puedes actuar." end
+  if p.montado then return "No puedes luchar montado: baja de la montura (O)." end
   local idh = Datos.barra[p.clase][slot]
   local rango = idh and Arbol.rango(p, idh) or 0
   if rango < 1 then return idh and "Aún no conoces ese poder: abre el árbol (K)." or nil end
@@ -1156,6 +1189,7 @@ end
 
 function Mundo:autoataque(p)
   local o = p.objetivo and self.entidades[p.objetivo]
+  if p.montado then return end -- montado no se combate
   if not o or not o.vivo or not self:puedeDanar(p, o) then return end
   if not self:mismoLugar(p, o) then return end
   local rango = self:alcance(p)
@@ -2393,7 +2427,7 @@ function Mundo:exportar(p)
     casas = p.casas, vinculo = p.vinculo, caceria = p.caceria,
     habilidades = p.habilidades, encantos = p.encantos,
     mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
-    job = p.job, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
+    job = p.oficioElegido, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
     monturas = p.monturas, monturaPreferida = p.monturaPreferida,
     z = z,
   }
@@ -2409,8 +2443,11 @@ function Mundo:aplicarGuardado(p, data)
   p.encantos = data.encantos or {}
   p.mascotas = data.mascotas or {}
   p.mascotaActiva = data.mascotaActiva
-  p.job, p.oficios = data.job, data.oficios or {}
+  p.oficioElegido, p.oficios = data.job, data.oficios or {}
   p.carga, p.cargaRobada = data.carga or {}, data.cargaRobada or {}
+  -- el oficio empieza desactivado; si traes carga, sigue activo para poder venderla
+  p.job = nil
+  if p.oficioElegido and self:pesoCarga(p) > 0 then p.job = p.oficioElegido end
   p.monturas, p.monturaPreferida = data.monturas or {}, data.monturaPreferida
   self:recalcularCarga(p)
   self:vincularGremio(p)
@@ -2457,7 +2494,9 @@ function Mundo:compactar(e)
     flash = (e.flash or 0) > 0 and e.flash or nil,
     burbuja = e.burbuja,
     est = self:estadosVisibles(e), especie = e.especie, gremio = e.gremioEtiqueta,
-    montado = e.montado, buscado = (e.kind == "jugador" and self:esBuscado(e)) and true or nil,
+    montado = e.montado, job = e.job,
+    item = e.kind == "loot" and e.item or nil, bien = e.kind == "loot" and e.bien or nil,
+    oroSuelo = (e.kind == "loot" and (e.oro or 0) > 0) and true or nil, buscado = (e.kind == "jugador" and self:esBuscado(e)) and true or nil,
     categoria = e.categoria, enGrupo = (e.kind == "jugador" and e.grupoId) and true or nil,
     -- proyectiles: de qué tipo son y a dónde van
     tipo = e.kind == "proyectil" and e.tipo or nil,
@@ -2486,7 +2525,7 @@ function Mundo:foto(pid)
       nombre = p.nombre, modo = p.modo, casaId = p.casaId, objetivo = p.objetivo,
       z = p.z or 0, habilidades = p.habilidades, encantos = p.encantos, xpSig = Datos.xpPara(p.nivel),
       mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
-      job = p.job, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
+      job = p.job, oficioElegido = p.oficioElegido, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
       capacidadCarga = p.capacidadCarga, pesoCarga = p.pesoCarga, monturas = p.monturas, montado = p.montado,
       buscadoResta = self:esBuscado(p) and (p.buscado - self.tiempo) or nil, recompensa = self:esBuscado(p) and p.recompensa or nil,
       escolta = p.escolta,
@@ -2728,5 +2767,6 @@ Subastas.instalar(Mundo)
 Programacion.instalar(Mundo)
 Grupos.instalar(Mundo)
 Encuentros.instalar(Mundo)
+Admin.instalar(Mundo)
 
 return Mundo

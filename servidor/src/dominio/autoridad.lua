@@ -16,7 +16,7 @@ local ACCIONES = {
   aprender = true, olvidar = true, encantar = true, mascota_adoptar = true, mascota_invocar = true,
   gremio_info = true, gremio_crear = true, gremio_invitar = true, gremio_responder = true, gremio_salir = true,
   gremio_expulsar = true, gremio_rango = true, gremio_disolver = true,
-  oficio_elegir = true, oficio_info = true, mercancia_info = true, mercancia_comprar = true, mercancia_vender = true,
+  oficio_elegir = true, oficio_alternar = true, oficio_info = true, mercancia_info = true, mercancia_comprar = true, mercancia_vender = true,
   robar = true, perista_vender = true, montura_comprar = true, montura_alternar = true, montura_info = true, escoltar = true,
   grupo_invitar = true, grupo_responder = true, grupo_salir = true, grupo_expulsar = true, grupo_lider = true, grupo_disolver = true,
   subasta_info = true, subasta_publicar = true, subasta_pujar = true, subasta_comprar = true, subasta_cancelar = true, subasta_cobrar = true,

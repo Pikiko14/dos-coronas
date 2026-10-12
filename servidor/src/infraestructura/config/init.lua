@@ -72,6 +72,16 @@ return {
     duracionEstandarte = entero("DOSCORONAS_ESTANDARTE_DURACION_SEG", 300, 30, 7200),
   },
   -- Reglas del juego que el servidor puede ajustar (ver servidor/src/aplicacion/ajustes.lua).
+  -- Administradores: cuentas que pueden usar los comandos /admin del chat. Si hay usuario y clave,
+  -- el servidor crea esa cuenta al arrancar (si no existe).
+  admin = (function()
+    local usuarios, primero = {}, nil
+    for u in texto("DOSCORONAS_ADMIN_USUARIO", ""):gmatch("[^,%s]+") do
+      usuarios[u:lower()] = true
+      primero = primero or u
+    end
+    return { usuarios = usuarios, primero = primero, clave = texto("DOSCORONAS_ADMIN_CLAVE", "") }
+  end)(),
   juego = {
     -- progresión y combate
     xpDificultad = numero("DOSCORONAS_XP_DIFICULTAD", 1.8, 0.1, 20),

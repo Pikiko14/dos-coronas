@@ -17,7 +17,7 @@ end
 function Consola.cargar()
   nota("Dos Coronas — servidor")
   nota("Configuración: " .. (Config.origen or "valores por defecto (no hay .env)"))
-  estado.mundo = Servicio.crearMundo({ eventos = Config.eventos, ajustes = { juego = Config.juego, eventos = Config.eventos } })
+  estado.mundo = Servicio.crearMundo({ admin = Config.admin, eventos = Config.eventos, ajustes = { juego = Config.juego, eventos = Config.eventos } })
   if #(estado.mundo.ajustesCambiados or {}) > 0 then
     nota("Ajustes del .env: " .. table.concat(estado.mundo.ajustesCambiados, "; "))
   end

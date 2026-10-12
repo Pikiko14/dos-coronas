@@ -282,3 +282,35 @@ NUEVO: CIUDADES SEGURAS Y MUERTE
     pide su nivel (nunca baja de nivel ni de cero). Se configura en servidor/.env
     (DOSCORONAS_MUERTE_NIVEL_MIN, DOSCORONAS_MUERTE_XP_PERDIDA). En las guerras no se pierde.
   - El cuerpo del personaje caido queda en el suelo en gris (misma imagen, sin color) hasta que reaparece.
+
+NUEVO: CUENTA ADMINISTRADOR Y COMANDOS
+  - En servidor/.env: DOSCORONAS_ADMIN_USUARIO (cuentas admin, separadas por comas) y
+    DOSCORONAS_ADMIN_CLAVE (el servidor crea la primera cuenta al arrancar si no existe).
+    Entra al juego con esa cuenta, crea un personaje y escribe en el chat:
+      /admin ayuda                          lista de comandos
+      /admin mob <id> [cant] [nivel]        invoca criaturas (ids: /admin mobs)
+      /admin item <id> [cant] [jugador]     da objetos (ids: /admin items [texto])
+      /admin oro|xp|nivel <n> [jugador]     oro, experiencia o nivel
+      /admin curar|revivir [jugador]
+      /admin tp <x> <y> | tp <jugador> | traer <jugador> | ciudad <id>
+      /admin limpiar [radio]                retira criaturas cercanas
+      /admin evento <estandarte|batalla> <iniciar|fin|estado> [todos]
+                                            inicia sin minimo de jugadores (todos = mete a todos)
+      /admin anuncio <texto> | dios | jugadores
+  - Solo el servidor marca a los admin (por su cuenta); un jugador normal recibe "sin permiso".
+
+NUEVO: INVENTARIO DE LA MONTURA Y COMBATE
+  - Tecla U: alforjas de la montura. Muestra la montura puesta (velocidad y carga extra), cuanto
+    llevas de la capacidad y la mercancia (y la robada) con su valor aproximado.
+  - Montado no se puede combatir: no hay ataque automatico ni se usan poderes. Baja con O para pelear.
+
+NUEVO: OFICIO ACTIVABLE, ASPECTO Y BOTIN EN EL SUELO
+  - El oficio se aprende con el maestro y se ACTIVA con la tecla Y (otra vez Y lo desactiva: hay
+    que dejar la carga y no estar buscado). Con el oficio activo se usa su sistema y el personaje
+    cambia de aspecto: comerciante, cazarrecompensas y ladron tienen cada uno su sprite
+    (render/personajes.lua, P.oficios). Al entrar al juego el oficio empieza desactivado, salvo
+    que lleves carga.
+  - Si matan a un comerciante cargado, su mercancia cae al suelo (un fardo por tipo, 90 s) y la
+    pueden cargar comerciantes y ladrones (el ladron la suma a lo robado).
+  - Al matar una criatura, cada objeto y el oro caen al suelo por separado, repartidos
+    alrededor, con su icono; se recogen pasando por encima (al principio solo quien la mato o su grupo).

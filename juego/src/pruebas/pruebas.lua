@@ -97,6 +97,22 @@ function Pruebas.correr()
     fallar(errores, "los botones del panel lateral reciben clics", ayuda ~= nil and ayuda ~= "panel", tostring(ayuda))
     fallar(errores, "el hueco de la barra de poderes responde", Interfaz.consumir((1280 - lado) / 2 - 175, 720 - consola - 34) == "hab_1")
   end)
+  paso("interfaz: alforjas de la montura", function()
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Alforja", faccion = "albor", clase = "guerrero", nivel = 10 })
+    pj.job, pj.monturas, pj.montado = "trader", { "buey" }, "buey"
+    pj.carga, pj.cargaRobada = { trigo = 4, gemas = 2 }, { vino = 1 }
+    pj.capacidadCarga, pj.pesoCarga = 40, 7
+    for _, montado in ipairs({ true, false }) do
+      if not montado then pj.montado = nil end
+      Interfaz.escala = 1
+      Interfaz.panel = "montura"
+      local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+      fallar(errores, "el panel de la montura se dibuja" .. (montado and " montado" or " a pie"), ok, tostring(err))
+    end
+    Interfaz.panel = nil
+local P = require("src.presentacion.render.personajes")    local ok3 = true    for _, j in ipairs({ "trader", "hunter", "thief" }) do      ok3 = ok3 and P.de({ kind = "jugador", clase = "mago", faccion = "umbra", job = j }) == P.oficios[j]    end    fallar(errores, "cada oficio activo tiene su aspecto", ok3 and P.de({ kind = "jugador", clase = "mago", faccion = "umbra" }) ~= P.oficios.trader)
+  end)
   local texto = (#errores == 0) and "OK\n" or ("FALLOS " .. #errores .. "\n" .. table.concat(errores, "\n"))
   Log.volcar("prueba_resultado.txt", texto)
   print(texto)

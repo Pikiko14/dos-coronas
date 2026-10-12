@@ -1,4 +1,5 @@
 local Datos = require("compartido.dominio.datos")
+local Atlas = require("src.presentacion.render.atlas")
 local Terreno = require("src.presentacion.render.terreno")
 local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
@@ -377,9 +378,25 @@ function D.entidad(e, sx, sy, mundo, jugador)
     if not e.portador then Objetos.dibujar(e.faccion == "umbra" and "bandera_umbra" or "bandera_albor", 0, sx, pies) end
     alto = 64
   elseif e.kind == "loot" then
-    Objetos.cofre(sx, pies)
-    love.graphics.setColor(1, 0.9, 0.4, 0.6 + math.sin((mundo.tiempo or 0) * 5) * 0.3)
-    love.graphics.circle("line", sx, pies - 6, 11)
+    -- cada objeto, montÃ³n de oro o fardo de mercancÃ­a cae al suelo por separado
+    local def = e.item and Datos.item(e.item)
+    local brillo = 0.5 + math.sin((mundo.tiempo or 0) * 5 + e.id) * 0.25
+    love.graphics.setColor(0, 0, 0, 0.3)
+    love.graphics.ellipse("fill", sx, pies - 2, 9, 4)
+    if def then
+      Atlas.dibujar(def.hoja, def.sprite, sx, pies - 9, 0.75, 16, 16)
+    elseif e.bien then
+      Atlas.dibujar("equipment", 699, sx, pies - 9, 0.75, 16, 16)
+    elseif e.oroSuelo then
+      love.graphics.setColor(1, 0.82, 0.2, 1)
+      love.graphics.circle("fill", sx, pies - 6, 5)
+      love.graphics.setColor(0.7, 0.5, 0.1, 1)
+      love.graphics.circle("line", sx, pies - 6, 5)
+    else
+      Objetos.cofre(sx, pies)
+    end
+    love.graphics.setColor(1, 0.9, 0.4, brillo)
+    love.graphics.circle("line", sx, pies - 8, 10)
   elseif e.kind == "trampa" then
     local img = Arte.img("Characters/!Hexagram.png")
     love.graphics.setColor(1, 1, 1, 0.9)

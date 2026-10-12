@@ -464,6 +464,7 @@ function I.hud(mundo, p, w, h)
   elseif I.panel == "oficios" then I.panelOficios(mundo, p, vw, h)
   elseif I.panel == "mercancias" then I.panelMercancias(mundo, p, vw, h)
   elseif I.panel == "establo" then I.panelEstablo(mundo, p, vw, h)
+  elseif I.panel == "montura" then I.panelMontura(mundo, p, vw, h)
   elseif I.panel == "subastas" then I.panelSubastas(mundo, p, vw, h)
   elseif I.panel == "grupo" then I.panelGrupo(mundo, p, vw, h)
   elseif I.panel == "mercado" then I.panelMercado(p, vw, h)
@@ -1143,7 +1144,7 @@ local DESC_OFICIO = {
 
 -- Franja de estado del oficio en la esquina del mundo.
 function I.estadoOficio(mundo, p, x, y)
-  if not p.job and not p.buscadoResta and not p.montado then return end
+  if not p.job and not p.oficioElegido and not p.buscadoResta and not p.montado then return end
   local f = pequena()
   love.graphics.setFont(f)
   local lineas = {}
@@ -1154,9 +1155,14 @@ function I.estadoOficio(mundo, p, x, y)
       lineas[#lineas + 1] = { "Carga " .. math.floor(p.pesoCarga or 0) .. "/" .. math.floor(p.capacidadCarga or 0), { 0.8, 0.85, 0.7 } }
     end
   end
+  if not p.job and p.oficioElegido then
+    lineas[#lineas + 1] = { NOMBRES_OFICIO[p.oficioElegido] .. " (inactivo)  Y: activar", { 0.7, 0.68, 0.6 } }
+  elseif p.job then
+    lineas[#lineas + 1] = { "Oficio activo (Y: desactivar)", { 0.6, 0.85, 0.6 } }
+  end
   if p.montado then
     local M = Monturas.especies[p.montado]
-    lineas[#lineas + 1] = { "Montado: " .. (M and M.nombre or p.montado) .. "  (O: bajar)", { 0.75, 0.85, 1 } }
+    lineas[#lineas + 1] = { "Montado: " .. (M and M.nombre or p.montado) .. "  (O: bajar, U: alforjas)", { 0.75, 0.85, 1 } }
   end
   if p.buscadoResta then
     lineas[#lineas + 1] = { "BUSCADO " .. math.ceil(p.buscadoResta) .. " s — recompensa " .. (p.recompensa or 0), { 1, 0.35, 0.3 } }
@@ -1204,7 +1210,9 @@ function I.panelOficios(mundo, p, w, h)
     love.graphics.setColor(actual and 0.95 or 0.5, actual and 0.8 or 0.42, actual and 0.3 or 0.25)
     love.graphics.rectangle("line", x, y, cw, ch, 6, 6)
     love.graphics.setColor(1, 0.9, 0.55)
-    love.graphics.print(NOMBRES_OFICIO[id] .. (actual and "  (actual)" or ""), x + 10, y + 8)
+    love.graphics.print(NOMBRES_OFICIO[id] .. (actual and (d.activo and "  (activo)" or "  (elegido)") or ""), x + 10, y + 8)
+    local spr = Personajes.oficios[id]
+    if spr then Personajes.dibujar(spr, 1, false, 0, x + cw - 28, y + 46) end
     love.graphics.setColor(0.82, 0.8, 0.7)
     love.graphics.printf(DESC_OFICIO[id], x + 10, y + 32, cw - 20, "left")
     local o = d.oficios[id]
@@ -1303,6 +1311,70 @@ function I.panelMercancias(mundo, p, w, h)
   love.graphics.setColor(0.7, 0.68, 0.6)
   love.graphics.printf("Compra donde la mercancía SOBRA y vende donde FALTA, cuanto más lejos mejor. Los precios suben cuando compras y bajan cuando vendes, y se recuperan con el tiempo. Los ladrones acechan los caminos: viaja con escolta.",
     px + 14, py + ph - 70, pw - 28, "left")
+end
+
+-- Alforjas de la montura: la mercancía que llevas, lo que cabe y lo que aporta la montura.
+function I.panelMontura(mundo, p, w, h)
+  local Oficios = require("compartido.dominio.oficios")
+  local px, py, pw, ph = w / 2 - 280, 70, 560, 470
+  caja(px, py, pw, ph, "Montura e inventario de carga")
+  I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
+  local M = p.montado and Monturas.especies[p.montado]
+  love.graphics.setColor(0.13, 0.11, 0.14)
+  love.graphics.rectangle("fill", px + 14, py + 44, pw - 28, 84, 6, 6)
+  local def = p.montado and Personajes.monturas[p.montado]
+  if def and def.hoja then Personajes.dibujar(def, 1, false, love.timer.getTime(), px + 56, py + 112) end
+  if def and def.vehiculo then
+    local img = Arte.img("Characters/Vehicle.png")
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.draw(img, Arte.quad(img, 128, 128, 32, 32), px + 56, py + 112, 0, 1.6, 1.6, 16, 28)
+  end
+  love.graphics.setColor(0.95, 0.9, 0.75)
+  if M then
+    love.graphics.print(M.nombre .. "  (montado, O para bajar)", px + 100, py + 54)
+    love.graphics.setColor(0.6, 0.85, 1)
+    love.graphics.print("Velocidad +" .. math.floor(M.vel * 100) .. "%    Carga extra +" .. M.carga, px + 100, py + 78)
+    love.graphics.setColor(1, 0.75, 0.5)
+    love.graphics.print("Montado no puedes combatir.", px + 100, py + 100)
+  else
+    love.graphics.print("No vas montado", px + 100, py + 54)
+    love.graphics.setColor(0.72, 0.78, 0.68)
+    local n = p.monturas and #p.monturas or 0
+    love.graphics.print(n > 0 and ("Tienes " .. n .. " montura(s): pulsa O para montar.") or "Compra una montura en la cuadra.", px + 100, py + 78)
+  end
+  local cap, peso = math.floor(p.capacidadCarga or 0), math.floor(p.pesoCarga or 0)
+  love.graphics.setColor(0.85, 0.82, 0.7)
+  love.graphics.print("Carga " .. peso .. " / " .. cap .. (p.job and "" or "   (la carga es del oficio de comerciante o ladrón)"), px + 14, py + 140)
+  barra(px + 14, py + 162, pw - 28, 12, cap > 0 and math.min(1, peso / cap) or 0, 0.8, 0.65, 0.25)
+  local y = py + 190
+  local hay = false
+  local function fila(titulo, mapa, color)
+    local ids = {}
+    for _, id in ipairs(Oficios.ORDEN_BIENES) do if (mapa[id] or 0) > 0 then ids[#ids + 1] = id end end
+    if #ids == 0 then return end
+    hay = true
+    love.graphics.setColor(color[1], color[2], color[3])
+    love.graphics.print(titulo, px + 14, y)
+    y = y + 22
+    for _, id in ipairs(ids) do
+      love.graphics.setColor(0.13, 0.11, 0.14)
+      love.graphics.rectangle("fill", px + 14, y, pw - 28, 26, 4, 4)
+      love.graphics.setColor(0.95, 0.9, 0.78)
+      love.graphics.print(Oficios.BIENES[id].nombre, px + 26, y + 5)
+      love.graphics.print("x " .. mapa[id], px + 260, y + 5)
+      love.graphics.setColor(0.7, 0.8, 0.6)
+      love.graphics.print("~" .. (Oficios.BIENES[id].base * mapa[id]) .. " oro", px + 380, y + 5)
+      y = y + 30
+    end
+  end
+  fila("Mercancía", p.carga or {}, { 0.7, 0.9, 0.6 })
+  fila("Mercancía robada", p.cargaRobada or {}, { 1, 0.5, 0.4 })
+  if not hay then
+    love.graphics.setColor(0.7, 0.68, 0.6)
+    love.graphics.print("Las alforjas están vacías. Compra mercancías en un mercader de caminos.", px + 14, y)
+  end
+  love.graphics.setColor(0.7, 0.68, 0.6)
+  love.graphics.printf("Pulsa U para abrir o cerrar este panel.", px + 14, py + ph - 28, pw - 28, "left")
 end
 
 function I.panelEstablo(mundo, p, w, h)

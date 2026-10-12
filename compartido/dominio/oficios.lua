@@ -205,25 +205,75 @@ function M.instalar(Mundo)
   function Mundo:elegirOficio(p, job, lugar)
     if p.kind ~= "jugador" then return "Solo los jugadores tienen oficio." end
     if not M.OFICIOS[job] then return "Ese oficio no existe." end
-    if job == p.job then return "Ya eres " .. M.OFICIOS[job].nombre:lower() .. "." end
+    if job == p.oficioElegido then return "Ya eres " .. M.OFICIOS[job].nombre:lower() .. "." end
     if lugar == "ladron" and job ~= "thief" then return "Aquí solo se aprende el oficio de ladrón." end
     if lugar == "ciudad" and job == "thief" then return "El oficio de ladrón se aprende en un refugio de ladrones." end
     if lugar == "capitan" and job ~= "hunter" then return "Aquí solo se aprende el oficio de cazarrecompensas." end
     p.oficios = p.oficios or {}
     local nuevo = p.oficios[job] == nil
-    local coste = p.job and M.COSTE_CAMBIO or 0
+    local coste = p.oficioElegido and M.COSTE_CAMBIO or 0
     if (p.oro or 0) < coste then return "Cambiar de oficio cuesta " .. coste .. " de oro." end
     if self:pesoCarga(p) > 0 then return "Vende o suelta tu carga antes de cambiar de oficio." end
     if p.buscado and p.buscado > self.tiempo then return "Con la ley detrás de ti, no puedes cambiar de oficio." end
     p.oro = p.oro - coste
     p.oficios[job] = p.oficios[job] or { nivel = 1, xp = 0 }
-    p.job = job
+    p.oficioElegido, p.job = job, nil -- se elige aqui y se activa con la tecla Y
     p.contrato = nil
     p.escolta = nil
     self:recalcularCarga(p)
     self:marcarProgreso(p)
-    self:mensaje("sistema", "", "Ahora eres " .. M.OFICIOS[job].nombre .. (nuevo and "." or (" (nivel " .. p.oficios[job].nivel .. ").")), p)
+    self:mensaje("sistema", "", "Ahora eres " .. M.OFICIOS[job].nombre .. (nuevo and "." or (" (nivel " .. p.oficios[job].nivel .. ")."))
+      .. " Pulsa Y para activar el oficio cuando quieras usarlo.", p)
     return nil
+  end
+
+  -- Mensaje de error: si el oficio es el tuyo pero no estÃ¡ activo, di como activarlo.
+  function Mundo:avisoOficio(p, job, texto)
+    if p.oficioElegido == job and not p.job then return "Activa tu oficio con la tecla Y." end
+    return texto
+  end
+
+  -- Activa o desactiva el oficio elegido (tecla Y). Con el oficio activo se usa su sistema y
+  -- el personaje cambia de aspecto.
+  function Mundo:alternarOficio(p)
+    if p.kind ~= "jugador" then return "Solo los jugadores tienen oficio." end
+    if p.job then
+      if self:pesoCarga(p) > 0 then return "Vende o suelta tu carga antes de desactivar el oficio." end
+      if self:esBuscado(p) then return "Con la ley detrÃ¡s de ti, no puedes dejar el oficio." end
+      if p.robo then return "No puedes dejar el oficio en pleno robo." end
+      p.job, p.contrato, p.escolta = nil, nil, nil
+      self:recalcularCarga(p)
+      self:mensaje("sistema", "", "Oficio desactivado. Pulsa Y para activarlo de nuevo.", p)
+      return nil
+    end
+    if not p.oficioElegido then return "AÃºn no tienes oficio: aprende uno con un maestro de oficios." end
+    if p.modo ~= "mundo" then return "AquÃ­ no puedes activar el oficio." end
+    p.job = p.oficioElegido
+    self:recalcularCarga(p)
+    self:marcarProgreso(p)
+    self:mensaje("sistema", "", "Oficio activado: " .. M.OFICIOS[p.job].nombre .. ". Pulsa Y para desactivarlo.", p)
+    return nil
+  end
+
+  -- Al morir, la mercancÃ­a que llevabas cae al suelo (una pieza por tipo) y cualquier comerciante
+  -- o ladrÃ³n puede cargarla. Lo robado que llevaba un ladrÃ³n se pierde con la ley (ver caeBuscado).
+  function Mundo:soltarCargaMuerto(p)
+    if p.kind ~= "jugador" and p.kind ~= "bot" then return end
+    local cargada = false
+    for bien, c in pairs(p.carga or {}) do
+      if c > 0 then
+        cargada = true
+        self:dejarEnSuelo({
+          nombre = M.BIENES[bien] and M.BIENES[bien].nombre or "MercancÃ­a", bien = bien, oro = 0, items = {},
+          bienes = { [bien] = c }, hasta = self.tiempo + 90,
+        }, p.x, p.y, p.modo, p.z)
+      end
+    end
+    if cargada then
+      p.carga = {}
+      self:recalcularCarga(p)
+      self:mensaje("sistema", "", "Tu mercancÃ­a cae al suelo: otros pueden llevÃ¡rsela.", p)
+    end
   end
 
   function Mundo:ganarXpOficio(p, cant)
@@ -247,7 +297,7 @@ function M.instalar(Mundo)
 
   -- ------------------------------------------------------------------ comercio
   function Mundo:comprarBien(p, bien, cant)
-    if p.job ~= "trader" then return "Solo los comerciantes compran mercancías." end
+    if p.job ~= "trader" then return self:avisoOficio(p, "trader", "Solo los comerciantes compran mercancías.") end
     local sitio = self:sitioCerca(p)
     if not sitio then return "Acércate a un mercader mayor." end
     if not M.BIENES[bien] then return "Esa mercancía no existe." end
@@ -293,7 +343,7 @@ function M.instalar(Mundo)
   end
 
   function Mundo:venderBien(p, bien, cant)
-    if p.job ~= "trader" then return "Solo los comerciantes venden mercancías." end
+    if p.job ~= "trader" then return self:avisoOficio(p, "trader", "Solo los comerciantes venden mercancías.") end
     local sitio = self:sitioCerca(p)
     if not sitio then return "Acércate a un mercader mayor." end
     local tengo = p.carga and p.carga[bien] or 0
@@ -367,7 +417,7 @@ function M.instalar(Mundo)
     end
     local lugar = self:lugarOficio(p)
     local info = {
-      lugar = lugar, job = p.job, oficios = o, coste = M.COSTE_CAMBIO,
+      lugar = lugar, job = p.oficioElegido, activo = p.job ~= nil, oficios = o, coste = M.COSTE_CAMBIO,
       peso = p.pesoCarga, capacidad = p.capacidadCarga,
       buscado = self:esBuscado(p) and { resta = p.buscado - self.tiempo, recompensa = p.recompensa } or nil,
     }
@@ -404,6 +454,9 @@ function M.instalar(Mundo)
       local lugar = self:lugarOficio(p)
       if not lugar then err = "Acércate a un maestro de oficios."
       else err = self:elegirOficio(p, datos.job, lugar) end
+    elseif nombre == "oficio_alternar" then
+      err = self:alternarOficio(p)
+      panel = nil
     elseif nombre == "mercancia_comprar" then
       err = self:comprarBien(p, datos.bien, datos.cant)
       panel = "mercancias"

@@ -29,6 +29,13 @@ P.clases = {
   },
 }
 
+-- Aspecto de cada oficio mientras esta activo (sustituye al de la clase).
+P.oficios = {
+  trader = { hoja = "Characters/People3.png", idx = 0 },
+  hunter = { hoja = "Characters/People3.png", idx = 1 },
+  thief = { hoja = "Characters/People3.png", idx = 4 },
+}
+
 P.npc = {
   mercado = { hoja = "Characters/Actor1.png", idx = 7 },
   heraldo = { hoja = "Characters/People4.png", idx = 0 },
@@ -37,7 +44,7 @@ P.npc = {
   encantador = { hoja = "Characters/Actor2.png", idx = 7 },
   criador = { hoja = "Characters/People1.png", idx = 2 },
   gremio = { hoja = "Characters/People2.png", idx = 3 },
-  oficios = { hoja = "Characters/People3.png", idx = 1 },
+  oficios = { hoja = "Characters/People4.png", idx = 4 },
   comercio = { hoja = "Characters/People3.png", idx = 3 },
   establo = { hoja = "Characters/People7.png", idx = 6 },
   capitan = { hoja = "Characters/People4.png", idx = 7 },
@@ -112,6 +119,7 @@ P.monstruos = {
 function P.de(e)
   local k = e.kind
   if k == "jugador" or k == "bot" then
+    if e.job and P.oficios[e.job] then return P.oficios[e.job] end
     local c = P.clases[e.clase or "guerrero"] or P.clases.guerrero
     return c[e.faccion or "albor"] or c.albor
   elseif k == "guardia" then

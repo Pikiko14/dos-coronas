@@ -714,7 +714,7 @@ function Pruebas.correr()
     local maestro = npcDe("oficios", mapa.ciudades[1].id)
     irA(t, maestro)
     fallar(errores, "hay maestro de oficios", maestro ~= nil)
-    fallar(errores, "elige comerciante gratis", mundo:elegirOficio(t, "trader", "ciudad") == nil and t.job == "trader" and t.oro == 50000)
+    fallar(errores, "elige comerciante gratis", mundo:elegirOficio(t, "trader", "ciudad") == nil and t.oficioElegido == "trader" and t.job == nil and mundo:alternarOficio(t) == nil and t.job == "trader" and t.oro == 50000)
     fallar(errores, "el ladrón no se aprende en la ciudad", mundo:elegirOficio(t, "thief", "ciudad") ~= nil)
     -- comprar y vender entre dos ciudades
     local a, b, bien
@@ -759,8 +759,8 @@ function Pruebas.correr()
     local hunter = mundo:crearPersonaje({ nombre = "Cazador1", faccion = "albor", clase = "guerrero", nivel = 12 })
     local contacto = npcDe("contacto")
     irA(ladron, contacto)
-    fallar(errores, "un ladrón se hace en un refugio", mundo:elegirOficio(ladron, "thief", "ladron") == nil and ladron.job == "thief")
-    fallar(errores, "el cazarrecompensas se hace en su campamento", mundo:elegirOficio(hunter, "hunter", "capitan") == nil)
+    fallar(errores, "un ladrón se hace en un refugio", mundo:elegirOficio(ladron, "thief", "ladron") == nil and ladron.job == nil and mundo:alternarOficio(ladron) == nil and ladron.job == "thief")
+    fallar(errores, "el cazarrecompensas se hace en su campamento", mundo:elegirOficio(hunter, "hunter", "capitan") == nil and mundo:alternarOficio(hunter) == nil and hunter.job == "hunter")
     local victima = mundo:crearPersonaje({ nombre = "Mercader2", faccion = "albor", clase = "mago", nivel = 12 })
     victima.job, victima.oficios = "trader", { trader = { nivel = 1, xp = 0 } }
     victima.carga = { vino = 12, gemas = 4 }
@@ -1180,6 +1180,176 @@ function Pruebas.correr()
     fallar(errores, "se restauran los valores", Balance.xpPara(1) == xp0 and Subastas.COMISION == 0.05 and Gremios.COSTE == 1500
       and Datos.JUGADORES_EVENTO == 3 and #Subastas.DURACIONES == 4 and Balance.XP_MULTIPLICADOR == 1)
   end)
+  paso("montado no se combate", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local pu = mundo.mapas.mundo.puestos[1]
+    local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "albor", clase = "guerrero", nivel = 12 })
+    p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+    local m = mundo:spawnMonstruo("gato", p.x + 1, p.y, { x = p.x, y = p.y })
+    m.hp, m.hpMax, m.agresivo, m.cds = 9999, 9999, false, { auto = 1e9 }
+    p.monturas, p.montado = { "buey" }, "buey"
+    p.objetivo = m.id
+    p.cds.auto, p.gcd = 0, 0
+    mundo:autoataque(p)
+    fallar(errores, "montado no hay ataque automático", m.hp == 9999)
+    p.mp = p.mpMax
+    local err = mundo:usarHabilidad(p, 1)
+    fallar(errores, "montado no se usan poderes", err ~= nil and m.hp == 9999 and (p.cds.auto or 0) <= mundo.tiempo)
+    mundo:alternarMontura(p)
+    fallar(errores, "al bajar se puede pelear", p.montado == nil)
+    p.cds.auto, p.gcd = 0, 0
+    mundo:autoataque(p)
+    fallar(errores, "a pie sí ataca", m.hp < 9999 or (p.cds.auto or 0) > mundo.tiempo)
+  end)
+  paso("activar el oficio", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local pu = mundo.mapas.mundo.puestos[1]
+    local p = mundo:crearPersonaje({ nombre = "Activo", faccion = "albor", clase = "guerrero", nivel = 12 })
+    p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+    fallar(errores, "sin oficio no se activa", mundo:alternarOficio(p) ~= nil and p.job == nil)
+    p.oficioElegido, p.oficios = "trader", { trader = { nivel = 1, xp = 0 } }
+    fallar(errores, "elegido pero inactivo no comercia", mundo:comprarBien(p, "trigo", 1) == "Activa tu oficio con la tecla Y.")
+    fallar(errores, "se activa", mundo:alternarOficio(p) == nil and p.job == "trader")
+    fallar(errores, "la foto lleva el oficio activo", (function()
+      for _, e in ipairs(mundo:foto(p.id).ents) do if e.id == p.id then return e.job == "trader" end end
+      return false
+    end)())
+    p.carga = { trigo = 3 }
+    mundo:recalcularCarga(p)
+    fallar(errores, "con carga no se desactiva", mundo:alternarOficio(p) ~= nil and p.job == "trader")
+    p.carga = {}
+    mundo:recalcularCarga(p)
+    fallar(errores, "sin carga se desactiva", mundo:alternarOficio(p) == nil and p.job == nil and p.oficioElegido == "trader")
+    -- se guarda el oficio elegido; al volver empieza desactivado, salvo con carga
+    local otra = mundo:crearPersonaje({ nombre = "Activo2", faccion = "albor", clase = "guerrero" })
+    mundo:aplicarGuardado(otra, mundo:exportar(p))
+    fallar(errores, "al volver el oficio está desactivado", otra.oficioElegido == "trader" and otra.job == nil)
+    p.carga = { trigo = 2 }
+    local tercera = mundo:crearPersonaje({ nombre = "Activo3", faccion = "albor", clase = "guerrero" })
+    mundo:aplicarGuardado(tercera, mundo:exportar(p))
+    fallar(errores, "con carga vuelve activo para poder venderla", tercera.job == "trader")
+  end)
+  paso("botín por separado y mercancía del comerciante muerto", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local pu = mundo.mapas.mundo.puestos[1]
+    local function jug(nombre, faccion, job)
+      local e = mundo:crearPersonaje({ nombre = nombre, faccion = faccion, clase = "guerrero", nivel = 14 })
+      e.x, e.y, e.z, e.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+      e.job, e.oficioElegido, e.oficios = job, job, { [job or "trader"] = { nivel = 1, xp = 0 } }
+      return e
+    end
+    -- una criatura suelta cada objeto por separado
+    local cazador = jug("Caza", "albor", nil)
+    local piezas = 0
+    for _ = 1, 40 do
+      local m = mundo:spawnMonstruo("troll", cazador.x + 1, cazador.y, { x = cazador.x, y = cazador.y })
+      m.hp = 1
+      mundo:danar(m, 99999, cazador)
+    end
+    local sueltos, conVarios = 0, false
+    for _, o in pairs(mundo.entidades) do
+      if o.kind == "loot" then
+        sueltos = sueltos + 1
+        if #o.items > 1 then conVarios = true end
+      end
+    end
+    fallar(errores, "cada objeto cae en su propio sitio", sueltos > 40 and not conVarios, tostring(sueltos))
+    for _, o in pairs(mundo.entidades) do if o.kind == "loot" then o.borrar = true end end
+    mundo:actualizar(0.1)
+    -- el comerciante muere cargado
+    local t = jug("Mercader", "albor", "trader")
+    t.carga = { trigo = 5, vino = 2 }
+    mundo:recalcularCarga(t)
+    local asesino = jug("Ladron", "umbra", "thief")
+    asesino.x, asesino.y = t.x + 3, t.y
+    mundo:morir(t, asesino)
+    local fardos, total = 0, 0
+    for _, o in pairs(mundo.entidades) do
+      if o.kind == "loot" and o.bienes then
+        fardos = fardos + 1
+        for _, c in pairs(o.bienes) do total = total + c end
+      end
+    end
+    fallar(errores, "la mercancía cae al suelo", fardos == 2 and total == 7 and next(t.carga) == nil, fardos .. "/" .. total)
+    fallar(errores, "al comerciante no le queda carga", (t.pesoCarga or 0) == 0)
+    -- el ladrón la recoge: va a su carga robada
+    for _, o in pairs(mundo.entidades) do
+      if o.kind == "loot" and o.bienes then asesino.x, asesino.y = o.x, o.y; mundo:recoger(asesino, o) end
+    end
+    local robado = 0
+    for _, c in pairs(asesino.cargaRobada or {}) do robado = robado + c end
+    fallar(errores, "el ladrón carga lo caído", robado == 7 or robado == (asesino.capacidadCarga or 0), tostring(robado))
+    -- quien no es comerciante ni ladrón no puede cargarla
+    local t2 = jug("Mercader2", "albor", "trader")
+    t2.carga = { hierro = 3 }
+    mundo:recalcularCarga(t2)
+    mundo:morir(t2, nil)
+    local pasante = jug("Pasante", "albor", nil)
+    for _, o in pairs(mundo.entidades) do
+      if o.kind == "loot" and o.bienes and o.bienes.hierro then pasante.x, pasante.y = o.x, o.y; mundo:recoger(pasante, o) end
+    end
+    fallar(errores, "otro oficio no la carga", next(pasante.carga or {}) == nil and next(pasante.cargaRobada or {}) == nil)
+  end)
+  paso("comandos de administrador", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local afuera = mundo.mapas.mundo.puestos[1]
+    local function jug(nombre, faccion)
+      local e = mundo:crearPersonaje({ nombre = nombre, faccion = faccion, clase = "guerrero", nivel = 12 })
+      e.x, e.y, e.z, e.modo = afuera.x + 8.5, afuera.y + 8.5, 0, "mundo"
+      return e
+    end
+    local adm, rival, normal = jug("Admi", "albor"), jug("Otro", "umbra"), jug("Normal", "albor")
+    adm.admin = true
+    local function cuentaMobs(id) local n = 0 for _, m in pairs(mundo.entidades) do if m.kind == "monstruo" and m.monstruo == id then n = n + 1 end end return n end
+    mundo:decir(normal, "/admin mob gato 3")
+    fallar(errores, "un jugador normal no puede", cuentaMobs("gato") == 0)
+    mundo:decir(adm, "/admin mob gato 3 7")
+    fallar(errores, "invoca criaturas con nivel", cuentaMobs("gato") == 3)
+    mundo:decir(adm, "/admin mob gato 500")
+    fallar(errores, "tope de invocación", cuentaMobs("gato") <= 3 + require("compartido.dominio.admin").MAX_CRIATURAS)
+    mundo:decir(adm, "/admin mob noexiste")
+    mundo:decir(adm, "/admin item pocion_vida 5 Normal")
+    local tiene = 0
+    for _, s in ipairs(normal.bolsa) do if s.id == "pocion_vida" then tiene = tiene + s.cant end end
+    local idPocion = Datos.item("pocion_vida") and true or false
+    fallar(errores, "da objetos a otro jugador", not idPocion or tiene >= 5, tostring(tiene))
+    mundo:decir(adm, "/admin oro 250")
+    fallar(errores, "da oro", adm.oro >= 250)
+    mundo:decir(adm, "/admin nivel 25")
+    fallar(errores, "fija el nivel", adm.nivel == 25)
+    mundo:decir(adm, "/admin tp 100 100")
+    fallar(errores, "se teletransporta", math.floor(adm.x) >= 99 and math.floor(adm.x) <= 102)
+    mundo:decir(adm, "/admin traer Otro")
+    fallar(errores, "trae a un jugador", math.abs(rival.x - adm.x) < 3)
+    mundo:decir(adm, "/admin dios")
+    local hp = adm.hp
+    mundo:danar(adm, 30, nil)
+    fallar(errores, "invulnerable", adm.hp == hp)
+    mundo:decir(adm, "/admin dios")
+    mundo:decir(adm, "/admin limpiar 60")
+    local vivos = 0
+    for _, m in pairs(mundo.entidades) do if m.kind == "monstruo" and m.vivo and not m.borrar and require("compartido.dominio.util").dist(m.x, m.y, adm.x, adm.y) <= 60 then vivos = vivos + 1 end end
+    fallar(errores, "limpia criaturas", vivos == 0, tostring(vivos))
+    -- evento sin esperar a nadie
+    mundo:decir(adm, "/admin evento estandarte iniciar todos")
+    fallar(errores, "inicia el evento", mundo.instancia.estandarte.activa and adm.modo == "estandarte" and rival.modo == "estandarte")
+    mundo:decir(adm, "/admin evento estandarte fin")
+    fallar(errores, "termina el evento", mundo.instancia.estandarte.fin ~= nil)
+    mundo:decir(adm, "/admin anuncio hola a todos")
+    local visto = false
+    for _, m in ipairs(mundo.mensajes) do if m.texto == "hola a todos" and m.canal == "mundo" then visto = true end end
+    fallar(errores, "anuncia", visto)
+    local ok = pcall(function() mundo:decir(adm, "/admin cosa rara") mundo:decir(adm, "/admin") mundo:decir(adm, "/admin item") mundo:decir(adm, "/admin oro x") end)
+    fallar(errores, "los comandos mal escritos no rompen", ok)
+    -- el servidor marca admins por cuenta
+    local Servicio = require("src.aplicacion.servicio_servidor")
+    local m2 = Servicio.crearMundo({ admin = { usuarios = { jefe = true } } })
+    fallar(errores, "el servidor guarda las cuentas admin", m2.admins.jefe == true and Servicio.crearMundo().admins.jefe == nil)
+  end)
   paso("ciudades seguras y pérdida de experiencia al morir", function()
     local Balance = require("compartido.dominio.balance")
     local mundo = Mundo.nuevo()
@@ -1439,6 +1609,7 @@ function Pruebas.correr()
     fallar(errores, "el veneno traspasa la defensa", venenoDano > (a - victima.hp), venenoDano .. " vs " .. (a - victima.hp))
     victima.def = 0
     -- drenar vida cura a quien lo aplica
+    for _, m in pairs(mundo.entidades) do if m.kind == "monstruo" and m ~= victima then m.borrar = true end end
     mago.hp = mago.hpMax - 50
     local h0 = mago.hp
     mundo:aplicarEstado(victima, "drenar_vida", 3, nil, mago)
@@ -1644,7 +1815,7 @@ function Pruebas.correr()
         pj.x, pj.y = 210.5, 236.5
         mundo:darItem(pj, "guerrero_arma_2", 1)
         pj.encantos = { arma = 4 }
-        pj.job, pj.oficios = "trader", { trader = { nivel = 3, xp = 40 }, thief = { nivel = 2, xp = 5 } }
+        pj.job, pj.oficioElegido, pj.oficios = "trader", "trader", { trader = { nivel = 3, xp = 40 }, thief = { nivel = 2, xp = 5 } }
         pj.carga, pj.cargaRobada = { vino = 7 }, { gemas = 2 }
         pj.monturas, pj.monturaPreferida = { "buey", "caballo" }, "caballo"
         pj.mascotas = { { especie = "murcielago", nivel = 3, xp = 11 }, { especie = "gatito", nivel = 2, xp = 5 } }
@@ -1677,7 +1848,7 @@ function Pruebas.correr()
             otra.misiones.q_auroria and otra.misiones.q_auroria.progreso == 3 and otra.misiones.q_auroria.aceptada
               and otra.misiones.q_auroria.cantidad == 6)
           fallar(errores, "recupera la cacería", otra.caceria.gato == 5)
-          fallar(errores, "recupera el oficio y su nivel", otra.job == "trader" and otra.oficios.trader.nivel == 3 and otra.oficios.trader.xp == 40
+          fallar(errores, "recupera el oficio y su nivel", otra.oficioElegido == "trader" and otra.job == "trader" and otra.oficios.trader.nivel == 3 and otra.oficios.trader.xp == 40
             and otra.oficios.thief and otra.oficios.thief.nivel == 2)
           fallar(errores, "recupera la carga y lo robado", otra.carga.vino == 7 and otra.cargaRobada.gemas == 2)
           fallar(errores, "recupera las monturas", #otra.monturas == 2 and otra.monturaPreferida == "caballo")

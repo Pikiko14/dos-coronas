@@ -447,6 +447,8 @@ function Entrada.tecla(app, tecla)
   end
   if tecla == "j" then Interfaz.panel = Interfaz.panel == "grupo" and nil or "grupo" end
   if tecla == "o" then app.actuar("montura_alternar", {}) end
+  if tecla == "y" then app.actuar("oficio_alternar", {}) end
+  if tecla == "u" then Interfaz.panel = Interfaz.panel == "montura" and nil or "montura" end
   if tecla == "r" then
     -- robar: el objetivo elegido o la caravana / comerciante más cercano
     local p = app.jugador

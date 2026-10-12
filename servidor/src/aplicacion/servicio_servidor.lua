@@ -22,6 +22,13 @@ function Servicio.crearMundo(opciones)
   mundo.restaurarAjustes, mundo.ajustesCambiados = restaurar, cambios
   -- los eventos de guerra los lanza el servidor a sus horas
   if opciones and opciones.eventos and opciones.eventos.activos then mundo:programarEventos(opciones.eventos) end
+  -- cuentas de administrador (comandos /admin del chat)
+  mundo.admins = (opciones and opciones.admin and opciones.admin.usuarios) or {}
+  if opciones and opciones.admin and opciones.admin.primero and (opciones.admin.clave or "") ~= "" then
+    local id, err = Cuentas.registrar(opciones.admin.primero, opciones.admin.clave)
+    if id then Log.info("cuenta de administrador creada: " .. opciones.admin.primero)
+    elseif not tostring(err):find("registrado") then Log.warn("cuenta de administrador: " .. tostring(err)) end
+  end
   mundo.puertos.marcarEvento = function(...) return Cuentas.marcarEvento(...) end
   -- los gremios se cargan al arrancar y cada cambio se guarda al momento
   mundo.puertos.guardarGremio = function(g)
@@ -160,6 +167,9 @@ function Servicio.tratar(servidor, mundo, idCon, msg)
       faccion = datos.faccion,
       clase = datos.clase,
     })
+    -- la cuenta decide si es administrador (solo el servidor lo marca)
+    local _, usuario = Cuentas.cuentaDeToken(msg.token)
+    pj.admin = (usuario and mundo.admins and mundo.admins[tostring(usuario):lower()]) and true or nil
     pj.remoto = true
     pj.dbId = datos.dbId
     pj.eventosDia = datos.eventosDia
