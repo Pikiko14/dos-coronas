@@ -9,6 +9,15 @@ local Log = require("compartido.infraestructura.log")
 local Config = require("src.infraestructura.config")
 local Pruebas = {}
 
+-- Activa el oficio de e (solo se puede dentro de una ciudad) y lo deja donde estaba.
+local function activar(mundo, e)
+  local x, y, modo, z = e.x, e.y, e.modo, e.z
+  local c = mundo.mapas.mundo.ciudades[1]
+  e.x, e.y, e.modo, e.z = c.spawn.x, c.spawn.y, "mundo", 0
+  local r = mundo:alternarOficio(e)
+  e.x, e.y, e.modo, e.z = x, y, modo, z
+  return r
+end
 local function fallar(lista, nombre, cond, extra)
   if cond then return end
   lista[#lista + 1] = nombre .. (extra and (": " .. extra) or "")
@@ -714,7 +723,7 @@ function Pruebas.correr()
     local maestro = npcDe("oficios", mapa.ciudades[1].id)
     irA(t, maestro)
     fallar(errores, "hay maestro de oficios", maestro ~= nil)
-    fallar(errores, "elige comerciante gratis", mundo:elegirOficio(t, "trader", "ciudad") == nil and t.oficioElegido == "trader" and t.job == nil and mundo:alternarOficio(t) == nil and t.job == "trader" and t.oro == 50000)
+    fallar(errores, "elige comerciante gratis", mundo:elegirOficio(t, "trader", "ciudad") == nil and t.oficioElegido == "trader" and t.job == nil and activar(mundo, t) == nil and t.job == "trader" and t.oro == 50000)
     fallar(errores, "el ladrón no se aprende en la ciudad", mundo:elegirOficio(t, "thief", "ciudad") ~= nil)
     -- comprar y vender entre dos ciudades
     local a, b, bien
@@ -759,8 +768,8 @@ function Pruebas.correr()
     local hunter = mundo:crearPersonaje({ nombre = "Cazador1", faccion = "albor", clase = "guerrero", nivel = 12 })
     local contacto = npcDe("contacto")
     irA(ladron, contacto)
-    fallar(errores, "un ladrón se hace en un refugio", mundo:elegirOficio(ladron, "thief", "ladron") == nil and ladron.job == nil and mundo:alternarOficio(ladron) == nil and ladron.job == "thief")
-    fallar(errores, "el cazarrecompensas se hace en su campamento", mundo:elegirOficio(hunter, "hunter", "capitan") == nil and mundo:alternarOficio(hunter) == nil and hunter.job == "hunter")
+    fallar(errores, "un ladrón se hace en un refugio", mundo:elegirOficio(ladron, "thief", "ladron") == nil and ladron.job == nil and activar(mundo, ladron) == nil and ladron.job == "thief")
+    fallar(errores, "el cazarrecompensas se hace en su campamento", mundo:elegirOficio(hunter, "hunter", "capitan") == nil and activar(mundo, hunter) == nil and hunter.job == "hunter")
     local victima = mundo:crearPersonaje({ nombre = "Mercader2", faccion = "albor", clase = "mago", nivel = 12 })
     victima.job, victima.oficios = "trader", { trader = { nivel = 1, xp = 0 } }
     victima.carga = { vino = 12, gemas = 4 }
@@ -1211,7 +1220,8 @@ function Pruebas.correr()
     fallar(errores, "sin oficio no se activa", mundo:alternarOficio(p) ~= nil and p.job == nil)
     p.oficioElegido, p.oficios = "trader", { trader = { nivel = 1, xp = 0 } }
     fallar(errores, "elegido pero inactivo no comercia", mundo:comprarBien(p, "trigo", 1) == "Activa tu oficio con la tecla Y.")
-    fallar(errores, "se activa", mundo:alternarOficio(p) == nil and p.job == "trader")
+fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOficio(p) ~= nil and p.job == nil)
+    fallar(errores, "se activa", activar(mundo, p) == nil and p.job == "trader")
     fallar(errores, "la foto lleva el oficio activo", (function()
       for _, e in ipairs(mundo:foto(p.id).ents) do if e.id == p.id then return e.job == "trader" end end
       return false
@@ -1300,6 +1310,157 @@ function Pruebas.correr()
     for _ = 1, 400 do mundo:actualizarCaravanas(1) end
     fallar(errores, "el servidor no lanza caravanas por su cuenta", mundo:contarCaravanas() == 0, tostring(mundo:contarCaravanas()))
     mundo.restaurarAjustes()
+  end)
+  paso("monturas de carga solo con el oficio activo", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local pu = mundo.mapas.mundo.puestos[1]
+    local p = mundo:crearPersonaje({ nombre = "Arriero", faccion = "albor", clase = "guerrero", nivel = 20 })
+    p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+    p.monturas = { "buey", "caballo" }
+    p.oficioElegido, p.oficios = "trader", { trader = { nivel = 1, xp = 0 } }
+    fallar(errores, "el buey no se monta con el oficio inactivo", mundo:alternarMontura(p, "buey") ~= nil and p.montado == nil)
+    fallar(errores, "el caballo sí se monta siempre", mundo:alternarMontura(p, "caballo") == nil and p.montado == "caballo")
+    mundo:alternarMontura(p, "caballo")
+    activar(mundo, p)
+    fallar(errores, "con el oficio activo se monta el buey", mundo:alternarMontura(p, "buey") == nil and p.montado == "buey")
+    activar(mundo, p)
+    fallar(errores, "al desactivar el oficio se baja de la montura de carga", p.job == nil and p.montado == nil)
+  end)
+  paso("polvo arcano difícil y solo de criaturas de nivel alto", function()
+    local Balance = require("compartido.dominio.balance")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local pu = mundo.mapas.mundo.puestos[1]
+    local p = mundo:crearPersonaje({ nombre = "Polvo", faccion = "albor", clase = "guerrero", nivel = 25 })
+    p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+    local function polvoDe(nivel, azar)
+      local m = mundo:spawnMonstruo("troll", p.x + 1, p.y, { x = p.x, y = p.y })
+      m.nivel, m.hp = nivel, 1
+      for _, o in pairs(mundo.entidades) do if o.kind == "loot" then o.borrar = true end end
+      mundo:actualizar(0.05)
+      local orig = math.random
+      math.random = function(x, y) if x then return x end return azar end
+      mundo:danar(m, 99999, p)
+      math.random = orig
+      local n = 0
+      for _, o in pairs(mundo.entidades) do
+        if o.kind == "loot" and not o.borrar then for _, it in ipairs(o.items) do if it.id == "polvo_arcano" then n = n + it.cant end end end
+      end
+      return n
+    end
+    fallar(errores, "hasta el nivel 10 no cae polvo ni con suerte", polvoDe(10, 0.0001) == 0)
+    fallar(errores, "por encima del nivel 10 puede caer con suerte", polvoDe(14, 0.0001) >= 1)
+    fallar(errores, "normalmente no cae", polvoDe(14, 0.5) == 0)
+    fallar(errores, "es raro (5% por defecto)", Balance.POLVO_PROB <= 0.1 and Balance.POLVO_NIVEL_MIN == 10)
+    local Datos = require("compartido.dominio.datos")
+    fallar(errores, "pociones: vida roja y maná azul", Datos.item("pocion_vida").sprite == 705 and Datos.item("pocion_mana").sprite == 704)
+  end)
+  paso("item mall: monedas, bonos y addons", function()
+    local Mall = require("compartido.dominio.mall")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local pu = mundo.mapas.mundo.puestos[1]
+    local p = mundo:crearPersonaje({ nombre = "Comprador", faccion = "albor", clase = "mago", nivel = 12 })
+    p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+    local adm = mundo:crearPersonaje({ nombre = "Jefe", faccion = "albor", clase = "guerrero", nivel = 5 })
+    adm.admin, adm.x, adm.y, adm.modo, adm.z = true, p.x, p.y, "mundo", 0
+    fallar(errores, "sin monedas no se compra", mundo:comprarMall(p, "tarjeta_exp") ~= nil)
+    p.bolsa, p.equipo.mochila = {}, "mochila_4"
+    mundo:decir(adm, "/admin monedas 500 Comprador")
+    fallar(errores, "el admin da monedas", p.monedas == 500)
+    for _, o in ipairs(Mall.OBJETOS) do
+      fallar(errores, "compra " .. o.id, mundo:comprarMall(p, o.id) == nil and Datos.item(o.id) ~= nil and Datos.item(o.id).mall == true)
+    end
+    local gastado = 0
+    for _, o in ipairs(Mall.OBJETOS) do gastado = gastado + o.precio end
+    fallar(errores, "se descuentan las monedas", p.monedas == 500 - gastado, tostring(p.monedas))
+    fallar(errores, "no se venden en el mercado", mundo:comprar(p, "tarjeta_exp") ~= nil)
+    -- experiencia doble
+    p.xp, p.nivel = 0, 12
+    mundo:recalcular(p)
+    mundo:ganarXp(p, 100)
+    local normal = p.xp
+    p.xp = 0
+    local function indice(id) for i, s in ipairs(p.bolsa) do if s.id == id then return i end end end
+    fallar(errores, "usa la tarjeta", mundo:equipar(p, indice("tarjeta_exp")) == nil and mundo:bonoActivo(p, "exp"))
+    mundo:ganarXp(p, 100)
+    fallar(errores, "la tarjeta dobla la experiencia", p.xp == normal * 2, p.xp .. " vs " .. normal)
+    fallar(errores, "se gasta la tarjeta", indice("tarjeta_exp") == nil)
+    -- pergaminos de atributos
+    local atk0, def0, matk0, mdef0, mp0 = p.atk, p.def, p.matk, p.mdef, p.mpMax
+    for _, id in ipairs({ "pergamino_atk", "pergamino_def", "pergamino_matk", "pergamino_mdef", "pergamino_int" }) do
+      mundo:equipar(p, indice(id))
+    end
+    fallar(errores, "ataque, defensa y magia suben", p.atk > atk0 and p.def > def0 and p.matk > matk0 and p.mdef > mdef0 and p.mpMax > mp0)
+    mundo:equipar(p, indice("pergamino_mvel"))
+    p.cds = {}
+    p.mp, p.gcd = p.mpMax, 0
+    p.cds.auto = 0
+    local barra = Datos.barra[p.clase]
+    local h = require("compartido.dominio.arbol").efectiva(barra[1], 1)
+    local blancoMall = mundo:spawnMonstruo("gato", p.x + 2, p.y, { x = p.x, y = p.y })
+    blancoMall.hp, blancoMall.hpMax, blancoMall.agresivo = 9999, 9999, false
+    blancoMall.cds = { auto = 1e9 }
+    p.objetivo = blancoMall.id
+    p.aturdido, p.estados = 0, nil
+    p.cds = {}
+    mundo:usarHabilidad(p, 1)
+    local cdReal = (p.cds[barra[1]] or 0) - mundo.tiempo
+    fallar(errores, "la velocidad mágica recorta el enfriamiento", cdReal <= h.cd * 0.81 + 0.01 and cdReal > 0, tostring(cdReal) .. " vs " .. h.cd)
+    -- caducan
+    local ahora = mundo:reloj()
+    for b in pairs(p.bonos) do p.bonos[b] = ahora - 1 end
+    mundo._bonoT = 5
+    mundo:actualizarBonos(1)
+    fallar(errores, "los bonos caducan", next(p.bonos) == nil and p.atk == atk0 and p.mpMax == mp0)
+    -- se guardan con el personaje (y los ya terminados no vuelven)
+    p.bonos = { exp = ahora + 600, atk = ahora - 10 }
+    p.addons, p.addonActivo = { skin_marea = true }, "skin_marea"
+    local ex = mundo:exportar(p)
+    local otra = mundo:crearPersonaje({ nombre = "Comprador2", faccion = "albor", clase = "mago" })
+    mundo:aplicarGuardado(otra, require("compartido.dominio.util").jsonDec(require("compartido.dominio.util").jsonEnc(ex)))
+    fallar(errores, "se guarda: monedas, addons y bonos vigentes", otra.monedas == p.monedas and otra.addons.skin_marea and otra.addonActivo == "skin_marea"
+      and otra.bonos.exp and not otra.bonos.atk)
+    -- addons
+    p.addons, p.addonActivo = {}, nil
+    p.monedas = 1000
+    fallar(errores, "compra un addon", mundo:comprarAddon(p, "skin_rey") == nil and p.addonActivo == "skin_rey" and p.monedas == 1000 - Mall.ADDONS.skin_rey.precio)
+    fallar(errores, "no se compra dos veces", mundo:comprarAddon(p, "skin_rey") ~= nil)
+    fallar(errores, "se quita", mundo:alternarAddon(p, "skin_rey") == nil and p.addonActivo == nil)
+    fallar(errores, "se pone", mundo:alternarAddon(p, "skin_rey") == nil and p.addonActivo == "skin_rey")
+    fallar(errores, "no se pone uno que no tienes", mundo:alternarAddon(p, "skin_princesa") ~= nil)
+    mundo:accion(p.id, "mall_addon_comprar", { id = "skin_princesa" })
+    fallar(errores, "la acción de red compra", p.addons.skin_princesa == true)
+    -- la foto lleva el addon y el resumen del mall
+    local ve
+    for _, e in ipairs(mundo:foto(p.id).ents) do if e.id == p.id then ve = e end end
+    fallar(errores, "los demás ven el addon", ve and ve.addon == p.addonActivo)
+    fallar(errores, "tu resumen trae las monedas", mundo:foto(p.id).tu.mall.monedas == p.monedas)
+  end)
+  paso("al morir queda el cuerpo y reaparece en la ciudad", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local pu = mundo.mapas.mundo.puestos[1]
+    local p = mundo:crearPersonaje({ nombre = "Caido", faccion = "umbra", clase = "guerrero", nivel = 12 })
+    p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+    local ox, oy = p.x, p.y
+    mundo:morir(p, nil)
+    local cuerpo
+    for _, e in pairs(mundo.entidades) do if e.kind == "cuerpo" then cuerpo = e end end
+    fallar(errores, "queda un cuerpo donde murió", cuerpo and cuerpo.x == ox and cuerpo.y == oy and cuerpo.nombre == "Caido" and cuerpo.faccion == "umbra")
+    fallar(errores, "el cuerpo no se puede dañar", cuerpo and not mundo:puedeDanar(p, cuerpo) and not mundo:puedeDanar({ kind = "monstruo", vivo = true }, cuerpo))
+    mundo:revivir(p)
+    local ciudad = mundo:ciudadEn(p.x, p.y)
+    fallar(errores, "reaparece en una ciudad de su corona", p.vivo and ciudad and ciudad.faccion == "umbra" and p.hp == p.hpMax)
+    fallar(errores, "el cuerpo sigue donde estaba", mundo.entidades[cuerpo.id] and cuerpo.x == ox and cuerpo.y == oy)
+    local otro = mundo:crearPersonaje({ nombre = "Pasa", faccion = "albor", clase = "guerrero" })
+    otro.x, otro.y, otro.modo, otro.z = ox - 1, oy, "mundo", 0
+    fallar(errores, "el cuerpo no bloquea el paso", not mundo:casillaOcupada(otro, math.floor(ox), math.floor(oy)))
+    mundo.tiempo = mundo.tiempo + Mundo.CUERPO_SEG + 1
+    mundo:actualizar(0.05)
+    mundo:actualizar(0.05)
+    fallar(errores, "el cuerpo desaparece con el tiempo", mundo.entidades[cuerpo.id] == nil)
   end)
   paso("comandos de administrador", function()
     local mundo = Mundo.nuevo()
@@ -1548,13 +1709,16 @@ function Pruebas.correr()
       for _, x in ipairs(mundo:miembrosGrupo(g)) do x.xp = 0 end
       local lider = mundo.entidades[g.lider]
       gigante.hp = 1
+      local azarG = math.random
+      math.random = function(x, y) if x then return x end return 0.001 end -- suerte maxima
       mundo:danar(gigante, 99999, lider)
+      math.random = azarG
       local ganada = lider.xp
       local solo2 = Balance.xpMonstruo(lider.nivel, gigante.nivel, false) * 10
       fallar(errores, "el gigante da mucha experiencia, repartida", ganada > 0 and ganada < solo2, ganada .. " vs " .. solo2)
       local polvo = false
       for _, o in pairs(mundo.entidades) do
-        if o.kind == "loot" then for _, it in ipairs(o.items) do if it.id == "polvo_arcano" and it.cant >= 3 then polvo = true end end end
+        if o.kind == "loot" then for _, it in ipairs(o.items) do if it.id == "polvo_arcano" and it.cant >= 2 then polvo = true end end end
       end
       fallar(errores, "el gigante suelta botín bueno", polvo)
     end

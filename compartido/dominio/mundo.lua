@@ -17,6 +17,7 @@ local Programacion = require("compartido.dominio.programacion")
 local Grupos = require("compartido.dominio.grupos")
 local Encuentros = require("compartido.dominio.encuentros")
 local Admin = require("compartido.dominio.admin")
+local Mall = require("compartido.dominio.mall")
 
 local Mundo = {}
 Mundo.__index = Mundo
@@ -173,6 +174,7 @@ function Mundo:recalcular(e)
     end
   end
   Arbol.aplicarPasivas(e)
+  self:aplicarBonos(e)
   e.hp = math.min(hp or e.hpMax, e.hpMax)
   e.mp = math.min(mp or e.mpMax, e.mpMax)
 end
@@ -758,7 +760,7 @@ end
 
 function Mundo:ganarXp(p, cant)
   if p.kind ~= "jugador" and p.kind ~= "bot" then return end
-  cant = math.floor(cant * Balance.XP_MULTIPLICADOR + 0.5)
+  cant = math.floor(cant * Balance.XP_MULTIPLICADOR * self:bonoExp(p) + 0.5)
   p.xp = (p.xp or 0) + cant
   local subio = false
   while p.nivel < Datos.NIVEL_MAX and p.xp >= Datos.xpPara(p.nivel) do
@@ -808,8 +810,10 @@ function Mundo:soltarBotin(m, asesino)
     loot.items[#loot.items + 1] = it
   end
   if m.categoria then
-    -- criaturas de grupo: mejor botín (siempre polvo arcano)
-    loot.items[#loot.items + 1] = { id = "polvo_arcano", cant = math.random(3, 6) }
+    -- criaturas de grupo: mejor botín (polvo arcano con más probabilidad, pero no seguro)
+    if (m.nivel or 1) > Balance.POLVO_NIVEL_MIN and math.random() < (m.categoria == "gigante" and 0.6 or 0.35) then
+      loot.items[#loot.items + 1] = { id = "polvo_arcano", cant = math.random(2, 4) }
+    end
     if m.categoria == "gigante" and math.random() < 0.5 then
       loot.items[#loot.items + 1] = { id = Items.aleatorio(Datos, asesino.clase or "guerrero", math.min(8, Items.tierPara(m.nivel) + 1)), cant = 1 }
     end
@@ -821,9 +825,9 @@ function Mundo:soltarBotin(m, asesino)
     local id = Items.aleatorio(Datos, asesino.clase or "guerrero", tier)
     if Datos.item(id) then loot.items[#loot.items + 1] = { id = id, cant = 1 } end
   end
-  -- polvo arcano para encantar: casi todas las criaturas lo sueltan, más las de más nivel
-  if math.random() < 0.45 then
-    loot.items[#loot.items + 1] = { id = "polvo_arcano", cant = math.random(1, 1 + math.floor((m.nivel or 1) / 8)) }
+  -- polvo arcano para encantar: difícil de conseguir y solo de criaturas por encima del nivel 10
+  if (m.nivel or 1) > Balance.POLVO_NIVEL_MIN and math.random() < Balance.POLVO_PROB then
+    loot.items[#loot.items + 1] = { id = "polvo_arcano", cant = math.random(1, 1 + math.floor((m.nivel or 1) / 16)) }
   end
   if math.random() < 0.04 then
     local tier = math.min(4, math.floor((m.nivel or 1) / 6) + 1)
@@ -885,6 +889,7 @@ function Mundo:morir(e, origen)
     end
   elseif e.kind == "jugador" or e.kind == "bot" then
     e.respawn = self.tiempo + 6
+    if e.modo == "mundo" then self:dejarCuerpo(e) end
     -- por encima del nivel 10 morir cuesta experiencia (sin bajar de nivel)
     if e.modo == "mundo" and (e.nivel or 1) > Balance.MUERTE_NIVEL_MIN and Balance.MUERTE_XP_PERDIDA > 0 then
       local perdida = math.min(e.xp or 0, math.floor(Datos.xpPara(e.nivel) * Balance.MUERTE_XP_PERDIDA))
@@ -937,6 +942,30 @@ function Mundo:avanzarMisiones(p, monId)
   end
 end
 
+-- El cuerpo de un personaje caÃ­do se queda donde muriÃ³ (sin vida, en gris) un buen rato; el
+-- personaje reaparece en la ciudad de su corona.
+Mundo.CUERPO_SEG = 300
+function Mundo:dejarCuerpo(e)
+  local id = self:idNuevo()
+  self.entidades[id] = {
+    id = id, kind = "cuerpo", nombre = e.nombre, faccion = e.faccion, clase = e.clase, job = e.job, addon = e.addonActivo,
+    dir = e.dir or 1, x = e.x, y = e.y, z = e.z or 0, modo = e.modo, vivo = true,
+    hasta = self.tiempo + Mundo.CUERPO_SEG,
+  }
+end
+
+-- Spawn de la ciudad de la corona de e mÃ¡s cercana a (x, y).
+function Mundo:ciudadPropiaCerca(e, x, y)
+  local mejor, md
+  for _, c in ipairs(self.mapas.mundo.ciudades) do
+    if c.faccion == e.faccion and c.spawn then
+      local d = (c.spawn.x - x) ^ 2 + (c.spawn.y - y) ^ 2
+      if not md or d < md then mejor, md = c, d end
+    end
+  end
+  return mejor
+end
+
 function Mundo:revivir(e)
   e.vivo = true
   self:limpiarEstados(e)
@@ -954,8 +983,14 @@ function Mundo:revivir(e)
       local sp = self.mapas[e.modo].spawns[e.faccion]
       e.x, e.y = sp.x, sp.y
     else
-      e.modo = v.modo or "mundo"
-      e.x, e.y = v.x, v.y
+      local c = self:ciudadPropiaCerca(e, e.x, e.y)
+      if c then
+        e.modo, e.z = "mundo", 0
+        e.x, e.y = c.spawn.x, c.spawn.y
+      else
+        e.modo = v.modo or "mundo"
+        e.x, e.y = v.x, v.y
+      end
     end
     e.hp = e.hpMax
     e.mp = e.mpMax or e.mp
@@ -1038,7 +1073,7 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
     end
   end
   p.mp = p.mp - h.mana
-  p.cds[idh] = self.tiempo + h.cd
+  p.cds[idh] = self.tiempo + h.cd * (1 - self:bonoVelocidadMagica(p))
   p.gcd = self.tiempo + 0.35
   p.swing = 0.2
   p.ultimoGolpe = self.tiempo
@@ -1815,6 +1850,7 @@ function Mundo:equipar(p, index)
   if not slot then return "No hay objeto." end
   local it = Datos.item(slot.id)
   if not it or not it.hueco then
+    if it and it.bono then return self:usarBono(p, index) end
     if it and (it.cura or it.mana) then return self:usarPocionId(p, slot.id) end
     return "No se puede equipar."
   end
@@ -1939,7 +1975,7 @@ end
 function Mundo:comprar(p, itemId)
   self:marcarProgreso(p)
   local it = Datos.item(itemId)
-  if not it or it.quest then return "No está a la venta." end
+  if not it or it.quest or it.mall then return "No está a la venta." end
   if p.oro < it.precio then return "Oro insuficiente." end
   if not self:darItem(p, itemId, 1) then return "Bolsa llena." end
   p.oro = p.oro - it.precio
@@ -1951,7 +1987,7 @@ function Mundo:vender(p, index)
   local slot = p.bolsa[index]
   if not slot then return end
   local it = Datos.item(slot.id)
-  if not it or it.quest then return "No se puede vender." end
+  if not it or it.quest or it.mall then return "No se puede vender." end
   local cant = slot.cant or 1
   p.oro = p.oro + math.floor((it.precio or 1) * 0.45) * cant
   table.remove(p.bolsa, index)
@@ -2351,7 +2387,7 @@ function Mundo:actualizar(dt)
       elseif e.kind == "mascota" then self:actualizarMascota(e, dt)
       elseif e.kind == "caravana" then self:actualizarCaravana(e, dt)
       elseif e.kind == "bandera" then self:actualizarBandera(e)
-      elseif e.kind == "loot" and self.tiempo > (e.hasta or 0) then e.borrar = true
+      elseif (e.kind == "loot" or e.kind == "cuerpo") and self.tiempo > (e.hasta or 0) then e.borrar = true
       elseif e.estructura and e.vivo and e.modo == "batalla" then
         e.pulso = (e.pulso or 2) - dt
         if e.pulso <= 0 then
@@ -2373,6 +2409,7 @@ function Mundo:actualizar(dt)
   self:actualizarSubastas(dt)
   self:actualizarProgramacion(dt)
   self:actualizarGrupos(dt)
+  self:actualizarBonos(dt)
   self:actualizarEncuentros(dt)
   self._presionT = (self._presionT or 0) + dt
   if self._presionT >= 5 then
@@ -2429,6 +2466,7 @@ function Mundo:exportar(p)
     mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
     job = p.oficioElegido, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
     monturas = p.monturas, monturaPreferida = p.monturaPreferida,
+    monedas = p.monedas, addons = p.addons, addonActivo = p.addonActivo, bonos = p.bonos,
     z = z,
   }
 end
@@ -2449,6 +2487,13 @@ function Mundo:aplicarGuardado(p, data)
   p.job = nil
   if p.oficioElegido and self:pesoCarga(p) > 0 then p.job = p.oficioElegido end
   p.monturas, p.monturaPreferida = data.monturas or {}, data.monturaPreferida
+  -- item mall: monedas, addons y bonos (los ya terminados se descartan)
+  p.monedas, p.addons, p.addonActivo = data.monedas or 0, data.addons or {}, data.addonActivo
+  if p.addonActivo and not p.addons[p.addonActivo] then p.addonActivo = nil end
+  p.bonos = {}
+  for bono, fin in pairs(data.bonos or {}) do
+    if tonumber(fin) and tonumber(fin) > self:reloj() then p.bonos[bono] = tonumber(fin) end
+  end
   self:recalcularCarga(p)
   self:vincularGremio(p)
   -- Un guardado antiguo con más objetos de los que caben sin mochila recibe la
@@ -2494,7 +2539,7 @@ function Mundo:compactar(e)
     flash = (e.flash or 0) > 0 and e.flash or nil,
     burbuja = e.burbuja,
     est = self:estadosVisibles(e), especie = e.especie, gremio = e.gremioEtiqueta,
-    montado = e.montado, job = e.job,
+    montado = e.montado, job = e.job, addon = e.kind == "jugador" and e.addonActivo or nil,
     item = e.kind == "loot" and e.item or nil, bien = e.kind == "loot" and e.bien or nil,
     oroSuelo = (e.kind == "loot" and (e.oro or 0) > 0) and true or nil, buscado = (e.kind == "jugador" and self:esBuscado(e)) and true or nil,
     categoria = e.categoria, enGrupo = (e.kind == "jugador" and e.grupoId) and true or nil,
@@ -2536,6 +2581,7 @@ function Mundo:foto(pid)
     }
     if p.gremioId and self.gremios[p.gremioId] then tu.gremioNombre = self.gremios[p.gremioId].nombre end
     tu.grupo = self:resumenGrupo(p)
+    tu.mall = self:resumenMall(p)
     if p.invitacionGrupo and p.invitacionGrupo.hasta > self.tiempo then
       tu.invGrupo = { nombre = p.invitacionGrupo.nombre }
     end
@@ -2749,6 +2795,7 @@ function Mundo:accion(pid, nombre, datos)
   if nombre:sub(1, 7) == "gremio_" and p then return self:accionGremio(p, nombre, datos or {}) end
   if nombre:sub(1, 6) == "grupo_" and p then return self:accionGrupo(p, nombre, datos or {}) end
   if nombre:sub(1, 8) == "subasta_" and p then return self:accionSubasta(p, nombre, datos or {}) end
+  if nombre:sub(1, 5) == "mall_" and p then return self:accionMall(p, nombre, datos or {}) end
   if p and (nombre:sub(1, 7) == "oficio_" or nombre:sub(1, 10) == "mercancia_" or nombre:sub(1, 8) == "montura_"
     or nombre == "robar" or nombre == "perista_vender" or nombre == "escoltar") then
     return self:accionOficio(p, nombre, datos or {})
@@ -2768,5 +2815,6 @@ Programacion.instalar(Mundo)
 Grupos.instalar(Mundo)
 Encuentros.instalar(Mundo)
 Admin.instalar(Mundo)
+Mall.instalar(Mundo)
 
 return Mundo

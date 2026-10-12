@@ -1,5 +1,6 @@
 local Datos = require("compartido.dominio.datos")
 local Atlas = require("src.presentacion.render.atlas")
+
 local Terreno = require("src.presentacion.render.terreno")
 local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
@@ -90,7 +91,7 @@ end
 
 -- Nombre y barra de vida de una criatura, en pantalla (fuera de la escala del mundo).
 local function placa(e, px, py, alto, jugador, tiempo)
-  if e.kind == "proyectil" or e.kind == "trampa" or e.kind == "loot" or e.kind == "bandera" then return end
+  if e.kind == "proyectil" or e.kind == "trampa" or e.kind == "loot" or e.kind == "bandera" or e.kind == "cuerpo" then return end
   local f = fuente()
   love.graphics.setFont(f)
   local color = { 0.92, 0.9, 0.84 }
@@ -196,10 +197,6 @@ function D.escena(mundo, jugador, cam, mx, my)
       if e.kind == "monstruo" then
         local resta = (e.respawn or 0) - (mundo.tiempo or 0)
         Objetos.dibujar("restos", 0, sx, sy + 14, nil, math.max(0, math.min(1, resta / 6)))
-      elseif e.kind == "jugador" or e.kind == "bot" then
-        -- el cuerpo del caído queda en gris hasta que reaparece
-        local def = Personajes.de(e)
-        if def then Personajes.dibujarGris(def, e.dir or 1, sx, sy + 14, 0.9) end
       elseif e.kind == "puerta" then
         Objetos.puerta(e.faccion, true, sx, sy + 14, 0.8)
       end
@@ -344,11 +341,15 @@ function D.entidad(e, sx, sy, mundo, jugador)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(img, Arte.quad(img, 128, 128 + fila * 32, 32, 32), sx, pies, 0, 1.5, 1.5, 16, 28)
     alto = 52
+  elseif e.kind == "cuerpo" and def then
+    -- el cuerpo del caÃ­do: misma imagen en gris
+    alto = Personajes.dibujarGris(def, e.dir or 1, sx, pies, 0.9)
   elseif def then
     local reloj = (e.anim or 0) / 8
     local rojo = (e.flash or 0) > 0
     local anda = e.mov or (math.abs(e.velx or 0) + math.abs(e.vely or 0) > 0.08)
     local piesJinete = pies
+
     if e.montado then
       -- la montura va debajo y el jinete algo más arriba
       local m = Personajes.monturas[e.montado]

@@ -264,6 +264,14 @@ function Entrada.manejar(app, id)
   if id == "comercio_ok" then app.actuar("comercio_ok") return end
   if id == "comercio_no" then app.actuar("comercio_no") Interfaz.panel = nil return end
   if id == "ajustes" then Interfaz.panel = "ajustes" return end
+  if id == "menu_mall" then Interfaz.panel = "mall" return end
+  if id == "mall_tab_obj" then Interfaz.mallTab = "objetos" return end
+  if id == "mall_tab_add" then Interfaz.mallTab = "addons" return end
+  if id:sub(1, 9) == "mall_buy_" then app.actuar("mall_comprar", { id = id:sub(10) }) return end
+  if id:sub(1, 13) == "mall_ad_buy_" then app.actuar("mall_addon_comprar", { id = id:sub(14) }) return end
+  if id:sub(1, 8) == "mall_ad_" then app.actuar("mall_addon", { id = id:sub(9) }) return end
+  if id == "menu_oficio" then app.actuar("oficio_alternar", {}) Interfaz.panel = nil return end
+  if id == "hud_montura" then app.actuar("montura_alternar", {}) return end
   if id == "aj_vol_mas" then Ajustes.volumen = math.min(1, (Ajustes.volumen or 0) + 0.1) Sonido.volumen = Ajustes.volumen Ajustes.guardar() return end
   if id == "aj_vol_menos" then Ajustes.volumen = math.max(0, (Ajustes.volumen or 0) - 0.1) Sonido.volumen = Ajustes.volumen Ajustes.guardar() return end
   if id == "aj_1280" then Ajustes.ancho, Ajustes.alto, Ajustes.completo = 1280, 720, false Ajustes.aplicarVentana() Ajustes.guardar() return end
@@ -447,6 +455,7 @@ function Entrada.tecla(app, tecla)
   end
   if tecla == "j" then Interfaz.panel = Interfaz.panel == "grupo" and nil or "grupo" end
   if tecla == "o" then app.actuar("montura_alternar", {}) end
+  if tecla == "l" then Interfaz.panel = Interfaz.panel == "mall" and nil or "mall" end
   if tecla == "y" then app.actuar("oficio_alternar", {}) end
   if tecla == "u" then Interfaz.panel = Interfaz.panel == "montura" and nil or "montura" end
   if tecla == "r" then

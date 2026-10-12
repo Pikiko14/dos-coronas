@@ -36,6 +36,16 @@ P.oficios = {
   thief = { hoja = "Characters/People3.png", idx = 4 },
 }
 
+-- Addons del Item Mall: sprites de personaje Ãºnicos (compartido/dominio/mall.lua, M.ADDONS).
+P.skins = {
+  skin_rey = { hoja = "Characters/People4.png", idx = 0 },
+  skin_princesa = { hoja = "Characters/People4.png", idx = 3 },
+  skin_explorador = { hoja = "Characters/Actor1.png", idx = 2 },
+  skin_fuego = { hoja = "Characters/Actor1.png", idx = 0 },
+  skin_marea = { hoja = "Characters/Actor1.png", idx = 3 },
+  skin_sombra = { hoja = "Characters/Actor1.png", idx = 6 },
+}
+
 P.npc = {
   mercado = { hoja = "Characters/Actor1.png", idx = 7 },
   heraldo = { hoja = "Characters/People4.png", idx = 0 },
@@ -118,8 +128,9 @@ P.monstruos = {
 -- Definición de dibujo de una entidad, o nil si no es una criatura.
 function P.de(e)
   local k = e.kind
-  if k == "jugador" or k == "bot" then
+  if k == "jugador" or k == "bot" or k == "cuerpo" then
     if e.job and P.oficios[e.job] then return P.oficios[e.job] end
+    if e.addon and P.skins[e.addon] then return P.skins[e.addon] end
     local c = P.clases[e.clase or "guerrero"] or P.clases.guerrero
     return c[e.faccion or "albor"] or c.albor
   elseif k == "guardia" then

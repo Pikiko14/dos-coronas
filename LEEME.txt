@@ -314,3 +314,37 @@ NUEVO: OFICIO ACTIVABLE, ASPECTO Y BOTIN EN EL SUELO
     pueden cargar comerciantes y ladrones (el ladron la suma a lo robado).
   - Al matar una criatura, cada objeto y el oro caen al suelo por separado, repartidos
     alrededor, con su icono; se recogen pasando por encima (al principio solo quien la mato o su grupo).
+
+MONTURAS DE CARGA
+  - El buey y la carreta (monturas de carga) solo se montan con el oficio activo (tecla Y); si
+    desactivas o cambias el oficio, te bajas solo. El caballo, de velocidad, se monta siempre.
+
+ACTIVAR EL OFICIO
+  - El oficio solo se puede ACTIVAR dentro de una ciudad (tecla Y). Una vez activo, lo llevas
+    fuera; desactivarlo sigue siendo posible en cualquier sitio (sin carga y sin ley detras).
+
+POCIONES Y POLVO ARCANO
+  - Poción de vida: frasco rojo. Poción de maná: frasco azul.
+  - El polvo arcano (para encantar) solo cae de criaturas de nivel mayor que 10 y rara vez
+    (5%; las de grupo 35% y los gigantes 60%). Se ajusta en servidor/.env
+    (DOSCORONAS_POLVO_NIVEL_MIN, DOSCORONAS_POLVO_PROB).
+
+MENU Y ICONO DE MONTURA
+  - Activar o desactivar el oficio es una opcion del menu (Esc): "Activar oficio (...)" /
+    "Desactivar oficio". La tecla Y sigue funcionando como atajo. Solo se activa en una ciudad.
+  - Montar y desmontar: icono a la derecha de la barra de poderes (o tecla O). Si vas montado el
+    icono se marca en verde. Las alforjas siguen en la tecla U.
+
+ITEM MALL
+  - Tienda con una moneda especial (Monedas Corona), tecla L o menu > Item Mall. Por ahora las
+    monedas las da un administrador: /admin monedas <n> [jugador].
+  - Objetos (van a la bolsa; se usan con clic en la bolsa; el bono dura aunque estes desconectado):
+    Tarjeta de experiencia doble (1 h), y pergaminos de 30 min: ataque, defensa, inteligencia
+    (+maná y +ataque magico), defensa magica, ataque magico y velocidad magica (poderes recargan antes).
+    Se ven en pantalla arriba a la izquierda con su tiempo.
+  - Addons: sprites de personaje unicos (skins; se compran una vez; se ponen o quitan). El oficio activo manda sobre la skin.
+  - Se guardan en Postgres (personajes.monedas, personaje_addon, personaje_bono) o en el archivo.
+
+MUERTE
+  - Al morir en el mundo, el cuerpo queda donde caiste, en gris, durante 5 minutos, y el personaje
+    reaparece en la ciudad de su corona mas cercana.

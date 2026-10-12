@@ -120,6 +120,75 @@ function Pruebas.correr()
       fallar(errores, "se dibuja el botín " .. i, ok, tostring(err))
     end
   end)
+  paso("interfaz: icono de montura y opción de oficio en el menú", function()
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Menu", faccion = "albor", clase = "guerrero", nivel = 10 })
+    pj.monturas, pj.oficioElegido = { "caballo", "carreta" }, "trader"
+    Interfaz.escala = 1
+    Interfaz.panel = nil
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el HUD con montura se dibuja", ok, tostring(err))
+    local lado, consola = Interfaz.medidas()
+    local hallado = Interfaz.consumir((1280 - lado) / 2 + 231, 720 - consola - 34) == "hud_montura"
+    fallar(errores, "el icono de montura responde al clic", hallado)
+    pj.montado = "caballo"
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el HUD montado se dibuja", ok, tostring(err))
+    for _, estado in ipairs({ false, true }) do
+      pj.job = estado and "trader" or nil
+      Interfaz.panel = "menu"
+      ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+      fallar(errores, "el menú con oficio se dibuja", ok, tostring(err))
+    end
+    Interfaz.panel = nil
+  end)
+  paso("interfaz: item mall y skins", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Mall", faccion = "albor", clase = "mago", nivel = 10 })
+    pj.mall = { monedas = 120, bonos = { exp = 3500, atk = 90 }, addons = { "skin_rey" }, addonActivo = "skin_rey" }
+    Interfaz.escala = 1
+    for _, tab in ipairs({ "objetos", "addons" }) do
+      Interfaz.mallTab = tab
+      Interfaz.panel = "mall"
+      local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+      fallar(errores, "el mall se dibuja en " .. tab, ok, tostring(err))
+    end
+    Interfaz.panel = nil
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "los bonos activos se dibujan en el HUD", ok, tostring(err))
+    pj.addon = "skin_marea"
+    ok, err = pcall(Dibujo.entidad, pj, 200, 200, mundo, pj)
+    fallar(errores, "la skin se dibuja", ok, tostring(err))
+    local it = Datos.item("pergamino_atk")
+    fallar(errores, "los pergaminos tienen tinte", it and it.tinte and it.mall == true)
+  end)
+  paso("dibujo del cuerpo caído", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Mira", faccion = "albor", clase = "guerrero" })
+    for _, job in ipairs({ "trader", "hunter", "thief" }) do
+      local cuerpo = { id = "e90", kind = "cuerpo", nombre = "X", faccion = "umbra", clase = "mago", job = job, dir = 1, x = 5, y = 5, vivo = true }
+      local ok, err = pcall(Dibujo.entidad, cuerpo, 100, 100, mundo, pj)
+      fallar(errores, "se dibuja el cuerpo " .. job, ok, tostring(err))
+    end
+  end)
+  paso("skins: el addon cambia el sprite y el oficio activo manda", function()
+    local P = require("src.presentacion.render.personajes")
+    local Mall = require("compartido.dominio.mall")
+    local todas = true
+    for _, id in ipairs(Mall.ORDEN_ADDONS) do
+      todas = todas and P.skins[id] ~= nil and require("src.presentacion.render.arte").img(P.skins[id].hoja) ~= nil
+    end
+    fallar(errores, "todos los addons tienen sprite", todas)
+    local base = { kind = "jugador", clase = "mago", faccion = "albor" }
+    fallar(errores, "sin addon, el de la clase", P.de(base) == P.clases.mago.albor)
+    base.addon = "skin_rey"
+    fallar(errores, "con addon, el sprite único", P.de(base) == P.skins.skin_rey)
+    base.job = "thief"
+    fallar(errores, "con oficio activo, el del oficio", P.de(base) == P.oficios.thief)
+    fallar(errores, "el cuerpo conserva la skin", P.de({ kind = "cuerpo", clase = "mago", faccion = "albor", addon = "skin_marea" }) == P.skins.skin_marea)
+  end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Clic", faccion = "albor", clase = "mago" })

@@ -220,10 +220,11 @@ function M.instalar(Mundo)
     p.oficioElegido, p.job = job, nil -- se elige aqui y se activa con la tecla Y
     p.contrato = nil
     p.escolta = nil
+    self:revisarMontura(p)
     self:recalcularCarga(p)
     self:marcarProgreso(p)
     self:mensaje("sistema", "", "Ahora eres " .. M.OFICIOS[job].nombre .. (nuevo and "." or (" (nivel " .. p.oficios[job].nivel .. ")."))
-      .. " Pulsa Y para activar el oficio cuando quieras usarlo.", p)
+      .. " Dentro de una ciudad, pulsa Y para activarlo cuando quieras usarlo.", p)
     return nil
   end
 
@@ -242,12 +243,13 @@ function M.instalar(Mundo)
       if self:esBuscado(p) then return "Con la ley detrás de ti, no puedes dejar el oficio." end
       if p.robo then return "No puedes dejar el oficio en pleno robo." end
       p.job, p.contrato, p.escolta = nil, nil, nil
+      self:revisarMontura(p)
       self:recalcularCarga(p)
       self:mensaje("sistema", "", "Oficio desactivado. Pulsa Y para activarlo de nuevo.", p)
       return nil
     end
     if not p.oficioElegido then return "Aún no tienes oficio: aprende uno con un maestro de oficios." end
-    if p.modo ~= "mundo" then return "Aquí no puedes activar el oficio." end
+    if p.modo ~= "mundo" or not self:ciudadEn(p.x, p.y) then return "El oficio solo se activa dentro de una ciudad." end
     p.job = p.oficioElegido
     self:recalcularCarga(p)
     self:marcarProgreso(p)

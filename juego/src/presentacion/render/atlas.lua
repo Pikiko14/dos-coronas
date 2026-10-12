@@ -144,10 +144,10 @@ function Atlas.armaEnMano(item, clase, rec, x, y, zoom, espejo)
   love.graphics.draw(img, q, hx, hy, rot, sign * wz, wz, ox, oy)
 end
 
-function Atlas.dibujar(hoja, indice, x, y, zoom, ox, oy)
+function Atlas.dibujar(hoja, indice, x, y, zoom, ox, oy, tinte)
   local img, q = Atlas.quad(hoja, indice)
   if not img then return end
-  love.graphics.setColor(1, 1, 1, 1)
+  if tinte then love.graphics.setColor(tinte[1], tinte[2], tinte[3], 1) else love.graphics.setColor(1, 1, 1, 1) end
   love.graphics.draw(img, q, x, y, 0, zoom or 1, zoom or 1, ox or 0, oy or 0)
 end
 

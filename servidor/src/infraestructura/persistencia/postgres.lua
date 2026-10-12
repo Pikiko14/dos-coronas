@@ -56,7 +56,7 @@ local function sentenciasDe(pid, ex, hp, mp)
   end
   local v = type(ex.vinculo) == "table" and ex.vinculo or {}
   local sets = {
-    "nivel=" .. entero(ex.nivel or 1), "xp=" .. entero(ex.xp), "oro=" .. entero(ex.oro),
+    "nivel=" .. entero(ex.nivel or 1), "xp=" .. entero(ex.xp), "oro=" .. entero(ex.oro), "monedas=" .. entero(ex.monedas),
     "x=" .. real(ex.x), "y=" .. real(ex.y), "z=" .. entero(ex.z),
     "modo=" .. Pg.literal(ex.modo or "mundo"),
     "vinculo_modo=" .. (v.x and Pg.literal(v.modo or "mundo") or "NULL"),
@@ -120,6 +120,18 @@ local function sentenciasDe(pid, ex, hp, mp)
     end
     cada("personaje_montura", "tipo, preferida", filas)
   end
+
+  -- item mall: addons comprados y bonos con su fin (hora Unix)
+  filas = {}
+  for _, id in ipairs(ordenadas(ex.addons)) do
+    filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(id) .. "," .. Pg.literal(ex.addonActivo == id) .. ")"
+  end
+  cada("personaje_addon", "addon, activo", filas)
+  filas = {}
+  for _, id in ipairs(ordenadas(ex.bonos)) do
+    filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(id) .. "," .. entero(ex.bonos[id]) .. ")"
+  end
+  cada("personaje_bono", "bono, fin", filas)
 
   if ex.habilidades then
     filas = {}
@@ -208,6 +220,19 @@ function M.abrir()
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS guardado BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS modo TEXT NOT NULL DEFAULT 'mundo';
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS z INT NOT NULL DEFAULT 0;
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS monedas INT NOT NULL DEFAULT 0;
+    CREATE TABLE IF NOT EXISTS personaje_addon (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      addon TEXT NOT NULL,
+      activo BOOLEAN NOT NULL DEFAULT FALSE,
+      PRIMARY KEY (personaje_id, addon)
+    );
+    CREATE TABLE IF NOT EXISTS personaje_bono (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      bono TEXT NOT NULL,
+      fin BIGINT NOT NULL,
+      PRIMARY KEY (personaje_id, bono)
+    );
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS vinculo_modo TEXT;
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS vinculo_x DOUBLE PRECISION;
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS vinculo_y DOUBLE PRECISION;
@@ -481,7 +506,7 @@ end
 function M.cargar(personajeId)
   return con(function(conn)
     local filas, err = conn:consulta(
-      "SELECT id, nombre, faccion, clase, nivel, xp, oro, x, y, z, modo, hp, mp, guardado, " ..
+      "SELECT id, nombre, faccion, clase, nivel, xp, oro, monedas, x, y, z, modo, hp, mp, guardado, " ..
       "vinculo_modo, vinculo_x, vinculo_y FROM personajes WHERE id = " .. tonumber(personajeId)
     )
     if not filas or not filas[1] then return nil, err or "No está ese personaje." end
@@ -489,7 +514,7 @@ function M.cargar(personajeId)
     local pid = tonumber(row.id)
     local datos = {
       nombre = row.nombre, faccion = row.faccion, clase = row.clase,
-      nivel = tonumber(row.nivel) or 1, xp = tonumber(row.xp) or 0, oro = tonumber(row.oro) or 0,
+      nivel = tonumber(row.nivel) or 1, xp = tonumber(row.xp) or 0, oro = tonumber(row.oro) or 0, monedas = tonumber(row.monedas) or 0,
       x = tonumber(row.x), y = tonumber(row.y),
       hp = tonumber(row.hp), mp = tonumber(row.mp), dbId = pid,
     }
@@ -549,6 +574,14 @@ function M.cargar(personajeId)
       for _, r in ipairs(lista("SELECT slot, especie, nivel, xp, activa FROM personaje_mascota WHERE personaje_id = " .. pid .. " ORDER BY slot")) do
         datos.mascotas[#datos.mascotas + 1] = { especie = r.especie, nivel = tonumber(r.nivel) or 1, xp = tonumber(r.xp) or 0 }
         if r.activa == "t" then datos.mascotaActiva = #datos.mascotas end
+      end
+      datos.addons, datos.bonos = {}, {}
+      for _, r in ipairs(lista("SELECT addon, activo FROM personaje_addon WHERE personaje_id = " .. pid)) do
+        datos.addons[r.addon] = true
+        if r.activo == "t" then datos.addonActivo = r.addon end
+      end
+      for _, r in ipairs(lista("SELECT bono, fin FROM personaje_bono WHERE personaje_id = " .. pid)) do
+        datos.bonos[r.bono] = tonumber(r.fin) or 0
       end
       datos.caceria = {}
       for _, r in ipairs(lista("SELECT monstruo_id, cantidad FROM personaje_caceria WHERE personaje_id = " .. pid)) do

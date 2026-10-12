@@ -9,16 +9,16 @@ M.MAX = 4
 
 M.especies = {
   buey = {
-    nombre = "Buey de carga", nivel = 5, precio = 900, vel = 0.10, carga = 22,
-    desc = "Lento pero fuerte: carga mucho más.",
+    nombre = "Buey de carga", nivel = 5, precio = 900, vel = 0.10, carga = 22, requiereOficio = true,
+    desc = "Lento pero fuerte: carga mucho más. Solo con el oficio activo.",
   },
   caballo = {
     nombre = "Caballo", nivel = 10, precio = 2400, vel = 0.40, carga = 6,
     desc = "El más rápido para cruzar el mapa.",
   },
   carreta = {
-    nombre = "Carreta cubierta", nivel = 14, precio = 4500, vel = 0.06, carga = 90, oficio = "trader",
-    desc = "Una carreta de mercader: carga enorme. Solo para comerciantes.",
+    nombre = "Carreta cubierta", nivel = 14, precio = 4500, vel = 0.06, carga = 90, oficio = "trader", requiereOficio = true,
+    desc = "Una carreta de mercader: carga enorme. Solo para comerciantes con el oficio activo.",
   },
 }
 M.orden = { "buey", "caballo", "carreta" }
@@ -60,9 +60,20 @@ function M.instalar(Mundo)
     if p.modo ~= "mundo" then return "Aquí no se puede montar." end
     if (p.z or 0) > 0 then return "No se monta en las alturas." end
     if d.oficio and p.job ~= d.oficio then return "Solo para el oficio de comerciante." end
+    if d.requiereOficio and not p.job then return "Las monturas de carga solo se usan con el oficio activo (tecla Y)." end
     p.montado, p.monturaPreferida = especie, especie
     self:recalcularCarga(p)
     return nil
+  end
+
+  -- Si el oficio se desactiva (o cambia), las monturas de carga se bajan solas.
+  function Mundo:revisarMontura(p)
+    local d = p.montado and M.especies[p.montado]
+    if d and d.requiereOficio and (not p.job or (d.oficio and p.job ~= d.oficio)) then
+      p.montado = nil
+      self:recalcularCarga(p)
+      self:mensaje("sistema", "", "Bajas de la montura de carga: solo se usa con el oficio activo.", p)
+    end
   end
 
   -- Bonos de la montura puesta.

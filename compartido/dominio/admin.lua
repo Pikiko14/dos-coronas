@@ -3,7 +3,7 @@
 --   /admin ayuda                         lista de comandos
 --   /admin mob <id> [cantidad] [nivel]   invoca criaturas a tu lado  (/admin mobs: ids)
 --   /admin item <id> [cantidad] [jugador] da objetos                 (/admin items [texto]: ids)
---   /admin oro|xp|nivel <n> [jugador]    da oro, experiencia o fija el nivel
+--   /admin oro|xp|nivel|monedas <n> [jugador]  da oro, experiencia, monedas del mall o fija el nivel
 --   /admin curar|revivir [jugador]       restaura vida y maná / revive
 --   /admin tp <x> <y> | tp <jugador> | traer <jugador> | ciudad <id>
 --   /admin limpiar [radio]               quita las criaturas cercanas
@@ -22,7 +22,7 @@ M.MAX_OBJETOS = 999
 local AYUDA = {
   "Admin: /admin mob <id> [cant] [nivel] | mobs",
   "/admin item <id> [cant] [jugador] | items [texto]",
-  "/admin oro|xp|nivel <n> [jugador] | curar|revivir [jugador]",
+  "/admin oro|xp|nivel|monedas <n> [jugador] | curar|revivir [jugador]",
   "/admin tp <x> <y> | tp <jugador> | traer <jugador> | ciudad <id>",
   "/admin limpiar [radio] | anuncio <texto> | dios | jugadores",
   "/admin evento <estandarte|batalla> <iniciar|fin|estado> [todos]",
@@ -123,6 +123,17 @@ function M.instalar(Mundo)
     e.oro = math.max(0, (e.oro or 0) + math.floor(n))
     self:marcarProgreso(e)
     decir(self, p, e.nombre .. " tiene ahora " .. e.oro .. " de oro.")
+  end
+
+  function comandos.monedas(self, p, a)
+    local n = tonumber(a[1])
+    local e = n and objetivo(self, p, a[2])
+    if not n then return decir(self, p, "Uso: /admin monedas <cantidad> [jugador]") end
+    if not e then return end
+    e.monedas = math.max(0, (e.monedas or 0) + math.floor(n))
+    self:marcarProgreso(e)
+    decir(self, p, e.nombre .. " tiene ahora " .. e.monedas .. " monedas Corona.")
+    if e ~= p then decir(self, e, "Un administrador te da " .. math.floor(n) .. " monedas Corona. Tienes " .. e.monedas .. ".") end
   end
 
   function comandos.xp(self, p, a)
