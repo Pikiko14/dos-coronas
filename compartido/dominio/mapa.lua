@@ -703,6 +703,57 @@ function M.mundo(rng)
       end
     end
   end
+  -- Zonas elevadas (mesetas y cumbres): una plataforma a la que se sube por una escalera y donde
+  -- salen criaturas más fuertes que las de su zona. Solo se ve y se pisa estando arriba (z = 1).
+  mapa.mesetas = {}
+  local ELEVADAS = {
+    { bioma = "colina", nombre = "Meseta del Alba" },
+    { bioma = "senda", nombre = "Terraza de Liria" },
+    { bioma = "velo", nombre = "Terraza del Velo" },
+    { bioma = "cienaga", nombre = "Meseta de la Ciénaga" },
+    { bioma = "pinar", nombre = "Cumbre de Nox" },
+    { bioma = "eclipse", nombre = "Cumbre del Eclipse" },
+  }
+  M.NIVEL_EXTRA_ELEVADA = 3
+  for _, z in ipairs(ELEVADAS) do
+    local x, y
+    for _ = 1, 6 do
+      x, y = buscarSitio({ z.bioma }, 22, 30)
+      if x and areaBuena(x, y, 8) then break end
+      x = nil
+    end
+    if x then
+      -- criaturas de la zona: las más fuertes, con el nivel subido
+      local lista = {}
+      for _, mon in ipairs(Datos.monstruos) do
+        if mon.bioma == z.bioma and not mon.noCampamento then lista[#lista + 1] = mon end
+      end
+      table.sort(lista, function(a, b) return a.nivel > b.nivel end)
+      if #lista > 0 then
+        local x0, y0, w, h = x - 7, y - 6, 14, 12
+        for tx = x0, x0 + w - 1 do
+          mapa.alto[tx] = mapa.alto[tx] or {}
+          for ty = y0, y0 + h - 1 do mapa.alto[tx][ty] = true end
+        end
+        mapa.escaleras[#mapa.escaleras + 1] = { x = x, y = y + 3, de = 0, a = 1 }
+        mapa.escaleras[#mapa.escaleras + 1] = { x = x, y = y, de = 1, a = 0 }
+        local nmin, nmax = 99, 0
+        local sitios = { { x - 4, y - 3 }, { x + 4, y - 3 }, { x - 4, y + 4 } }
+        for i, s in ipairs(sitios) do
+          local mon = lista[math.min(#lista, (i == 3) and 1 or ((i % #lista) + 1))]
+          local nivel = math.min(Datos.NIVEL_MAX, mon.nivel + M.NIVEL_EXTRA_ELEVADA)
+          mapa.campamentos[#mapa.campamentos + 1] = {
+            x = s[1] + 0.5, y = s[2] + 0.5, monstruo = mon.id, cantidad = 2, radio = 3, z = 1, nivel = nivel,
+          }
+          nmin, nmax = math.min(nmin, nivel), math.max(nmax, nivel)
+        end
+        mapa.mesetas[#mapa.mesetas + 1] = {
+          nombre = z.nombre, bioma = z.bioma, x = x0, y = y0, w = w, h = h,
+          entrada = { x = x, y = y + 3 }, nivelMin = nmin, nivelMax = nmax,
+        }
+      end
+    end
+  end
   return mapa
 end
 
@@ -710,38 +761,45 @@ function M.batalla()
   local w, h = 96, 64
   local mapa = M.nuevo(w, h)
   local medio = math.floor(h / 2)
+  mapa.decorado = {}
   for y = 0, h - 1 do
     for x = 0, w - 1 do
       local enCalle = math.abs(y - medio) <= 1 or math.abs(x - w / 2) <= 1
-      setSuelo(mapa, x, y, enCalle and "camino" or "cicatriz", "cicatriz", nil)
+      -- bioma "batalla": sin la decoración al azar del resto del mundo (todo se coloca a mano)
+      setSuelo(mapa, x, y, enCalle and "camino" or "cicatriz", "batalla", nil)
       if x == 0 or y == 0 or x == w - 1 or y == h - 1 then setBloque(mapa, x, y, true) end
     end
   end
   local function base(x0, y0, bw, bh)
     for y = 0, bh - 1 do
       for x = 0, bw - 1 do
-        setSuelo(mapa, x0 + x, y0 + y, "plaza", "cicatriz", nil)
+        setSuelo(mapa, x0 + x, y0 + y, "plaza", "batalla", nil)
         setBloque(mapa, x0 + x, y0 + y, false)
       end
     end
   end
   base(4, medio - 8, 16, 16)
   base(w - 20, medio - 8, 16, 16)
-  local function muro(x, faccion, puertaY)
+  -- Cada muro tiene varias entradas: la puerta principal en el centro y dos laterales.
+  local ENTRADAS = { medio, medio - 14, medio + 14 }
+  local function muro(x, faccion)
+    local esPuerta = {}
+    for _, py in ipairs(ENTRADAS) do esPuerta[py] = true end
     for y = 1, h - 2 do
-      if y ~= puertaY then
+      if not esPuerta[y] then
         setBloque(mapa, x, y, true)
-        setSuelo(mapa, x, y, "muralla", "cicatriz", nil)
+        setSuelo(mapa, x, y, "muralla", "batalla", nil)
       end
     end
     mapa.puerta = mapa.puerta or {}
-    mapa.puerta[x .. "_" .. puertaY] = { faccion = faccion, viva = true, x = x, y = puertaY }
-    setBloque(mapa, x, puertaY, true)
-    setSuelo(mapa, x, puertaY, "camino", "cicatriz", nil)
+    for _, py in ipairs(ENTRADAS) do
+      mapa.puerta[x .. "_" .. py] = { faccion = faccion, viva = true, x = x, y = py }
+      setBloque(mapa, x, py, true)
+      setSuelo(mapa, x, py, "camino", "batalla", nil)
+    end
   end
-  muro(22, "albor", medio)
-  muro(w - 23, "umbra", medio)
-  mapa.spawns = { albor = { x = 8.5, y = medio + 0.5 }, umbra = { x = w - 8.5, y = medio + 0.5 } }
+  muro(22, "albor")
+  muro(w - 23, "umbra")  mapa.spawns = { albor = { x = 8.5, y = medio + 0.5 }, umbra = { x = w - 8.5, y = medio + 0.5 } }
   mapa.objetivos = {
     { tipo = "altar", faccion = "albor", x = 12.5, y = medio + 0.5 },
     { tipo = "altar", faccion = "umbra", x = w - 12.5, y = medio + 0.5 },
@@ -749,9 +807,147 @@ function M.batalla()
     { tipo = "estatua", faccion = "albor", x = 30.5, y = medio + 14.5 },
     { tipo = "estatua", faccion = "umbra", x = w - 30.5, y = medio - 14.5 },
     { tipo = "estatua", faccion = "umbra", x = w - 30.5, y = medio + 14.5 },
-    { tipo = "puerta", faccion = "albor", x = 22.5, y = medio + 0.5 },
-    { tipo = "puerta", faccion = "umbra", x = (w - 23) + 0.5, y = medio + 0.5 },
+    { tipo = "puerta", faccion = "albor", x = 22.5, y = medio + 0.5, principal = true },
+    { tipo = "puerta", faccion = "albor", x = 22.5, y = medio - 14 + 0.5 },
+    { tipo = "puerta", faccion = "albor", x = 22.5, y = medio + 14 + 0.5 },
+    { tipo = "puerta", faccion = "umbra", x = (w - 23) + 0.5, y = medio + 0.5, principal = true },
+    { tipo = "puerta", faccion = "umbra", x = (w - 23) + 0.5, y = medio - 14 + 0.5 },
+    { tipo = "puerta", faccion = "umbra", x = (w - 23) + 0.5, y = medio + 14 + 0.5 },
   }
+
+  -- Relieve y obstáculos. Todo es determinista (mismo mapa en servidor y cliente) y con colisiones.
+  local cx = w / 2
+  local function libreDeRuta(x, y)
+    -- fuera de las calles, las bases, los muros y los objetivos
+    if math.abs(y - medio) <= 2 or math.abs(x - cx) <= 2 then return false end
+    if x < 24 or x > w - 25 then return false end
+    for _, o in ipairs(mapa.objetivos) do
+      if math.abs(o.x - x) < 5 and math.abs(o.y - y) < 5 then return false end
+    end
+    return true
+  end
+  local function decor(x, y, tipo)
+    mapa.decorado[x] = mapa.decorado[x] or {}
+    mapa.decorado[x][y] = tipo
+    setBloque(mapa, x, y, tipo ~= "restos")
+  end
+  -- 1) piedras al borde de los caminos (a ambos lados, con huecos para cruzar)
+  for x = 24, w - 25 do
+    if math.abs(x - cx) > 5 and azar(x, 3, 91) < 0.62 then
+      decor(x, medio - 3, "piedra")
+      if azar(x, 4, 92) < 0.3 then decor(x, medio - 4, "piedra") end
+    end
+    if math.abs(x - cx) > 5 and azar(x, 5, 93) < 0.62 then
+      decor(x, medio + 3, "piedra")
+      if azar(x, 6, 94) < 0.3 then decor(x, medio + 4, "piedra") end
+    end
+  end
+  for y = 3, h - 4 do
+    if math.abs(y - medio) > 5 and azar(y, 7, 95) < 0.62 then
+      decor(math.floor(cx) - 3, y, "piedra")
+      if azar(y, 8, 96) < 0.3 then decor(math.floor(cx) - 4, y, "piedra") end
+    end
+    if math.abs(y - medio) > 5 and azar(y, 9, 97) < 0.62 then
+      decor(math.floor(cx) + 3, y, "piedra")
+      if azar(y, 10, 98) < 0.3 then decor(math.floor(cx) + 4, y, "piedra") end
+    end
+  end
+  -- 2) crestas de montaña (relieve): bloques de 2x2 en el campo abierto, agrupados por ruido
+  local function libre2(x, y)
+    for dy = 0, 1 do
+      for dx = 0, 1 do
+        local tx, ty = x + dx, y + dy
+        if not libreDeRuta(tx, ty) or (mapa.bloque[tx] and mapa.bloque[tx][ty]) then return false end
+      end
+    end
+    return true
+  end
+  for y = 4, h - 6, 2 do
+    for x = 26, w - 28, 2 do
+      local n = math.sin(x * 0.21 + y * 0.09) + math.sin(x * 0.07 - y * 0.23) + azar(x, y, 99) * 0.9
+      if n > 1.2 and libre2(x, y) then
+        for dy = 0, 1 do
+          for dx = 0, 1 do
+            setBloque(mapa, x + dx, y + dy, true)
+          end
+        end
+        -- risco dibujado por el cliente (render/campo.lua)
+        mapa.props[#mapa.props + 1] = { x = x, y = y, ancho = 2, alto = 2, tipo = x < cx and "risco_albor" or "risco_umbra" }
+      end
+    end
+  end
+  -- 3) huecos (grietas) en parches de 2x2 o 3x2: no se pueden pisar
+  for y = 5, h - 7, 4 do
+    for x = 27, w - 30, 5 do
+      local px, py = x + math.floor(azar(x, y, 101) * 3), y + math.floor(azar(x, y, 102) * 2)
+      if azar(x, y, 103) < 0.38 then
+        local ancho = 2 + math.floor(azar(x, y, 104) * 2)
+        local ok = true
+        for dy = 0, 1 do
+          for dx = 0, ancho - 1 do
+            local tx, ty = px + dx, py + dy
+            if not libreDeRuta(tx, ty) or (mapa.bloque[tx] and mapa.bloque[tx][ty]) or M.get(mapa, tx, ty) ~= "cicatriz" then ok = false end
+          end
+        end
+        if ok then
+          for dy = 0, 1 do
+            for dx = 0, ancho - 1 do decor(px + dx, py + dy, "grieta") end
+          end
+        end
+      end
+    end
+  end
+  -- 4) restos en el suelo, sin colisión
+  -- (manchas de quemado, brasas, guijarros, grietas finas y restos: no bloquean el paso)
+  for y = 3, h - 4 do
+    for x = 24, w - 25 do
+      if not (mapa.bloque[x] and mapa.bloque[x][y]) and not (mapa.decorado[x] and mapa.decorado[x][y]) then
+        local suelo = M.get(mapa, x, y)
+        if suelo == "cicatriz" then
+          local r = azar(x, y, 105)
+          local tipo
+          if r < 0.006 then tipo = "restos"
+          elseif r < 0.07 then tipo = "mancha"
+          elseif r < 0.10 then tipo = "guijarros"
+          elseif r < 0.125 then tipo = "grietita"
+          elseif r < 0.14 then tipo = "brasas" end
+          if tipo then decor(x, y, tipo) end
+        end
+      end
+    end
+  end
+  -- 5) nunca se debe cerrar el paso: de la base de Albor se llega a todos los objetivos y a la base rival
+  local function alcanzable(desdeX, desdeY, destinos)
+    local visto, cola, i = {}, { { desdeX, desdeY } }, 1
+    visto[desdeX .. "_" .. desdeY] = true
+    local function pasa(tx, ty)
+      return M.transitable(mapa, tx, ty) or (mapa.puerta and mapa.puerta[tx .. "_" .. ty] ~= nil)
+    end
+    while cola[i] do
+      local c = cola[i]
+      i = i + 1
+      for dy = -1, 1 do
+        for dx = -1, 1 do
+          if dx ~= 0 or dy ~= 0 then
+            local nx, ny = c[1] + dx, c[2] + dy
+            local k = nx .. "_" .. ny
+            if pasa(nx, ny) and not visto[k] and (dx == 0 or dy == 0 or (pasa(c[1] + dx, c[2]) and pasa(c[1], c[2] + dy))) then
+              visto[k] = true
+              cola[#cola + 1] = { nx, ny }
+            end
+          end
+        end
+      end
+    end
+    for _, d in ipairs(destinos) do
+      if not visto[math.floor(d[1]) .. "_" .. math.floor(d[2])] then return false end
+    end
+    return true
+  end
+  local destinos = {}
+  for _, o in ipairs(mapa.objetivos) do destinos[#destinos + 1] = { o.x, o.y } end
+  destinos[#destinos + 1] = { mapa.spawns.umbra.x, mapa.spawns.umbra.y }
+  mapa.conexo = alcanzable(math.floor(mapa.spawns.albor.x), math.floor(mapa.spawns.albor.y), destinos)
   return mapa
 end
 
@@ -810,6 +1006,60 @@ function M.casa()
     mesa = { x = puerta + 0.5, y = 8.5 },
   }
   return mapa
+end
+
+-- Zonas de criaturas del mundo para el mapa: una por bioma con sus criaturas y niveles (centradas
+-- donde están sus campamentos) y una por cada zona elevada. Se calcula una vez y se guarda.
+function M.zonas(mapa)
+  if mapa._zonas then return mapa._zonas end
+  local por = {}
+  for _, camp in ipairs(mapa.campamentos or {}) do
+    if not camp.z then
+      local mon = Datos.monstruo(camp.monstruo)
+      if mon and mon.bioma then
+        local z = por[mon.bioma]
+        if not z then
+          z = { bioma = mon.bioma, sx = 0, sy = 0, n = 0, monstruos = {}, vistos = {} }
+          por[mon.bioma] = z
+        end
+        z.sx, z.sy, z.n = z.sx + camp.x, z.sy + camp.y, z.n + 1
+        if not z.vistos[mon.id] then
+          z.vistos[mon.id] = true
+          z.monstruos[#z.monstruos + 1] = { id = mon.id, nombre = mon.nombre, nivel = mon.nivel }
+        end
+      end
+    end
+  end
+  local lista = {}
+  for bioma, z in pairs(por) do
+    table.sort(z.monstruos, function(a, b) return a.nivel < b.nivel end)
+    local def = Datos.biomas[bioma]
+    lista[#lista + 1] = {
+      nombre = def and def.nombre or bioma, bioma = bioma, x = z.sx / z.n, y = z.sy / z.n,
+      nivelMin = z.monstruos[1].nivel, nivelMax = z.monstruos[#z.monstruos].nivel, monstruos = z.monstruos,
+    }
+  end
+  for _, ms in ipairs(mapa.mesetas or {}) do
+    local vistos, ms_lista = {}, {}
+    for _, camp in ipairs(mapa.campamentos) do
+      if camp.z and camp.x >= ms.x and camp.x < ms.x + ms.w and camp.y >= ms.y and camp.y < ms.y + ms.h and not vistos[camp.monstruo] then
+        vistos[camp.monstruo] = true
+        local mon = Datos.monstruo(camp.monstruo)
+        ms_lista[#ms_lista + 1] = { id = mon.id, nombre = mon.nombre, nivel = camp.nivel or mon.nivel }
+      end
+    end
+    table.sort(ms_lista, function(a, b) return a.nivel < b.nivel end)
+    lista[#lista + 1] = {
+      nombre = ms.nombre, bioma = ms.bioma, elevada = true, x = ms.x + ms.w / 2, y = ms.y + ms.h / 2,
+      nivelMin = ms.nivelMin, nivelMax = ms.nivelMax, monstruos = ms_lista, ancho = ms.w, alto = ms.h,
+    }
+  end
+  table.sort(lista, function(a, b)
+    if a.nivelMin ~= b.nivelMin then return a.nivelMin < b.nivelMin end
+    return a.nombre < b.nombre
+  end)
+  mapa._zonas = lista
+  return lista
 end
 
 return M

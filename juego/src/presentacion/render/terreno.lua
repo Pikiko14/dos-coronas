@@ -194,6 +194,21 @@ end
 
 local function decorar(mapa, x, y, px, py, tipo, fam)
   if fam ~= "hierba" and fam ~= "tierra" and fam ~= "arena" then return end
+  if mapa.decorado then
+    -- mapas con la decoración colocada a mano (campo de batalla): rocas, huecos y restos con colisión
+    -- relieve suave del suelo: lomas claras y hondonadas oscuras (ruido de baja frecuencia)
+    local n = math.sin(x * 0.19 + y * 0.07) + math.sin(y * 0.23 - x * 0.05) + math.sin((x + y) * 0.09) * 0.8
+    if n < -0.3 then
+      love.graphics.setColor(0, 0, 0, math.min(0.2, (-n - 0.3) * 0.1))
+      love.graphics.rectangle("fill", px, py, TILE, TILE)
+    elseif n > 0.9 then
+      love.graphics.setColor(1, 0.78, 0.55, math.min(0.1, (n - 0.9) * 0.08))
+      love.graphics.rectangle("fill", px, py, TILE, TILE)
+    end
+    local d = mapa.decorado[x] and mapa.decorado[x][y]
+    if d then require("src.presentacion.render.campo").decoracion(mapa, d, x, y, px, py) end
+    return
+  end
   if mapa.bloque[x] and mapa.bloque[x][y] then return end
   if tipo == "montana" or tipo == "adoquin" then return end
   local bioma = mapa.bioma[x] and mapa.bioma[x][y]

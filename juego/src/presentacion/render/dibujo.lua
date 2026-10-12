@@ -1,5 +1,6 @@
 local Datos = require("compartido.dominio.datos")
 local Atlas = require("src.presentacion.render.atlas")
+local Campo = require("src.presentacion.render.campo")
 
 local Terreno = require("src.presentacion.render.terreno")
 local Personajes = require("src.presentacion.render.personajes")
@@ -91,7 +92,7 @@ end
 
 -- Nombre y barra de vida de una criatura, en pantalla (fuera de la escala del mundo).
 local function placa(e, px, py, alto, jugador, tiempo)
-  if e.kind == "proyectil" or e.kind == "trampa" or e.kind == "loot" or e.kind == "bandera" or e.kind == "cuerpo" then return end
+  if e.kind == "proyectil" or e.kind == "trampa" or e.kind == "loot" or e.kind == "bandera" or e.kind == "cuerpo" or e.kind == "cristal" then return end
   local f = fuente()
   love.graphics.setFont(f)
   local color = { 0.92, 0.9, 0.84 }
@@ -110,8 +111,8 @@ local function placa(e, px, py, alto, jugador, tiempo)
   if e.gremio and (e.kind == "jugador" or e.kind == "bot") then nombre = nombre .. " <" .. e.gremio .. ">" end
   local ancho = f:getWidth(nombre)
   local y = py - alto - 15
-  local barra = e.hp and e.hpMax and e.kind ~= "altar"
-    and (e.kind == "monstruo" or e.kind == "estatua" or e.kind == "puerta" or e.hp < e.hpMax
+  local barra = e.hp and e.hpMax
+    and (e.kind == "monstruo" or e.kind == "estatua" or e.kind == "puerta" or e.kind == "altar" or e.hp < e.hpMax
       or (jugador and jugador.objetivo == e.id))
   if barra then
     local w = 34
@@ -120,6 +121,15 @@ local function placa(e, px, py, alto, jugador, tiempo)
     love.graphics.rectangle("fill", px - w / 2 - 1, y + 14, w + 2, 6)
     love.graphics.setColor(D.colorVida(frac))
     love.graphics.rectangle("fill", px - w / 2, y + 15, w * frac, 4)
+  end
+  if e.monturaFrac then
+    -- vida de la montura: barra naranja sobre la del jinete
+    local w = 34
+    local frac = math.max(0, math.min(1, e.monturaFrac))
+    love.graphics.setColor(0, 0, 0, 0.8)
+    love.graphics.rectangle("fill", px - w / 2 - 1, y + 7, w + 2, 6)
+    love.graphics.setColor(0.95, 0.6, 0.2, 1)
+    love.graphics.rectangle("fill", px - w / 2, y + 8, w * frac, 4)
   end
   textoSombra(nombre, px - ancho / 2, y - 2, color)
   if e.burbuja and e.burbuja.hasta and e.burbuja.texto and e.burbuja.hasta > (tiempo or 0) then
@@ -171,6 +181,23 @@ function D.escena(mundo, jugador, cam, mx, my)
     love.graphics.setColor(1, 1, 1, 1)
     Terreno.dibujar(mapa, cam.x, cam.y, ancho, alto, mundo.tiempo)
   end
+  -- zonas elevadas: desde el suelo se marca su contorno y su nombre con el nivel de sus criaturas
+  if pz == 0 and jugador.modo == "mundo" then
+    for _, ms in ipairs(mapa.mesetas or {}) do
+      if math.abs(ms.x + ms.w / 2 - jugador.x) < radio + 8 and math.abs(ms.y + ms.h / 2 - jugador.y) < radio + 8 then
+        local rx, ry = ms.x * TILE - cam.x, ms.y * TILE - cam.y
+        love.graphics.setColor(1, 0.85, 0.4, 0.35)
+        love.graphics.setLineWidth(2)
+        love.graphics.rectangle("line", rx, ry, ms.w * TILE, ms.h * TILE, 6, 6)
+        love.graphics.setLineWidth(1)
+        local texto = ms.nombre .. "  (nv " .. ms.nivelMin .. "-" .. ms.nivelMax .. ")  ▲"
+        love.graphics.setColor(0, 0, 0, 0.55)
+        love.graphics.print(texto, rx + 9, ry + 5)
+        love.graphics.setColor(1, 0.9, 0.55, 0.9)
+        love.graphics.print(texto, rx + 8, ry + 4)
+      end
+    end
+  end
   for _, s in ipairs(mapa.escaleras or {}) do
     if s.de == pz then
       local sx, sy = s.x * TILE - cam.x, s.y * TILE - cam.y
@@ -197,6 +224,9 @@ function D.escena(mundo, jugador, cam, mx, my)
       if e.kind == "monstruo" then
         local resta = (e.respawn or 0) - (mundo.tiempo or 0)
         Objetos.dibujar("restos", 0, sx, sy + 14, nil, math.max(0, math.min(1, resta / 6)))
+      elseif e.kind == "altar" then
+        -- núcleo destruido: ruinas apagadas hasta que se regenere
+        Objetos.dibujar("altar_cristal", 0, sx, sy + 14, { 0.3, 0.3, 0.32 }, 0.7)
       elseif e.kind == "puerta" then
         Objetos.puerta(e.faccion, true, sx, sy + 14, 0.8)
       end
@@ -246,7 +276,9 @@ function D.escena(mundo, jugador, cam, mx, my)
         and jugador.y > p.y - 2.5 and jugador.y < p.y + alto - 0.1 then
         alfa = 0.45 -- el jugador queda detrás: se ve a través de la montaña
       end
-      Objetos.dibujar(p.tipo, variante, (p.x + ancho / 2) * TILE - cam.x, (p.y + alto) * TILE - cam.y, tint, alfa)
+      local px0, py0 = (p.x + ancho / 2) * TILE - cam.x, (p.y + alto) * TILE - cam.y
+      if Objetos.personalizados and Objetos.personalizados[p.tipo] then Objetos.personalizados[p.tipo](p, px0, py0)
+      else Objetos.dibujar(p.tipo, variante, px0, py0, tint, alfa) end
     elseif item.tipo == "mueble" then
       D.mueble(item.nombre, sx, sy)
     else
@@ -342,7 +374,7 @@ function D.entidad(e, sx, sy, mundo, jugador)
     love.graphics.draw(img, Arte.quad(img, 128, 128 + fila * 32, 32, 32), sx, pies, 0, 1.5, 1.5, 16, 28)
     alto = 52
   elseif e.kind == "cuerpo" and def then
-    -- el cuerpo del caÃ­do: misma imagen en gris
+    -- el cuerpo del caído: misma imagen en gris
     alto = Personajes.dibujarGris(def, e.dir or 1, sx, pies, 0.9)
   elseif def then
     local reloj = (e.anim or 0) / 8
@@ -399,6 +431,14 @@ function D.entidad(e, sx, sy, mundo, jugador)
     end
     love.graphics.setColor(1, 0.9, 0.4, brillo)
     love.graphics.circle("line", sx, pies - 8, 10)
+  elseif e.kind == "cristal" then
+    -- cristal enemigo en el suelo: brilla y late para verse de lejos
+    local pulso = 0.5 + 0.5 * math.sin((mundo.tiempo or 0) * 4 + (e.x or 0))
+    love.graphics.setColor(0, 0, 0, 0.3)
+    love.graphics.ellipse("fill", sx, pies - 1, 9, 4)
+    Objetos.cristal(e.faccion, pulso, sx, pies - 2)
+    love.graphics.setColor(0.5, 0.9, 1, 0.35 + 0.35 * pulso)
+    love.graphics.circle("line", sx, pies - 10, 12 + 2 * pulso)
   elseif e.kind == "trampa" then
     local img = Arte.img("Characters/!Hexagram.png")
     love.graphics.setColor(1, 1, 1, 0.9)

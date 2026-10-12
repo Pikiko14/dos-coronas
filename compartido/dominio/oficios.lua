@@ -164,7 +164,7 @@ function M.instalar(Mundo)
   function Mundo:recuperarPresion(dt)
     for _, t in pairs(self.presion or {}) do
       for bien, v in pairs(t) do
-        v = v * (1 - dt / DIVISOR_PRESION)
+        if math.abs(v) < 0.002 then t[bien] = nil else t[bien] = v end
         t[bien] = math.abs(v) < 0.002 and nil or v
       end
     end

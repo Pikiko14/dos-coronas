@@ -3,7 +3,7 @@
 --   * Batalla por cristales: una vez al día, a la hora que diga la configuración (21:00).
 -- Unos minutos antes se abre la inscripción con un aviso; a la hora se juega si hay jugadores
 -- suficientes en cada corona y, si no, se cancela y se espera a la siguiente edición.
--- Cada jugador puede participar una vez por edición. Sin programación (mundos locales y
+-- Todos los jugadores pueden participar en cada edición. Sin programación (mundos locales y
 -- pruebas) todo funciona como antes: la cola empieza sola al juntarse jugadores.
 local Datos = require("compartido.dominio.datos")
 
@@ -113,8 +113,8 @@ function M.instalar(Mundo)
       if ev.activa and not (inst.activa and not inst.fin) then ev.activa = nil end
       if not ev.avisado and ahora >= ev.proxima - c.avisoMinutos * 60 and ahora < ev.proxima then
         ev.avisado = true
-        self:mensaje("mundo", "", self:nombreEvento(modo) .. " empieza a las " .. os.date("%H:%M", ev.proxima) ..
-          ". Apúntate en el portal de la Cicatriz o con B (hacen falta " .. min .. " jugadores por corona).", nil)
+        self:avisoEvento("mundo", "", self:nombreEvento(modo) .. " empieza a las " .. os.date("%H:%M", ev.proxima) ..
+          ". Apúntate con el Heraldo de cualquier ciudad (hacen falta " .. min .. " jugadores por corona).", nil)
       end
       if ahora >= ev.proxima then
         if inst.activa and not inst.fin then
@@ -127,7 +127,7 @@ function M.instalar(Mundo)
             self:empezarEvento(modo)
           else
             soltarCola(self, modo, "No hubo jugadores suficientes para " .. self:nombreEvento(modo) .. ". Queda para la próxima edición.")
-            self:mensaje("mundo", "", self:nombreEvento(modo) .. " cancelada: faltaron jugadores. Próxima edición: " ..
+            self:avisoEvento("mundo", "", self:nombreEvento(modo) .. " cancelada: faltaron jugadores. Próxima edición: " ..
               os.date("%H:%M", self:proximaEdicion(modo, ahora)) .. ".", nil)
           end
         end

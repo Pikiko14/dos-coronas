@@ -1,6 +1,7 @@
 local Interfaz = require("src.presentacion.interfaz")
 local Sonido = require("src.presentacion.sonido")
 local Util = require("compartido.dominio.util")
+local Datos = require("compartido.dominio.datos")
 local Dibujo = require("src.presentacion.render.dibujo")
 local Ajustes = require("src.presentacion.ajustes")
 local Config = require("src.infraestructura.config")
@@ -28,10 +29,11 @@ function Entrada.manejar(app, id)
   if id == "menu_entrar" or id == "menu_registro" then
     app.cuenta = {
       modo = id == "menu_registro" and "crear" or "entrar",
-      usuario = "", clave = "", error = "",
+      usuario = (id == "menu_entrar") and Ajustes.ultimoUsuario or "", clave = "", error = "",
     }
     app.estado = "cuenta"
-    Interfaz.foco = "usuario"
+    -- con el usuario recordado, el cursor va directo a la clave
+    Interfaz.foco = (app.cuenta.usuario ~= "") and "clave" or "usuario"
     return
   end
   if id == "cuenta_volver" or id == "cuenta_salir" then
@@ -45,6 +47,10 @@ function Entrada.manejar(app, id)
   if id == "foco_clave" then Interfaz.foco = "clave" return end
   if id == "cuenta_ok" then
     cuenta = app.cuenta
+    if cuenta.usuario and cuenta.usuario ~= "" and cuenta.usuario ~= Ajustes.ultimoUsuario then
+      Ajustes.ultimoUsuario = cuenta.usuario
+      Ajustes.guardar()
+    end
     require("src.presentacion.estados.juego").pedirCuenta(app, Config.red.host, {
       t = "cuenta",
       a = cuenta.modo == "crear" and "registrar" or "entrar",
@@ -90,7 +96,7 @@ function Entrada.manejar(app, id)
   if id == "cerrar" then Interfaz.panel = nil return end
   if id == "hud_bolsa" then Interfaz.panel = "bolsa" return end
   if id == "hud_equipo" then Interfaz.panel = "equipo" return end
-  if id == "hud_arbol" then Interfaz.panel = Interfaz.panel == "arbol" and nil or "arbol" return end
+  if id == "hud_arbol" then Interfaz.panel = (Interfaz.panel ~= "arbol") and "arbol" or nil return end
   if id:sub(1, 13) == "masc_adoptar_" then app.actuar("mascota_adoptar", { especie = id:sub(14) }) return end
   if id:sub(1, 9) == "masc_inv_" then app.actuar("mascota_invocar", { idx = tonumber(id:sub(10)) }) return end
   if id:sub(1, 3) == "gp_" then
@@ -200,7 +206,6 @@ function Entrada.manejar(app, id)
   if id == "arbol_reset" then app.actuar("olvidar") return end
   if id:sub(1, 4) == "arb_" then app.actuar("aprender", { id = id:sub(5) }) return end
   if id == "hud_mapa" then Interfaz.panel = "mapa" return end
-  if id == "hud_guerra" then Interfaz.panel = "guerra" return end
   if id == "hud_ayuda" then Interfaz.panel = "ayuda" return end
   if id == "hud_menu" then Interfaz.panel = "menu" return end
   if id:sub(1, 3) == "bl_" then
@@ -217,14 +222,14 @@ function Entrada.manejar(app, id)
     local jugador, mundo = app.jugador, app.mundo
     local obj = jugador and jugador.objetivo and mundo.entidades[jugador.objetivo]
     if obj and (obj.kind == "jugador" or obj.kind == "bot") then
+      -- se manda la invitación: el otro jugador verá una alerta y, si acepta, se abre el comercio
       app.actuar("comercio_invitar", { id = obj.id })
-      Interfaz.panel = "comercio"
     else
       mundo:mensaje("sistema", "", "Selecciona a un aventurero cercano y pulsa T.", jugador)
     end
     return
   end
-  if id:sub(1, 4) == "hab_" then app.actuar("habilidad", { slot = tonumber(id:sub(5)) }) return end
+  if id:sub(1, 4) == "hab_" then Entrada.lanzarHabilidad(app, tonumber(id:sub(5))) return end
   if id == "poc_vida" then app.actuar("pocion", { id = "pocion_vida" }) return end
   if id == "poc_mana" then app.actuar("pocion", { id = "pocion_mana" }) return end
   if id:sub(1, 6) == "canal_" then Interfaz.canal = id:sub(7) return end
@@ -262,18 +267,49 @@ function Entrada.manejar(app, id)
   if id == "oro_10" then app.actuar("comercio_oro", { oro = ((jugador.sesion and mundo.sesiones[jugador.sesion] and mundo.sesiones[jugador.sesion].oferta[jugador.id].oro) or 0) + 10 }) return end
   if id == "oro_50" then app.actuar("comercio_oro", { oro = ((jugador.sesion and mundo.sesiones[jugador.sesion] and mundo.sesiones[jugador.sesion].oferta[jugador.id].oro) or 0) + 50 }) return end
   if id == "comercio_ok" then app.actuar("comercio_ok") return end
+  if id == "com_acepta" then app.actuar("comercio_responder", { acepta = true }) return end
+  if id == "com_rechaza" then app.actuar("comercio_responder", { acepta = false }) return end
+  if id == "alerta_fondo" then return end
+  if id:sub(1, 11) == "com_quitar_" then app.actuar("comercio_quitar", { i = tonumber(id:sub(12)) }) return end
+  if id:sub(1, 10) == "com_bolsa_" then app.actuar("comercio_item", { i = tonumber(id:sub(11)) }) return end
+  if id == "foco_com_oro" then Interfaz.foco = "com_oro" return end
+  if id == "com_oro_todo" then
+    local s = jugador.sesion and mundo.sesiones[jugador.sesion]
+    local mia = s and s.oferta[jugador.id]
+    Interfaz.comOro = tostring((jugador.oro or 0) + ((mia and mia.oro) or 0))
+    Entrada.fijarOroComercio(app)
+    return
+  end
+  if id == "com_oro_fijar" then Entrada.fijarOroComercio(app) return end
   if id == "comercio_no" then app.actuar("comercio_no") Interfaz.panel = nil return end
   if id == "ajustes" then Interfaz.panel = "ajustes" return end
+  if id == "mapa_mas" or id == "mapa_menos" then
+    local g = Interfaz.mapaGeom
+    if g then Interfaz.mapaZoomar(id == "mapa_mas" and 1.5 or 1 / 1.5, g.ax + g.aw / 2, g.ay + g.ah / 2) end
+    return
+  end
+  if id == "mapa_centrar" then
+    local p = app.jugador
+    if p and p.modo == "mundo" then Interfaz.mapaCentrarEn(p.x, p.y, Interfaz.mapaZoom) else Interfaz.mapaCentrarEn(Datos.MAPA_W / 2, Datos.MAPA_H / 2, 1) end
+    return
+  end
+  if id == "mapa_tab_zonas" then Interfaz.mapaTab = "zonas" return end
+  if id == "mapa_tab_ciudades" then Interfaz.mapaTab = "ciudades" return end
+  if id == "mapa_tab_pnj" then Interfaz.mapaTab = "pnj" return end
+  if id:sub(1, 10) == "mapa_zona_" then
+    local z = require("compartido.dominio.mapa").zonas(app.mundo.mapas.mundo)[tonumber(id:sub(11))]
+    if z then Interfaz.mapaCentrarEn(z.x, z.y, math.max(Interfaz.mapaZoom or 1, 3)) end
+    return
+  end
+  if id == "mapa_area" then Interfaz.mapaArrastre = true return end
   if id == "menu_mall" then Interfaz.panel = "mall" return end
-  if id == "mall_tab_obj" then Interfaz.mallTab = "objetos" return end
-  if id == "mall_tab_add" then Interfaz.mallTab = "addons" return end
+  if id == "mall_tab_obj" then Interfaz.mallTab, Interfaz.mallScroll = "objetos", 0 return end
+  if id == "mall_tab_add" then Interfaz.mallTab, Interfaz.mallScroll = "addons", 0 return end
   if id:sub(1, 9) == "mall_buy_" then app.actuar("mall_comprar", { id = id:sub(10) }) return end
   if id:sub(1, 13) == "mall_ad_buy_" then app.actuar("mall_addon_comprar", { id = id:sub(14) }) return end
   if id:sub(1, 8) == "mall_ad_" then app.actuar("mall_addon", { id = id:sub(9) }) return end
   if id == "menu_oficio" then app.actuar("oficio_alternar", {}) Interfaz.panel = nil return end
   if id == "hud_montura" then app.actuar("montura_alternar", {}) return end
-  if id == "aj_vol_mas" then Ajustes.volumen = math.min(1, (Ajustes.volumen or 0) + 0.1) Sonido.volumen = Ajustes.volumen Ajustes.guardar() return end
-  if id == "aj_vol_menos" then Ajustes.volumen = math.max(0, (Ajustes.volumen or 0) - 0.1) Sonido.volumen = Ajustes.volumen Ajustes.guardar() return end
   if id == "aj_1280" then Ajustes.ancho, Ajustes.alto, Ajustes.completo = 1280, 720, false Ajustes.aplicarVentana() Ajustes.guardar() return end
   if id == "aj_1600" then Ajustes.ancho, Ajustes.alto, Ajustes.completo = 1600, 900, false Ajustes.aplicarVentana() Ajustes.guardar() return end
   if id == "aj_completo" then Ajustes.completo = not Ajustes.completo Ajustes.aplicarVentana() Ajustes.guardar() return end
@@ -308,6 +344,26 @@ function Entrada.siguienteObjetivo(app)
   app.actuar("objetivo", { id = lista[sigue].e.id, persigue = true })
 end
 
+-- Lanza un poder. Los de Ã¡rea sobre un punto (meteoro) caen donde estÃ¡ el cursor si estÃ¡ sobre el
+-- mundo; si no, sobre el objetivo elegido (el servidor limita el alcance).
+function Entrada.lanzarHabilidad(app, slot)
+  local p, mundo = app.jugador, app.mundo
+  local datos = { slot = slot }
+  if p and mundo and slot then
+    local Arbol = require("compartido.dominio.arbol")
+    local idh = Datos.barra[p.clase] and Datos.barra[p.clase][slot]
+    local h = idh and Arbol.efectiva(idh, math.max(1, Arbol.rango(p, idh) or 1))
+    if h and h.tipo == "punto" then
+      local mx, my = love.mouse.getPosition()
+      if Dibujo.dentroVista(mx, my) then
+        local cam = Dibujo.camara(p, app.zoom, mundo:mapaDe(p))
+        datos.x, datos.y = Dibujo.pantallaAMundo(cam, mx, my)
+      end
+    end
+  end
+  app.actuar("habilidad", datos)
+end
+
 function Entrada.clicMundo(app, mx, my, boton)
   local mundo, jugador = app.mundo, app.jugador
   if not mundo or not jugador then return end
@@ -333,6 +389,12 @@ function Entrada.raton(app, mx, my, boton)
   local estado = app.estado
   if estado == "menu" or estado == "crear" or estado == "cuenta" or estado == "personajes" or (estado == "juego" and app.jugador) then
     local id = Interfaz.consumir(mx, my)
+    if id == "mapa_area" then
+      -- puede ser el inicio de un arrastre o un clic para viajar: se decide al soltar
+      Interfaz.mapaArrastre = true
+      Interfaz.mapaPresion = { x = mx, y = my, movido = 0 }
+      return
+    end
     if id then Entrada.manejar(app, id) return end
   end
   if estado == "juego" and app.jugador then
@@ -340,8 +402,74 @@ function Entrada.raton(app, mx, my, boton)
   end
 end
 
+-- Manda al servidor el oro escrito en el comercio (el servidor lo vuelve a validar).
+function Entrada.fijarOroComercio(app)
+  local p = app.jugador
+  local s = p and p.sesion and app.mundo.sesiones[p.sesion]
+  if not s then return end
+  local mia = s.oferta[p.id]
+  local disponible = (p.oro or 0) + (mia.oro or 0)
+  local n = tonumber(Interfaz.comOro ~= "" and Interfaz.comOro or "0") or 0
+  n = math.max(0, math.min(disponible, math.floor(n)))
+  Interfaz.comOro = tostring(n)
+  Interfaz.foco = nil
+  app.actuar("comercio_oro", { oro = n })
+end
+
+function Entrada.moverRaton(app, x, y, dx, dy)
+  local g = Interfaz.mapaGeom
+  if Interfaz.panel == "mapa" and Interfaz.mapaArrastre and g and Interfaz.mapaCx then
+    local esc = Interfaz.escala or 1
+    local s = g.s0 * (Interfaz.mapaZoom or 1)
+    if Interfaz.mapaPresion then Interfaz.mapaPresion.movido = Interfaz.mapaPresion.movido + math.abs(dx) + math.abs(dy) end
+    Interfaz.mapaCx = Interfaz.mapaCx - dx / esc / s
+    Interfaz.mapaCy = Interfaz.mapaCy - dy / esc / s
+    Interfaz.mapaAjustar(g)
+  end
+end
+
+-- Un clic corto sobre el mapa manda al personaje a ese sitio.
+function Entrada.viajarPorMapa(app, mx, my)
+  local g, p = Interfaz.mapaGeom, app.jugador
+  if not g or not p or not Interfaz.mapaCx then return end
+  local esc = Interfaz.escala or 1
+  local s = g.s0 * (Interfaz.mapaZoom or 1)
+  local wx = Interfaz.mapaCx + (mx / esc - (g.ax + g.aw / 2)) / s
+  local wy = Interfaz.mapaCy + (my / esc - (g.ay + g.ah / 2)) / s
+  if wx < 1 or wy < 1 or wx > g.mw - 1 or wy > g.mh - 1 then return end
+  if p.modo ~= "mundo" or (p.z or 0) > 0 then
+    Interfaz.aviso = "Solo se viaja por el mapa desde el mundo abierto."
+    return
+  end
+  app.actuar("objetivo", { id = nil, persigue = false })
+  app.actuar("destino", { x = wx, y = wy })
+  Interfaz.mapaDestino = { x = wx, y = wy }
+end
+
+function Entrada.soltarRaton(app, mx, my)
+  local pres = Interfaz.mapaPresion
+  Interfaz.mapaArrastre = false
+  Interfaz.mapaPresion = nil
+  if pres and pres.movido < 6 and Interfaz.panel == "mapa" and app and mx then
+    Entrada.viajarPorMapa(app, mx, my)
+  end
+end
+
 function Entrada.rueda(app, dy)
-  if Interfaz.panel == "mercado" then
+  if Interfaz.panel == "comercio" then
+    local mx, my = love.mouse.getPosition()
+    local esc = Interfaz.escala or 1
+    mx, my = mx / esc, my / esc
+    local function dentro(r) return r and mx >= r.x and mx <= r.x + r.w and my >= r.y and my <= r.y + r.h end
+    if dentro(Interfaz.comListaA) then Interfaz.comScrollA = math.max(0, (Interfaz.comScrollA or 0) - dy)
+    elseif dentro(Interfaz.comListaB) then Interfaz.comScrollB = math.max(0, (Interfaz.comScrollB or 0) - dy) end
+  elseif Interfaz.panel == "mapa" and Interfaz.mapaGeom then
+    local mx, my = love.mouse.getPosition()
+    local esc = Interfaz.escala or 1
+    Interfaz.mapaZoomar(dy > 0 and 1.25 or 1 / 1.25, mx / esc, my / esc)
+  elseif Interfaz.panel == "mall" then
+    Interfaz.mallScroll = math.max(0, math.min(Interfaz.mallScrollMax or 0, (Interfaz.mallScroll or 0) - dy * (Interfaz.mallTab == "addons" and 3 or 1)))
+  elseif Interfaz.panel == "mercado" then
     Interfaz.scroll = math.max(0, Interfaz.scroll - dy)
   else
     app.zoom = math.max(1, math.min(3, app.zoom + dy * 0.25))
@@ -361,6 +489,19 @@ function Entrada.texto(app, t)
     local clave = Interfaz.foco:sub(5)
     Interfaz.subCampos = Interfaz.subCampos or { oferta = "", cant = "1", salida = "", compra = "" }
     if t:match("^%d$") and #(Interfaz.subCampos[clave] or "") < 9 then Interfaz.subCampos[clave] = (Interfaz.subCampos[clave] or "") .. t end
+  elseif Interfaz.foco == "com_oro" then
+    -- solo cifras y nunca más oro del que tienes
+    if t:match("^%d$") then
+      local actual = Interfaz.comOro or ""
+      if actual == "0" then actual = "" end
+      if #actual < 10 then
+        local p = app.jugador
+        local s = p and p.sesion and app.mundo.sesiones[p.sesion]
+        local disponible = p and ((p.oro or 0) + ((s and s.oferta[p.id].oro) or 0)) or 0
+        local n = math.min(tonumber(actual .. t) or 0, disponible)
+        Interfaz.comOro = tostring(n)
+      end
+    end
   elseif Interfaz.foco == "gremio_nombre" then
     Interfaz.gremioNombre = Interfaz.gremioNombre or ""
     if #Interfaz.gremioNombre < 24 and t:byte() >= 32 then Interfaz.gremioNombre = Interfaz.gremioNombre .. t end
@@ -371,6 +512,13 @@ function Entrada.texto(app, t)
 end
 
 function Entrada.tecla(app, tecla)
+  -- en el formulario de cuenta, Tab salta entre usuario y clave (Mayús + Tab, al revés)
+  if tecla == "tab" and app.estado == "cuenta" then
+
+    if Interfaz.foco == "usuario" then Interfaz.foco = "clave"
+    else Interfaz.foco = "usuario" end
+    return
+  end
   if tecla == "escape" then
     if Ajustes.esperando then Ajustes.esperando = nil return end
     if app.estado == "cuenta" then app.estado = "menu" Interfaz.foco = nil return end
@@ -403,6 +551,7 @@ function Entrada.tecla(app, tecla)
     elseif Interfaz.foco == "usuario" then app.cuenta.usuario = Util.popUtf8(app.cuenta.usuario or "")
     elseif Interfaz.foco == "clave" then app.cuenta.clave = Util.popUtf8(app.cuenta.clave or "")
     elseif Interfaz.foco == "chat" then Interfaz.texto = Util.popUtf8(Interfaz.texto or "")
+    elseif Interfaz.foco == "com_oro" then Interfaz.comOro = Util.popUtf8(Interfaz.comOro or "")
     elseif Interfaz.foco and Interfaz.foco:sub(1, 4) == "sub_" then
       local clave = Interfaz.foco:sub(5)
       if Interfaz.subCampos then Interfaz.subCampos[clave] = Util.popUtf8(Interfaz.subCampos[clave] or "") end
@@ -411,6 +560,7 @@ function Entrada.tecla(app, tecla)
     return
   end
   if tecla == "return" or tecla == "kpenter" then
+    if app.estado == "juego" and Interfaz.foco == "com_oro" then Entrada.fijarOroComercio(app) return end
     if app.estado == "cuenta" then Entrada.manejar(app, "cuenta_ok") return end
     if app.estado == "crear" then Entrada.manejar(app, "crear_entrar") return end
     if app.estado == "juego" and Interfaz.foco == "chat" then
@@ -446,18 +596,18 @@ function Entrada.tecla(app, tecla)
   if app.estado ~= "juego" or Interfaz.foco then return end
   local bolsa = (Ajustes.teclas and Ajustes.teclas.bolsa) or "i"
   local interactuar = (Ajustes.teclas and Ajustes.teclas.interactuar) or "e"
-  if tecla == bolsa then Interfaz.panel = Interfaz.panel == "bolsa" and nil or "bolsa" end
-  if tecla == "p" then Interfaz.panel = Interfaz.panel == "equipo" and nil or "equipo" end
+  if tecla == bolsa then Interfaz.panel = (Interfaz.panel ~= "bolsa") and "bolsa" or nil end
+  if tecla == "p" then Interfaz.panel = (Interfaz.panel ~= "equipo") and "equipo" or nil end
   if tecla == "n" then
     local p = app.jugador
     local idx = p and (p.mascotaActiva or (p.mascotas and #p.mascotas > 0 and 1))
     if idx then app.actuar("mascota_invocar", { idx = idx }) end
   end
-  if tecla == "j" then Interfaz.panel = Interfaz.panel == "grupo" and nil or "grupo" end
+  if tecla == "j" then Interfaz.panel = (Interfaz.panel ~= "grupo") and "grupo" or nil end
   if tecla == "o" then app.actuar("montura_alternar", {}) end
-  if tecla == "l" then Interfaz.panel = Interfaz.panel == "mall" and nil or "mall" end
+  if tecla == "l" then Interfaz.panel = (Interfaz.panel ~= "mall") and "mall" or nil end
   if tecla == "y" then app.actuar("oficio_alternar", {}) end
-  if tecla == "u" then Interfaz.panel = Interfaz.panel == "montura" and nil or "montura" end
+  if tecla == "u" then Interfaz.panel = (Interfaz.panel ~= "montura") and "montura" or nil end
   if tecla == "r" then
     -- robar: el objetivo elegido o la caravana / comerciante más cercano
     local p = app.jugador
@@ -481,14 +631,13 @@ function Entrada.tecla(app, tecla)
       app.actuar("gremio_info")
     end
   end
-  if tecla == "k" then Interfaz.panel = Interfaz.panel == "arbol" and nil or "arbol" end
-  if tecla == "m" then Interfaz.panel = Interfaz.panel == "mapa" and nil or "mapa" end
-  if tecla == "b" then Interfaz.panel = Interfaz.panel == "guerra" and nil or "guerra" end
+  if tecla == "k" then Interfaz.panel = (Interfaz.panel ~= "arbol") and "arbol" or nil end
+  if tecla == "m" then Interfaz.panel = (Interfaz.panel ~= "mapa") and "mapa" or nil end
   if tecla == interactuar then app.actuar("interactuar") end
   if tecla == "t" then Entrada.manejar(app, "hud_comercio") end
   if tecla == "f1" then Interfaz.panel = "ayuda" end
   if tecla == "1" or tecla == "2" or tecla == "3" or tecla == "4" or tecla == "5" or tecla == "6" then
-    app.actuar("habilidad", { slot = tonumber(tecla) })
+    Entrada.lanzarHabilidad(app, tonumber(tecla))
   end
   if tecla == "7" then app.actuar("pocion", { id = "pocion_vida" }) end
   if tecla == "8" then app.actuar("pocion", { id = "pocion_mana" }) end

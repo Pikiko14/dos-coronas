@@ -13,6 +13,7 @@ M.DURACION_EXP_SEG = 3600    -- tarjeta de experiencia doble
 -- Bonos temporales. mult = multiplicador de lo que se gana; pct = fracción que se suma.
 M.BONOS = {
   exp   = { nombre = "Experiencia doble", mult = 2, largo = true, color = { 1, 0.85, 0.3 }, etiqueta = "x2 EXP" },
+  str   = { nombre = "Fuerza", pct = 0.20, atk = 0.05, color = { 0.9, 0.65, 0.3 }, etiqueta = "STR" },
   atk   = { nombre = "Ataque", pct = 0.15, color = { 0.95, 0.4, 0.3 }, etiqueta = "ATK" },
   def   = { nombre = "Defensa", pct = 0.15, color = { 0.45, 0.6, 0.95 }, etiqueta = "DEF" },
   int   = { nombre = "Inteligencia", pct = 0.20, matk = 0.08, color = { 0.7, 0.45, 0.95 }, etiqueta = "INT" },
@@ -20,28 +21,30 @@ M.BONOS = {
   matk  = { nombre = "Ataque mágico", pct = 0.15, color = { 0.95, 0.5, 0.85 }, etiqueta = "MATK" },
   mvel  = { nombre = "Velocidad mágica", pct = 0.20, color = { 0.5, 0.9, 0.5 }, etiqueta = "MSPD" },
 }
-M.ORDEN_BONOS = { "exp", "atk", "def", "int", "mdef", "matk", "mvel" }
+M.ORDEN_BONOS = { "exp", "str", "atk", "def", "int", "mdef", "matk", "mvel" }
 
 -- Objetos del mall (se registran en Datos.items). precio = en monedas.
 M.OBJETOS = {
   { id = "tarjeta_exp", bono = "exp", nombre = "Tarjeta de experiencia doble", precio = 50, sprite = 699,
     texto = "Durante 1 hora ganas el doble de experiencia." },
+  { id = "pergamino_str", bono = "str", nombre = "Pergamino de fuerza", precio = 25, sprite = 697,
+    texto = "+20% de vida y +5% de ataque durante 30 minutos." },
   { id = "pergamino_atk", bono = "atk", nombre = "Pergamino de ataque", precio = 20, sprite = 697,
     texto = "+15% de ataque durante 30 minutos." },
   { id = "pergamino_def", bono = "def", nombre = "Pergamino de defensa", precio = 20, sprite = 697,
     texto = "+15% de defensa durante 30 minutos." },
   { id = "pergamino_int", bono = "int", nombre = "Pergamino de inteligencia", precio = 25, sprite = 697,
-    texto = "+20% de maná y +8% de ataque mágico durante 30 minutos." },
+    texto = "+20% de maná y +8% de ataque mágico (30 min)." },
   { id = "pergamino_mdef", bono = "mdef", nombre = "Pergamino de defensa mágica", precio = 20, sprite = 697,
     texto = "+15% de defensa mágica durante 30 minutos." },
   { id = "pergamino_matk", bono = "matk", nombre = "Pergamino de ataque mágico", precio = 20, sprite = 697,
     texto = "+15% de ataque mágico durante 30 minutos." },
   { id = "pergamino_mvel", bono = "mvel", nombre = "Pergamino de velocidad mágica", precio = 30, sprite = 697,
-    texto = "Los poderes se recargan un 20% más rápido durante 30 minutos." },
+    texto = "Poderes un 20% más rápidos (30 min)." },
 }
 
--- Addons: sprites de personaje Ãºnicos (skins). Cambian el aspecto mientras no tengas un oficio
--- activo (el oficio activo usa su propio sprite). La imagen de cada uno estÃ¡ en el cliente
+-- Addons: sprites de personaje únicos (skins). Cambian el aspecto mientras no tengas un oficio
+-- activo (el oficio activo usa su propio sprite). La imagen de cada uno está en el cliente
 -- (render/personajes.lua, P.skins).
 M.ADDONS = {
   skin_rey = { nombre = "Rey", precio = 300, desc = "Corona, capa y porte de monarca." },
@@ -50,8 +53,50 @@ M.ADDONS = {
   skin_fuego = { nombre = "Pelirrojo", precio = 200, desc = "Melena de fuego y mirada decidida." },
   skin_marea = { nombre = "Hija de la marea", precio = 250, desc = "Pelo turquesa como el mar." },
   skin_sombra = { nombre = "Sombra del bosque", precio = 250, desc = "Capucha oscura de cazador nocturno." },
+  skin_marino = { nombre = "Marino azul", precio = 250, desc = "Pelo azul y casaca de navegante." },
+  skin_plata = { nombre = "Cabello de plata", precio = 250, desc = "Un viajero de pelo plateado." },
+  skin_chico = { nombre = "Joven aventurero", precio = 200, desc = "Pelo castaño y ropa de camino." },
+  skin_coletas = { nombre = "Chica de coletas", precio = 200, desc = "Coletas y vestido rojo." },
+  skin_noel = { nombre = "Papá Noel", precio = 400, desc = "Gorro rojo y larga barba blanca." },
+  skin_noel_saco = { nombre = "Papá Noel con saco", precio = 400, desc = "Con el saco de los regalos." },
+  skin_reno = { nombre = "Reno", precio = 400, desc = "Un reno de las nieves." },
+  skin_ayudante = { nombre = "Ayudante navideña", precio = 350, desc = "Gorro de duende y melena rubia." },
 }
-M.ORDEN_ADDONS = { "skin_rey", "skin_princesa", "skin_explorador", "skin_fuego", "skin_marea", "skin_sombra" }
+M.ORDEN_ADDONS = { "skin_rey", "skin_princesa", "skin_explorador", "skin_fuego", "skin_marea", "skin_sombra",
+  "skin_marino", "skin_plata", "skin_chico", "skin_coletas", "skin_noel", "skin_noel_saco", "skin_reno", "skin_ayudante" }
+
+-- Más skins (hojas Spiritual, Riding y Evil): id, nombre, precio, descripción.
+local MAS = {
+  { "skin_esp_fuego", "Espíritu de fuego", 350, "Una dama de llamas y cabello naranja." },
+  { "skin_esp_agua", "Espíritu del agua", 350, "Cabello azul como las corrientes." },
+  { "skin_esp_bruma", "Espíritu de la bruma", 350, "Plateada y esquiva como la niebla." },
+  { "skin_esp_bosque", "Espíritu del bosque", 350, "Coronada de hojas verdes." },
+  { "skin_hada", "Hada dorada", 300, "Pequeña, rubia y luminosa." },
+  { "skin_angel_fuego", "Ángel ardiente", 450, "Alas blancas y melena de fuego." },
+  { "skin_angel_plata", "Ángel de cintas azules", 450, "Rubia, con cintas y túnica clara." },
+  { "skin_sabio", "Anciano sabio", 300, "Larga barba y mirada serena." },
+  { "skin_jinete_pardo", "Caballero de corcel pardo", 500, "Armadura de plata sobre un caballo pardo." },
+  { "skin_jinete_blanco", "Caballero de corcel blanco", 500, "Armadura de plata sobre un caballo blanco." },
+  { "skin_jinete_negro", "Caballero de corcel negro", 500, "Armadura de plata sobre un caballo oscuro." },
+  { "skin_jinete_dorado", "Caballero de corcel dorado", 500, "Armadura de plata sobre un caballo dorado." },
+  { "skin_abanderado", "Abanderado", 300, "Soldado con el estandarte rojo." },
+  { "skin_rey_jinete", "Rey a caballo", 550, "Corona y capa sobre su montura." },
+  { "skin_dama_jinete", "Dama a caballo", 550, "Rubia amazona de porte noble." },
+  { "skin_jinete_capucha", "Jinete encapuchado", 450, "Capucha parda y montura gris." },
+  { "skin_cazador_verde", "Cazador de cabello verde", 300, "Rápido y de mirada afilada." },
+  { "skin_desierto", "Mercader del desierto", 300, "Turbante blanco y barba cuidada." },
+  { "skin_sombra_capucha", "Sombra encapuchada", 350, "Una capa oscura que oculta el rostro." },
+  { "skin_gran_capucha", "Gran capucha", 350, "Capucha parda de hilo dorado." },
+  { "skin_hechicera", "Hechicera de plata", 350, "Cabello blanco y túnica morada." },
+  { "skin_enmascarado", "Enmascarado", 350, "Máscara azul y capa violeta." },
+  { "skin_centinela", "Centinela verde", 350, "Yelmo verde y mirada fija." },
+  { "skin_caballero_oscuro", "Caballero oscuro", 500, "Armadura negra con cuernos." },
+}
+for _, s in ipairs(MAS) do
+  M.ADDONS[s[1]] = { nombre = s[2], precio = s[3], desc = s[4] }
+  M.ORDEN_ADDONS[#M.ORDEN_ADDONS + 1] = s[1]
+end
+
 function M.duracion(bono)
   local d = M.BONOS[bono]
   return (d and d.largo) and M.DURACION_EXP_SEG or M.DURACION_SEG
@@ -90,6 +135,10 @@ function M.instalar(Mundo)
     if not e.bonos or next(e.bonos) == nil then return end
     local t = ahora(self)
     local function on(b) return (e.bonos[b] or 0) > t end
+    if on("str") then
+      e.hpMax = e.hpMax * (1 + M.BONOS.str.pct)
+      e.atk = e.atk * (1 + M.BONOS.str.atk)
+    end
     if on("atk") then e.atk = e.atk * (1 + M.BONOS.atk.pct) end
     if on("def") then e.def = e.def * (1 + M.BONOS.def.pct) end
     if on("mdef") then e.mdef = e.mdef * (1 + M.BONOS.mdef.pct) end

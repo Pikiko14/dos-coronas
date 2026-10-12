@@ -39,6 +39,14 @@ function love.mousepressed(x, y, boton)
   Entrada.raton(App, x, y, boton)
 end
 
+function love.mousemoved(x, y, dx, dy)
+  Entrada.moverRaton(App, x, y, dx, dy)
+end
+
+function love.mousereleased(x, y)
+  Entrada.soltarRaton(App, x, y)
+end
+
 function love.wheelmoved(_, dy)
   Entrada.rueda(App, dy)
 end

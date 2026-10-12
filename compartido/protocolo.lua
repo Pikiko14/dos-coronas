@@ -32,7 +32,7 @@ P.ACCIONES = {
   "pocion", "comprar", "vender", "interactuar", "guerra", "salir_guerra",
   "casa_comprar", "casa_entrar", "casa_salir", "mueble", "cofre_guardar",
   "cofre_sacar", "mision_aceptar", "mision_entregar", "comercio_invitar",
-  "comercio_oro", "comercio_item", "comercio_ok", "comercio_no", "mover_bolsa",
+  "comercio_oro", "comercio_item", "comercio_responder", "comercio_quitar", "comercio_ok", "comercio_no", "mover_bolsa",
   "mirar", "aprender", "olvidar", "encantar", "mascota_adoptar", "mascota_invocar",
   "gremio_info", "gremio_crear", "gremio_invitar", "gremio_responder", "gremio_salir", "gremio_expulsar",
   "gremio_rango", "gremio_disolver", "mall_comprar", "mall_addon_comprar", "mall_addon", "oficio_elegir", "oficio_alternar", "oficio_info", "mercancia_info", "mercancia_comprar",

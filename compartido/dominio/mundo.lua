@@ -17,6 +17,7 @@ local Programacion = require("compartido.dominio.programacion")
 local Grupos = require("compartido.dominio.grupos")
 local Encuentros = require("compartido.dominio.encuentros")
 local Admin = require("compartido.dominio.admin")
+local Comercio = require("compartido.dominio.comercio")
 local Mall = require("compartido.dominio.mall")
 
 local Mundo = {}
@@ -35,6 +36,9 @@ function Mundo.nuevo()
   self.rng = Util.rng(Datos.SEMILLA)
   math.randomseed(Datos.SEMILLA)
   self.tiempo = 0
+  -- identifica esta vida del mundo: los clientes que siguen conectados al reiniciar el servidor
+  -- reconocen que los numeros de mensaje empezaron de nuevo
+  self.epoca = tostring(os.time()) .. "-" .. tostring(math.floor(os.clock() * 1000))
   self.seq = 0
   self.entidades = {}
   self.mensajes = {}
@@ -123,9 +127,26 @@ function Mundo:mensaje(canal, de, texto, origen)
     x = origen and origen.x or 0, y = origen and origen.y or 0,
     modo = origen and origen.modo or "mundo",
     tiempo = self.tiempo,
+    id = (self._msgId or 0) + 1, epoca = self.epoca,
   }
+  self._msgId = (self._msgId or 0) + 1
   if #self.mensajes > 80 then table.remove(self.mensajes, 1) end
   if origen and canal == "local" then origen.burbuja = { texto = texto, hasta = self.tiempo + 4 } end
+end
+
+-- Aviso global del sistema: sale en el chat de todos y en una marquesina que cruza la parte de
+-- arriba de la pantalla de derecha a izquierda.
+function Mundo:anunciar(texto)
+  self:mensaje("sistema", "", texto, nil)
+  local m = self.mensajes[#self.mensajes]
+  m.marquesina, m.evento = true, true
+end
+
+-- Mensaje sobre un evento (próximo, empieza, termina, cancelado): sale en su canal de siempre y
+-- también en la pestaña "Eventos" del chat.
+function Mundo:avisoEvento(canal, de, texto, origen)
+  self:mensaje(canal, de, texto, origen)
+  self.mensajes[#self.mensajes].evento = true
 end
 
 function Mundo:decir(p, texto)
@@ -142,7 +163,7 @@ function Mundo:decir(p, texto)
     if not p.gremioId then self:mensaje("sistema", "", "No perteneces a ningún gremio.", p) return end
     canal, texto = "gremio", texto:sub(4)
   elseif texto == "/ayuda" then
-    self:mensaje("sistema", "", "Mover: clic o WASD. Atacar: clic en enemigo. Poderes: 1-6 (árbol: K). Curar: selecciona aliado y pulsa 1. E interactúa. I bolsa, P equipo, T comercio, M mapa, B guerra.", p)
+    self:mensaje("sistema", "", "Mover: clic o WASD. Atacar: clic en enemigo. Poderes: 1-6 (árbol: K). Curar: selecciona aliado y pulsa 1. E interactúa. I bolsa, P equipo, T comercio, M mapa.", p)
     return
   end
   self:mensaje(canal, p.nombre, texto, p)
@@ -272,7 +293,7 @@ function Mundo:spawnMonstruo(idMon, x, y, hogar, nivel)
     monstruo = def.id,
     nombre = def.nombre,
     nivel = def.nivel,
-    x = x, y = y,
+    x = x, y = y, z = hogar and hogar.z or 0,
     hogarx = hogar and hogar.x or x,
     hogary = hogar and hogar.y or y,
     modo = "mundo",
@@ -333,7 +354,8 @@ function Mundo:poblar()
       local ang = (i / camp.cantidad) * math.pi * 2
       local x = camp.x + math.cos(ang) * 1.2
       local y = camp.y + math.sin(ang) * 1.2
-      self:spawnMonstruo(camp.monstruo, x, y, camp)
+      local mon = self:spawnMonstruo(camp.monstruo, x, y, camp, camp.nivel)
+      if mon and camp.z then mon.z = camp.z end
     end
   end
   self:crearObjetivos()
@@ -344,16 +366,15 @@ function Mundo:crearObjetivos()
     if e.modo == "batalla" or e.modo == "estandarte" then self.entidades[id] = nil end
   end
   for _, o in ipairs(self.mapas.batalla.objetivos) do
-    local hp = o.tipo == "puerta" and 1100 or 780
+    local hp = o.tipo == "altar" and 1500 or (o.tipo == "puerta" and (o.principal and 1100 or 800) or 780)
     local e = {
       id = self:idNuevo(),
       kind = o.tipo,
       nombre = (o.tipo == "altar" and "Altar de cristales" or o.tipo == "puerta" and "Puerta" or "Estatua") .. " de " .. (o.faccion == "albor" and "Albor" or "Umbra"),
       faccion = o.faccion, x = o.x, y = o.y, modo = "batalla", vivo = true,
-      hp = o.tipo == "altar" and 1 or hp,
-      hpMax = o.tipo == "altar" and 1 or hp,
-      def = 0, estructura = o.tipo ~= "altar",
-      tx = math.floor(o.x), ty = math.floor(o.y),
+      hp = hp, hpMax = hp, nucleo = o.tipo == "altar" or nil,
+      def = 0, estructura = true,
+      tx = math.floor(o.x), ty = math.floor(o.y), principal = o.principal,
     }
     self.entidades[e.id] = e
   end
@@ -546,13 +567,25 @@ local function cortarCamino(cam)
   return corto
 end
 
+-- Ruta hacia (x, y). Si queda lejos se va por tramos: se calcula hasta un punto intermedio y, al
+-- llegar, se vuelve a calcular (así se puede viajar de una punta a otra del mapa).
+local function rutaHacia(self, e, x, y)
+  local dx, dy = x - e.x, y - e.y
+  local d = math.sqrt(dx * dx + dy * dy)
+  local tx, ty = x, y
+  if d > 110 then tx, ty = e.x + dx / d * 100, e.y + dy / d * 100 end
+  local cam = Mapa.buscar(self:mapaDe(e), e.x, e.y, tx, ty)
+  if not cam then return nil, false end
+  return cortarCamino(cam), (#cam > 80) or d > 110
+end
+
 function Mundo:fijarDestino(e, x, y)
   e.metaX, e.metaY = x, y
-  local mapa = self:mapaDe(e)
   if e.modo == "mundo" and (e.z or 0) == 0 then
-    e.camino = cortarCamino(Mapa.buscar(mapa, e.x, e.y, x, y)) or { { x = x, y = y } }
+    local cam, mas = rutaHacia(self, e, x, y)
+    e.camino, e.caminoCortado = cam or { { x = x, y = y } }, mas
   else
-    e.camino = { { x = x, y = y } }
+    e.camino, e.caminoCortado = { { x = x, y = y } }, false
   end
   e.persigue = false
 end
@@ -567,7 +600,16 @@ function Mundo:direccionCamino(e, dt)
   end
   local w = cam[1]
   if not w then
-    e.camino, e.bloqueado = nil, nil
+    -- ruta larga: terminó un tramo, se calcula el siguiente hacia la meta
+    if e.caminoCortado and e.metaX and e.modo == "mundo" and (e.z or 0) == 0 and not e.persigue
+      and Util.dist(e.x, e.y, e.metaX, e.metaY) > 2.5 then
+      local nuevo, mas = rutaHacia(self, e, e.metaX, e.metaY)
+      if nuevo and #nuevo > 0 then
+        e.camino, e.caminoCortado = nuevo, mas
+        return 0, 0
+      end
+    end
+    e.camino, e.bloqueado, e.caminoCortado = nil, nil, nil
     return 0, 0
   end
   local ddx, ddy = signo(math.floor(w.x) - tx), signo(math.floor(w.y) - ty)
@@ -583,7 +625,8 @@ function Mundo:direccionCamino(e, dt)
   if e.bloqueado > ESPERA_BLOQUEO then
     e.bloqueado = nil
     if e.metaX and e.modo == "mundo" and (e.z or 0) == 0 then
-      e.camino = cortarCamino(Mapa.buscar(self:mapaDe(e), e.x, e.y, e.metaX, e.metaY))
+      local nuevo, mas = rutaHacia(self, e, e.metaX, e.metaY)
+      e.camino, e.caminoCortado = nuevo, mas
     else
       e.camino = nil
     end
@@ -667,10 +710,10 @@ function Mundo:puedeDanar(origen, objetivo)
   if (kind == "jugador" or kind == "bot") and origen.kind ~= "monstruo" and self:legitimoPorOficio(origen, objetivo) then
     return true
   end
-  if kind ~= "jugador" and kind ~= "bot" and kind ~= "guardia" and kind ~= "monstruo" and kind ~= "estatua" and kind ~= "puerta" then
+  if kind ~= "jugador" and kind ~= "bot" and kind ~= "guardia" and kind ~= "monstruo" and kind ~= "estatua" and kind ~= "puerta" and kind ~= "altar" then
     return false
   end
-  if kind == "estatua" or kind == "puerta" then
+  if kind == "estatua" or kind == "puerta" or kind == "altar" then
     return origen.faccion and origen.faccion ~= objetivo.faccion
   end
   if kind == "monstruo" or origen.kind == "monstruo" then return true end
@@ -722,6 +765,7 @@ function Mundo:danar(objetivo, cantidad, origen, critico, color)
   if objetivo.invulnerable then return end
   if origen and not self:puedeDanar(origen, objetivo) then return end
   cantidad = math.max(1, math.floor(cantidad))
+  if objetivo.montado and self:danarMontura(objetivo, cantidad, origen) then return end
   if (objetivo.mascotaBono or 0) > 0 then cantidad = math.max(1, math.floor(cantidad * (1 - objetivo.mascotaBono))) end
   local esc = self:tieneBuff(objetivo, "escudo")
   if esc and esc.absorbe and esc.absorbe > 0 then
@@ -900,6 +944,11 @@ function Mundo:morir(e, origen)
       end
     end
     if e.modo == "estandarte" and e.llevaBandera then self:soltarBandera(e) end
+    -- los cristales que llevaba caen al suelo donde muere: el rival puede cogerlos
+    if e.modo == "batalla" and (e.llevaCristales or 0) > 0 then
+      for _ = 1, e.llevaCristales do self:dejarCristal(e.x, e.y, e.faccion == "albor" and "umbra" or "albor") end
+      e.llevaCristales = nil
+    end
     if origen and origen.faccion and origen.faccion ~= e.faccion then
       self.gloria[origen.faccion] = (self.gloria[origen.faccion] or 0) + 8
       local inst = self.instancia[e.modo]
@@ -908,17 +957,23 @@ function Mundo:morir(e, origen)
       end
     end
     self:mensaje("sistema", "", e.nombre .. " ha caído.", e)
-  elseif e.kind == "estatua" or e.kind == "puerta" then
+  elseif e.kind == "estatua" or e.kind == "puerta" or e.kind == "altar" then
     local fac = origen and origen.faccion
     if fac then
       local inst = self.instancia.batalla
-      local pts = e.kind == "puerta" and 160 or 100
+      local pts = e.kind == "altar" and 200 or (e.kind == "puerta" and (e.principal and 160 or 120) or 100)
       inst.puntos[fac] = inst.puntos[fac] + pts
-      if origen.kind == "jugador" or origen.kind == "bot" then
-        self:darItem(origen, "cristal", 1)
-        origen.cristales = (origen.cristales or 0) + 1
+      local quien = fac == "albor" and "Albor" or "Umbra"
+      if e.kind == "altar" then
+        -- el núcleo: solo al destruirlo sale el cristal, que hay que llevar al altar propio
+        self:dejarCristal(e.x, e.y, e.faccion)
+        e.respawn = self.tiempo + 120
+        if origen.kind == "jugador" or origen.kind == "bot" then origen.cristales = (origen.cristales or 0) + 1 end
+        self:avisoEvento("mundo", "", e.nombre .. " destruido por " .. quien .. ". ¡Su cristal está en el suelo!", nil)
+        self:mensaje("sistema", "", e.nombre .. " destruido. +" .. pts .. " puntos. ¡Recoge el cristal y llévalo a tu altar!", origen)
+      else
+        self:mensaje("sistema", "", e.nombre .. " cae. " .. quien .. " gana +" .. pts .. " puntos.", origen)
       end
-      self:mensaje("sistema", "", e.nombre .. " cae. " .. (fac == "albor" and "Albor" or "Umbra") .. " obtiene un cristal enemigo. +" .. pts .. " puntos.", origen)
       if e.kind == "puerta" then
         local mapa = self.mapas.batalla
         if mapa.puerta then
@@ -942,9 +997,11 @@ function Mundo:avanzarMisiones(p, monId)
   end
 end
 
--- El cuerpo de un personaje caÃ­do se queda donde muriÃ³ (sin vida, en gris) un buen rato; el
+-- El cuerpo de un personaje caído se queda donde murió (sin vida, en gris) un buen rato; el
 -- personaje reaparece en la ciudad de su corona.
 Mundo.CUERPO_SEG = 300
+Mundo.PUNTOS_CRISTAL = 300      -- lo que vale entregar el cristal del núcleo enemigo
+Mundo.POCION_CD = 3          -- segundos entre una poción y la siguiente
 function Mundo:dejarCuerpo(e)
   local id = self:idNuevo()
   self.entidades[id] = {
@@ -954,7 +1011,7 @@ function Mundo:dejarCuerpo(e)
   }
 end
 
--- Spawn de la ciudad de la corona de e mÃ¡s cercana a (x, y).
+-- Spawn de la ciudad de la corona de e más cercana a (x, y).
 function Mundo:ciudadPropiaCerca(e, x, y)
   local mejor, md
   for _, c in ipairs(self.mapas.mundo.ciudades) do
@@ -1099,7 +1156,15 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
       end
     end
   elseif h.tipo == "punto" then
-    local px, py = tx or (objetivo and objetivo.x) or p.x, ty or (objetivo and objetivo.y) or p.y
+    local px, py = tx or (objetivo and objetivo.x), ty or (objetivo and objetivo.y)
+    if not px then
+      -- sin objetivo ni punto: cae delante del personaje, hacia donde mira
+      local d = math.min(h.rango or 5, 4)
+      local mx = ({ [1] = 0, [2] = 0, [3] = 1, [4] = -1 })[p.dir or 1] or 0
+      local my = ({ [1] = 1, [2] = -1, [3] = 0, [4] = 0 })[p.dir or 1] or 0
+      px, py = p.x + mx * d, p.y + my * d
+    end
+    p.impactoX, p.impactoY = px, py
     for _, o in pairs(self.entidades) do
       if o.vivo and self:mismoLugar(p, o) and self:puedeDanar(p, o) and Util.dist(px, py, o.x, o.y) <= (h.aoe or 2) then
         golpe(o, h.coef)
@@ -1163,7 +1228,8 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
   if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" then
     self:efecto(idh, p.x, p.y, 0.5)
   elseif h.tipo == "punto" then
-    self:efecto(idh, tx or ex, ty or ey, 0.55)
+    self:efecto(idh, p.impactoX or tx or ex, p.impactoY or ty or ey, 0.55)
+    p.impactoX, p.impactoY = nil, nil
   elseif not h.proyectil then
     self:efecto(idh, ex, ey, 0.4)
   end
@@ -1324,6 +1390,7 @@ function Mundo:actualizarJugador(e, dt)
   end
   self:pisarEscalera(e)
   if e.modo == "estandarte" then self:tocarBandera(e) end
+  if e.modo == "batalla" and (e.kind == "jugador" or e.kind == "bot") then self:cristalesCerca(e) end
 end
 
 function Mundo:pisarEscalera(e)
@@ -1621,8 +1688,40 @@ function Mundo:actualizarBandera(f)
   end
 end
 
+-- Cristal enemigo en el suelo del campo de batalla: se recoge pasando por encima.
+function Mundo:dejarCristal(x, y, faccion)
+  local id = self:idNuevo()
+  local ang, d = math.random() * math.pi * 2, 0.4 + math.random() * 0.9
+  self.entidades[id] = {
+    id = id, kind = "cristal", nombre = "Cristal", faccion = faccion, modo = "batalla", vivo = true, z = 0,
+    x = x + math.cos(ang) * d, y = y + math.sin(ang) * d, hasta = self.tiempo + 300,
+  }
+  return self.entidades[id]
+end
+
+-- Recoge cristales cercanos y, si llevas alguno, los entrega al llegar al altar de tu corona.
+function Mundo:cristalesCerca(p)
+  if p.modo ~= "batalla" or not p.vivo then return end
+  for _, o in pairs(self.entidades) do
+    if o.kind == "cristal" and o.vivo and not o.borrar and Util.dist(p.x, p.y, o.x, o.y) < 1.1 then
+      o.vivo, o.borrar = false, true
+      p.llevaCristales = (p.llevaCristales or 0) + 1
+      self:mensaje("sistema", "", "Coges un cristal enemigo (" .. p.llevaCristales .. "). Llévalo a tu altar.", p)
+    end
+  end
+  if (p.llevaCristales or 0) > 0 then
+    for _, o in pairs(self.entidades) do
+      if o.kind == "altar" and o.vivo and o.faccion == p.faccion and o.modo == "batalla" and Util.dist(p.x, p.y, o.x, o.y) < 2.4 then
+        self:entregarCristales(p)
+        break
+      end
+    end
+  end
+end
+
 function Mundo:entregarCristales(p)
-  local n = 0
+  local n = p.llevaCristales or 0
+  p.llevaCristales = nil
   for i = #p.bolsa, 1, -1 do
     if p.bolsa[i].id == "cristal" then
       n = n + p.bolsa[i].cant
@@ -1631,9 +1730,9 @@ function Mundo:entregarCristales(p)
   end
   if n <= 0 then return "No llevas cristales." end
   local inst = self.instancia.batalla
-  inst.puntos[p.faccion] = inst.puntos[p.faccion] + n * 45
+  inst.puntos[p.faccion] = inst.puntos[p.faccion] + n * Mundo.PUNTOS_CRISTAL
   p.entregados = (p.entregados or 0) + n
-  self:mensaje("sistema", "", "Entregas " .. n .. " cristales enemigos. +" .. (n * 45) .. " puntos.", p)
+  self:mensaje("sistema", "", "Entregas " .. n .. " cristales enemigos. +" .. (n * Mundo.PUNTOS_CRISTAL) .. " puntos.", p)
   return nil
 end
 
@@ -1694,7 +1793,7 @@ function Mundo:meterEnCampo(p, modo)
       if self.puertos.marcarEvento then self.puertos.marcarEvento(p.dbId, clave) end
     end
   end
-  self:mensaje("sistema", "", p.nombre .. " entra en " .. nombre .. ". No podrás repetir esta edición.", p)
+  self:mensaje("sistema", "", p.nombre .. " entra en " .. nombre .. ".", p)
 end
 
 function Mundo:empezarEvento(modo)
@@ -1707,7 +1806,7 @@ function Mundo:empezarEvento(modo)
       self:meterEnCampo(e, modo)
     end
   end
-  self:mensaje("mundo", "", self:nombreEvento(modo) .. " empieza. Albor y Umbra entran al campo.", nil)
+  self:avisoEvento("mundo", "", self:nombreEvento(modo) .. " empieza. Albor y Umbra entran al campo.", nil)
   return true
 end
 
@@ -1718,16 +1817,13 @@ function Mundo:entrarGuerra(p, modo)
   if p.modo == modo then return "Ya estás dentro." end
   if p.colaGuerra == modo then return "Ya estás en la cola." end
   if p.colaGuerra and p.colaGuerra ~= modo then return "Sal de la otra cola antes de apuntarte." end
-  local hoy = os.date("%Y-%m-%d")
-  p.eventosDia = p.eventosDia or {}
-  if p.eventosDia[self:claveEdicion(modo)] == hoy then
-    return "Ya participaste en esta edición de " .. self:nombreEvento(modo) .. ". Espera a la siguiente."
-  end
+  -- todos pueden participar en cada evento, las veces que haga falta (sin límite por edición)
   if (p.ultimoGolpe or 0) + 4 > self.tiempo and p.modo == "mundo" then
     return "Sal del combate antes de entrar."
   end
   local inst = self.instancia[modo]
   if inst.activa and not inst.fin then
+    self:anunciar(p.nombre .. " (" .. (p.faccion == "albor" and "Albor" or "Umbra") .. ") se une a " .. self:nombreEvento(modo) .. ", que ya está en marcha.")
     self:meterEnCampo(p, modo)
     return nil
   end
@@ -1735,6 +1831,8 @@ function Mundo:entrarGuerra(p, modo)
   local n = self:contarCola(modo)
   local min = Datos.JUGADORES_EVENTO
   local programa = self:programaDe(modo)
+  self:anunciar(string.format("%s (%s) se anota a %s. Albor %d/%d · Umbra %d/%d.", p.nombre,
+    p.faccion == "albor" and "Albor" or "Umbra", self:nombreEvento(modo), n.albor, min, n.umbra, min))
   if programa then
     -- el servidor lo lanza a su hora: aquí solo queda inscrito
     self:mensaje("sistema", "", string.format("Quedas inscrito en %s: empieza a las %s si hay %d jugadores por corona (ahora Albor %d, Umbra %d).",
@@ -1760,11 +1858,14 @@ function Mundo:reiniciarInstancia(modo)
   inst.fin = nil
   inst.activa = true
   if modo == "batalla" then
-    for _, e in pairs(self.entidades) do
+    for id, e in pairs(self.entidades) do
       if e.modo == "batalla" and (e.kind == "estatua" or e.kind == "puerta" or e.kind == "altar") then
         e.vivo = true
         e.hp = e.hpMax
+      elseif e.kind == "cristal" then
+        self.entidades[id] = nil
       end
+      if e.llevaCristales then e.llevaCristales = nil end
     end
     if self.mapas.batalla.puerta then
       for _, puerta in pairs(self.mapas.batalla.puerta) do
@@ -1790,7 +1891,7 @@ function Mundo:cerrarInstancia(modo, ganador)
   inst.fin = ganador or "empate"
   inst.activa = false
   local titulo = modo == "batalla" and "La batalla por cristales" or "Captura el estandarte"
-  self:mensaje("mundo", "", titulo .. " termina. Victoria: " .. (ganador == "albor" and "Albor" or ganador == "umbra" and "Umbra" or "nadie") .. ".", nil)
+  self:avisoEvento("mundo", "", titulo .. " termina. Victoria: " .. (ganador == "albor" and "Albor" or ganador == "umbra" and "Umbra" or "nadie") .. ".", nil)
   if ganador == "albor" or ganador == "umbra" then
     self.gloria[ganador] = self.gloria[ganador] + 40
   end
@@ -1800,6 +1901,9 @@ function Mundo:cerrarInstancia(modo, ganador)
       local oro = gano and 220 or 70
       local xp = gano and 280 or 90
       if e.kind == "jugador" then
+        -- los cristales sin entregar valen algo de oro
+        oro = oro + (e.llevaCristales or 0) * 100
+        e.llevaCristales = nil
         for i = #e.bolsa, 1, -1 do
           if e.bolsa[i].id == "cristal" then
             oro = oro + e.bolsa[i].cant * 15
@@ -1808,7 +1912,22 @@ function Mundo:cerrarInstancia(modo, ganador)
         end
         e.oro = e.oro + oro
         self:ganarXp(e, xp)
-        self:mensaje("sistema", "", (gano and "Victoria" or "Derrota") .. ". +" .. oro .. " de oro.", e)
+        -- premios del evento: material de encantamiento y un pergamino de atributos al azar
+        local polvo = gano and math.random(8, 12) or math.random(2, 4)
+        local premios = { polvo .. " de polvo arcano" }
+        if not self:darItem(e, "polvo_arcano", polvo) then premios[1] = "polvo arcano (bolsa llena)" end
+        if gano or math.random() < 0.4 then
+          local ids = {}
+          for _, o in ipairs(Mall.OBJETOS) do
+            if o.id:sub(1, 10) == "pergamino_" then ids[#ids + 1] = o.id end
+          end
+          local id = ids[math.random(#ids)]
+          local def = Datos.item(id)
+          if self:darItem(e, id, 1) then premios[#premios + 1] = def.nombre
+          else premios[#premios + 1] = def.nombre .. " (bolsa llena, se pierde)" end
+        end
+        self:marcarProgreso(e)
+        self:mensaje("sistema", "", (gano and "Victoria" or "Derrota") .. ". +" .. oro .. " de oro, " .. table.concat(premios, " y ") .. ".", e)
       end
       local ret = e.retorno
       if e.kind == "jugador" and ret then
@@ -1968,7 +2087,7 @@ function Mundo:usarPocionId(p, id)
   if it.mana then p.mp = math.min(p.mpMax, p.mp + math.floor(p.mpMax * it.mana)) end
   p.bolsa[idx].cant = p.bolsa[idx].cant - 1
   if p.bolsa[idx].cant <= 0 then table.remove(p.bolsa, idx) end
-  p.cdPocion = self.tiempo + 6
+  p.cdPocion = self.tiempo + Mundo.POCION_CD
   return nil
 end
 
@@ -2387,7 +2506,11 @@ function Mundo:actualizar(dt)
       elseif e.kind == "mascota" then self:actualizarMascota(e, dt)
       elseif e.kind == "caravana" then self:actualizarCaravana(e, dt)
       elseif e.kind == "bandera" then self:actualizarBandera(e)
-      elseif (e.kind == "loot" or e.kind == "cuerpo") and self.tiempo > (e.hasta or 0) then e.borrar = true
+      elseif (e.kind == "loot" or e.kind == "cuerpo" or e.kind == "cristal") and self.tiempo > (e.hasta or 0) then e.borrar = true
+      elseif e.kind == "altar" and not e.vivo and e.respawn and self.tiempo >= e.respawn then
+        -- el núcleo se regenera pasado un tiempo
+        e.vivo, e.hp, e.respawn = true, e.hpMax, nil
+        self:avisoEvento("mundo", "", e.nombre .. " se ha regenerado.", nil)
       elseif e.estructura and e.vivo and e.modo == "batalla" then
         e.pulso = (e.pulso or 2) - dt
         if e.pulso <= 0 then
@@ -2410,6 +2533,8 @@ function Mundo:actualizar(dt)
   self:actualizarProgramacion(dt)
   self:actualizarGrupos(dt)
   self:actualizarBonos(dt)
+  self:actualizarComercio(dt)
+  self:actualizarMonturas(dt)
   self:actualizarEncuentros(dt)
   self._presionT = (self._presionT or 0) + dt
   if self._presionT >= 5 then
@@ -2539,7 +2664,7 @@ function Mundo:compactar(e)
     flash = (e.flash or 0) > 0 and e.flash or nil,
     burbuja = e.burbuja,
     est = self:estadosVisibles(e), especie = e.especie, gremio = e.gremioEtiqueta,
-    montado = e.montado, job = e.job, addon = e.kind == "jugador" and e.addonActivo or nil,
+    montado = e.montado, monturaFrac = e.montado and (function() local hp, mx = self:vidaMontura(e, e.montado) return hp / mx end)() or nil, job = e.job, addon = e.kind == "jugador" and e.addonActivo or nil,
     item = e.kind == "loot" and e.item or nil, bien = e.kind == "loot" and e.bien or nil,
     oroSuelo = (e.kind == "loot" and (e.oro or 0) > 0) and true or nil, buscado = (e.kind == "jugador" and self:esBuscado(e)) and true or nil,
     categoria = e.categoria, enGrupo = (e.kind == "jugador" and e.grupoId) and true or nil,
@@ -2582,6 +2707,13 @@ function Mundo:foto(pid)
     if p.gremioId and self.gremios[p.gremioId] then tu.gremioNombre = self.gremios[p.gremioId].nombre end
     tu.grupo = self:resumenGrupo(p)
     tu.mall = self:resumenMall(p)
+    tu.cdPocion = p.cdPocion
+    tu.invComercio = self:resumenInvitacionComercio(p)
+    tu.llevaCristales = p.llevaCristales
+    if p.montado then
+      local hp, mx = self:vidaMontura(p, p.montado)
+      tu.monturaHp, tu.monturaHpMax = math.floor(hp), mx
+    end
     if p.invitacionGrupo and p.invitacionGrupo.hasta > self.tiempo then
       tu.invGrupo = { nombre = p.invitacionGrupo.nombre }
     end
@@ -2782,16 +2914,7 @@ function Mundo:accion(pid, nombre, datos)
     local err = self:entregarMision(p, datos.id)
     if err then self:mensaje("sistema", "", err, p) end
   end
-  if nombre == "comercio_invitar" then
-    local otro = self.entidades[datos.id]
-    local err = self:invitarComercio(p, otro)
-    if err then self:mensaje("sistema", "", err, p) end
-    if not err then return { panel = "comercio" } end
-  end
-  if nombre == "comercio_oro" then self:ofrecerOro(p, datos.oro) end
-  if nombre == "comercio_item" then self:ofrecerItem(p, datos.i) end
-  if nombre == "comercio_ok" then self:aceptarComercio(p) end
-  if nombre == "comercio_no" then self:cancelarComercio(p) return { panel = nil } end
+  if nombre:sub(1, 9) == "comercio_" and p then return self:accionComercio(p, nombre, datos or {}) end
   if nombre:sub(1, 7) == "gremio_" and p then return self:accionGremio(p, nombre, datos or {}) end
   if nombre:sub(1, 6) == "grupo_" and p then return self:accionGrupo(p, nombre, datos or {}) end
   if nombre:sub(1, 8) == "subasta_" and p then return self:accionSubasta(p, nombre, datos or {}) end
@@ -2815,6 +2938,7 @@ Programacion.instalar(Mundo)
 Grupos.instalar(Mundo)
 Encuentros.instalar(Mundo)
 Admin.instalar(Mundo)
+Comercio.instalar(Mundo)
 Mall.instalar(Mundo)
 
 return Mundo

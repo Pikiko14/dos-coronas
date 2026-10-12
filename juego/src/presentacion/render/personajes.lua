@@ -36,7 +36,7 @@ P.oficios = {
   thief = { hoja = "Characters/People3.png", idx = 4 },
 }
 
--- Addons del Item Mall: sprites de personaje Ãºnicos (compartido/dominio/mall.lua, M.ADDONS).
+-- Addons del Item Mall: sprites de personaje únicos (compartido/dominio/mall.lua, M.ADDONS).
 P.skins = {
   skin_rey = { hoja = "Characters/People4.png", idx = 0 },
   skin_princesa = { hoja = "Characters/People4.png", idx = 3 },
@@ -44,6 +44,38 @@ P.skins = {
   skin_fuego = { hoja = "Characters/Actor1.png", idx = 0 },
   skin_marea = { hoja = "Characters/Actor1.png", idx = 3 },
   skin_sombra = { hoja = "Characters/Actor1.png", idx = 6 },
+  skin_marino = { hoja = "Characters/People8.png", idx = 0 },
+  skin_plata = { hoja = "Characters/People8.png", idx = 1 },
+  skin_chico = { hoja = "Characters/People8.png", idx = 2 },
+  skin_coletas = { hoja = "Characters/People8.png", idx = 3 },
+  skin_noel = { hoja = "Characters/People8.png", idx = 4 },
+  skin_noel_saco = { hoja = "Characters/People8.png", idx = 5 },
+  skin_reno = { hoja = "Characters/People8.png", idx = 6 },
+  skin_ayudante = { hoja = "Characters/People8.png", idx = 7 },
+  skin_esp_fuego = { hoja = "Characters/Spiritual.png", idx = 0 },
+  skin_esp_agua = { hoja = "Characters/Spiritual.png", idx = 1 },
+  skin_esp_bruma = { hoja = "Characters/Spiritual.png", idx = 2 },
+  skin_esp_bosque = { hoja = "Characters/Spiritual.png", idx = 3 },
+  skin_hada = { hoja = "Characters/Spiritual.png", idx = 4 },
+  skin_angel_fuego = { hoja = "Characters/Spiritual.png", idx = 5 },
+  skin_angel_plata = { hoja = "Characters/Spiritual.png", idx = 6 },
+  skin_sabio = { hoja = "Characters/Spiritual.png", idx = 7 },
+  skin_jinete_pardo = { hoja = "Characters/Riding.png", idx = 0 },
+  skin_jinete_blanco = { hoja = "Characters/Riding.png", idx = 1 },
+  skin_jinete_negro = { hoja = "Characters/Riding.png", idx = 2 },
+  skin_jinete_dorado = { hoja = "Characters/Riding.png", idx = 3 },
+  skin_abanderado = { hoja = "Characters/Riding.png", idx = 4 },
+  skin_rey_jinete = { hoja = "Characters/Riding.png", idx = 5 },
+  skin_dama_jinete = { hoja = "Characters/Riding.png", idx = 6 },
+  skin_jinete_capucha = { hoja = "Characters/Riding.png", idx = 7 },
+  skin_cazador_verde = { hoja = "Characters/Evil.png", idx = 0 },
+  skin_desierto = { hoja = "Characters/Evil.png", idx = 1 },
+  skin_sombra_capucha = { hoja = "Characters/Evil.png", idx = 2 },
+  skin_gran_capucha = { hoja = "Characters/Evil.png", idx = 3 },
+  skin_hechicera = { hoja = "Characters/Evil.png", idx = 4 },
+  skin_enmascarado = { hoja = "Characters/Evil.png", idx = 5 },
+  skin_centinela = { hoja = "Characters/Evil.png", idx = 6 },
+  skin_caballero_oscuro = { hoja = "Characters/Evil.png", idx = 7 },
 }
 
 P.npc = {

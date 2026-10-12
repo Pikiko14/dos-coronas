@@ -39,6 +39,10 @@ function M.instalar(Mundo)
   function Mundo:legitimoPorOficio(origen, objetivo)
     if objetivo.kind ~= "jugador" and objetivo.kind ~= "bot" then return false end
     if origen.combateCon and (origen.combateCon[objetivo.id] or 0) > self.tiempo then return true end
+    -- un ladrón puede atacar a un comerciante montado (el golpe baja la vida de su montura)
+    if (origen.kind == "jugador" or origen.kind == "bot") and origen.job == "thief" and objetivo.job == "trader" and objetivo.montado then
+      return true
+    end
     if self:esBuscado(objetivo) then
       if origen.kind == "guardia" then return true end
       if (origen.kind == "jugador" or origen.kind == "bot") and origen.job == "hunter" then return true end

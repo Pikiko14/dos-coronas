@@ -348,3 +348,92 @@ ITEM MALL
 MUERTE
   - Al morir en el mundo, el cuerpo queda donde caiste, en gris, durante 5 minutos, y el personaje
     reaparece en la ciudad de su corona mas cercana.
+
+SIN SONIDO, ZONAS ELEVADAS Y MAPA
+  - El juego va sin sonido (no se crea ninguna fuente de audio; ajustes ya no tiene volumen).
+  - Zonas elevadas (mesetas y cumbres): 6 plataformas repartidas por el mundo. Se sube por una
+    escalera (el contorno y el nombre de la zona se marcan en el suelo) y arriba salen criaturas
+    de la zona 3 niveles mas fuertes. Solo se ven y se pelea con ellas estando arriba.
+  - Mapa (M): rueda del raton = zoom hacia el cursor, arrastrar = mover, botones + - Centrar.
+    Cada zona de criaturas tiene su punto con el rango de nivel (nv a-b); con zoom alto sale el
+    nombre; al pasar el raton se listan sus criaturas con nivel. Pestanas Zonas / Ciudades / PNJ;
+    clic en una zona de la lista la centra. Las zonas elevadas se marcan con triangulo.
+
+MONTURAS CON VIDA
+  - Las monturas tienen su propia vida (buey 500, caballo 350, carreta 1100; multiplicador en
+    DOSCORONAS_MONTURA_VIDA_MULT). Si vas montado, los golpes (de criaturas y de otros jugadores)
+    bajan primero la vida de la montura; se ve en una barra naranja sobre el jinete, bajo el icono
+    de montar y en las alforjas (U).
+  - Un ladron puede atacar a un comerciante MONTADO aunque sea de su corona: queda buscado y se abre
+    pelea. Al llegar la montura a cero cae: el jinete sigue vivo y baja, su mercancia cae al
+    suelo (un fardo por tipo) y el ladron puede cargarla sin matarlo. La montura caida no se puede
+    usar durante 5 minutos (DOSCORONAS_MONTURA_RECUPERA_SEG) y recupera vida si no la golpean.
+
+AVISO DE EVENTOS Y POCIONES
+  - Cuando alguien se anota a un evento (o se une a uno en marcha), sale un aviso GLOBAL del
+    sistema: aparece en el chat de todos y en una marquesina arriba de la pantalla que cruza de
+    derecha a izquierda (los avisos esperan su turno). Mundo:anunciar(texto) sirve para otros avisos.
+  - Las pociones tienen un enfriamiento de 3 segundos (compartido por vida y maná), con cuenta
+    atras sobre los huecos 7 y 8.
+
+CAMPO DE BATALLA POR CRISTALES (mejorado)
+  - Relieve: crestas de montana, piedras al borde de los caminos y huecos (grietas) en parches. Todo
+    tiene colisiones y se comprueba que siempre se pueda llegar de una base a todos los objetivos.
+  - Cada muro tiene 3 entradas (puerta principal y dos laterales). Cada puerta es un objetivo que se
+    derriba; solo deja pasar a su corona hasta caer.
+  - El cristal ya no va a la bolsa: al caer una estatua o puerta, el cristal cae al suelo. Se recoge
+    pasando por encima (se ve cuantos llevas) y se entrega solo al llegar al altar de tu base
+    (45 puntos cada uno). Si mueres con cristales, caen donde moriste y el rival puede cogerlos.
+    Los que no se entreguen valen 15 de oro al terminar.
+
+PANTALLAS DE INICIO
+  - Iniciar sesion: fondo del lago nocturno con hadas; Registro: la puerta alada de la cueva.
+
+EVENTOS: INGRESO POR EL HERALDO
+  - Se quitaron la tecla B y el boton "Guerra": ahora se ingresa hablando (E) con el Heraldo que hay
+    en cada ciudad (o en el portal de la Cicatriz). El servidor no acepta inscribirse lejos de ellos.
+  - Todos los jugadores pueden participar en cada edicion de cada evento, sin limite por dia.
+  - Pergamino de fuerza (Item Mall, 25 monedas): +20% de vida y +5% de ataque durante 30 minutos.
+    El mall ya desplaza la lista de objetos con la rueda del raton.
+
+PESTAÑA DE EVENTOS EN EL CHAT
+  - Nueva pestaña "Eventos" junto a Grupo: reune los avisos de eventos (proximo evento y su hora,
+    inscripciones, cuando empiezan, terminan o se cancelan). Siguen saliendo ademas en su canal de
+    siempre (Mundo/Sistema) y en la pestaña Todo. En codigo: Mundo:avisoEvento() y Mundo:anunciar().
+
+MAS SKINS EN EL ITEM MALL
+  - Se anadieron 24 skins mas con los personajes de las hojas Spiritual (espiritus, hadas, angeles,
+    sabio), Riding (caballeros, rey y dama a caballo, abanderado, jinete encapuchado) y Evil
+    (cazador, mercader del desierto, encapuchados, hechicera, enmascarado, centinela, caballero
+    oscuro). En total hay 38; la pestana Addons se recorre con la rueda del raton (3 por tick).
+
+MAPA: VIAJAR, TECLA M Y EVENTO
+  - Un clic corto en el mapa (M) manda al personaje a ese sitio (se marca con una cruz roja hasta
+    llegar). Arrastrar mueve el mapa y no viaja. Las rutas largas se hacen por tramos.
+  - M abre y cierra el mapa. Arreglado un fallo que impedia cerrar con la tecla los paneles
+    I, P, K, J, L, U y M (la formula "a y nil o b" siempre daba b).
+  - Login: recuerda el ultimo usuario y pasa el cursor a la clave; Tab salta entre usuario y clave.
+  - Evento: el nucleo (altar de cristales) se puede atacar; SOLO al destruirlo sale su cristal
+    (estatuas y puertas dan puntos). El cristal entregado en tu altar vale 300 puntos; el nucleo
+    destruido se regenera a los 2 minutos. Al terminar el evento todos reciben polvo arcano y
+    oro, y un pergamino de atributos al azar (siempre el ganador, 40% el perdedor).
+
+ALERTAS DE INVITACION, COMERCIO Y MONTURAS
+  - Invitar a un gremio, a un grupo o a comerciar muestra al invitado una ALERTA en medio de la
+    pantalla con Aceptar y Rechazar (modal). Arreglado un fallo: el servidor rechazaba los ids de
+    jugador (son de texto, "e12") en las invitaciones de gremio y grupo, por eso no llegaban.
+  - Comercio: T (o Trato) con un jugador seleccionado le manda la invitacion; si acepta, se abre la
+    ventana en los dos. La ventana tiene listas desplazables (rueda) para cada oferta, tu bolsa para
+    elegir objetos (clic) y quitar con un boton, y un campo de oro que solo admite cifras y nunca mas
+    de lo que tienes (validado en el cliente y otra vez en el servidor). El trato es de todo o nada y
+    se cancela solo si os alejais; no se pueden ofrecer objetos de mision.
+  - Montar: todas las monturas requieren el oficio activo y el icono de montar solo aparece con el
+    oficio activo (o si ya vas montado).
+  - Campo de batalla: sprites propios dibujados por codigo (campo.lua): penascos, riscos con relieve,
+    huecos con borde y marcas en el suelo (manchas, brasas, guijarros, grietas finas, huesos).
+
+PODERES DE AREA
+  - La Nova de hielo golpea y ralentiza a todos los enemigos a su alrededor. El Meteoro cae en un
+    punto y golpea a todo lo que hay en su area (2,6 casillas): se apunta con el cursor del raton
+    (si esta sobre el mundo), o sobre el objetivo elegido, o delante de ti si no hay ninguno. El
+    servidor limita el punto al alcance del poder.

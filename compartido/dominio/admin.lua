@@ -283,7 +283,7 @@ function M.instalar(Mundo)
         n = n + 1
       end
     end
-    self:mensaje("mundo", "", self:nombreEvento(modo) .. " empieza (lanzada por un administrador).", nil)
+    self:avisoEvento("mundo", "", self:nombreEvento(modo) .. " empieza (lanzada por un administrador).", nil)
     decir(self, p, "Evento iniciado con " .. n .. " jugador(es)." .. (n == 0 and " Nadie en cola: usa «todos» para meter a todos." or ""))
   end
 

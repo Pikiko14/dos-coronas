@@ -23,23 +23,9 @@ local function tono(frecuencia, duracion, forma)
   return love.audio.newSource(datos, "static")
 end
 
+-- El juego va sin sonido: no se crea ninguna fuente de audio y tocar/ambiente no hacen nada.
 function S.iniciar()
-  local ok, err = pcall(function()
-    S.fuentes.corte = tono(160, 0.09, "cuadrada")
-    S.fuentes.grito = tono(240, 0.16, "cuadrada")
-    S.fuentes.magia = tono(540, 0.14, "seno")
-    S.fuentes.fuego = tono(140, 0.16, "cuadrada")
-    S.fuentes.hielo = tono(880, 0.16, "seno")
-    S.fuentes.flecha = tono(520, 0.07, "cuadrada")
-    S.fuentes.cura = tono(660, 0.14, "seno")
-    S.fuentes.sagrado = tono(740, 0.18, "seno")
-    S.fondos.ciudad = tono(196, 1.6, "seno")
-    S.fondos.bosque = tono(146, 1.8, "seno")
-    S.fondos.mar = tono(110, 2.0, "seno")
-    S.fondos.cicatriz = tono(82, 1.7, "cuadrada")
-  end)
-  if not ok then Log.error("sonido: " .. tostring(err)) end
-  S.ok = ok
+  S.ok = false
 end
 
 function S.tocar(nombre)

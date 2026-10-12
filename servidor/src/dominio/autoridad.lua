@@ -1,6 +1,7 @@
 local Datos = require("compartido.dominio.datos")
 local Util = require("compartido.dominio.util")
 local Balance = require("compartido.dominio.balance")
+local Arbol = require("compartido.dominio.arbol")
 
 local A = {}
 
@@ -11,7 +12,7 @@ local ACCIONES = {
   casa_comprar = true, casa_entrar = true, casa_salir = true, mueble = true,
   cofre_guardar = true, cofre_sacar = true,
   mision_aceptar = true, mision_entregar = true,
-  comercio_invitar = true, comercio_oro = true, comercio_item = true,
+  comercio_invitar = true, comercio_oro = true, comercio_item = true, comercio_responder = true, comercio_quitar = true,
   comercio_ok = true, comercio_no = true, mover_bolsa = true, mirar = true,
   aprender = true, olvidar = true, encantar = true, mascota_adoptar = true, mascota_invocar = true,
   gremio_info = true, gremio_crear = true, gremio_invitar = true, gremio_responder = true, gremio_salir = true,
@@ -47,21 +48,47 @@ function A.aceptar(mundo, pj, nombre, datos)
   if nombre == "habilidad" then
     local slot = tonumber(datos.slot)
     if not slot or slot < 1 or slot > 6 then return false end
-    return true, { slot = math.floor(slot) }
+    slot = math.floor(slot)
+    local limpio = { slot = slot }
+    -- poderes de Ã¡rea (meteoro...): se puede apuntar a un punto, siempre dentro de su alcance
+    local x, y = tonumber(datos.x), tonumber(datos.y)
+    if x and y and finito(x) and finito(y) and pj and pj.x then
+      local idh = Datos.barra[pj.clase] and Datos.barra[pj.clase][slot]
+      local h = idh and Arbol.efectiva(idh, math.max(1, Arbol.rango(pj, idh) or 1))
+      if h and h.tipo == "punto" then
+        local dx, dy = x - pj.x, y - pj.y
+        local d = math.sqrt(dx * dx + dy * dy)
+        local max = (h.rango or 6) + 0.3
+        if d > max then x, y = pj.x + dx / d * max, pj.y + dy / d * max end
+        limpio.x, limpio.y = x, y
+      end
+    end
+    return true, limpio
   end
   if nombre == "gremio_crear" then
     if type(datos.nombre) ~= "string" or #datos.nombre > 40 or type(datos.etiqueta) ~= "string" or #datos.etiqueta > 8 then return false end
     return true, { nombre = datos.nombre, etiqueta = datos.etiqueta }
   end
-  if nombre == "gremio_invitar" or nombre == "gremio_expulsar" or nombre == "gremio_rango" then
+  -- los jugadores del mundo se identifican con ids de texto ("e12"); los miembros de un gremio, con su
+  -- nÃºmero en la base de datos
+  local function idEntidad(v)
+    if type(v) ~= "string" or #v > 16 or not v:match("^e%d+$") then return nil end
+    return v
+  end
+  if nombre == "gremio_invitar" then
+    local id = idEntidad(datos.id)
+    if not id then return false end
+    return true, { id = id }
+  end
+  if nombre == "gremio_expulsar" or nombre == "gremio_rango" then
     local id = tonumber(datos.id)
     if not id or not finito(id) then return false end
     return true, { id = id, sube = datos.sube and true or false }
   end
   if nombre == "gremio_responder" or nombre == "grupo_responder" then return true, { acepta = datos.acepta and true or false } end
   if nombre == "grupo_invitar" or nombre == "grupo_expulsar" or nombre == "grupo_lider" then
-    local id = tonumber(datos.id)
-    if not id or not finito(id) then return false end
+    local id = idEntidad(datos.id)
+    if not id then return false end
     return true, { id = id }
   end
   if nombre:sub(1, 8) == "subasta_" then
@@ -156,6 +183,17 @@ function A.aceptar(mundo, pj, nombre, datos)
   end
   if nombre == "guerra" then
     if datos.modo ~= "batalla" and datos.modo ~= "estandarte" then return false end
+    -- solo se ingresa hablando con el Heraldo de una ciudad (o en el portal de la Cicatriz)
+    local m = mundo and mundo.mapas and mundo.mapas.mundo
+    local cerca = mundo and mundo.npcCerca and mundo:npcCerca(pj, "heraldo")
+    if not cerca and m and pj.modo == "mundo" and m.portal then
+      local dx, dy = pj.x - m.portal.x, pj.y - m.portal.y
+      cerca = dx * dx + dy * dy < 2.5 * 2.5
+    end
+    if not cerca then
+      mundo:mensaje("sistema", "", "Para ingresar a un evento habla con el Heraldo de una ciudad.", pj)
+      return false
+    end
     return true, { modo = datos.modo }
   end
   if nombre == "mover_bolsa" then
@@ -164,10 +202,16 @@ function A.aceptar(mundo, pj, nombre, datos)
     return true, { a = math.floor(a), b = math.floor(b) }
   end
   if nombre == "comercio_oro" then
-    local oro = tonumber(datos.oro) or 0
-    if not finito(oro) or oro < 0 or oro > 1000000 then return false end
+    local oro = tonumber(datos.oro)
+    if not oro or not finito(oro) or oro < 0 or oro > 1e9 then return false end
     return true, { oro = math.floor(oro) }
   end
+  if nombre == "comercio_item" or nombre == "comercio_quitar" then
+    local i = tonumber(datos.i)
+    if not i or not finito(i) or i < 1 or i > 200 then return false end
+    return true, { i = math.floor(i) }
+  end
+  if nombre == "comercio_responder" then return true, { acepta = datos.acepta == true } end
   return true, datos
 end
 

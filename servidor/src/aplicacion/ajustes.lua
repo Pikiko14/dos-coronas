@@ -12,6 +12,7 @@ local Ley = require("compartido.dominio.ley")
 local Mascotas = require("compartido.dominio.mascotas")
 local Grupos = require("compartido.dominio.grupos")
 local Encuentros = require("compartido.dominio.encuentros")
+local Monturas = require("compartido.dominio.monturas")
 
 local A = {}
 
@@ -44,6 +45,8 @@ function A.aplicar(cfg)
   fijar(Balance, "MUERTE_XP_PERDIDA", j.muerteXpPerdida, "experiencia perdida al morir")
   fijar(Balance, "POLVO_NIVEL_MIN", j.polvoNivelMin, "nivel desde el que cae polvo arcano")
   fijar(Balance, "POLVO_PROB", j.polvoProb, "probabilidad de polvo arcano")
+  fijar(Monturas, "VIDA_MULT", j.monturaVidaMult, "vida de las monturas")
+  fijar(Monturas, "RECUPERA_SEG", j.monturaRecuperaSeg, "recuperacion de monturas caidas")
   fijar(Datos, "MONSTRUO_HP", j.monstruoVida, "vida de criaturas")
   fijar(Datos, "MONSTRUO_ATK", j.monstruoAtaque, "ataque de criaturas")
   fijar(Datos, "RESPAWN_MONSTRUO", j.respawnMonstruo, "reaparición de criaturas")

@@ -124,6 +124,12 @@ function Pruebas.correr()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Menu", faccion = "albor", clase = "guerrero", nivel = 10 })
     pj.monturas, pj.oficioElegido = { "caballo", "carreta" }, "trader"
+    pj.job = nil
+    Interfaz.escala, Interfaz.panel = 1, nil
+    pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    local lado0, consola0 = Interfaz.medidas()
+    fallar(errores, "sin oficio activo no sale el icono de montar", Interfaz.consumir((1280 - lado0) / 2 + 231, 720 - consola0 - 34) ~= "hud_montura")
+    pj.job = "trader"
     Interfaz.escala = 1
     Interfaz.panel = nil
     local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
@@ -162,6 +168,10 @@ function Pruebas.correr()
     fallar(errores, "la skin se dibuja", ok, tostring(err))
     local it = Datos.item("pergamino_atk")
     fallar(errores, "los pergaminos tienen tinte", it and it.tinte and it.mall == true)
+Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    local okS, errS = pcall(Interfaz.hud, mundo, pj, 1280, 720)    fallar(errores, "el mall se dibuja desplazado", okS, tostring(errS))    fallar(errores, "hay más addons que filas (necesita rueda)", (Interfaz.mallScrollMax or 0) >= 7, tostring(Interfaz.mallScrollMax))
+    Interfaz.mallTab, Interfaz.mallScroll = "objetos", 1
+    local okO, errO = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "los objetos del mall también se desplazan", okO and Interfaz.mallScrollMax >= 1, tostring(errO))    Interfaz.mallScroll, Interfaz.panel = 0, nil
   end)
   paso("dibujo del cuerpo caído", function()
     local Dibujo = require("src.presentacion.render.dibujo")
@@ -189,6 +199,311 @@ function Pruebas.correr()
     fallar(errores, "con oficio activo, el del oficio", P.de(base) == P.oficios.thief)
     fallar(errores, "el cuerpo conserva la skin", P.de({ kind = "cuerpo", clase = "mago", faccion = "albor", addon = "skin_marea" }) == P.skins.skin_marea)
   end)
+  paso("interfaz: mapa con zoom y zonas", function()
+    local Entrada = require("src.presentacion.entrada")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Mapa", faccion = "albor", clase = "guerrero", nivel = 10 })
+    local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1 }
+    Interfaz.escala = 1
+    Interfaz.mapaZoom, Interfaz.mapaCx, Interfaz.mapaCy, Interfaz.mapaTab = 1, nil, nil, "zonas"
+    Interfaz.panel = "mapa"
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el mapa se dibuja", ok, tostring(err))
+    local g = Interfaz.mapaGeom
+    fallar(errores, "el mapa tiene su zona de arrastre", g and Interfaz.consumir(g.ax + 10, g.ay + 10) == "mapa_area")
+    -- zoom con los botones y la rueda
+    Entrada.manejar(app, "mapa_mas")
+    fallar(errores, "el botón + acerca", Interfaz.mapaZoom > 1.4)
+    local z1 = Interfaz.mapaZoom
+    Interfaz.mapaZoomar(1.25, g.ax + 50, g.ay + 50)
+    fallar(errores, "la rueda acerca hacia el cursor", Interfaz.mapaZoom > z1)
+    Entrada.manejar(app, "mapa_menos")
+    Entrada.manejar(app, "mapa_menos")
+    Entrada.manejar(app, "mapa_menos")
+    fallar(errores, "no se aleja más del mapa entero", Interfaz.mapaZoom == 1)
+    for _ = 1, 20 do Interfaz.mapaZoomar(1.5, g.ax + 10, g.ay + 10) end
+    fallar(errores, "el zoom tiene tope", Interfaz.mapaZoom <= 8)
+    -- arrastrar mueve la vista sin salirse del mapa
+    local cx0 = Interfaz.mapaCx
+    Interfaz.mapaArrastre = true
+    Entrada.moverRaton(app, 0, 0, 80, 40)
+    fallar(errores, "arrastrar mueve la vista", Interfaz.mapaCx < cx0)
+    Entrada.moverRaton(app, 0, 0, -99999, -99999)
+    fallar(errores, "la vista no se sale del mapa", Interfaz.mapaCx <= Datos.MAPA_W and Interfaz.mapaCy <= Datos.MAPA_H)
+    Entrada.soltarRaton()
+    fallar(errores, "soltar termina el arrastre", Interfaz.mapaArrastre == false)
+    -- clic en una zona de la lista centra el mapa en ella
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    Entrada.manejar(app, "mapa_zona_1")
+    local zona = require("compartido.dominio.mapa").zonas(mundo.mapas.mundo)[1]
+    fallar(errores, "clic en una zona la centra", Interfaz.mapaZoom >= 3 and math.abs(Interfaz.mapaCx - zona.x) < Datos.MAPA_W / 2)
+    -- todas las pestañas se dibujan, con zoom alto (muestra nombres) y la ciudad abierta
+    for _, tab in ipairs({ "zonas", "ciudades", "pnj" }) do
+      Interfaz.mapaTab = tab
+      ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+      fallar(errores, "pestaña " .. tab, ok, tostring(err))
+    end
+    pj.z = 1
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el mapa arriba de una zona elevada", ok, tostring(err))
+    Interfaz.panel, Interfaz.mapaZoom, Interfaz.mapaCx, Interfaz.mapaCy = nil, 1, nil, nil
+  end)
+  paso("interfaz: vida de la montura", function()
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Jinete2", faccion = "albor", clase = "guerrero", nivel = 12 })
+    pj.monturas, pj.montado, pj.monturaHp, pj.monturaHpMax = { "buey" }, "buey", 200, 500
+    pj.hp = pj.hpMax - 5
+    Interfaz.escala = 1
+    for _, panel in ipairs({ false, "montura" }) do
+      Interfaz.panel = panel or nil
+      local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+      fallar(errores, "el HUD con vida de montura se dibuja", ok, tostring(err))
+    end
+    Interfaz.panel = nil
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local ok, err = pcall(Dibujo.entidad, { id = "e5", kind = "jugador", clase = "guerrero", faccion = "albor", nombre = "J", x = 5, y = 5, vivo = true,
+      montado = "caballo", monturaFrac = 0.4, hp = 50, hpMax = 100 }, 100, 100, mundo, pj)
+    fallar(errores, "el jinete con montura herida se dibuja", ok, tostring(err))
+  end)
+  paso("interfaz: marquesina y enfriamiento de pociones", function()
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Marq", faccion = "albor", clase = "guerrero", nivel = 10 })
+    Interfaz.escala, Interfaz.marq, Interfaz.panel = 1, nil, nil
+    mundo.mensajes = {}
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el HUD sin avisos se dibuja", ok, tostring(err))
+    -- un aviso nuevo entra en la marquesina y avanza hacia la izquierda
+    mundo:anunciar("Prueba se anota a Captura del estandarte. Albor 1/3 · Umbra 0/3.")
+    pj.cdPocion = mundo.tiempo + 2
+    local xs = {}
+    for i = 1, 3 do
+      ok, err = pcall(function()
+        Interfaz.hud(mundo, pj, 1280, 720)
+        Interfaz.marquesina(mundo, pj, 1280, 0.5)
+      end)
+      fallar(errores, "la marquesina se dibuja", ok, tostring(err))
+      xs[i] = Interfaz.marq.actual and Interfaz.marq.actual.x
+    end
+    fallar(errores, "el texto avanza de derecha a izquierda", xs[1] and xs[2] and xs[3] and xs[1] > xs[2] and xs[2] > xs[3], tostring(xs[1]) .. "," .. tostring(xs[3]))
+    fallar(errores, "empieza por el borde derecho", xs[1] > 640)
+    -- al terminar de cruzar desaparece y deja pasar al siguiente
+    mundo:anunciar("Otro aviso")
+    for _ = 1, 80 do pcall(Interfaz.marquesina, mundo, pj, 1280, 0.5) end
+    fallar(errores, "no se repiten los avisos ya mostrados", Interfaz.marq.actual == nil and #Interfaz.marq.cola == 0)
+    Interfaz.marq = nil
+  end)
+  paso("interfaz: fondos de inicio de sesión y registro", function()
+    for _, modo in ipairs({ "entrar", "crear" }) do
+      local ok, err = pcall(Interfaz.cuenta, { modo = modo, usuario = "", clave = "", error = "" }, 1280, 720)
+      fallar(errores, "la pantalla de " .. modo .. " se dibuja", ok, tostring(err))
+    end
+    local Arte = require("src.presentacion.render.arte")
+    fallar(errores, "los dos fondos existen", Arte.img("Titles1/Fountain.png", true) ~= nil and Arte.img("Titles1/Gates.png", true) ~= nil)
+  end)
+  paso("interfaz: pestaña de eventos del chat", function()
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Pest", faccion = "albor", clase = "guerrero" })
+    mundo.mensajes = {}
+    mundo:mensaje("mundo", "Z", "charla", nil)
+    mundo:avisoEvento("mundo", "", "La batalla empieza a las 21:00", nil)
+    Interfaz.escala, Interfaz.panel = 1, nil
+    for _, canal in ipairs({ "todo", "evento", "mundo" }) do
+      Interfaz.canal = canal
+      local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+      fallar(errores, "el chat se dibuja en la pestaña " .. canal, ok, tostring(err))
+    end
+    local lado, consola = Interfaz.medidas()
+    local hallado = false
+    for x = 8, 700, 6 do if Interfaz.consumir(x, 720 - consola + 12) == "canal_evento" then hallado = true end end
+    fallar(errores, "la pestaña Eventos recibe clics", hallado)
+    Interfaz.canal = "todo"
+  end)
+  paso("interfaz: tecla M y viaje con clic en el mapa", function()
+    local Entrada = require("src.presentacion.entrada")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Viaja", faccion = "albor", clase = "guerrero", nivel = 10 })
+    local llamadas = {}
+    local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
+    Interfaz.escala, Interfaz.panel, Interfaz.foco = 1, nil, nil
+    Entrada.tecla(app, "m")
+    fallar(errores, "M abre el mapa", Interfaz.panel == "mapa")
+    Entrada.tecla(app, "m")
+    fallar(errores, "M lo cierra", Interfaz.panel == nil)
+    Entrada.tecla(app, "m")
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el mapa se dibuja", ok, tostring(err))
+    local g = Interfaz.mapaGeom
+    -- clic corto en el centro del mapa: manda al personaje a ese sitio
+    local mx, my = g.ax + g.aw / 2, g.ay + g.ah / 2
+    Entrada.raton(app, mx, my, 1)
+    Entrada.soltarRaton(app, mx, my)
+    local destino
+    for _, l in ipairs(llamadas) do if l[1] == "destino" then destino = l[2] end end
+    fallar(errores, "el clic en el mapa viaja al sitio", destino and math.abs(destino.x - g.mw / 2) < 2 and math.abs(destino.y - g.mh / 2) < 2,
+      destino and (destino.x .. "," .. destino.y) or "sin destino")
+    fallar(errores, "queda marcado el destino", Interfaz.mapaDestino ~= nil)
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el mapa dibuja la cruz del destino", ok, tostring(err))
+    -- arrastrar no viaja
+    llamadas = {}
+    Entrada.raton(app, mx, my, 1)
+    Entrada.moverRaton(app, mx + 40, my + 20, 40, 20)
+    Entrada.soltarRaton(app, mx + 40, my + 20)
+    local viajo = false
+    for _, l in ipairs(llamadas) do if l[1] == "destino" then viajo = true end end
+    fallar(errores, "arrastrar el mapa no viaja", not viajo)
+    Interfaz.panel, Interfaz.mapaDestino = nil, nil
+  end)
+  paso("interfaz: alertas de invitación y ventana de comercio", function()
+    local Entrada = require("src.presentacion.entrada")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Yo", faccion = "albor", clase = "guerrero", nivel = 12 })
+    local otro = mundo:crearPersonaje({ nombre = "Otro", faccion = "albor", clase = "guerrero", nivel = 12 })
+    local llamadas = {}
+    local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
+    Interfaz.escala, Interfaz.panel, Interfaz.foco = 1, nil, nil
+    local function clic(id)
+      llamadas = {}
+      Entrada.manejar(app, id)
+      return llamadas[1]
+    end
+    local function hallar(id, x0, y0, x1, y1)
+      for y = y0, y1, 4 do for x = x0, x1, 4 do if Interfaz.consumir(x, y) == id then return x, y end end end
+    end
+    -- alertas: cada invitación sale encima de todo con sus dos botones
+    for _, caso in ipairs({
+      { campo = "invComercio", valor = { de = "Otro", hasta = mundo.tiempo + 20 }, si = "com_acepta", no = "com_rechaza", accion = "comercio_responder" },
+      { campo = "invGremio", valor = { de = "Otro", nombre = "Probados", hasta = mundo.tiempo + 20 }, si = "gr_acepta", no = "gr_rechaza", accion = "gremio_responder" },
+      { campo = "invGrupo", valor = { nombre = "Otro" }, si = "gp_acepta", no = "gp_rechaza", accion = "grupo_responder" },
+    }) do
+      pj.invComercio, pj.invGremio, pj.invGrupo = nil, nil, nil
+      pj[caso.campo] = caso.valor
+      local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+      fallar(errores, "se dibuja la alerta " .. caso.campo, ok, tostring(err))
+      local xs, ys = hallar(caso.si, 300, 200, 1000, 500)
+      local xn, yn = hallar(caso.no, 300, 200, 1000, 500)
+      fallar(errores, "la alerta " .. caso.campo .. " tiene Aceptar y Rechazar", xs and xn)
+      Entrada.manejar(app, caso.si)
+      local l = llamadas[#llamadas]
+      fallar(errores, "Aceptar manda la respuesta", true)
+      local lc = clic(caso.si)
+      fallar(errores, "Aceptar de " .. caso.campo, lc and lc[1] == caso.accion and lc[2].acepta == true)
+      lc = clic(caso.no)
+      fallar(errores, "Rechazar de " .. caso.campo, lc and lc[1] == caso.accion and lc[2].acepta == false)
+      -- la alerta tapa lo de debajo: un clic fuera no atraviesa
+      fallar(errores, "la alerta es modal", Interfaz.consumir(40, 300) == "alerta_fondo")
+    end
+    pj.invComercio, pj.invGremio, pj.invGrupo = nil, nil, nil
+    -- comercio: se abre solo, con lista desplazable, oro validado y bolsa propia
+    pj.oro = 250
+    pj.bolsa = {}
+    for i = 1, 10 do pj.bolsa[i] = { id = i % 2 == 0 and "pocion_vida" or "pocion_mana", cant = i } end
+    local items = {}
+    for i = 1, 14 do items[i] = { id = "pocion_vida", cant = i } end
+    mundo.sesiones = { s1 = { id = "s1", a = pj.id, b = otro.id, oferta = {
+      [pj.id] = { oro = 50, items = items, ok = false },
+      [otro.id] = { oro = 0, items = {}, ok = true },
+    } } }
+    pj.sesion = "s1"
+    mundo.entidades[otro.id] = otro
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el comercio se abre al empezar el trato", ok and Interfaz.panel == "comercio", tostring(err))
+    local bx, by = hallar("com_bolsa_3", 40, 300, 1240, 700)
+    fallar(errores, "tu bolsa está dentro de la ventana", bx ~= nil)
+    local lc = clic("com_bolsa_3")
+    fallar(errores, "clic en la bolsa ofrece el objeto", lc and lc[1] == "comercio_item" and lc[2].i == 3)
+    fallar(errores, "hay botón de quitar por objeto", hallar("com_quitar_1", 40, 150, 900, 450) ~= nil)
+    lc = clic("com_quitar_2")
+    fallar(errores, "quitar devuelve el objeto", lc and lc[1] == "comercio_quitar" and lc[2].i == 2)
+    -- la lista se desplaza con la rueda (14 objetos, caben 6)
+    local primero = Interfaz.comListaA ~= nil
+    fallar(errores, "la lista tiene zona de rueda", primero)
+    Interfaz.comScrollA = 8
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "la lista se dibuja desplazada", ok and Interfaz.comScrollA == 8, tostring(err))
+    fallar(errores, "al bajar aparecen los últimos", hallar("com_quitar_14", 40, 150, 900, 450) ~= nil and hallar("com_quitar_1", 40, 150, 900, 450) == nil)
+    Interfaz.comScrollA = 99
+    pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el desplazamiento tiene tope", Interfaz.comScrollA == 8, tostring(Interfaz.comScrollA))
+    -- oro: solo cifras y nunca más de lo que tienes (250 + 50 ya ofrecidos = 300)
+    Interfaz.foco, Interfaz.comOro = "com_oro", ""
+    for _, c in ipairs({ "a", "-", "9", "9", "9", "9" }) do Entrada.texto(app, c) end
+    fallar(errores, "solo admite cifras y se limita a lo que tienes", Interfaz.comOro == "300", Interfaz.comOro)
+    Interfaz.comOro = "120"
+    llamadas = {}
+    Entrada.tecla(app, "return")
+    local l2 = llamadas[1]
+    fallar(errores, "Intro envía el oro", l2 and l2[1] == "comercio_oro" and l2[2].oro == 120 and Interfaz.foco == nil)
+    Interfaz.comOro = "999999"
+    Entrada.fijarOroComercio(app)
+    fallar(errores, "aunque se fuerce un valor, se recorta al máximo", llamadas[#llamadas][2].oro == 300, tostring(llamadas[#llamadas][2].oro))
+    lc = clic("com_oro_todo")
+    fallar(errores, "el botón Todo ofrece todo", lc and lc[1] == "comercio_oro" and lc[2].oro == 300)
+    -- al terminar el trato se cierra la ventana
+    pj.sesion = nil
+    pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "la ventana se cierra al terminar", Interfaz.panel == nil)
+    Interfaz.panel, Interfaz.foco, Interfaz.comSesionAbierta = nil, nil, nil
+  end)
+  paso("campo de batalla: sprites propios y login", function()
+    local Terreno = require("src.presentacion.render.terreno")
+    local Campo = require("src.presentacion.render.campo")
+    local Objetos = require("src.presentacion.render.objetos")
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.batalla
+    local ok, err = pcall(function()
+      Terreno.dibujar(mapa, 20 * 32, 12 * 32, 1280, 720, 0)
+      Terreno.dibujar(mapa, 60 * 32, 30 * 32, 1280, 720, 0)
+    end)
+    fallar(errores, "el terreno del campo de batalla se dibuja con sus decoraciones", ok, tostring(err))
+    local tipos = {}
+    for _, col in pairs(mapa.decorado) do for _, t in pairs(col) do tipos[t] = (tipos[t] or 0) + 1 end end
+    fallar(errores, "hay variedad de decoración (no se ve plano)", (tipos.piedra or 0) > 0 and (tipos.grieta or 0) > 0 and (tipos.mancha or 0) > 20
+      and (tipos.guijarros or 0) > 10 and (tipos.grietita or 0) > 5 and (tipos.brasas or 0) > 3, require("compartido.infraestructura.log") and "")
+    local props = 0
+    for _, p in ipairs(mapa.props) do
+      if Objetos.personalizados[p.tipo] then
+        props = props + 1
+        local ok2, err2 = pcall(Objetos.personalizados[p.tipo], p, 100, 100)
+        fallar(errores, "el risco se dibuja", ok2, tostring(err2))
+      end
+    end
+    fallar(errores, "hay riscos con sprite propio", props > 10)
+    local ok3, err3 = pcall(function()
+      for _, t in ipairs({ "piedra", "mancha", "brasas", "guijarros", "grietita", "restos", "grieta" }) do
+        Campo.decoracion(mapa, t, 30, 20, 100, 100)
+      end
+    end)
+    fallar(errores, "todas las decoraciones se pintan", ok3, tostring(err3))
+    -- login: se recuerda el usuario y Tab salta de campo
+    local Entrada = require("src.presentacion.entrada")
+    local Ajustes = require("src.presentacion.ajustes")
+    local app = { estado = "menu", cuenta = { modo = "entrar", usuario = "", clave = "", error = "" }, actuar = function() end,
+      sesion = { personajes = {} } }
+    Ajustes.ultimoUsuario = "Recordado"
+    Entrada.manejar(app, "menu_entrar")
+    fallar(errores, "el login recuerda el último usuario y va a la clave", app.cuenta.usuario == "Recordado" and Interfaz.foco == "clave")
+    Entrada.tecla(app, "tab")
+    fallar(errores, "Tab pasa de la clave al usuario", Interfaz.foco == "usuario")
+    Entrada.tecla(app, "tab")
+    fallar(errores, "y de vuelta a la clave", Interfaz.foco == "clave")
+    Entrada.manejar(app, "menu_registro")
+    fallar(errores, "el registro empieza vacío", app.cuenta.usuario == "" and Interfaz.foco == "usuario")
+    Interfaz.foco = nil
+  end)
+  paso("interfaz: poderes de área apuntan con el cursor", function()
+    local Entrada = require("src.presentacion.entrada")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Mago", faccion = "albor", clase = "mago", nivel = 20 })
+    pj.habilidades.meteoro, pj.habilidades.nova = 1, 1
+    local llamadas = {}
+    local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
+    local function slotDe(id) for i, h in ipairs(Datos.barra.mago) do if h == id then return i end end end
+    Entrada.lanzarHabilidad(app, slotDe("nova"))
+    fallar(errores, "la nova no necesita punto", llamadas[1] and llamadas[1][1] == "habilidad" and llamadas[1][2].x == nil)
+    Entrada.lanzarHabilidad(app, slotDe("meteoro"))
+    fallar(errores, "el meteoro se envía con su slot (y el punto si el cursor está en el mundo)", llamadas[2] and llamadas[2][2].slot == slotDe("meteoro"))
+  end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Clic", faccion = "albor", clase = "mago" })
@@ -204,8 +519,12 @@ function Pruebas.correr()
     fallar(errores, "la entrada del chat recibe el clic", Interfaz.consumir(200, 720 - 14) == "foco_chat")
     local lista = {}
     for i = 1, 4 do lista[i] = Interfaz.consumir(1280 - lado + 20 + (i - 1) * 40, 8) end
-    local ayuda = Interfaz.consumir(1280 - lado + 118, 160)
-    fallar(errores, "los botones del panel lateral reciben clics", ayuda ~= nil and ayuda ~= "panel", tostring(ayuda))
+    local ayuda
+    for x = 1280 - lado + 4, 1279, 4 do
+      local id = Interfaz.consumir(x, 160)
+      if id == "hud_ayuda" then ayuda = id end
+    end
+    fallar(errores, "los botones del panel lateral reciben clics", ayuda == "hud_ayuda", tostring(ayuda))
     fallar(errores, "el hueco de la barra de poderes responde", Interfaz.consumir((1280 - lado) / 2 - 175, 720 - consola - 34) == "hab_1")
   end)
   paso("interfaz: alforjas de la montura", function()
@@ -737,6 +1056,20 @@ function Pruebas.tickFoto(app, dt)
   local foto = app.foto
   if not foto then return end
   foto.espera = foto.espera + dt
+  if foto.paso == "batalla" and app.jugador and app.jugador.modo == "batalla" and not foto.vista then
+    -- vista del campo abierto (rocas, crestas, huecos y marcas del suelo) en vez de la base
+    foto.vista = true
+    local r0
+    for _, pr in ipairs(app.mundo.mapas.batalla.props) do
+      if pr.tipo:find("risco") and (not r0 or math.abs(pr.x - 56) + math.abs(pr.y - 26) < math.abs(r0.x - 56) + math.abs(r0.y - 26)) then r0 = pr end
+    end
+    app.jugador.x, app.jugador.y = (r0 and r0.x + 1 or 46) + 0.5, (r0 and r0.y + 4 or 24) + 0.5
+    -- si hay huecos a la vista, mejor enseÃ±arlos
+    local g0
+    for gx, col in pairs(app.mundo.mapas.batalla.decorado) do for gy, t in pairs(col) do if t == "grieta" and (not g0 or math.abs(gx - 46) + math.abs(gy - 26) < math.abs(g0[1] - 46) + math.abs(g0[2] - 26)) then g0 = { gx, gy } end end end
+    if g0 and not os.getenv("DC_FOTO_RISCO") then app.jugador.x, app.jugador.y = g0[1] + 0.5, g0[2] + 4.5 end
+    foto.espera = 0
+  end
   if foto.espera > 0.35 and not app.capturando and foto.paso ~= "fin" then
     app.capturando = true
     local nombre = foto.paso

@@ -8,6 +8,7 @@ local A = {
   alto = 720,
   teclas = { interactuar = "e", bolsa = "i" },
   esperando = nil,
+  ultimoUsuario = "",   -- el último usuario con el que se entró (se recuerda en el formulario)
 }
 
 function A.cargar(aplicar)
@@ -19,6 +20,7 @@ function A.cargar(aplicar)
       if A.volumen < 0 then A.volumen = 0 end
       if A.volumen > 1 then A.volumen = 1 end
       A.completo = t.completo and true or false
+      if type(t.ultimoUsuario) == "string" and #t.ultimoUsuario <= 16 then A.ultimoUsuario = t.ultimoUsuario end
       A.ancho = tonumber(t.ancho) or A.ancho
       A.alto = tonumber(t.alto) or A.alto
       if type(t.teclas) == "table" then
@@ -38,6 +40,7 @@ function A.guardar()
     completo = A.completo,
     ancho = A.ancho,
     alto = A.alto,
+    ultimoUsuario = A.ultimoUsuario,
     teclas = { interactuar = A.teclas.interactuar, bolsa = A.teclas.bolsa },
   }))
 end
