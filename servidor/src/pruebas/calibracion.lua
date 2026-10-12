@@ -13,7 +13,7 @@ local C = {}
 local function monstruoDeNivel(n)
   local mejor
   for _, m in ipairs(Datos.monstruos) do
-    if not m.elite and (not mejor or math.abs(m.nivel - n) < math.abs(mejor.nivel - n)) then mejor = m end
+    if not m.elite and not m.noCampamento and (not mejor or math.abs(m.nivel - n) < math.abs(mejor.nivel - n)) then mejor = m end
   end
   return mejor
 end

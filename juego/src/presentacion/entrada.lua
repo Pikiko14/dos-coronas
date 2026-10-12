@@ -93,6 +93,21 @@ function Entrada.manejar(app, id)
   if id == "hud_arbol" then Interfaz.panel = Interfaz.panel == "arbol" and nil or "arbol" return end
   if id:sub(1, 13) == "masc_adoptar_" then app.actuar("mascota_adoptar", { especie = id:sub(14) }) return end
   if id:sub(1, 9) == "masc_inv_" then app.actuar("mascota_invocar", { idx = tonumber(id:sub(10)) }) return end
+  if id:sub(1, 3) == "gp_" then
+    if id == "gp_acepta" then app.actuar("grupo_responder", { acepta = true })
+    elseif id == "gp_rechaza" then app.actuar("grupo_responder", { acepta = false })
+    elseif id == "gp_salir" then Interfaz.confirmaGrupo = nil app.actuar("grupo_salir")
+    elseif id == "gp_disolver" then
+      if Interfaz.confirmaGrupo then Interfaz.confirmaGrupo = nil app.actuar("grupo_disolver") else Interfaz.confirmaGrupo = true end
+    elseif id == "gp_invitar" then
+      local o = app.jugador and app.jugador.objetivo
+      if o then app.actuar("grupo_invitar", { id = o }) end
+    elseif id:sub(1, 9) == "gp_lider_" then app.actuar("grupo_lider", { id = tonumber(id:sub(10)) })
+    elseif id:sub(1, 7) == "gp_exp_" then app.actuar("grupo_expulsar", { id = tonumber(id:sub(8)) })
+    elseif id:sub(1, 7) == "gp_sel_" then app.actuar("objetivo", { id = tonumber(id:sub(8)), persigue = false })
+    end
+    return
+  end
   if id:sub(1, 10) == "of_elegir_" then app.actuar("oficio_elegir", { job = id:sub(11) }) return end
   if id == "perista_vender" then app.actuar("perista_vender") return end
   if id:sub(1, 6) == "mc_c1_" then app.actuar("mercancia_comprar", { bien = id:sub(7), cant = 1 }) return end
@@ -430,6 +445,7 @@ function Entrada.tecla(app, tecla)
     local idx = p and (p.mascotaActiva or (p.mascotas and #p.mascotas > 0 and 1))
     if idx then app.actuar("mascota_invocar", { idx = idx }) end
   end
+  if tecla == "j" then Interfaz.panel = Interfaz.panel == "grupo" and nil or "grupo" end
   if tecla == "o" then app.actuar("montura_alternar", {}) end
   if tecla == "r" then
     -- robar: el objetivo elegido o la caravana / comerciante más cercano

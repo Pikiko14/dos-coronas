@@ -262,3 +262,12 @@ NUEVO: CASA DE SUBASTAS Y EVENTOS PROGRAMADOS
     batalla por cristales una vez al dia (21:00). Cinco minutos antes hay aviso e inscripcion;
     si falta gente (3 por corona) se cancela. Cada jugador participa una vez por edicion.
     Se configura en servidor/.env (DOSCORONAS_ESTANDARTE_CADA_HORAS, DOSCORONAS_BATALLA_HORA...).
+
+NUEVO: GRUPOS (PARTY)
+  - Hasta 5 jugadores de la misma corona (tecla J, chat /p). El que invita es el lider.
+  - Al matar una criatura, la experiencia se reparte a partes iguales entre los miembros que estan
+    cerca (30 casillas) con un +10% extra sobre el total. El oro, el progreso de encargos y el botin
+    tambien se comparten. Solo (o sin companeros cerca) todo es como siempre.
+  - Cerca de los grupos que cazan en campo abierto salen criaturas "de grupo" (jefes party, con su
+    escolta) y, en grupos grandes, gigantes: mucha vida, mucha experiencia (repartida) y mejor botin.
+  - Todo se ajusta en servidor/.env (DOSCORONAS_GRUPO_*, DOSCORONAS_ENCUENTRO*).

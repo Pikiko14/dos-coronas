@@ -14,6 +14,8 @@ local Caravanas = require("compartido.dominio.caravanas")
 local Monturas = require("compartido.dominio.monturas")
 local Subastas = require("compartido.dominio.subastas")
 local Programacion = require("compartido.dominio.programacion")
+local Grupos = require("compartido.dominio.grupos")
+local Encuentros = require("compartido.dominio.encuentros")
 
 local Mundo = {}
 Mundo.__index = Mundo
@@ -42,6 +44,7 @@ function Mundo.nuevo()
   self.puertos = {}
   self:iniciarGremios()
   self:iniciarSubastas()
+  self:iniciarGrupos()
   self.gloria = { albor = 0, umbra = 0 }
   self.evento = { tipo = nil, hasta = 0 }
   self.instancia = {
@@ -112,6 +115,7 @@ function Mundo:mensaje(canal, de, texto, origen)
     -- los avisos del sistema son de quien los recibe; el chat de gremio, solo de su gremio
     para = (canal == "sistema" and origen) and origen.id or nil,
     gremio = (canal == "gremio" and origen) and origen.gremioId or nil,
+    grupo = (canal == "grupo" and origen) and origen.grupoId or nil,
     x = origen and origen.x or 0, y = origen and origen.y or 0,
     modo = origen and origen.modo or "mundo",
     tiempo = self.tiempo,
@@ -126,6 +130,9 @@ function Mundo:decir(p, texto)
   local canal = "local"
   if texto:sub(1, 3) == "/m " then canal, texto = "mundo", texto:sub(4)
   elseif texto:sub(1, 3) == "/f " then canal, texto = "faccion", texto:sub(4)
+  elseif texto:sub(1, 3) == "/p " then
+    if not p.grupoId then self:mensaje("sistema", "", "No estás en ningún grupo.", p) return end
+    canal, texto = "grupo", texto:sub(4)
   elseif texto:sub(1, 3) == "/g " then
     if not p.gremioId then self:mensaje("sistema", "", "No perteneces a ningÃºn gremio.", p) return end
     canal, texto = "gremio", texto:sub(4)
@@ -242,9 +249,16 @@ function Mundo:crearPersonaje(opts)
   return e
 end
 
-function Mundo:spawnMonstruo(idMon, x, y, hogar)
+function Mundo:spawnMonstruo(idMon, x, y, hogar, nivel)
   local def = Datos.monstruo(idMon)
   if not def then return end
+  if nivel then
+    -- criaturas de grupo: su nivel se fija al aparecer
+    local c = {}
+    for k, v in pairs(def) do c[k] = v end
+    c.nivel = nivel
+    def = c
+  end
   local st = Datos.statsMonstruo(def)
   local e = {
     id = self:idNuevo(),
@@ -270,6 +284,7 @@ function Mundo:spawnMonstruo(idMon, x, y, hogar)
     sensor = math.random(),
     respawn = 0,
     golpe = def.golpe, poderes = def.poderes, bandido = def.bandido,
+    categoria = def.categoria, xpMul = def.xpMul,
   }
   -- que no lancen todos sus poderes a la vez al aparecer
   for _, id in ipairs(def.poderes or {}) do
@@ -760,14 +775,22 @@ function Mundo:soltarBotin(m, asesino)
   local loot = {
     id = self:idNuevo(), kind = "loot", nombre = "Botín",
     x = m.x, y = m.y,     modo = m.modo, vivo = true, z = m.z or 0,
-    oro = m.oro, items = {}, dueno = asesino.id, hasta = self.tiempo + 45,
+    oro = m.oro, items = {}, dueno = asesino.id, grupo = asesino.grupoId, hasta = self.tiempo + 45,
   }
   for _, it in ipairs(Balance.tirar(m)) do
     loot.items[#loot.items + 1] = it
   end
-  if math.random() < 0.12 then
+  if m.categoria then
+    -- criaturas de grupo: mejor botín (siempre polvo arcano)
+    loot.items[#loot.items + 1] = { id = "polvo_arcano", cant = math.random(3, 6) }
+    if m.categoria == "gigante" and math.random() < 0.5 then
+      loot.items[#loot.items + 1] = { id = Items.aleatorio(Datos, asesino.clase or "guerrero", math.min(8, Items.tierPara(m.nivel) + 1)), cant = 1 }
+    end
+  end
+  if math.random() < (m.categoria == "gigante" and 1 or m.categoria == "party" and 0.6 or 0.12) then
     local tier = Items.tierPara(m.nivel)
-    if tier > 1 and math.random() < 0.35 then tier = tier - 1 end
+    if m.categoria then tier = math.min(8, tier + 1)
+    elseif tier > 1 and math.random() < 0.35 then tier = tier - 1 end
     local id = Items.aleatorio(Datos, asesino.clase or "guerrero", tier)
     if Datos.item(id) then loot.items[#loot.items + 1] = { id = id, cant = 1 } end
   end
@@ -800,8 +823,10 @@ function Mundo:morir(e, origen)
     self:caeBuscado(e, origen)
   end
   if e.kind == "monstruo" then
-    if origen and (origen.kind == "jugador" or origen.kind == "bot") then
-      local exp = Balance.xpMonstruo(origen.nivel or 1, e.nivel or 1, e.elite)
+    if origen and origen.kind == "jugador" and origen.grupoId and self:recompensaGrupo(e, origen) then
+      -- recompensa repartida entre el grupo
+    elseif origen and (origen.kind == "jugador" or origen.kind == "bot") then
+      local exp = Balance.xpMonstruo(origen.nivel or 1, e.nivel or 1, e.elite) * (e.xpMul or 1)
       if exp > 0 then
         exp = math.floor(exp * self:bonoGremio(origen) + 0.5)
         self:ganarXp(origen, exp)
@@ -1206,7 +1231,8 @@ function Mundo:actualizarJugador(e, dt)
     end
   end
   for _, o in pairs(self.entidades) do
-    if o.kind == "loot" and o.vivo and self:mismoLugar(e, o) and (not o.dueno or o.dueno == e.id or self.tiempo > (o.hasta or 0) - 20) then
+    if o.kind == "loot" and o.vivo and self:mismoLugar(e, o)
+      and (not o.dueno or o.dueno == e.id or (o.grupo and e.grupoId == o.grupo) or self.tiempo > (o.hasta or 0) - 20) then
       if Util.dist(e.x, e.y, o.x, o.y) < 0.8 and e.kind == "jugador" then self:recoger(e, o) end
     end
   end
@@ -2293,6 +2319,8 @@ function Mundo:actualizar(dt)
   self:actualizarCaravanas(dt)
   self:actualizarSubastas(dt)
   self:actualizarProgramacion(dt)
+  self:actualizarGrupos(dt)
+  self:actualizarEncuentros(dt)
   self._presionT = (self._presionT or 0) + dt
   if self._presionT >= 5 then
     self:recuperarPresion(self._presionT)
@@ -2411,6 +2439,7 @@ function Mundo:compactar(e)
     burbuja = e.burbuja,
     est = self:estadosVisibles(e), especie = e.especie, gremio = e.gremioEtiqueta,
     montado = e.montado, buscado = (e.kind == "jugador" and self:esBuscado(e)) and true or nil,
+    categoria = e.categoria, enGrupo = (e.kind == "jugador" and e.grupoId) and true or nil,
     -- proyectiles: de qué tipo son y a dónde van
     tipo = e.kind == "proyectil" and e.tipo or nil,
     tx = e.kind == "proyectil" and e.tx or nil, ty = e.kind == "proyectil" and e.ty or nil,
@@ -2448,6 +2477,10 @@ function Mundo:foto(pid)
       estadosResta = {},
     }
     if p.gremioId and self.gremios[p.gremioId] then tu.gremioNombre = self.gremios[p.gremioId].nombre end
+    tu.grupo = self:resumenGrupo(p)
+    if p.invitacionGrupo and p.invitacionGrupo.hasta > self.tiempo then
+      tu.invGrupo = { nombre = p.invitacionGrupo.nombre }
+    end
     if p.job then
       tu.caravanas = self:caravanasVisibles()
       if p.job == "hunter" then tu.buscados = self:buscadosVisibles(p) end
@@ -2461,6 +2494,7 @@ function Mundo:foto(pid)
     local visible = true
     if m.canal == "sistema" and m.para and m.para ~= pid then visible = false end
     if m.canal == "gremio" and (not p or m.gremio ~= p.gremioId) then visible = false end
+    if m.canal == "grupo" and (not p or not p.grupoId or m.grupo ~= p.grupoId) then visible = false end
     if visible then
       table.insert(msgs, 1, m)
       if #msgs >= 13 then break end
@@ -2655,6 +2689,7 @@ function Mundo:accion(pid, nombre, datos)
   if nombre == "comercio_ok" then self:aceptarComercio(p) end
   if nombre == "comercio_no" then self:cancelarComercio(p) return { panel = nil } end
   if nombre:sub(1, 7) == "gremio_" and p then return self:accionGremio(p, nombre, datos or {}) end
+  if nombre:sub(1, 6) == "grupo_" and p then return self:accionGrupo(p, nombre, datos or {}) end
   if nombre:sub(1, 8) == "subasta_" and p then return self:accionSubasta(p, nombre, datos or {}) end
   if p and (nombre:sub(1, 7) == "oficio_" or nombre:sub(1, 10) == "mercancia_" or nombre:sub(1, 8) == "montura_"
     or nombre == "robar" or nombre == "perista_vender" or nombre == "escoltar") then
@@ -2672,5 +2707,7 @@ Caravanas.instalar(Mundo)
 Monturas.instalar(Mundo)
 Subastas.instalar(Mundo)
 Programacion.instalar(Mundo)
+Grupos.instalar(Mundo)
+Encuentros.instalar(Mundo)
 
 return Mundo

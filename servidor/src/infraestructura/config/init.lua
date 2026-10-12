@@ -104,5 +104,13 @@ return {
     buscadoFalloSeg = numero("DOSCORONAS_LADRON_BUSCADO_FALLO_SEG", 120, 10, 86400),
     -- mascotas
     mascotaDescanso = numero("DOSCORONAS_MASCOTA_DESCANSO_SEG", 30, 0, 3600),
+    -- grupos y encuentros de grupo
+    grupoMax = entero("DOSCORONAS_GRUPO_MAX", 5, 2, 5),
+    grupoBonoXp = numero("DOSCORONAS_GRUPO_BONO_XP", 0.10, 0, 5),
+    grupoDistancia = numero("DOSCORONAS_GRUPO_DISTANCIA", 30, 5, 200),
+    encuentrosActivos = texto("DOSCORONAS_ENCUENTROS_GRUPO", "si"):lower() ~= "no",
+    encuentroIntervalo = numero("DOSCORONAS_ENCUENTRO_INTERVALO_SEG", 150, 10, 86400),
+    encuentroDuracion = numero("DOSCORONAS_ENCUENTRO_DURACION_SEG", 300, 30, 7200),
+    encuentroMax = entero("DOSCORONAS_ENCUENTRO_MAX", 10, 0, 200),
   },
 }

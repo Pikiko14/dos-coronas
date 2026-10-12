@@ -548,8 +548,22 @@ local function avanzarFoto(app)
       },
     }
   elseif foto.paso == "subastas" then
+    foto.paso = "grupo"
+    Interfaz.panel = "grupo"
+    local j = app.jugador
+    j.grupo = {
+      lider = j.id, max = 5, bono = 0.1,
+      miembros = {
+        { id = j.id, nombre = "Liora", nivel = 14, clase = "clerigo", hp = 142, hpMax = 142, x = 10, y = 10, cerca = true },
+        { id = 77, nombre = "Kael", nivel = 13, clase = "guerrero", hp = 210, hpMax = 340, x = 12, y = 10, cerca = true },
+        { id = 78, nombre = "Mira", nivel = 15, clase = "mago", hp = 120, hpMax = 150, x = 400, y = 300, cerca = false },
+      },
+    }
+    j.invGrupo = { nombre = "Dante" }
+  elseif foto.paso == "grupo" then
     foto.paso = "batalla"
     Interfaz.panel = nil
+    app.jugador.grupo, app.jugador.invGrupo = nil, nil
     local j = app.jugador
     j.montado, j.job, j.oficios, j.buscadoResta = nil, nil, nil, nil
     Interfaz.datosGremio = nil
@@ -599,7 +613,7 @@ function Pruebas.tickFoto(app, dt)
   if foto.espera > 0.35 and not app.capturando and foto.paso ~= "fin" then
     app.capturando = true
     local nombre = foto.paso
-    if nombre ~= "equipo" and nombre ~= "arbol" and nombre ~= "mercado" and nombre ~= "encantar" and nombre ~= "mascotas" and nombre ~= "gremio" and nombre ~= "mapa" and nombre ~= "oficios" and nombre ~= "mercancias" and nombre ~= "establo" and nombre ~= "subastas" then Interfaz.panel = nil end
+    if nombre ~= "equipo" and nombre ~= "arbol" and nombre ~= "mercado" and nombre ~= "encantar" and nombre ~= "mascotas" and nombre ~= "gremio" and nombre ~= "mapa" and nombre ~= "oficios" and nombre ~= "mercancias" and nombre ~= "establo" and nombre ~= "subastas" and nombre ~= "grupo" then Interfaz.panel = nil end
     Log.info(string.format("foto %s fps=%d panel=%s", nombre, love.timer.getFPS(), tostring(Interfaz.panel)))
     love.graphics.captureScreenshot(function(img)
       local fd = img:encode("png")

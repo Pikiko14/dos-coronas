@@ -275,6 +275,26 @@ for _, b in ipairs({
   D.monstruos[#D.monstruos + 1] = b
 end
 
+-- Criaturas de grupo: solo aparecen cerca de grupos de jugadores (ver encuentros.lua). Las "party" son
+-- jefes fuertes pensados para 2 o 3 y los "gigantes" para grupos grandes. Su nivel se fija al aparecer.
+for _, g in ipairs({
+  { id = "jefe_manada", nombre = "Jefe de la manada", categoria = "party", hpMul = 3.5, atkMul = 1.5, xpMul = 4,
+    golpe = { { tipo = "sangrar", prob = 0.30 } }, desc = "Guía a la manada y no caza solo." },
+  { id = "sectario_mayor", nombre = "Sectario mayor", categoria = "party", magico = true, hpMul = 3.2, atkMul = 1.6, xpMul = 4,
+    poderes = { "drenaje", "maldicion" }, desc = "Su culto pide sacrificios en grupo." },
+  { id = "reina_avispa", nombre = "Reina de las avispas", categoria = "party", vuela = true, hpMul = 3.3, atkMul = 1.5, xpMul = 4,
+    golpe = { { tipo = "veneno", prob = 0.40 } }, poderes = { "maldicion" }, desc = "Su enjambre cubre el cielo." },
+  { id = "oso_gigante", nombre = "Oso gigante", categoria = "gigante", tam = 2, paso = 2, porDir = 2, hpMul = 4.5, atkMul = 1.9, xpMul = 10, velocidad = 2.4,
+    golpe = { { tipo = "sangrar", prob = 0.30 }, { tipo = "aturdir", prob = 0.15 } }, poderes = { "pisoton" }, desc = "Del tamaño de una casa." },
+  { id = "coloso", nombre = "Coloso de piedra", categoria = "gigante", tam = 2, paso = 2, porDir = 2, hpMul = 5, atkMul = 1.8, xpMul = 10, velocidad = 2.2,
+    golpe = { { tipo = "lentitud", prob = 0.30 } }, poderes = { "pisoton" }, desc = "El suelo tiembla a su paso." },
+  { id = "gigante_guerra", nombre = "Gigante de guerra", categoria = "gigante", tam = 2, paso = 2, porDir = 2, hpMul = 4.5, atkMul = 2.0, xpMul = 10, velocidad = 2.5,
+    golpe = { { tipo = "aturdir", prob = 0.20 }, { tipo = "sangrar", prob = 0.25 } }, poderes = { "pisoton" }, desc = "Bajó de las montañas buscando pelea." },
+}) do
+  g.nivel, g.hoja, g.base, g.cuadros, g.agresivo, g.noCampamento = 10, "creatures_01", 0, 4, true, true
+  D.monstruos[#D.monstruos + 1] = g
+end
+
 -- Criaturas que pegan con magia: tienen más ataque y defensa mágicos que físicos.
 local MAGICOS = {
   espectro = true, alma = true, alma_verde = true, alma_hielo = true, cultista = true,
@@ -334,11 +354,11 @@ function D.statsMonstruo(m)
   local curva = n * n
   -- Un monstruo físico pega con atk y se defiende sobre todo con def; uno mágico,
   -- al revés. Lo que no es lo suyo vale el 30% (ataque) o el 50% (defensa).
-  local atk0 = math.floor((4 + n * 1.45 + curva * 0.035) * D.MONSTRUO_ATK * (m.elite and 2.1 or 1))
+  local atk0 = math.floor((4 + n * 1.45 + curva * 0.035) * D.MONSTRUO_ATK * (m.elite and 2.1 or 1) * (m.atkMul or 1))
   local def0 = math.floor((n * 0.9 + curva * 0.02) * (m.elite and 1.4 or 1))
   local magico = m.magico and true or false
   return {
-    hp = math.floor((28 + n * 16 + curva * 0.85) * D.MONSTRUO_HP * elite * (m.elite and 1 or grande)),
+    hp = math.floor((28 + n * 16 + curva * 0.85) * D.MONSTRUO_HP * elite * (m.elite and 1 or grande) * (m.hpMul or 1)),
     atk = magico and math.floor(atk0 * 0.3) or atk0,
     matk = magico and atk0 or math.floor(atk0 * 0.3),
     def = magico and math.floor(def0 * 0.5) or def0,
@@ -347,7 +367,7 @@ function D.statsMonstruo(m)
     xp = Balance.xpMonstruo(n, n, m.elite),
     oro = math.floor((4 + n * 3 + curva * 0.08) * (m.elite and 4 or 1)),
     rango = m.vuela and 5.5 or (magico and 4.5 or 1.25),
-    velocidad = m.elite and 3.4 or (2.5 + math.min(1.6, n * 0.055)),
+    velocidad = m.velocidad or (m.elite and 3.4 or (2.5 + math.min(1.6, n * 0.055))),
   }
 end
 

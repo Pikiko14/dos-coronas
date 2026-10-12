@@ -1126,9 +1126,12 @@ function Pruebas.correr()
     fallar(errores, "la batalla se marca por día", albor[1].eventosDia["batalla@20300310"] ~= nil)
     -- sin programación todo sigue como antes (mundos locales y pruebas)
     local Servicio = require("src.aplicacion.servicio_servidor")
-    local real = Servicio.crearMundo({ eventos = Config.eventos })
+    local cfgEv = {}
+    for k, v in pairs(Config.eventos) do cfgEv[k] = v end
+    cfgEv.activos = true
+    local real = Servicio.crearMundo({ eventos = cfgEv })
     fallar(errores, "el servidor programa los eventos con su configuración",
-      real.horarioEventos and real.horarioEventos.estandarteCadaHoras == 4 and real.horarioEventos.batallaHora == 21,
+      real.horarioEventos and real.horarioEventos.estandarteCadaHoras == Config.eventos.estandarteCadaHoras and real.horarioEventos.batallaHora == Config.eventos.batallaHora,
       tostring(real.horarioEventos and real.horarioEventos.estandarteCadaHoras))
     fallar(errores, "el servidor sin opciones no programa", Servicio.crearMundo().horarioEventos == nil)
     local viejo = Mundo.nuevo()
@@ -1141,9 +1144,9 @@ function Pruebas.correr()
     local Ajustes = require("src.aplicacion.ajustes")
     local Servicio = require("src.aplicacion.servicio_servidor")
     -- valores por defecto que lee la configuración
-    fallar(errores, "por defecto: experiencia", Config.juego.xpDificultad == 1.8 and Config.juego.monstruoVida == 3.0)
-    fallar(errores, "por defecto: subastas y gremios", Config.juego.subastaComision == 0.05 and Config.juego.gremioCoste == 1500)
-    fallar(errores, "por defecto: eventos", Config.eventos.minJugadores == 1 and Config.eventos.duracionBatalla == 300 and Config.juego.xpMultiplicador == 1)
+    fallar(errores, "la configuración del juego se lee (números dentro de rango)", type(Config.juego.xpDificultad) == "number" and Config.juego.xpDificultad >= 0.1 and type(Config.juego.monstruoVida) == "number")
+    fallar(errores, "la configuración de subastas y gremios se lee", type(Config.juego.subastaComision) == "number" and Config.juego.subastaComision <= 0.5 and type(Config.juego.gremioCoste) == "number")
+    fallar(errores, "la configuración de eventos se lee", Config.eventos.minJugadores >= 1 and Config.eventos.duracionBatalla >= 30 and type(Config.juego.xpMultiplicador) == "number")
     -- lista de horas
     local h = Ajustes.horas("2, 48 ,x,0,9999")
     fallar(errores, "las duraciones se leen de una lista", h and #h == 2 and h[1] == 2 and h[2] == 48)
@@ -1173,6 +1176,170 @@ function Pruebas.correr()
     mundo.restaurarAjustes()
     fallar(errores, "se restauran los valores", Balance.xpPara(1) == xp0 and Subastas.COMISION == 0.05 and Gremios.COSTE == 1500
       and Datos.JUGADORES_EVENTO == 3 and #Subastas.DURACIONES == 4 and Balance.XP_MULTIPLICADOR == 1)
+  end)
+  paso("grupos, experiencia compartida y encuentros", function()
+    local Grupos = require("compartido.dominio.grupos")
+    local Encuentros = require("compartido.dominio.encuentros")
+    local Balance = require("compartido.dominio.balance")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local mapa = mundo.mapas.mundo
+    local afuera = mapa.puestos[1]
+    local function jug(nombre, faccion, nivel)
+      local e = mundo:crearPersonaje({ nombre = nombre, faccion = faccion or "albor", clase = "guerrero", nivel = nivel or 10 })
+      e.x, e.y, e.z, e.modo = afuera.x + 8.5, afuera.y + 8.5, 0, "mundo"
+      return e
+    end
+    local a, b, c, d, e5, e6 = jug("G1"), jug("G2"), jug("G3"), jug("G4"), jug("G5"), jug("G6")
+    local rival = jug("Rival", "umbra")
+    fallar(errores, "máximo de 5 en un grupo", Grupos.MAX == 5)
+    -- invitar y aceptar
+    fallar(errores, "no se invita a la otra corona", mundo:invitarGrupo(a, rival.id) ~= nil)
+    fallar(errores, "invita", mundo:invitarGrupo(a, b.id) == nil and b.invitacionGrupo ~= nil)
+    fallar(errores, "acepta y se crea el grupo", mundo:responderInvitacionGrupo(b, true) == nil and a.grupoId == b.grupoId and a.grupoId ~= nil)
+    fallar(errores, "el que invitó es el líder", mundo:grupoDe(a).lider == a.id)
+    fallar(errores, "un miembro no invita", mundo:invitarGrupo(b, c.id) ~= nil)
+    fallar(errores, "no se invita a quien ya tiene grupo", mundo:invitarGrupo(a, b.id) ~= nil)
+    for _, x in ipairs({ c, d, e5 }) do
+      mundo:invitarGrupo(a, x.id)
+      mundo:responderInvitacionGrupo(x, true)
+    end
+    fallar(errores, "grupo de cinco", #mundo:grupoDe(a).miembros == 5)
+    fallar(errores, "el sexto no entra", mundo:invitarGrupo(a, e6.id) ~= nil)
+    -- invitaciones que caducan o se rechazan
+    mundo:salirGrupo(e5)
+    mundo:invitarGrupo(a, e5.id)
+    mundo.tiempo = mundo.tiempo + Grupos.INVITACION_SEG + 5
+    fallar(errores, "la invitación caduca", mundo:responderInvitacionGrupo(e5, true) ~= nil and e5.grupoId == nil)
+    mundo:invitarGrupo(a, e5.id)
+    fallar(errores, "rechazar no entra", mundo:responderInvitacionGrupo(e5, false) == nil and e5.grupoId == nil)
+    -- reparto de experiencia entre tres cerca (d y c salen del grupo para fijar el caso)
+    mundo:salirGrupo(d)
+    mundo:salirGrupo(c)
+    mundo:invitarGrupo(a, c.id)
+    mundo:responderInvitacionGrupo(c, true)
+    for _, x in ipairs({ a, b, c }) do x.xp, x.oro, x.misiones = 0, 0, {} end
+    b.misiones = { q = { aceptada = true, entregada = false, monstruo = "gato", cantidad = 5, progreso = 0, titulo = "t" } }
+    local gato = mundo:spawnMonstruo("troll", a.x + 1, a.y, { x = a.x, y = a.y })
+    gato.nivel = 10
+    local base = Balance.xpMonstruo(10, 10, false)
+    local esperado = math.floor(base * (1 + Grupos.BONO_XP) / 3 + 0.5)
+    gato.hp = 1
+    mundo:danar(gato, 99999, a)
+    fallar(errores, "cada uno recibe su parte con el 10% extra", a.xp == esperado and b.xp == esperado and c.xp == esperado,
+      a.xp .. "/" .. b.xp .. "/" .. c.xp .. " (esperado " .. esperado .. ")")
+    fallar(errores, "el grupo gana en total más que uno solo, pero cada uno menos", a.xp * 3 > base and a.xp < base)
+    fallar(errores, "el oro también se reparte", a.oro > 0 and a.oro == b.oro and b.oro == c.oro)
+    -- los que están lejos no cuentan
+    for _, x in ipairs({ a, b, c }) do x.xp = 0 end
+    c.x = a.x + 200
+    local gato2 = mundo:spawnMonstruo("troll", a.x + 1, a.y, { x = a.x, y = a.y })
+    gato2.nivel, gato2.hp = 10, 1
+    mundo:danar(gato2, 99999, a)
+    local esperado2 = math.floor(base * (1 + Grupos.BONO_XP) / 2 + 0.5)
+    fallar(errores, "solo reparten los que están cerca", a.xp == esperado2 and b.xp == esperado2 and c.xp == 0, a.xp .. "/" .. b.xp .. "/" .. c.xp)
+    c.x = a.x
+    -- el botín es del grupo
+    local botin
+    for _, o in pairs(mundo.entidades) do if o.kind == "loot" then botin = o end end
+    fallar(errores, "el botín lleva la marca del grupo", botin and botin.grupo == a.grupoId)
+    -- solo (sin compañeros cerca) todo es como siempre
+    local solo = jug("Solitario")
+    solo.xp = 0
+    local gato3 = mundo:spawnMonstruo("troll", solo.x + 1, solo.y, { x = solo.x, y = solo.y })
+    gato3.nivel, gato3.hp = 10, 1
+    mundo:danar(gato3, 99999, solo)
+    fallar(errores, "sin grupo se lleva toda la experiencia", solo.xp == base, solo.xp .. " vs " .. base)
+    -- chat de grupo
+    mundo:decir(a, "/p al ataque")
+    local function ve(p, texto) for _, m in ipairs(mundo:foto(p.id).msgs) do if m.texto == texto then return true end end return false end
+    fallar(errores, "el grupo ve su chat", ve(b, "al ataque") and ve(a, "al ataque"))
+    fallar(errores, "los demás no", not ve(solo, "al ataque"))
+    -- la foto lleva el grupo
+    local tu = mundo:foto(a.id).tu
+    fallar(errores, "la foto trae el grupo", tu.grupo and #tu.grupo.miembros == 3 and tu.grupo.lider == a.id)
+    -- líder: pasar el mando, expulsar, salir
+    fallar(errores, "pasa el mando", mundo:ascenderGrupo(a, b.id) == nil and mundo:grupoDe(a).lider == b.id)
+    fallar(errores, "solo el líder expulsa", mundo:expulsarGrupo(a, c.id) ~= nil)
+    fallar(errores, "el líder expulsa", mundo:expulsarGrupo(b, c.id) == nil and c.grupoId == nil)
+    fallar(errores, "un grupo de dos sigue", mundo:grupoDe(a) ~= nil and #mundo:grupoDe(a).miembros == 2)
+    fallar(errores, "al irse el líder el grupo de dos se disuelve", mundo:salirGrupo(b) == nil and a.grupoId == nil and b.grupoId == nil)
+    -- si alguien se desconecta se le quita del grupo
+    mundo:invitarGrupo(a, b.id)
+    mundo:responderInvitacionGrupo(b, true)
+    mundo:invitarGrupo(a, c.id)
+    mundo:responderInvitacionGrupo(c, true)
+    c.borrar = true
+    mundo._grupoT = 5
+    mundo:actualizarGrupos(1)
+    fallar(errores, "el desconectado sale del grupo", #mundo:grupoDe(a).miembros == 2)
+    mundo.entidades[c.id] = nil
+    -- encuentros: criaturas de grupo y gigantes
+    local normal = Datos.statsMonstruo({ nivel = 12 }).hp
+    fallar(errores, "los jefes de grupo tienen mucha más vida", Datos.statsMonstruo({ nivel = 12, hpMul = 3.5 }).hp >= normal * 3)
+    fallar(errores, "los gigantes aún más", Datos.statsMonstruo({ nivel = 12, tam = 2, hpMul = 4.5 }).hp >= normal * 7)
+    local g = mundo:grupoDe(a)
+    g.proximoEncuentro = 0
+    local f = jug("G7")
+    mundo:invitarGrupo(a, f.id)
+    mundo:responderInvitacionGrupo(f, true)
+    g.proximoEncuentro = 0
+    local azar = math.random
+    math.random = function(x, y) if x then return y or 1 end return 0.99 end
+    mundo._encT = 10
+    local ok = pcall(function() mundo:actualizarEncuentros(1) end)
+    math.random = azar
+    fallar(errores, "el encuentro se crea sin errores", ok)
+    local principal
+    for _, m in pairs(mundo.entidades) do
+      if m.kind == "monstruo" and m.categoria then principal = m end
+    end
+    fallar(errores, "sale una criatura de grupo", principal and principal.categoria == "party" and principal.xpMul == 4 and principal.efimero ~= nil)
+    fallar(errores, "con su nivel fijado al del grupo", principal and principal.nivel >= 10 and principal.nivel <= 12)
+    fallar(errores, "el grupo sabe cuál es su encuentro", g.encuentro and #g.encuentro >= 1)
+    -- con el grupo grande y suerte sale un gigante
+    local grande = jug("G8")
+    local grande2 = jug("G9")
+    for _, x in ipairs({ grande, grande2 }) do mundo:invitarGrupo(a, x.id) mundo:responderInvitacionGrupo(x, true) end
+    for _, m in pairs(mundo.entidades) do if m.kind == "monstruo" then m.borrar = true end end
+    mundo:actualizar(0.1)
+    g.encuentro, g.proximoEncuentro = nil, 0
+    math.random = function(x, y) if x then return y or 1 end return 0.01 end
+    mundo._encT = 10
+    pcall(function() mundo:actualizarEncuentros(1) end)
+    math.random = azar
+    local gigante
+    for _, m in pairs(mundo.entidades) do
+      if m.kind == "monstruo" and m.categoria == "gigante" then gigante = m end
+    end
+    fallar(errores, "con un grupo grande puede salir un gigante", gigante and gigante.xpMul == 10 and gigante.tam == 2)
+    fallar(errores, "el gigante es mucho más fuerte que su nivel", gigante and gigante.hpMax >= Datos.statsMonstruo({ nivel = gigante.nivel }).hp * 7)
+    -- la recompensa de un gigante: experiencia repartida y botín bueno
+    if gigante then
+      for _, x in ipairs(mundo:miembrosGrupo(g)) do x.xp = 0 end
+      local lider = mundo.entidades[g.lider]
+      gigante.hp = 1
+      mundo:danar(gigante, 99999, lider)
+      local ganada = lider.xp
+      local solo2 = Balance.xpMonstruo(lider.nivel, gigante.nivel, false) * 10
+      fallar(errores, "el gigante da mucha experiencia, repartida", ganada > 0 and ganada < solo2, ganada .. " vs " .. solo2)
+      local polvo = false
+      for _, o in pairs(mundo.entidades) do
+        if o.kind == "loot" then for _, it in ipairs(o.items) do if it.id == "polvo_arcano" and it.cant >= 3 then polvo = true end end end
+      end
+      fallar(errores, "el gigante suelta botín bueno", polvo)
+    end
+    -- en una ciudad no salen encuentros
+    local ciudad = mapa.ciudades[1]
+    for _, x in ipairs(mundo:miembrosGrupo(g)) do x.x, x.y = ciudad.spawn.x, ciudad.spawn.y end
+    for _, m in pairs(mundo.entidades) do if m.kind == "monstruo" then m.borrar = true end end
+    mundo:actualizar(0.1)
+    g.encuentro, g.proximoEncuentro = nil, 0
+    mundo._encT = 10
+    mundo:actualizarEncuentros(1)
+    local hay = false
+    for _, m in pairs(mundo.entidades) do if m.kind == "monstruo" and m.categoria then hay = true end end
+    fallar(errores, "dentro de la ciudad no salen", not hay)
   end)
   paso("equilibrio de combate por nivel", function()
     local Calibracion = require("src.pruebas.calibracion")

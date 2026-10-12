@@ -67,6 +67,12 @@ P.monturas = {
 }
 
 P.monstruos = {
+  jefe_manada = { hoja = "Characters/Animal.png", idx = 6, tinte = { 1, 0.55, 0.5 } },
+  sectario_mayor = { hoja = "Characters/Evil.png", idx = 5, tinte = { 0.85, 0.7, 1 } },
+  reina_avispa = { hoja = "Characters/Monster3.png", idx = 2, tinte = { 1, 0.9, 0.5 } },
+  oso_gigante = { hoja = "Characters/$BigMonster1.png", fila = 2, tinte = { 0.85, 0.7, 0.55 } },
+  coloso = { hoja = "Characters/$BigMonster1.png", fila = 1, tinte = { 0.7, 0.75, 0.85 } },
+  gigante_guerra = { hoja = "Characters/$BigMonster2.png", fila = 2, tinte = { 1, 0.7, 0.7 } },
   bandido = { hoja = "Characters/People7.png", idx = 1, tinte = { 0.85, 0.75, 0.75 } },
   asaltante = { hoja = "Characters/Actor3.png", idx = 6 },
   saqueador = { hoja = "Characters/Evil.png", idx = 6, tinte = { 0.9, 0.8, 0.8 } },

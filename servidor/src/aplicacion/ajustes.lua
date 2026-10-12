@@ -10,6 +10,8 @@ local Caravanas = require("compartido.dominio.caravanas")
 local Oficios = require("compartido.dominio.oficios")
 local Ley = require("compartido.dominio.ley")
 local Mascotas = require("compartido.dominio.mascotas")
+local Grupos = require("compartido.dominio.grupos")
+local Encuentros = require("compartido.dominio.encuentros")
 
 local A = {}
 
@@ -63,6 +65,13 @@ function A.aplicar(cfg)
   fijar(Ley, "BUSCADO_SEG", j.buscadoSeg, "búsqueda tras un robo")
   fijar(Ley, "BUSCADO_FALLO_SEG", j.buscadoFalloSeg, "búsqueda tras un robo fallido")
   fijar(Mascotas, "DESCANSO_SEG", j.mascotaDescanso, "descanso de mascotas")
+  fijar(Grupos, "MAX", j.grupoMax, "miembros por grupo")
+  fijar(Grupos, "BONO_XP", j.grupoBonoXp, "bono de experiencia de grupo")
+  fijar(Grupos, "DISTANCIA", j.grupoDistancia, "distancia de reparto del grupo")
+  fijar(Encuentros, "ACTIVO", j.encuentrosActivos, "encuentros de grupo activos")
+  fijar(Encuentros, "INTERVALO", j.encuentroIntervalo, "intervalo de encuentros")
+  fijar(Encuentros, "DURACION", j.encuentroDuracion, "duración de encuentros")
+  fijar(Encuentros, "MAX_A_LA_VEZ", j.encuentroMax, "encuentros a la vez")
   local function restaurar()
     for i = #guardado, 1, -1 do
       local g = guardado[i]

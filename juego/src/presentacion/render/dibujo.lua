@@ -97,6 +97,8 @@ local function placa(e, px, py, alto, jugador, tiempo)
   elseif e.kind == "monstruo" then color = e.elite and { 1, 0.8, 0.2 } or { 1, 0.62, 0.45 } end
   if e.kind == "caravana" then color = { 0.95, 0.8, 0.45 } end
   local nombre = e.nombre or ""
+  if e.categoria == "party" then color, nombre = { 0.8, 0.55, 1 }, nombre .. " (Grupo)"
+  elseif e.categoria == "gigante" then color, nombre = { 1, 0.35, 0.3 }, nombre .. " (Gigante)" end
   if e.buscado then
     -- los ladrones buscados se ven de rojo y marcados
     color = { 1, 0.3, 0.25 }

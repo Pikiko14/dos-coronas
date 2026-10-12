@@ -421,6 +421,17 @@ function I.hud(mundo, p, w, h)
   end
   -- oficio, carga, montura y búsqueda
   I.estadoOficio(mundo, p, 8, 8)
+  -- marco del grupo y su invitación
+  I.estadoGrupo(mundo, p, vw - 188, 34)
+  if p.invGrupo then
+    local bx, by = vw / 2 - 210, 112 + (p.invGremio and 52 or 0)
+    marco(bx, by, 420, 46, true)
+    love.graphics.setFont(f)
+    love.graphics.setColor(0.95, 0.9, 0.7)
+    love.graphics.printf(p.invGrupo.nombre .. " te invita a su grupo.", bx + 8, by + 4, 404, "center")
+    I.boton(bx + 100, by + 22, 90, 22, "Aceptar", "gp_acepta")
+    I.boton(bx + 230, by + 22, 90, 22, "Rechazar", "gp_rechaza")
+  end
   -- invitación a un gremio
   if p.invGremio then
     local bx, by = vw / 2 - 210, 112
@@ -454,6 +465,7 @@ function I.hud(mundo, p, w, h)
   elseif I.panel == "mercancias" then I.panelMercancias(mundo, p, vw, h)
   elseif I.panel == "establo" then I.panelEstablo(mundo, p, vw, h)
   elseif I.panel == "subastas" then I.panelSubastas(mundo, p, vw, h)
+  elseif I.panel == "grupo" then I.panelGrupo(mundo, p, vw, h)
   elseif I.panel == "mercado" then I.panelMercado(p, vw, h)
   elseif I.panel == "comercio" then I.panelComercio(mundo, p, vw, h)
   elseif I.panel == "guerra" then I.panelGuerra(mundo, p, vw, h)
@@ -487,7 +499,7 @@ end
 
 local COLOR_CANAL = {
   sistema = { 1, 0.85, 0.4 }, mundo = { 1, 0.62, 0.3 }, faccion = { 0.75, 0.6, 1 },
-  ["local"] = { 0.95, 0.95, 0.9 }, gremio = { 0.45, 0.95, 0.55 },
+  ["local"] = { 0.95, 0.95, 0.9 }, gremio = { 0.45, 0.95, 0.55 }, grupo = { 0.55, 0.8, 1 },
 }
 
 function I.consola(mundo, p, x, y, w, h)
@@ -496,7 +508,7 @@ function I.consola(mundo, p, x, y, w, h)
   -- El fondo se registra primero: lo que se registra después (pestañas, entrada
   -- de chat) queda por encima y recibe los clics.
   I.registrar(x, y, w, h, "panel")
-  local canales = { { "todo", "Todo" }, { "mundo", "Mundo" }, { "faccion", "Facción" }, { "sistema", "Sistema" }, { "gremio", "Gremio" } }
+  local canales = { { "todo", "Todo" }, { "mundo", "Mundo" }, { "faccion", "Facción" }, { "sistema", "Sistema" }, { "gremio", "Gremio" }, { "grupo", "Grupo" } }
   for i, c in ipairs(canales) do
     local bx = x + 8 + (i - 1) * 76
     local activo = I.canal == c[1]
@@ -518,7 +530,7 @@ function I.consola(mundo, p, x, y, w, h)
   for _, m in ipairs(mundo.mensajes) do
     local ver = m.canal == "sistema" or m.canal == "mundo"
     if m.canal == "faccion" and m.faccion == p.faccion then ver = true end
-    if m.canal == "gremio" then ver = true end -- el servidor solo manda los de tu gremio
+    if m.canal == "gremio" or m.canal == "grupo" then ver = true end -- el servidor solo manda los tuyos
     if m.canal == "local" and m.modo == p.modo then ver = true end
     if I.canal ~= "todo" and m.canal ~= I.canal then ver = false end
     if ver then lineas[#lineas + 1] = m end
@@ -531,7 +543,7 @@ function I.consola(mundo, p, x, y, w, h)
     local m = lineas[i]
     local c = COLOR_CANAL[m.canal] or COLOR_CANAL["local"]
     local pref = m.canal == "sistema" and "" or (m.de .. ": ")
-    local etiqueta = m.canal == "sistema" and "" or ((m.canal == "mundo" and "[Mundo] ") or (m.canal == "faccion" and "[Facción] ") or (m.canal == "gremio" and "[Gremio] ") or "")
+    local etiqueta = m.canal == "sistema" and "" or ((m.canal == "mundo" and "[Mundo] ") or (m.canal == "faccion" and "[Facción] ") or (m.canal == "gremio" and "[Gremio] ") or (m.canal == "grupo" and "[Grupo] ") or "")
     local _, partes = f:getWrap(etiqueta .. pref .. m.texto, w - 16)
     local alto = #partes * fh
     ly = ly - alto
@@ -544,7 +556,7 @@ function I.consola(mundo, p, x, y, w, h)
   love.graphics.rectangle("fill", x + 6, ey, w - 12, entrada - 4, 2, 2)
   love.graphics.setColor(0.4, 0.33, 0.2)
   love.graphics.rectangle("line", x + 6.5, ey + 0.5, w - 13, entrada - 5, 2, 2)
-  local muestra = I.foco == "chat" and I.texto or "Enter para hablar  ·  /m mundo  ·  /f facción  ·  /g gremio"
+  local muestra = I.foco == "chat" and I.texto or "Enter para hablar  ·  /m mundo  ·  /f facción  ·  /g gremio  ·  /p grupo"
   love.graphics.setColor(I.foco == "chat" and 1 or 0.6, I.foco == "chat" and 0.95 or 0.58, I.foco == "chat" and 0.8 or 0.5)
   love.graphics.print(muestra .. (I.foco == "chat" and "_" or ""), x + 12, ey + 2)
   I.registrar(x + 6, ey, w - 12, entrada - 4, "foco_chat")
@@ -623,6 +635,18 @@ local function minimapaLocal(mundo, p, x, y, lado)
   for _, n in ipairs(mundo.mapas.mundo.npcsMapa or {}) do
     local ex, ey = x + (n.x - x0) * k, y + (n.y - y0) * k
     if ex > x + 2 and ex < x + lado - 2 and ey > y + 2 and ey < y + lado - 2 then I.iconoNpc(n.rol, ex, ey, 2.4) end
+  end
+  -- compañeros de grupo (se ven aunque estén lejos)
+  for _, m in ipairs(p.grupo and p.grupo.miembros or {}) do
+    if m.id ~= p.id then
+      local ex, ey = x + (m.x - x0) * k, y + (m.y - y0) * k
+      if ex > x + 2 and ex < x + lado - 2 and ey > y + 2 and ey < y + lado - 2 then
+        love.graphics.setColor(0, 0, 0, 0.9)
+        love.graphics.circle("fill", ex, ey, 4)
+        love.graphics.setColor(0.35, 0.85, 1)
+        love.graphics.circle("fill", ex, ey, 2.8)
+      end
+    end
   end
   -- caravanas en marcha y ladrones buscados (los oficios los rastrean)
   for _, c in ipairs(p.caravanas or {}) do
@@ -1522,6 +1546,77 @@ function I.panelSubastas(mundo, p, w, h)
       love.graphics.print("Mínimo: " .. sel.minima, px + 236, yb - 18)
     end
   end
+end
+
+-- ---------------------------------------------------------------------------------------
+-- Grupo (party)
+-- ---------------------------------------------------------------------------------------
+-- Marco con los miembros del grupo en una esquina: vida de cada uno y clic para elegirlo (curas).
+function I.estadoGrupo(mundo, p, x, y)
+  local g = p.grupo
+  if not g then return end
+  local f = pequena()
+  love.graphics.setFont(f)
+  local alto = #g.miembros * 30 + 22
+  marco(x, y, 180, alto, true)
+  texto("Grupo (" .. #g.miembros .. "/" .. g.max .. ")", x + 8, y + 3, { 0.55, 0.8, 1 }, f)
+  for i, m in ipairs(g.miembros) do
+    local yy = y + 20 + (i - 1) * 30
+    local lider = m.id == g.lider
+    local color = m.cerca and { 0.95, 0.92, 0.8 } or { 0.55, 0.55, 0.5 }
+    texto((lider and "[L] " or "") .. m.nombre .. "  nv " .. m.nivel, x + 8, yy, color, f)
+    local frac = math.max(0, math.min(1, m.hp / math.max(1, m.hpMax)))
+    love.graphics.setColor(0, 0, 0, 0.75)
+    love.graphics.rectangle("fill", x + 8, yy + 15, 164, 8)
+    local cr, cg, cb = Dibujo.colorVida(frac)
+    love.graphics.setColor(cr, cg, cb, m.cerca and 1 or 0.5)
+    love.graphics.rectangle("fill", x + 8, yy + 15, 164 * frac, 8)
+    if p.objetivo == m.id then
+      love.graphics.setColor(1, 0.25, 0.2, 0.9)
+      love.graphics.rectangle("line", x + 4, yy - 2, 172, 28, 3, 3)
+    end
+    I.registrar(x + 4, yy - 2, 172, 28, "gp_sel_" .. m.id)
+  end
+end
+
+function I.panelGrupo(mundo, p, w, h)
+  local px, py, pw, ph = w / 2 - 280, 70, 560, 440
+  caja(px, py, pw, ph, "Grupo")
+  I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
+  local g = p.grupo
+  love.graphics.setColor(0.85, 0.82, 0.7)
+  love.graphics.printf("Hasta " .. (g and g.max or 5) .. " jugadores de tu corona. Al derrotar una criatura, la experiencia (con un " ..
+    math.floor(((g and g.bono) or 0.1) * 100) .. "% extra) se reparte entre los miembros que estén cerca. Cerca de un grupo salen criaturas de grupo y gigantes. Chat: /p.",
+    px + 14, py + 40, pw - 28, "left")
+  local objetivo = p.objetivo and mundo.entidades[p.objetivo]
+  local valido = objetivo and objetivo.kind == "jugador" and not objetivo.enGrupo and objetivo.faccion == p.faccion
+  local esLider = g and g.lider == p.id
+  if not g or esLider then
+    I.boton(px + 14, py + 112, 300, 32, valido and ("Invitar a " .. objetivo.nombre) or "Invitar (elige un jugador)", "gp_invitar", valido and true or false)
+  end
+  if not g then
+    love.graphics.setColor(0.7, 0.68, 0.6)
+    love.graphics.print("No estás en ningún grupo.", px + 14, py + 160)
+    return
+  end
+  for i, m in ipairs(g.miembros) do
+    local y = py + 156 + (i - 1) * 40
+    love.graphics.setColor(0.13, 0.11, 0.14)
+    love.graphics.rectangle("fill", px + 14, y, pw - 28, 34, 4, 4)
+    love.graphics.setColor(m.cerca and 0.95 or 0.6, m.cerca and 0.9 or 0.6, m.cerca and 0.75 or 0.55)
+    love.graphics.print((m.id == g.lider and "[L] " or "") .. m.nombre .. "   nv " .. m.nivel .. "   " .. (Datos.clases[m.clase] and Datos.clases[m.clase].nombre or ""), px + 26, y + 9)
+    love.graphics.setColor(0.6, 0.85, 0.6)
+    love.graphics.print(m.hp .. "/" .. m.hpMax, px + 300, y + 9)
+    love.graphics.setColor(m.cerca and 0.5 or 0.9, m.cerca and 0.85 or 0.6, m.cerca and 0.5 or 0.4)
+    love.graphics.print(m.cerca and "cerca" or "lejos", px + 370, y + 9)
+    if esLider and m.id ~= p.id then
+      I.boton(px + pw - 28 - 160, y + 4, 76, 26, "Mando", "gp_lider_" .. m.id)
+      I.boton(px + pw - 28 - 80, y + 4, 80, 26, "Expulsar", "gp_exp_" .. m.id)
+    end
+  end
+  local yb = py + ph - 52
+  I.boton(px + 14, yb, 120, 34, "Salir", "gp_salir")
+  if esLider then I.boton(px + 144, yb, 140, 34, I.confirmaGrupo and "¿Seguro?" or "Disolver", "gp_disolver") end
 end
 
 function I.panelMascotas(mundo, p, w, h)
