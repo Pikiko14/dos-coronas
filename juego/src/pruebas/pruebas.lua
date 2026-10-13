@@ -188,7 +188,8 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local Mall = require("compartido.dominio.mall")
     local todas = true
     for _, id in ipairs(Mall.ORDEN_ADDONS) do
-      todas = todas and P.skins[id] ~= nil and require("src.presentacion.render.arte").img(P.skins[id].hoja) ~= nil
+      local def = P.skins[id]
+      todas = todas and def ~= nil and ((def.generada and require("src.presentacion.render.propias").hoja(def.generada) ~= nil) or (def.hoja and require("src.presentacion.render.arte").img(def.hoja) ~= nil))
     end
     fallar(errores, "todos los addons tienen sprite", todas)
     local base = { kind = "jugador", clase = "mago", faccion = "albor" }
@@ -491,20 +492,54 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     fallar(errores, "el registro empieza vacío", app.cuenta.usuario == "" and Interfaz.foco == "usuario")
     Interfaz.foco = nil
   end)
-  paso("interfaz: poderes de área apuntan con el cursor", function()
+  paso("interfaz: los poderes de Ã¡rea se apuntan en la zona habilitada", function()
     local Entrada = require("src.presentacion.entrada")
+    local Dibujo = require("src.presentacion.render.dibujo")
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Mago", faccion = "albor", clase = "mago", nivel = 20 })
     pj.habilidades.meteoro, pj.habilidades.nova = 1, 1
+    pj.mp, pj.mpMax, pj.cds = 9999, 9999, {}
     local llamadas = {}
     local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
     local function slotDe(id) for i, h in ipairs(Datos.barra.mago) do if h == id then return i end end end
     Entrada.lanzarHabilidad(app, slotDe("nova"))
-    fallar(errores, "la nova no necesita punto", llamadas[1] and llamadas[1][1] == "habilidad" and llamadas[1][2].x == nil)
+    fallar(errores, "la nova se lanza al momento", llamadas[1] and llamadas[1][1] == "habilidad" and llamadas[1][2].x == nil and app.apuntando == nil)
+    llamadas = {}
     Entrada.lanzarHabilidad(app, slotDe("meteoro"))
-    fallar(errores, "el meteoro se envía con su slot (y el punto si el cursor está en el mundo)", llamadas[2] and llamadas[2][2].slot == slotDe("meteoro"))
-  end)
-  paso("skins de jinetes con casillas de 48 px", function()
+    fallar(errores, "el meteoro entra en modo apuntar sin lanzarse", #llamadas == 0 and app.apuntando and app.apuntando.slot == slotDe("meteoro")
+      and app.apuntando.rango > 5 and app.apuntando.aoe > 2)
+    -- la zona habilitada y el Ã¡rea bajo el cursor se dibujan
+    Dibujo.apuntando = app.apuntando
+    local cam = Dibujo.camara(pj, 1, mundo:mapaDe(pj))
+    local mx, my = 300, 300
+    local ok, err = pcall(Dibujo.escena, mundo, pj, cam, mx, my)
+    fallar(errores, "la zona de apuntado se dibuja", ok, tostring(err))
+    -- el punto de impacto nunca sale de la zona habilitada
+    local ix, iy, fuera = Dibujo.puntoApuntado(app.apuntando, pj, cam, 5, 5)
+    local d = math.sqrt((ix - pj.x) ^ 2 + (iy - pj.y) ^ 2)
+    fallar(errores, "el punto de impacto se limita al alcance", d <= app.apuntando.rango + 0.01, tostring(d))
+    -- clic izquierdo lanza el poder; clic derecho o Esc lo cancelan
+    Entrada.clicMundo(app, 300, 300, 1)
+    local l = llamadas[#llamadas]
+    fallar(errores, "el clic lanza el poder con su punto", l and l[1] == "habilidad" and l[2].slot == slotDe("meteoro") and app.apuntando == nil)
+    llamadas = {}
+    Entrada.lanzarHabilidad(app, slotDe("meteoro"))
+    Entrada.clicMundo(app, 300, 300, 2)
+    fallar(errores, "el clic derecho cancela", app.apuntando == nil and #llamadas == 0)
+    Entrada.lanzarHabilidad(app, slotDe("meteoro"))
+    Entrada.tecla(app, "escape")
+    fallar(errores, "Esc cancela", app.apuntando == nil and #llamadas == 0)
+    -- pulsar otra vez la tecla lo lanza
+    Entrada.lanzarHabilidad(app, slotDe("meteoro"))
+    Entrada.lanzarHabilidad(app, slotDe("meteoro"))
+    fallar(errores, "pulsar de nuevo el poder lo lanza", llamadas[1] and llamadas[1][1] == "habilidad" and app.apuntando == nil)
+    -- en enfriamiento no se entra en modo apuntar (el servidor avisarÃ¡)
+    llamadas = {}
+    pj.cds[Datos.barra.mago[slotDe("meteoro")]] = mundo.tiempo + 20
+    Entrada.lanzarHabilidad(app, slotDe("meteoro"))
+    fallar(errores, "en enfriamiento no se apunta", app.apuntando == nil and llamadas[1] and llamadas[1][1] == "habilidad")
+    Dibujo.apuntando = nil
+  end)  paso("skins de jinetes con casillas de 48 px", function()
     local P = require("src.presentacion.render.personajes")
     local Arte = require("src.presentacion.render.arte")
     local grandes = 0
@@ -538,6 +573,100 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       end
     end
     fallar(errores, "cada criatura se dibuja", #faltan == 0, table.concat(faltan, ", "))
+  end)
+  paso("interfaz: los botones del mall mandan la acción correcta", function()
+    local Entrada = require("src.presentacion.entrada")
+    local Mall = require("compartido.dominio.mall")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Compra", faccion = "albor", clase = "guerrero", nivel = 10 })
+    local llamadas = {}
+    local app = { jugador = pj, mundo = mundo, estado = "juego", actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
+    local function clic(id) llamadas = {} Entrada.manejar(app, id) return llamadas[1] end
+    local l = clic("mall_buy_pergamino_atk")
+    fallar(errores, "comprar un objeto", l and l[1] == "mall_comprar" and l[2].id == "pergamino_atk")
+    l = clic("mall_ad_buy_skin_rey")
+    fallar(errores, "comprar un addon manda mall_addon_comprar con su id", l and l[1] == "mall_addon_comprar" and l[2].id == "skin_rey", l and (l[1] .. "/" .. tostring(l[2].id)) or "nada")
+    l = clic("mall_ad_skin_rey")
+    fallar(errores, "poner o quitar un addon manda mall_addon", l and l[1] == "mall_addon" and l[2].id == "skin_rey")
+    local bien = true
+    for _, id in ipairs(Mall.ORDEN_ADDONS) do
+      local c = clic("mall_ad_buy_" .. id)
+      if not (c and c[1] == "mall_addon_comprar" and c[2].id == id) or #id > 24 then bien = false end
+    end
+    fallar(errores, "cada addon se compra desde su botón con el id completo", bien)
+  end)
+  paso("skins exclusivas dibujadas por código", function()
+    local P = require("src.presentacion.render.personajes")
+    local Propias = require("src.presentacion.render.propias")
+    local Mall = require("compartido.dominio.mall")
+    for _, id in ipairs({ "hada_cristal", "caballero_solar" }) do
+      local h = Propias.hoja(id)
+      fallar(errores, id .. ": la hoja es de 96x128", h and h:getWidth() == 96 and h:getHeight() == 128)
+      -- tiene dibujo en cada uno de los 12 cuadros (4 direcciones x 3 pasos)
+      local datos = h:newImageData()
+      local vacios = 0
+      for fila = 0, 3 do
+        for col = 0, 2 do
+          local n = 0
+          for y = fila * 32, fila * 32 + 31 do
+            for x = col * 32, col * 32 + 31 do
+              local _, _, _, a = datos:getPixel(x, y)
+              if a > 0.5 then n = n + 1 end
+            end
+          end
+          if n < 150 then vacios = vacios + 1 end
+        end
+      end
+      fallar(errores, id .. ": los 12 cuadros tienen personaje", vacios == 0, vacios .. " vacíos")
+    end
+    for _, id in ipairs({ "skin_hada_cristal", "skin_caballero_solar" }) do
+      fallar(errores, id .. " está en el mall con precio", Mall.ADDONS[id] and Mall.ADDONS[id].precio > 0 and P.skins[id] and P.skins[id].generada ~= nil)
+      for dir = 1, 4 do
+        local ok, err = pcall(P.dibujar, P.skins[id], dir, dir % 2 == 0, 0.3, 100, 100)
+        fallar(errores, id .. " se dibuja en la dirección " .. dir, ok, tostring(err))
+      end
+    end
+    local primeras = Mall.ORDEN_ADDONS[1] == "skin_hada_cristal" and Mall.ORDEN_ADDONS[2] == "skin_caballero_solar"
+    fallar(errores, "salen las primeras de la lista", primeras)
+  end)
+  paso("interfaz: pestaña de forja y botón de forjar", function()
+    local Entrada = require("src.presentacion.entrada")
+    local Mall = require("compartido.dominio.mall")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Forja", faccion = "albor", clase = "guerrero", nivel = 12 })
+    pj.mall = { monedas = 500, addons = {} }
+    local llamadas = {}
+    local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
+    Interfaz.escala = 1
+    Entrada.manejar(app, "mall_tab_forja")
+    fallar(errores, "la pestaña Forja se abre", Interfaz.mallTab == "forja")
+    Interfaz.panel = "mall"
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el mall muestra la forja", ok, tostring(err))
+    local x1 = nil
+    for y = 100, 400, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "mall_buy_pergamino_forja" then x1 = x end end end
+    fallar(errores, "se puede comprar el pergamino de forja", x1 ~= nil)
+    local x2 = nil
+    for y = 100, 600, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "mall_buy_pergamino_atk" then x2 = x end end end
+    fallar(errores, "los pergaminos de atributos no están en la forja", x2 == nil)
+    Entrada.manejar(app, "mall_tab_obj")
+    pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    local x3 = nil
+    for y = 100, 600, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "mall_buy_pergamino_forja" then x3 = x end end end
+    fallar(errores, "ni los de forja en Objetos", x3 == nil)
+    -- Maestro de encantos: aparece el botón con el pergamino en la bolsa
+    pj.bolsa = { { id = "pergamino_forja", cant = 2 } }
+    Interfaz.panel, Interfaz.encSel = "encantar", "equipo_arma"
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el panel de encantos se dibuja con pergaminos", ok, tostring(err))
+    local hallado
+    for y = 300, 650, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "enc_forja_pergamino_forja" then hallado = true end end end
+    fallar(errores, "hay botón de forjar", hallado == true)
+    llamadas = {}
+    Entrada.manejar(app, "enc_forja_pergamino_forja")
+    local l = llamadas[1]
+    fallar(errores, "forjar manda la pieza y el pergamino", l and l[1] == "encantar" and l[2].donde == "equipo" and l[2].ref == "arma" and l[2].pergamino == "pergamino_forja")
+    Interfaz.panel, Interfaz.mallTab = nil, "objetos"
   end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()

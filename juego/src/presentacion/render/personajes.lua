@@ -44,6 +44,8 @@ P.skins = {
   skin_fuego = { hoja = "Characters/Actor1.png", idx = 0 },
   skin_marea = { hoja = "Characters/Actor1.png", idx = 3 },
   skin_sombra = { hoja = "Characters/Actor1.png", idx = 6 },
+  skin_hada_cristal = { generada = "hada_cristal", idx = 0 },
+  skin_caballero_solar = { generada = "caballero_solar", idx = 0 },
   skin_marino = { hoja = "Characters/People8.png", idx = 0 },
   skin_plata = { hoja = "Characters/People8.png", idx = 1 },
   skin_chico = { hoja = "Characters/People8.png", idx = 2 },
@@ -192,7 +194,8 @@ end
 
 -- Dibuja la criatura con los pies en (sx, sy). mov: está andando; reloj: segundos.
 function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa)
-  local img = Arte.img(def.hoja)
+  -- las skins propias del mall se dibujan por cÃ³digo (render/propias.lua)
+  local img = def.generada and require("src.presentacion.render.propias").hoja(def.generada) or Arte.img(def.hoja)
   local col = mov and CICLO[(math.floor(reloj * 8) % 4) + 1] or 1
   local c = tinte or def.tinte
   if c then love.graphics.setColor(c[1], c[2], c[3], alfa or 1)

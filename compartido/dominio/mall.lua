@@ -26,6 +26,12 @@ M.ORDEN_BONOS = { "exp", "str", "atk", "def", "int", "mdef", "matk", "mvel" }
 
 -- Objetos del mall (se registran en Datos.items). precio = en monedas.
 M.OBJETOS = {
+  -- Pergaminos de forja: se usan en el Maestro de encantos y suben una pieza +1 SIN fallar y sin
+  -- gastar oro ni polvo, hasta el nivel indicado (forja). Van en su pestaÃ±a del mall.
+  { id = "pergamino_forja", forja = 6, nombre = "Pergamino de forja", precio = 60, sprite = 697, color = { 1, 0.62, 0.2 },
+    texto = "Forja una pieza +1 sin fallar ni gastar oro ni polvo (hasta +6). Se usa en el Maestro de encantos." },
+  { id = "pergamino_forja_sagrado", forja = 10, nombre = "Pergamino de forja sagrado", precio = 160, sprite = 697, color = { 1, 0.9, 0.35 },
+    texto = "Forja una pieza +1 sin fallar ni gastar oro ni polvo (hasta +10). Se usa en el Maestro de encantos." },
   { id = "tarjeta_exp", bono = "exp", nombre = "Tarjeta de experiencia doble", precio = 50, sprite = 699,
     texto = "Durante 1 hora ganas el doble de experiencia." },
   { id = "pergamino_str", bono = "str", nombre = "Pergamino de fuerza", precio = 25, sprite = 697,
@@ -48,6 +54,9 @@ M.OBJETOS = {
 -- activo (el oficio activo usa su propio sprite). La imagen de cada uno está en el cliente
 -- (render/personajes.lua, P.skins).
 M.ADDONS = {
+  -- exclusivas: dibujadas por código para el juego (render/propias.lua)
+  skin_hada_cristal = { nombre = "Hada de cristal", precio = 700, desc = "Exclusiva: alas de hielo, melena celeste y tiara de cristal." },
+  skin_caballero_solar = { nombre = "Caballero solar", precio = 700, desc = "Exclusiva: armadura dorada, penacho rojo y emblema de sol." },
   skin_rey = { nombre = "Rey", precio = 300, desc = "Corona, capa y porte de monarca." },
   skin_princesa = { nombre = "Princesa", precio = 300, desc = "Cabello dorado y vestido real." },
   skin_explorador = { nombre = "Explorador", precio = 200, desc = "Pelo verde y ropa de viaje." },
@@ -63,7 +72,7 @@ M.ADDONS = {
   skin_reno = { nombre = "Reno", precio = 400, desc = "Un reno de las nieves." },
   skin_ayudante = { nombre = "Ayudante navideña", precio = 350, desc = "Gorro de duende y melena rubia." },
 }
-M.ORDEN_ADDONS = { "skin_rey", "skin_princesa", "skin_explorador", "skin_fuego", "skin_marea", "skin_sombra",
+M.ORDEN_ADDONS = { "skin_hada_cristal", "skin_caballero_solar", "skin_rey", "skin_princesa", "skin_explorador", "skin_fuego", "skin_marea", "skin_sombra",
   "skin_marino", "skin_plata", "skin_chico", "skin_coletas", "skin_noel", "skin_noel_saco", "skin_reno", "skin_ayudante" }
 
 -- Más skins (hojas Spiritual, Riding y Evil): id, nombre, precio, descripción.

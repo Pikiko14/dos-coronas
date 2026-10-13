@@ -2011,6 +2011,7 @@ function Mundo:equipar(p, index)
   if not slot then return "No hay objeto." end
   local it = Datos.item(slot.id)
   if not it or not it.hueco then
+    if it and it.forja then return "Usa este pergamino en el Maestro de encantos: elige la pieza y pulsa Forjar." end
     if it and it.bono then return self:usarBono(p, index) end
     if it and (it.cura or it.mana) then return self:usarPocionId(p, slot.id) end
     return "No se puede equipar."
@@ -2075,7 +2076,8 @@ end
 
 -- Intenta subir un nivel de encantamiento a una pieza, equipada (donde = "equipo", ref = hueco)
 -- o en la bolsa (donde = "bolsa", ref = posición). Devuelve un texto de error o nil.
-function Mundo:encantar(p, donde, ref)
+-- pergamino: id de un pergamino de forja del mall (sube +1 seguro, sin coste, hasta su tope).
+function Mundo:encantar(p, donde, ref, pergamino)
   local id, enc
   if donde == "equipo" then
     id, enc = p.equipo[ref], p.encantos and p.encantos[ref]
@@ -2087,6 +2089,25 @@ function Mundo:encantar(p, donde, ref)
   if not Encanto.encantable(it) then return "Eso no se puede encantar." end
   enc = enc or 0
   if enc >= Encanto.MAX then return "Ya está al máximo (+" .. Encanto.MAX .. ")." end
+  if pergamino then
+    local sc = Datos.item(pergamino)
+    if not sc or not sc.forja then return "Ese no es un pergamino de forja." end
+    if self:contarItem(p, pergamino) < 1 then return "No tienes ese pergamino." end
+    if enc >= sc.forja then return "Este pergamino solo forja hasta +" .. sc.forja .. "." end
+    self:gastarItem(p, pergamino, 1)
+    local nuevo = enc + 1
+    self:mensaje("sistema", "", it.nombre .. " se forja a +" .. nuevo .. ".", p)
+    self:numero(p, "+" .. nuevo, { 1, 0.85, 0.4 })
+    if donde == "equipo" then
+      p.encantos = p.encantos or {}
+      p.encantos[ref] = nuevo
+      self:recalcular(p)
+    else
+      p.bolsa[tonumber(ref)].enc = nuevo
+    end
+    self:marcarProgreso(p)
+    return nil
+  end
   local coste = Encanto.coste(it, enc)
   if (p.oro or 0) < coste.oro then return "Necesitas " .. coste.oro .. " de oro." end
   if self:contarItem(p, Encanto.MATERIAL) < coste.polvo then
@@ -2947,7 +2968,7 @@ function Mundo:accion(pid, nombre, datos)
   end
   if nombre == "encantar" then
     local err
-    if self:npcCerca(p, "encantador") then err = self:encantar(p, datos.donde, datos.ref)
+    if self:npcCerca(p, "encantador") then err = self:encantar(p, datos.donde, datos.ref, datos.pergamino)
     else err = "Acércate al maestro de encantos." end
     if err then self:mensaje("sistema", "", err, p) end
   end

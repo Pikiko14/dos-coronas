@@ -446,8 +446,8 @@ add({ id = "cristal", nombre = "Cristal enemigo", apila = 20, precio = 1, hoja =
 add({ id = "polvo_arcano", nombre = "Polvo arcano", apila = 99, precio = 6, hoja = "equipment", sprite = 699, texto = "Material para encantar el equipo." })
 -- Objetos del Item Mall (se pagan con monedas especiales, ver dominio/mall.lua)
 for _, o in ipairs(Mall.OBJETOS) do
-  add({ id = o.id, nombre = o.nombre, apila = 20, mall = true, monedas = o.precio, bono = o.bono,
-    hoja = "equipment", sprite = o.sprite, texto = o.texto, tinte = Mall.BONOS[o.bono].color })
+  add({ id = o.id, nombre = o.nombre, apila = 20, mall = true, monedas = o.precio, bono = o.bono, forja = o.forja,
+    hoja = "equipment", sprite = o.sprite, texto = o.texto, tinte = o.color or (o.bono and Mall.BONOS[o.bono].color) })
 end
 
 D.muebles = {

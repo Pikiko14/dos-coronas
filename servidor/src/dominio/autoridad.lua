@@ -145,11 +145,11 @@ function A.aceptar(mundo, pj, nombre, datos)
   if nombre == "encantar" then
     if datos.donde == "equipo" then
       if type(datos.ref) ~= "string" or #datos.ref > 12 then return false end
-      return true, { donde = "equipo", ref = datos.ref }
+      return true, { donde = "equipo", ref = datos.ref, pergamino = (type(datos.pergamino) == "string" and #datos.pergamino <= 24) and datos.pergamino or nil }
     elseif datos.donde == "bolsa" then
       local i = tonumber(datos.ref)
       if not i or i < 1 or i > Datos.BOLSA then return false end
-      return true, { donde = "bolsa", ref = math.floor(i) }
+      return true, { donde = "bolsa", ref = math.floor(i), pergamino = (type(datos.pergamino) == "string" and #datos.pergamino <= 24) and datos.pergamino or nil }
     end
     return false
   end

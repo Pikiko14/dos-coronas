@@ -475,3 +475,7 @@ CRIATURAS CADA DOS NIVELES, CAMPAMENTOS Y MONEDAS
     por tick) y las criaturas lejos de todo jugador (45 casillas) se actualizan 1 vez por segundo.
   - Monedas del mall: cada personaje recibe 5000 UNA vez (los nuevos y los ya existentes la primera vez
     que entran tras esta version). No poder comprar addons = 0 monedas.
+
+== Novedades: skins exclusivas, forja y AoE apuntado ==
+- Item Mall: pestana "Forja" con pergaminos de forja; pestana "Addons" con dos skins exclusivas (Hada de Cristal y Caballero Solar), dibujadas por codigo sobre sprites del pack (juego/src/presentacion/render/propias.lua).
+- Habilidades en area (meteoro, lluvia de flechas, etc.): se apuntan con el raton dentro de la zona habilitada y se lanzan con clic.

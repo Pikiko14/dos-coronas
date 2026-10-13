@@ -197,6 +197,12 @@ function Entrada.manejar(app, id)
   if id:sub(1, 8) == "gr_sube_" then app.actuar("gremio_rango", { id = tonumber(id:sub(9)), sube = true }) return end
   if id:sub(1, 8) == "gr_baja_" then app.actuar("gremio_rango", { id = tonumber(id:sub(9)), sube = false }) return end
   if id:sub(1, 7) == "gr_exp_" then app.actuar("gremio_expulsar", { id = tonumber(id:sub(8)) }) return end
+  if id:sub(1, 10) == "enc_forja_" then
+    -- forjar con un pergamino del mall: sube la pieza +1 sin fallar
+    local donde, ref = tostring(Interfaz.encSel or ""):match("^(%a+)_(.+)$")
+    if donde then app.actuar("encantar", { donde = donde, ref = ref, pergamino = id:sub(11) }) end
+    return
+  end
   if id == "enc_go" then
     local donde, ref = tostring(Interfaz.encSel or ""):match("^(%a+)_(.+)$")
     if donde then app.actuar("encantar", { donde = donde, ref = ref }) end
@@ -304,9 +310,10 @@ function Entrada.manejar(app, id)
   if id == "mapa_area" then Interfaz.mapaArrastre = true return end
   if id == "menu_mall" then Interfaz.panel = "mall" return end
   if id == "mall_tab_obj" then Interfaz.mallTab, Interfaz.mallScroll = "objetos", 0 return end
+  if id == "mall_tab_forja" then Interfaz.mallTab, Interfaz.mallScroll = "forja", 0 return end
   if id == "mall_tab_add" then Interfaz.mallTab, Interfaz.mallScroll = "addons", 0 return end
   if id:sub(1, 9) == "mall_buy_" then app.actuar("mall_comprar", { id = id:sub(10) }) return end
-  if id:sub(1, 13) == "mall_ad_buy_" then app.actuar("mall_addon_comprar", { id = id:sub(14) }) return end
+  if id:sub(1, 12) == "mall_ad_buy_" then app.actuar("mall_addon_comprar", { id = id:sub(13) }) return end
   if id:sub(1, 8) == "mall_ad_" then app.actuar("mall_addon", { id = id:sub(9) }) return end
   if id == "menu_oficio" then app.actuar("oficio_alternar", {}) Interfaz.panel = nil return end
   if id == "hud_montura" then app.actuar("montura_alternar", {}) return end
@@ -346,27 +353,54 @@ end
 
 -- Lanza un poder. Los de área sobre un punto (meteoro) caen donde está el cursor si está sobre el
 -- mundo; si no, sobre el objetivo elegido (el servidor limita el alcance).
+-- Los poderes de area sobre un punto (meteoro, lluvia de flechas) se apuntan: al pulsar su tecla se
+-- muestra la zona habilitada (su alcance) y el area de impacto bajo el cursor; un clic (o pulsar la
+-- tecla otra vez) lo lanza ahi, y Esc o clic derecho lo cancela.
 function Entrada.lanzarHabilidad(app, slot)
   local p, mundo = app.jugador, app.mundo
   local datos = { slot = slot }
+  local h
   if p and mundo and slot then
     local Arbol = require("compartido.dominio.arbol")
     local idh = Datos.barra[p.clase] and Datos.barra[p.clase][slot]
-    local h = idh and Arbol.efectiva(idh, math.max(1, Arbol.rango(p, idh) or 1))
-    if h and h.tipo == "punto" then
-      local mx, my = love.mouse.getPosition()
-      if Dibujo.dentroVista(mx, my) then
-        local cam = Dibujo.camara(p, app.zoom, mundo:mapaDe(p))
-        datos.x, datos.y = Dibujo.pantallaAMundo(cam, mx, my)
+    h = idh and Arbol.efectiva(idh, math.max(1, Arbol.rango(p, idh) or 1))
+    if h and h.tipo == "punto" and idh then
+      local lista = (p.cds[idh] or 0) > mundo.tiempo or (p.mp or 0) < (h.mana or 0) or Arbol.rango(p, idh) < 1
+      if not lista then
+        if app.apuntando and app.apuntando.slot == slot then
+          Entrada.lanzarApuntado(app)
+        else
+          app.apuntando = { slot = slot, rango = h.rango, aoe = h.aoe, nombre = h.nombre }
+        end
+        return
       end
     end
   end
+  app.apuntando = nil
+  app.actuar("habilidad", datos)
+end
+
+-- Lanza el poder que se esta apuntando sobre el punto del cursor (dentro de su alcance).
+function Entrada.lanzarApuntado(app, mx, my)
+  local ap, p, mundo = app.apuntando, app.jugador, app.mundo
+  if not ap or not p or not mundo then app.apuntando = nil return end
+  local datos = { slot = ap.slot }
+  if not mx then mx, my = love.mouse.getPosition() end
+  if Dibujo.dentroVista(mx, my) then
+    local cam = Dibujo.camara(p, app.zoom, mundo:mapaDe(p))
+    datos.x, datos.y = Dibujo.puntoApuntado(ap, p, cam, mx, my)
+  end
+  app.apuntando = nil
   app.actuar("habilidad", datos)
 end
 
 function Entrada.clicMundo(app, mx, my, boton)
   local mundo, jugador = app.mundo, app.jugador
   if not mundo or not jugador then return end
+  if app.apuntando then
+    if boton == 1 then Entrada.lanzarApuntado(app, mx, my) else app.apuntando = nil end
+    return
+  end
   if not Dibujo.dentroVista(mx, my) then return end
   local cam = Dibujo.camara(jugador, app.zoom, mundo:mapaDe(jugador))
   local x, y = Dibujo.pantallaAMundo(cam, mx, my)
@@ -515,6 +549,7 @@ function Entrada.texto(app, t)
 end
 
 function Entrada.tecla(app, tecla)
+  if tecla == "escape" and app.apuntando then app.apuntando = nil return end
   -- en el formulario de cuenta, Tab salta entre usuario y clave (Mayús + Tab, al revés)
   if tecla == "tab" and app.estado == "cuenta" then
 

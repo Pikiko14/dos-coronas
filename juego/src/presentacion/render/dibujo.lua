@@ -297,6 +297,10 @@ function D.escena(mundo, jugador, cam, mx, my)
       Efectos.cuadro(fx.tipo, fx.t, fx.dur, fx.x * TILE - cam.x, fx.y * TILE - cam.y + 14)
     end
   end
+  -- apuntando un poder de area: la zona habilitada (alcance) y el area de impacto bajo el cursor
+  if D.apuntando and mx and my and D.dentroVista(mx, my) then
+    D.zonaApuntada(D.apuntando, jugador, cam, mx, my, mundo.tiempo or 0)
+  end
   love.graphics.pop()
   love.graphics.setScissor()
 
@@ -357,6 +361,44 @@ function D.mueble(nombre, sx, sy)
   local p = pos[nombre] or pos.mesa
   love.graphics.setColor(1, 1, 1, 1)
   love.graphics.draw(img, Arte.quad(img, p[1] * 32, p[2] * 32, p[3] * 32, p[4] * 32), sx, sy + 14, 0, 1, 1, p[3] * 16, p[4] * 32)
+end
+
+-- Punto de impacto de un poder de area: el del cursor, dentro del alcance. Devuelve x, y y si el
+-- cursor estaba fuera de la zona habilitada (en ese caso se acerca al borde).
+function D.puntoApuntado(ap, jugador, cam, mx, my)
+  local wx, wy = D.pantallaAMundo(cam, mx, my)
+  local dx, dy = wx - jugador.x, wy - jugador.y
+  local d = math.sqrt(dx * dx + dy * dy)
+  local max = ap.rango or 6
+  if d > max then return jugador.x + dx / d * max, jugador.y + dy / d * max, true end
+  return wx, wy, false
+end
+
+function D.zonaApuntada(ap, jugador, cam, mx, my, t)
+  local ix, iy, fuera = D.puntoApuntado(ap, jugador, cam, mx, my)
+  local px, py = jugador.x * TILE - cam.x, jugador.y * TILE - cam.y
+  local pulso = 0.5 + 0.5 * math.sin(t * 6)
+  -- zona habilitada: todo lo que alcanza el poder
+  love.graphics.setColor(0.4, 0.75, 1, 0.07)
+  love.graphics.circle("fill", px, py, (ap.rango or 6) * TILE)
+  love.graphics.setColor(0.55, 0.85, 1, 0.55)
+  love.graphics.setLineWidth(1.5)
+  love.graphics.circle("line", px, py, (ap.rango or 6) * TILE)
+  -- area de impacto
+  local sx, sy = ix * TILE - cam.x, iy * TILE - cam.y
+  local r = (ap.aoe or 2) * TILE
+  local c = fuera and { 1, 0.65, 0.3 } or { 1, 0.45, 0.25 }
+  love.graphics.setColor(c[1], c[2], c[3], 0.18 + 0.1 * pulso)
+  love.graphics.circle("fill", sx, sy, r)
+  love.graphics.setColor(c[1], c[2], c[3], 0.9)
+  love.graphics.setLineWidth(2)
+  love.graphics.circle("line", sx, sy, r)
+  love.graphics.setLineWidth(1)
+  love.graphics.line(sx - 7, sy, sx + 7, sy)
+  love.graphics.line(sx, sy - 7, sx, sy + 7)
+  -- el trazo del personaje al punto
+  love.graphics.setColor(c[1], c[2], c[3], 0.35)
+  love.graphics.line(px, py, sx, sy)
 end
 
 -- Dibuja una criatura u objeto vivo. Devuelve su altura en píxeles (para la placa).

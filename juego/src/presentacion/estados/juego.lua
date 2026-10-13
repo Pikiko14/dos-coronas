@@ -213,6 +213,7 @@ function Juego.dibujar(app, w, h)
     local lado, consola = Interfaz.medidas()
     Dibujo.fijarVista(0, 0, w - lado * s, h - consola * s)
     local cam = Dibujo.camara(app.jugador, app.zoom, app.mundo:mapaDe(app.jugador))
+    Dibujo.apuntando = app.apuntando
     Dibujo.escena(app.mundo, app.jugador, cam, mx, my)
     love.graphics.push()
     love.graphics.scale(s, s)

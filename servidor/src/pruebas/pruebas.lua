@@ -2287,6 +2287,87 @@ mundo.tiempo = 100
     local ultima = mundo:crearPersonaje({ nombre = "Gastada", faccion = "albor", clase = "guerrero" })
     mundo:aplicarGuardado(ultima, require("compartido.dominio.util").jsonDec(require("compartido.dominio.util").jsonEnc(ex2)))
     fallar(errores, "lo gastado no se repone", ultima.monedas == 7, tostring(ultima.monedas))
+  paso("compra de addon de punta a punta por la autoridad", function()
+    local Autoridad = require("src.dominio.autoridad")
+    local Mall = require("compartido.dominio.mall")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local p = mundo:crearPersonaje({ nombre = "Compra", faccion = "albor", clase = "guerrero", nivel = 10 })
+    p.monedas = 100000
+    local todos = true
+    for _, id in ipairs(Mall.ORDEN_ADDONS) do
+      local ok, limpio = Autoridad.aceptar(mundo, p, "mall_addon_comprar", { id = id })
+      if not ok then todos = false else mundo:accion(p.id, "mall_addon_comprar", limpio) end
+      if not p.addons[id] then todos = false end
+    end
+    fallar(errores, "los 38 addons se pueden comprar por el camino del servidor", todos and #Mall.ORDEN_ADDONS >= 38)
+    local gastado = 0
+    for _, id in ipairs(Mall.ORDEN_ADDONS) do gastado = gastado + Mall.ADDONS[id].precio end
+    fallar(errores, "se cobra el precio de cada uno", p.monedas == 100000 - gastado)
+    -- poner y quitar usa su propio mensaje y no confunde la compra
+    local ok, l = Autoridad.aceptar(mundo, p, "mall_addon", { id = "skin_rey" })
+    mundo:accion(p.id, "mall_addon", l)
+    fallar(errores, "alternar un addon comprado lo pone", ok and p.addonActivo == "skin_rey")
+    -- un addon que no se tiene no se puede poner (es lo que veías en el chat)
+    local q = mundo:crearPersonaje({ nombre = "Sin", faccion = "albor", clase = "guerrero" })
+    mundo.mensajes = {}
+    mundo:accion(q.id, "mall_addon", { id = "skin_rey" })
+    fallar(errores, "sin comprarlo no se puede poner", q.addonActivo == nil)
+  end)
+  paso("pergaminos de forja del mall: suben +1 seguro sin coste", function()
+    local Autoridad = require("src.dominio.autoridad")
+    local Mall = require("compartido.dominio.mall")
+    local mundo = Mundo.nuevo()
+    local p = mundo:crearPersonaje({ nombre = "Herrero", faccion = "albor", clase = "guerrero", nivel = 20 })
+    local npc
+    for _, e in pairs(mundo.entidades) do if e.kind == "npc" and e.rol == "encantador" then npc = e break end end
+    fallar(errores, "hay un maestro de encantos", npc ~= nil)
+    p.x, p.y, p.z, p.modo = npc.x + 1, npc.y, 0, "mundo"
+    p.bolsa, p.equipo.mochila = {}, "mochila_4"
+    p.oro, p.monedas = 0, 1000
+    fallar(errores, "los pergaminos de forja están en el mall", Mall.objeto("pergamino_forja") and Mall.objeto("pergamino_forja_sagrado")
+      and Datos.item("pergamino_forja").forja == 6 and Datos.item("pergamino_forja_sagrado").forja == 10)
+    fallar(errores, "se compran con monedas", mundo:comprarMall(p, "pergamino_forja") == nil and mundo:comprarMall(p, "pergamino_forja_sagrado") == nil
+      and mundo:contarItem(p, "pergamino_forja") == 1)
+    local arma = p.equipo.arma
+    fallar(errores, "tiene un arma puesta", arma ~= nil)
+    -- sin oro ni polvo, el pergamino sube la pieza sin fallar
+    for i = 1, 6 do
+      mundo:darItem(p, "pergamino_forja", 1)
+      local ok, l = Autoridad.aceptar(mundo, p, "encantar", { donde = "equipo", ref = "arma", pergamino = "pergamino_forja" })
+      mundo:accion(p.id, "encantar", l)
+    end
+    fallar(errores, "seis forjas seguidas llegan a +6 sin gastar oro ni polvo", (p.encantos.arma or 0) == 6 and p.oro == 0, tostring(p.encantos.arma))
+    -- el pergamino básico no pasa de +6
+    mundo:darItem(p, "pergamino_forja", 1)
+    mundo:accion(p.id, "encantar", { donde = "equipo", ref = "arma", pergamino = "pergamino_forja" })
+    fallar(errores, "el básico no pasa de +6 y no se gasta", p.encantos.arma == 6 and mundo:contarItem(p, "pergamino_forja") >= 1)
+    -- el sagrado sigue hasta +10
+    local n = mundo:contarItem(p, "pergamino_forja_sagrado")
+    for _ = 1, 4 do
+      mundo:darItem(p, "pergamino_forja_sagrado", 1)
+      mundo:accion(p.id, "encantar", { donde = "equipo", ref = "arma", pergamino = "pergamino_forja_sagrado" })
+    end
+    fallar(errores, "el sagrado llega a +10", p.encantos.arma == 10, tostring(p.encantos.arma))
+    mundo:darItem(p, "pergamino_forja_sagrado", 1)
+    mundo:accion(p.id, "encantar", { donde = "equipo", ref = "arma", pergamino = "pergamino_forja_sagrado" })
+    fallar(errores, "no pasa del máximo", p.encantos.arma == 10)
+    -- sin pergamino no se puede, y los ids raros se descartan
+    p.encantos.arma = 1
+    local antes = p.encantos.arma
+    mundo:accion(p.id, "encantar", { donde = "equipo", ref = "arma", pergamino = "polvo_arcano" })
+    fallar(errores, "un objeto que no es pergamino de forja no sirve", p.encantos.arma == antes)
+    local ok, l = Autoridad.aceptar(mundo, p, "encantar", { donde = "equipo", ref = "arma", pergamino = string.rep("x", 40) })
+    fallar(errores, "un id demasiado largo se ignora", ok and l.pergamino == nil)
+    -- al pulsarlo en la bolsa avisa de dónde se usa y no se gasta
+    mundo:darItem(p, "pergamino_forja", 1)
+    local i = 0
+    for k, s in ipairs(p.bolsa) do if s.id == "pergamino_forja" then i = k end end
+    local gasto = mundo:contarItem(p, "pergamino_forja")
+    fallar(errores, "en la bolsa explica dónde se usa", mundo:equipar(p, i) ~= nil and mundo:contarItem(p, "pergamino_forja") == gasto)
+    -- no se vende al mercader ni se puede perder el pergamino en un trato normal
+    fallar(errores, "no se vende en el mercado", mundo:vender(p, i) ~= nil)
+  end)
   end)  paso("comandos de administrador", function()
     local mundo = Mundo.nuevo()
     mundo.entidades = {}

@@ -1491,19 +1491,25 @@ function I.panelMall(mundo, p, w, h)
   love.graphics.setColor(1, 0.85, 0.3)
   love.graphics.print(Mall.MONEDA .. ": " .. (m.monedas or 0), px + 14, py + 40)
   I.mallTab = I.mallTab or "objetos"
-  I.boton(px + 330, py + 36, 150, 28, "Objetos", "mall_tab_obj", I.mallTab ~= "objetos")
-  I.boton(px + 490, py + 36, 150, 28, "Addons", "mall_tab_add", I.mallTab ~= "addons")
+  I.boton(px + 316, py + 36, 104, 28, "Objetos", "mall_tab_obj", I.mallTab ~= "objetos")
+  I.boton(px + 426, py + 36, 104, 28, "Forja", "mall_tab_forja", I.mallTab ~= "forja")
+  I.boton(px + 536, py + 36, 104, 28, "Addons", "mall_tab_add", I.mallTab ~= "addons")
   local y0 = py + 76
-  if I.mallTab == "objetos" then
+  if I.mallTab == "objetos" or I.mallTab == "forja" then
+    -- los pergaminos de forja van en su pestana; el resto en "Objetos"
+    local objetos = {}
+    for _, o in ipairs(Mall.OBJETOS) do
+      if (o.forja ~= nil) == (I.mallTab == "forja") then objetos[#objetos + 1] = o end
+    end
     -- caben 7 filas; el resto se recorre con la rueda del ratón
     local visibles = 7
-    I.mallScrollMax = math.max(0, #Mall.OBJETOS - visibles)
+    I.mallScrollMax = math.max(0, #objetos - visibles)
     I.mallScroll = math.max(0, math.min(I.mallScrollMax, I.mallScroll or 0))
     if I.mallScrollMax > 0 then
       love.graphics.setColor(0.65, 0.62, 0.55)
-      love.graphics.print("Rueda del ratón para ver más (" .. (I.mallScroll + 1) .. "-" .. (I.mallScroll + visibles) .. " de " .. #Mall.OBJETOS .. ")", px + 14, py + 62)
+      love.graphics.print("Rueda del ratón para ver más (" .. (I.mallScroll + 1) .. "-" .. (I.mallScroll + visibles) .. " de " .. #objetos .. ")", px + 14, py + 62)
     end
-    for i, o in ipairs(Mall.OBJETOS) do
+    for i, o in ipairs(objetos) do
      if i > I.mallScroll and i <= I.mallScroll + visibles then
       local y = y0 + (i - 1 - I.mallScroll) * 58
       love.graphics.setColor(0.13, 0.11, 0.14)
@@ -2055,6 +2061,19 @@ function I.panelEncantar(mundo, p, w, h)
         love.graphics.printf(Encanto.bajaAlFallar(enc) and "Si falla, la pieza baja un nivel." or "Si falla, no pierdes el nivel (sí los materiales).", dx, py + 272, pw - 380, "left")
       end
       I.boton(dx, py + 320, 200, 36, "Encantar", "enc_go", ok)
+      -- pergaminos de forja del Item Mall: suben +1 seguro y sin coste
+      local yy = py + 366
+      for _, o in ipairs(require("compartido.dominio.mall").OBJETOS) do
+        if o.forja then
+          local tengo = mundo:contarItem(p, o.id)
+          if tengo > 0 then
+            love.graphics.setColor(1, 0.85, 0.4)
+            love.graphics.print(o.nombre .. " x" .. tengo .. "  (hasta +" .. o.forja .. ")", dx, yy)
+            I.boton(dx, yy + 18, 200, 30, "Forjar +" .. (enc + 1) .. " seguro", "enc_forja_" .. o.id, enc < o.forja)
+            yy = yy + 56
+          end
+        end
+      end
     end
   else
     love.graphics.setColor(0.7, 0.68, 0.6)
