@@ -29,7 +29,7 @@ function E.coste(it, enc)
   enc = enc or 0
   local sig = enc + 1
   return {
-    oro = math.floor((it.precio or 40) * 0.1 * sig * (1 + enc * 0.2)),
+    oro = math.floor((it.precio or 40) * 0.12 * sig * (1 + enc * 0.2)),
     polvo = sig + math.floor(enc / 2),
   }
 end

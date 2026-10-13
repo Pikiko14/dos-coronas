@@ -19,7 +19,7 @@ M.especies = {
     desc = "Lento pero fuerte: carga mucho más. Solo con el oficio activo.",
   },
   caballo = {
-    nombre = "Caballo", nivel = 10, precio = 2400, vel = 0.40, carga = 6, vida = 350, requiereOficio = true,
+    nombre = "Caballo", nivel = 10, precio = 1000, vel = 0.40, carga = 6, vida = 350, requiereOficio = true,
     desc = "El más rápido para cruzar el mapa. Solo con el oficio activo.",
   },
   carreta = {
@@ -30,19 +30,19 @@ M.especies = {
 -- Monturas de viaje: no llevan mercancía ni exigen oficio activo. Su aspecto sigue la facción del
 -- jinete (Alba: blanco y oro; Ocaso: negro y violeta). Ir montado no permite atacar.
 M.especies.corcel_real = {
-  nombre = "Corcel real", nivel = 12, precio = 5200, vel = 0.38, carga = 0, vida = 420,
+  nombre = "Corcel real", nivel = 12, precio = 2500, vel = 0.38, carga = 0, vida = 420,
   desc = "El caballo de tu reino: blanco del Alba o negro del Ocaso. Rápido y noble.",
 }
 M.especies.lobo_guerra = {
-  nombre = "Lobo de guerra", nivel = 16, precio = 6800, vel = 0.45, carga = 0, vida = 380,
+  nombre = "Lobo de guerra", nivel = 16, precio = 3600, vel = 0.45, carga = 0, vida = 380,
   desc = "Pelaje de escarcha o de sombra. El más veloz entre árboles y caminos.",
 }
 M.especies.bisonte_guerra = {
-  nombre = "Bisonte acorazado", nivel = 20, precio = 8400, vel = 0.28, carga = 0, vida = 1000,
+  nombre = "Bisonte acorazado", nivel = 20, precio = 4800, vel = 0.28, carga = 0, vida = 1000,
   desc = "Lento pero casi imposible de derribar: su vida es la más alta.",
 }
 M.especies.corcel_fuego = {
-  nombre = "Corcel de fuego", nivel = 25, precio = 11000, vel = 0.50, carga = 0, vida = 520,
+  nombre = "Corcel de fuego", nivel = 25, precio = 7000, vel = 0.50, carga = 0, vida = 520,
   desc = "Dorado como el sol del Alba o rojo como el ascua del Ocaso. El más rápido.",
 }
 M.orden = { "buey", "caballo", "carreta", "corcel_real", "lobo_guerra", "bisonte_guerra", "corcel_fuego" }

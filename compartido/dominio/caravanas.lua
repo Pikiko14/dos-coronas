@@ -15,40 +15,48 @@ M.DISTANCIA_MAX = 620   -- no se mandan caravanas más lejos que esto
 
 function M.instalar(Mundo)
   -- ------------------------------------------------------------------ rutas
-  -- Puerta de la ciudad más cercana a una artería (arriba o abajo).
-  local function puertaHacia(ciudad, y)
-    local mejor, md
-    for _, a in ipairs(ciudad.accesos) do
-      local d = math.abs(a.y - y)
-      if not md or d < md then mejor, md = a, d end
-    end
-    return mejor
-  end
-
-  local function arteriaDe(mapa, y)
-    local ar = mapa.arterias
-    return math.abs(y - ar.norte) <= math.abs(y - ar.sur) and ar.norte or ar.sur
-  end
-
-  -- Puntos por los que pasa una caravana de una ciudad a otra, siguiendo los caminos.
+  -- Puntos por los que pasa una caravana de una ciudad a otra, siguiendo los caminos del mapa (de
+  -- ciudad en ciudad por el grafo de caminos). Solo hay ruta entre ciudades del mismo continente.
   function Mundo:rutaCaravana(a, b)
     local mapa = self.mapas.mundo
-    local ga = puertaHacia(a, b.y + b.h / 2)
-    local gb = puertaHacia(b, a.y + a.h / 2)
-    local ya, yb = arteriaDe(mapa, ga.y), arteriaDe(mapa, gb.y)
-    local sale = ga.y < ya and 1 or -1
-    local entra = gb.y < yb and 1 or -1
-    local ruta = {
-      { x = ga.x + 0.5, y = ga.y + sale * 1.5 },
-      { x = ga.x + 0.5, y = ya + 0.5 },
-    }
-    if ya ~= yb then
-      local cx = math.floor(mapa.w / 2)
-      ruta[#ruta + 1] = { x = cx + 0.5, y = ya + 0.5 }
-      ruta[#ruta + 1] = { x = cx + 0.5, y = yb + 0.5 }
+    local ady = {}
+    for _, cam in ipairs(mapa.caminos or {}) do
+      ady[cam.a] = ady[cam.a] or {}
+      ady[cam.b] = ady[cam.b] or {}
+      table.insert(ady[cam.a], { a = cam.b, cam = cam, inv = false })
+      table.insert(ady[cam.b], { a = cam.a, cam = cam, inv = true })
     end
-    ruta[#ruta + 1] = { x = gb.x + 0.5, y = yb + 0.5 }
-    ruta[#ruta + 1] = { x = gb.x + 0.5, y = gb.y + entra * 1.5 }
+    -- búsqueda en anchura de a a b
+    local previo, cola, cabeza = { [a.id] = false }, { a.id }, 1
+    while cabeza <= #cola do
+      local id = cola[cabeza]
+      cabeza = cabeza + 1
+      if id == b.id then break end
+      for _, e in ipairs(ady[id] or {}) do
+        if previo[e.a] == nil then
+          previo[e.a] = { desde = id, e = e }
+          cola[#cola + 1] = e.a
+        end
+      end
+    end
+    local tramos = {}
+    local actual = b.id
+    while previo[actual] do
+      table.insert(tramos, 1, previo[actual].e)
+      actual = previo[actual].desde
+    end
+    local ruta = {}
+    for _, e in ipairs(tramos) do
+      local pts = e.cam.puntos
+      if e.inv then
+        for i = #pts, 1, -1 do ruta[#ruta + 1] = { x = pts[i].x, y = pts[i].y } end
+      else
+        for i = 1, #pts do ruta[#ruta + 1] = { x = pts[i].x, y = pts[i].y } end
+      end
+    end
+    if #ruta == 0 then
+      ruta = { { x = a.x + a.w / 2, y = a.y + a.h / 2 }, { x = b.x + b.w / 2, y = b.y + b.h / 2 } }
+    end
     return ruta
   end
 
@@ -76,7 +84,7 @@ function M.instalar(Mundo)
     if not b then
       local opciones = {}
       for _, c in ipairs(mapa.ciudades) do
-        if c ~= a and Util.dist(a.x, a.y, c.x, c.y) <= M.DISTANCIA_MAX then opciones[#opciones + 1] = c end
+        if c ~= a and c.cont == a.cont and Util.dist(a.x, a.y, c.x, c.y) <= M.DISTANCIA_MAX then opciones[#opciones + 1] = c end
       end
       if #opciones == 0 then return nil end
       b = opciones[math.random(#opciones)]

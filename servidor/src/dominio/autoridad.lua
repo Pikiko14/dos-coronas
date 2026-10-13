@@ -8,7 +8,7 @@ local A = {}
 local ACCIONES = {
   deseo = true, destino = true, objetivo = true, habilidad = true, chat = true,
   equipar = true, desequipar = true, pocion = true, comprar = true, vender = true,
-  interactuar = true, guerra = true, salir_guerra = true,
+  interactuar = true, guerra = true, salir_guerra = true, viaje = true,
   casa_comprar = true, casa_entrar = true, casa_salir = true, mueble = true,
   cofre_guardar = true, cofre_sacar = true,
   mision_aceptar = true, mision_entregar = true,
@@ -74,6 +74,10 @@ function A.aceptar(mundo, pj, nombre, datos)
   local function idEntidad(v)
     if type(v) ~= "string" or #v > 16 or not v:match("^e%d+$") then return nil end
     return v
+  end
+  if nombre == "viaje" then
+    if type(datos.destino) ~= "string" or #datos.destino > 24 or not datos.destino:match("^[%w_]+$") then return false end
+    return true, { destino = datos.destino }
   end
   if nombre == "gremio_invitar" then
     local id = idEntidad(datos.id)

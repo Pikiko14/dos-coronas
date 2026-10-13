@@ -394,8 +394,10 @@ function Pruebas.correr()
     local ciudades = mapa.ciudades
     for i = 2, #ciudades do
       local a, b = ciudades[1], ciudades[i]
-      local ruta = Mapa.buscar(mapa, a.x + a.w / 2, a.y + a.h + 2, b.x + b.w / 2, b.y + b.h + 2)
-      fallar(errores, "ruta de " .. a.nombre .. " a " .. b.nombre, ruta ~= nil and #ruta > 0)
+      if a.cont == b.cont then
+        local ruta = Mapa.buscar(mapa, a.x + a.w / 2, a.y + a.h + 2, b.x + b.w / 2, b.y + b.h + 2)
+        fallar(errores, "ruta de " .. a.nombre .. " a " .. b.nombre, ruta ~= nil and #ruta > 0)
+      end
     end
   end)
   paso("árbol de poderes: aprender, mejorar y reiniciar", function()
@@ -705,7 +707,7 @@ function Pruebas.correr()
         minimo = math.min(minimo, math.sqrt((a.x - b.x) ^ 2 + (a.y - b.y) ^ 2))
       end
     end
-    fallar(errores, "las ciudades están más separadas", minimo > 140, string.format("%.0f", minimo))
+    fallar(errores, "las ciudades están separadas", minimo > 90, string.format("%.0f", minimo))
     fallar(errores, "hay puestos repartidos", #mapa.puestos >= 18, tostring(#mapa.puestos))
     local roles = {}
     for _, n in ipairs(mapa.npcsMapa) do
@@ -724,14 +726,17 @@ function Pruebas.correr()
       end
     end
     fallar(errores, "los PNJ de ciudad se reparten por las avenidas", lejos >= #mapa.ciudades * 9, tostring(lejos))
-    -- los puestos se alcanzan por tierra
+    -- los puestos del continente de la capital se alcanzan por tierra (los demás, en barco)
     local a = mapa.ciudades[1]
-    local alcanzados = 0
+    local alcanzados, total = 0, 0
     for _, pu in ipairs(mapa.puestos) do
-      local ruta = Mapa.buscar(mapa, a.x + a.w / 2, a.y + a.h + 2, pu.x, pu.y)
-      if ruta and #ruta > 0 then alcanzados = alcanzados + 1 end
+      if mapa.cont[math.floor(pu.x)][math.floor(pu.y)] == a.cont then
+        total = total + 1
+        local ruta = Mapa.buscar(mapa, a.x + a.w / 2, a.y + a.h + 2, pu.x, pu.y)
+        if ruta and #ruta > 0 then alcanzados = alcanzados + 1 end
+      end
     end
-    fallar(errores, "los puestos son alcanzables", alcanzados >= #mapa.puestos - 2, alcanzados .. "/" .. #mapa.puestos)
+    fallar(errores, "los puestos son alcanzables", total >= 6 and alcanzados >= total - 1, alcanzados .. "/" .. total)
   end)
   paso("oficios, comercio, robos y recompensas", function()
     local mundo = Mundo.nuevo()
@@ -791,6 +796,10 @@ function Pruebas.correr()
     fallar(errores, "solo los comerciantes comercian", mundo:comprarBien(x, "trigo", 1) ~= nil)
     -- robo: fuera de la ciudad
     local afuera = mapa.puestos[1]
+    -- sin criaturas cerca del punto de prueba (si no, interrumpen el robo)
+    for id, e in pairs(mundo.entidades) do
+      if e.kind == "monstruo" and Util.dist(e.x, e.y, afuera.x, afuera.y) < 60 then mundo.entidades[id] = nil end
+    end
     local ladron = mundo:crearPersonaje({ nombre = "Sombra", faccion = "albor", clase = "cazador", nivel = 12 })
     ladron.oro = 5000
     local hunter = mundo:crearPersonaje({ nombre = "Cazador1", faccion = "albor", clase = "guerrero", nivel = 12 })
@@ -1216,7 +1225,7 @@ function Pruebas.correr()
     fallar(errores, "con x2 se gana el doble de experiencia", p.xp - xpAntes == 20, tostring(p.xp - xpAntes))
     -- restaurar deja todo como estaba
     mundo.restaurarAjustes()
-    fallar(errores, "se restauran los valores", Balance.xpPara(1) == xp0 and Subastas.COMISION == 0.05 and Gremios.COSTE == 1500
+    fallar(errores, "se restauran los valores", Balance.xpPara(1) == xp0 and Subastas.COMISION == 0.05 and Gremios.COSTE == 2500
       and Datos.JUGADORES_EVENTO == 3 and #Subastas.DURACIONES == 4 and Balance.XP_MULTIPLICADOR == 1)
   end)
   paso("montado no se combate", function()
@@ -1923,8 +1932,10 @@ mundo.tiempo = 100
   paso("viaje largo por rutas en tramos", function()
     local mundo = Mundo.nuevo()
     mundo.entidades = {}
-    local ciudad = mundo.mapas.mundo.ciudades[1]
-    local destino = mundo.mapas.mundo.ciudades[6]
+    local ciudad, destino
+    for _, c in ipairs(mundo.mapas.mundo.ciudades) do
+      if c.id == "henar" then ciudad = c elseif c.id == "liria" then destino = c end
+    end
     local p = mundo:crearPersonaje({ nombre = "Viajero", faccion = "albor", clase = "guerrero", nivel = 12 })
     p.x, p.y, p.z, p.modo = ciudad.spawn.x, ciudad.spawn.y, 0, "mundo"
     local ox, oy = p.x, p.y
@@ -2170,7 +2181,7 @@ mundo.tiempo = 100
       minx, maxx = math.min(minx, c.x), math.max(maxx, c.x + c.w)
       miny, maxy = math.min(miny, c.y), math.max(maxy, c.y + c.h)
     end
-    fallar(errores, "las ciudades ocupan casi todo el ancho y el alto", (maxx - minx) > mapa.w * 0.6 and (maxy - miny) > mapa.h * 0.6,
+    fallar(errores, "las ciudades ocupan casi todo el ancho y el alto", (maxx - minx) > mapa.w * 0.6 and (maxy - miny) > mapa.h * 0.4,
       string.format("%.0f%% x %.0f%%", (maxx - minx) / mapa.w * 100, (maxy - miny) / mapa.h * 100))
     local separadas = true
     for i, a in ipairs(mapa.ciudades) do
@@ -2197,14 +2208,14 @@ mundo.tiempo = 100
     local capA, capU
     for _, c in ipairs(mapa.ciudades) do if c.capital and c.faccion == "albor" then capA = c elseif c.capital then capU = c end end
     for _, c in ipairs(mapa.ciudades) do
-      if not alcanzable(capA, c) then todas = false end
+      if c.cont == capA.cont and not alcanzable(capA, c) then todas = false end
     end
-    fallar(errores, "desde la capital de Albor se llega a pie a todas las ciudades", todas)
-    fallar(errores, "y a la capital de Umbra", alcanzable(capA, capU))
+    fallar(errores, "desde la capital de Albor se llega a pie a todas las ciudades de su continente", todas)
+    fallar(errores, "pero no a pie a la capital de Umbra: es otro continente", not alcanzable(capA, capU) and capA.cont ~= capU.cont)
     -- criaturas: más y por anillos de nivel
     local n = 0
     for _, e in pairs(mundo.entidades) do if e.kind == "monstruo" then n = n + 1 end end
-    fallar(errores, "hay mucha más vida salvaje", n >= 1000, tostring(n))
+    fallar(errores, "hay vida salvaje", n >= 600, tostring(n))
   end)
   paso("clérigo: curar a quien eliges (o a ti) y rayo bendito al nivel 5", function()
     local Arbol = require("compartido.dominio.arbol")
@@ -2260,17 +2271,16 @@ mundo.tiempo = 100
     local Mapa = require("compartido.dominio.mapa")
     local mundo = Mundo.nuevo()
     local mapa = mundo.mapas.mundo
-    local cx = mapa.w / 2
     local enCicatriz = 0
     for _, k in ipairs(mapa.campamentos) do
-      if not k.z and math.abs(k.x - cx) < 20 then enCicatriz = enCicatriz + 1 end
+      if not k.z and mapa.cont[math.floor(k.x)][math.floor(k.y)] == 3 then enCicatriz = enCicatriz + 1 end
     end
-    fallar(errores, "hay campamentos en la Cicatriz y a su alrededor", enCicatriz >= 8, tostring(enCicatriz))
+    fallar(errores, "hay campamentos en la isla de la Cicatriz", enCicatriz >= 8, tostring(enCicatriz))
     -- casi cualquier punto de tierra tiene criaturas a una distancia razonable
     local total, vacios = 0, 0
     for gy = 30, mapa.h - 30, 25 do
       for gx = 30, mapa.w - 30, 25 do
-        if Mapa.transitable(mapa, gx, gy) and mapa.bioma[gx][gy] ~= "costa" then
+        if Mapa.transitable(mapa, gx, gy) and mapa.bioma[gx][gy] ~= "costa" and mapa.cont[gx][gy] <= 3 then
           total = total + 1
           local cerca = false
           for _, k in ipairs(mapa.campamentos) do
@@ -2284,9 +2294,9 @@ mundo.tiempo = 100
     -- el nivel sube hacia el centro (lejos de las ciudades)
     local suma, n = 0, 0
     for _, k in ipairs(mapa.campamentos) do
-      if not k.z and math.abs(k.x - cx) < 40 then suma, n = suma + Datos.monstruo(k.monstruo).nivel, n + 1 end
+      if not k.z and mapa.cont[math.floor(k.x)][math.floor(k.y)] == 3 then suma, n = suma + Datos.monstruo(k.monstruo).nivel, n + 1 end
     end
-    fallar(errores, "el centro es la zona más peligrosa", n > 0 and suma / n >= 14, string.format("%.1f", n > 0 and suma / n or 0))
+    fallar(errores, "la isla de la Cicatriz es la zona más peligrosa", n > 0 and suma / n >= 25, string.format("%.1f", n > 0 and suma / n or 0))
   end)
   paso("monedas del mall: 5000 una sola vez por personaje", function()
     local Mall = require("compartido.dominio.mall")
@@ -2711,7 +2721,7 @@ mundo.tiempo = 100
     fallar(errores, "el veneno traspasa la defensa", venenoDano > (a - victima.hp), venenoDano .. " vs " .. (a - victima.hp))
     victima.def = 0
     -- drenar vida cura a quien lo aplica
-    for _, m in pairs(mundo.entidades) do if m.kind == "monstruo" and m ~= victima then m.borrar = true end end
+    for id, m in pairs(mundo.entidades) do if m ~= victima and m ~= mago then mundo.entidades[id] = nil end end
     mago.hp = mago.hpMax - 50
     local h0 = mago.hp
     mundo:aplicarEstado(victima, "drenar_vida", 3, nil, mago)
@@ -3218,6 +3228,189 @@ mundo.tiempo = 100
       if not cofre.reclamado[llena.id] then huboAviso = true break end
     end
     fallar(errores, "con la bolsa llena el cofre sigue sin reclamar (salvo addon/monedas)", huboAviso or llena.oro > antes)
+  end)
+  paso("campamentos: el nivel de cada criatura encaja con su zona", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.mundo
+    local camps, mobs, peor = 0, 0, 0
+    for _, c in ipairs(mapa.campamentos) do
+      if not c.z and not c.isla then
+        camps = camps + 1
+        mobs = mobs + c.cantidad
+        local mon = Datos.monstruo(c.monstruo)
+        peor = math.max(peor, math.abs(Mapa.nivelZona(c.x, c.y) - mon.nivel))
+      end
+    end
+    fallar(errores, "ninguna criatura sale en una zona de otro nivel", peor <= Mapa.TOLERANCIA_NIVEL + 1, "desajuste " .. peor)
+    fallar(errores, "hay campamentos pero no una plaga de criaturas", camps > 150 and mobs < 1800, camps .. " campamentos, " .. mobs .. " criaturas")
+  end)
+  paso("continentes, caminos curvos y barco entre puertos", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local Viaje = require("compartido.dominio.viaje")
+    local Autoridad = require("src.dominio.autoridad")
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.mundo
+    -- tres masas de tierra habitadas y varios islotes vacíos
+    local habitados = 0
+    for _, k in pairs(mapa.continentes) do if k.habitado then habitados = habitados + 1 end end
+    fallar(errores, "hay tres continentes habitados", habitados == 3)
+    local albor, umbra = 0, 0
+    for _, c in ipairs(mapa.ciudades) do
+      if c.cont == 1 then albor = albor + 1 end
+      if c.cont == 2 then umbra = umbra + 1 end
+    end
+    fallar(errores, "las diez ciudades se reparten entre Alba y Umbra", albor == 5 and umbra == 5, albor .. "/" .. umbra)
+    local tipos = {}
+    local islote = false
+    for x = 0, mapa.w - 1, 2 do
+      for y = 0, mapa.h - 1, 2 do
+        local s = mapa.suelo[x][y]
+        tipos[s] = (tipos[s] or 0) + 1
+        if mapa.cont[x][y] >= 4 and s ~= "agua" then islote = true end
+      end
+    end
+    fallar(errores, "hay islotes", islote)
+    for _, t in ipairs({ "agua", "hierba", "arena", "bosque", "tierra", "roca", "nieve", "pantano", "cicatriz", "camino", "montana" }) do
+      fallar(errores, "hay terreno de tipo " .. t, (tipos[t] or 0) > 100, tostring(tipos[t]))
+    end
+    for _, k in ipairs(mapa.campamentos) do
+      fallar(errores, "ningún campamento en un islote", mapa.cont[math.floor(k.x)][math.floor(k.y)] <= 3)
+    end
+    -- los caminos son curvas sobre tierra, no rectas
+    fallar(errores, "hay caminos entre las ciudades de cada continente", #mapa.caminos >= 8, tostring(#mapa.caminos))
+    local curvos = 0
+    for _, cam in ipairs(mapa.caminos) do
+      local p = cam.puntos
+      local largo = 0
+      for i = 2, #p do largo = largo + Util.dist(p[i - 1].x, p[i - 1].y, p[i].x, p[i].y) end
+      local recta = Util.dist(p[1].x, p[1].y, p[#p].x, p[#p].y)
+      if largo > recta * 1.03 then curvos = curvos + 1 end
+      for _, q in ipairs(p) do
+        fallar(errores, "el camino " .. cam.a .. "-" .. cam.b .. " pisa tierra", mapa.suelo[math.floor(q.x)][math.floor(q.y)] ~= "agua")
+      end
+    end
+    fallar(errores, "los caminos no son líneas rectas", curvos >= #mapa.caminos * 0.7, curvos .. "/" .. #mapa.caminos)
+    -- barco: tres puertos, uno por continente
+    fallar(errores, "hay tres puertos", #mapa.puertos == 3)
+    local origen, destino
+    for _, pu in ipairs(mapa.puertos) do
+      if pu.id == "puerto_sol" then origen = pu elseif pu.id == "puerto_sombra" then destino = pu end
+    end
+    local p = mundo:crearPersonaje({ nombre = "Navegante", faccion = "albor", clase = "guerrero", nivel = 10 })
+    p.x, p.y, p.z, p.modo = origen.x, origen.y, 0, "mundo"
+    p.oro = 10
+    mundo:navegar(p, "puerto_sombra")
+    fallar(errores, "sin oro no se embarca", Util.dist(p.x, p.y, origen.x, origen.y) < 1 and p.oro == 10)
+    local precio = Viaje.precio(origen, destino)
+    p.oro = 500
+    p.montado = "caballo"
+    fallar(errores, "el pasaje cuesta lo que dice", precio > 40 and precio < 300, tostring(precio))
+    fallar(errores, "embarca hacia otro continente", mundo:navegar(p, "puerto_sombra") == nil)
+    fallar(errores, "llega al puerto de destino", Util.dist(p.x, p.y, destino.x, destino.y) < 1 and p.oro == 500 - precio and p.montado == nil)
+    fallar(errores, "está en el otro continente", mapa.cont[math.floor(p.x)][math.floor(p.y)] == 2)
+    fallar(errores, "no se puede navegar al mismo puerto", mundo:navegar(p, "puerto_sombra") ~= nil)
+    p.x, p.y = destino.x + 30, destino.y + 30
+    fallar(errores, "lejos del puerto no se embarca", mundo:navegar(p, "puerto_sol") ~= nil)
+    p.x, p.y = destino.x, destino.y
+    p.ultimoGolpe = mundo.tiempo
+    fallar(errores, "en pleno combate no se embarca", mundo:navegar(p, "puerto_sol") ~= nil)
+    p.ultimoGolpe = nil
+    -- el barquero abre su panel y la acción pasa por la autoridad
+    local barquero
+    for _, e in pairs(mundo.entidades) do
+      if e.kind == "npc" and e.rol == "barquero" and Util.dist(e.x, e.y, destino.x, destino.y) < 4 then barquero = e end
+    end
+    fallar(errores, "hay barquero en el puerto", barquero ~= nil)
+    p.x, p.y = barquero.x + 1, barquero.y
+    fallar(errores, "hablar con el barquero abre el viaje", mundo:interactuar(p).panel == "viaje")
+    local ok, limpio = Autoridad.aceptar(mundo, p, "viaje", { destino = "cicatriz" })
+    fallar(errores, "la autoridad acepta el destino", ok and limpio.destino == "cicatriz")
+    fallar(errores, "y rechaza destinos raros", not Autoridad.aceptar(mundo, p, "viaje", { destino = "../x" }) and not Autoridad.aceptar(mundo, p, "viaje", {}))
+    -- a pie no se cruza el mar
+    local capA, capU
+    for _, c in ipairs(mapa.ciudades) do if c.capital and c.faccion == "albor" then capA = c elseif c.capital then capU = c end end
+    local ruta = Mapa.buscar(mapa, capA.spawn.x, capA.spawn.y, capU.spawn.x, capU.spawn.y)
+    fallar(errores, "a pie no se llega a otro continente", ruta == nil or #ruta == 0 or Util.dist(ruta[#ruta].x, ruta[#ruta].y, capU.spawn.x, capU.spawn.y) > 8)
+    -- personajes de un mundo anterior: una posición guardada en el mar vuelve a la capital
+    local viejo = mundo:crearPersonaje({ nombre = "Viejo", faccion = "albor", clase = "guerrero", nivel = 10 })
+    local base = { x = viejo.x, y = viejo.y }
+    mundo:aplicarGuardado(viejo, { clase = "guerrero", nivel = 10, xp = 0, oro = 1, x = mapa.w / 2 - 150, y = 40, vinculo = { x = 5, y = 5, modo = "mundo" } })
+    fallar(errores, "una posición guardada en el mar vuelve a la capital", math.abs(viejo.x - base.x) < 0.01 and math.abs(viejo.y - base.y) < 0.01)
+    fallar(errores, "y su punto de reaparición también", viejo.vinculo.x ~= 5)
+    local alba = mapa.ciudades[1]
+    local bueno = { x = alba.spawn.x + 3, y = alba.spawn.y }
+    local sano = mundo:crearPersonaje({ nombre = "Sano", faccion = "albor", clase = "guerrero", nivel = 10 })
+    mundo:aplicarGuardado(sano, { clase = "guerrero", nivel = 10, xp = 0, oro = 1, x = bueno.x, y = bueno.y })
+    fallar(errores, "una posición válida se respeta", math.abs(sano.x - bueno.x) < 0.01)
+    local intruso = mundo:crearPersonaje({ nombre = "Intruso", faccion = "umbra", clase = "guerrero", nivel = 10 })
+    local ibase = { x = intruso.x, y = intruso.y }
+    mundo:aplicarGuardado(intruso, { clase = "guerrero", nivel = 10, xp = 0, oro = 1, x = bueno.x, y = bueno.y })
+    fallar(errores, "un umbra guardado en tierra de Alba vuelve a su capital", math.abs(intruso.x - ibase.x) < 0.01)
+    -- la isla de la Cicatriz tiene su embarcadero y el portal de guerra
+    local isla = mapa.cont[math.floor(mapa.portal.x)][math.floor(mapa.portal.y)]
+    fallar(errores, "el portal de guerra está en la isla de la Cicatriz", isla == 3)
+  end)
+  paso("economía: precios coherentes con lo que se gana", function()
+    local Items = require("compartido.dominio.items")
+    local Monturas = require("compartido.dominio.monturas")
+    local Mascotas = require("compartido.dominio.mascotas")
+    local Gremios = require("compartido.dominio.gremios")
+    -- lo que se gana por criatura de tu nivel: su oro directo (30%) + el oro que suelta
+    local function ingreso(n)
+      local oro = math.floor(4 + n * 3 + n * n * 0.08)
+      return math.floor(oro * 0.3) + oro
+    end
+    -- un conjunto completo de cada escalón (arma + cuatro piezas) cuesta entre 25 y 50 criaturas
+    for t, tier in ipairs(Items.TIER) do
+      local c = "guerrero"
+      local suma = 0
+      for _, id in ipairs({ "arma", "pecho", "cabeza", "piernas", "pies" }) do suma = suma + Datos.item(c .. "_" .. id .. "_" .. t).precio end
+      local kills = suma / ingreso(tier.nivel)
+      fallar(errores, "el conjunto del escalón " .. t .. " cuesta entre 25 y 50 criaturas", kills >= 25 and kills <= 50, string.format("%.0f", kills))
+    end
+    -- el equipo sube de precio con el escalón
+    for t = 2, #Items.TIER do
+      fallar(errores, "el escalón " .. t .. " es más caro que el anterior", Datos.item("guerrero_arma_" .. t).precio > Datos.item("guerrero_arma_" .. (t - 1)).precio)
+    end
+    -- el caballo: nivel 10 y 1.000 de oro; las demás monturas de viaje valen entre 30 y 50 criaturas de su nivel
+    local caballo = Monturas.especies.caballo
+    fallar(errores, "el caballo pide nivel 10 y vale 1.000", caballo.nivel == 10 and caballo.precio == 1000, caballo.nivel .. "/" .. caballo.precio)
+    for _, id in ipairs({ "corcel_real", "lobo_guerra", "bisonte_guerra", "corcel_fuego" }) do
+      local d = Monturas.especies[id]
+      local kills = d.precio / ingreso(d.nivel)
+      fallar(errores, id .. " vale entre 30 y 50 criaturas de su nivel", d.nivel >= 10 and kills >= 30 and kills <= 50, string.format("%.0f", kills))
+      fallar(errores, id .. " cuesta más que el caballo", d.precio > caballo.precio)
+    end
+    -- las monturas y mascotas nuevas escalan con el nivel
+    local previo = 0
+    for _, id in ipairs({ "corcel_real", "lobo_guerra", "bisonte_guerra", "corcel_fuego" }) do
+      fallar(errores, "la escalera de monturas sube: " .. id, Monturas.especies[id].precio > previo)
+      previo = Monturas.especies[id].precio
+    end
+    previo = 0
+    for _, id in ipairs(Mascotas.orden) do
+      fallar(errores, "la escalera de mascotas sube: " .. id, Mascotas.especies[id].precio > previo)
+      previo = Mascotas.especies[id].precio
+    end
+    -- pociones: una cuesta menos que una criatura de nivel 10 da; vender paga menos de lo que cuesta comprar
+    fallar(errores, "una poción cuesta poco comparada con el botín", Datos.item("pocion_vida").precio < ingreso(10) * 0.7 and Datos.item("pocion_vida").precio > 20)
+    fallar(errores, "vender paga menos que comprar", Datos.FACTOR_VENTA > 0 and Datos.FACTOR_VENTA < 0.5)
+    local p = Mundo.nuevo():crearPersonaje({ nombre = "Vende", faccion = "albor", clase = "guerrero", nivel = 12 })
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    p = mundo:crearPersonaje({ nombre = "Vende", faccion = "albor", clase = "guerrero", nivel = 12 })
+    p.bolsa, p.oro = { { id = "guerrero_arma_4", cant = 1 } }, 0
+    mundo:vender(p, 1)
+    fallar(errores, "vender paga el 40% del precio", p.oro == math.floor(Datos.item("guerrero_arma_4").precio * 0.4), tostring(p.oro))
+    -- casas, gremio y muebles
+    fallar(errores, "las casas cuestan más que antes", Datos.precioCasa.normal >= 700 and Datos.precioCasa.capital > Datos.precioCasa.normal)
+    fallar(errores, "fundar un gremio cuesta unos miles de oro", Gremios.COSTE >= 2000 and Gremios.COSTE <= 5000)
+    -- encantar: el oro crece con la pieza y con el nivel de encanto
+    local Encanto = require("compartido.dominio.encanto")
+    local arma = Datos.item("guerrero_arma_4")
+    fallar(errores, "encantar cuesta más cuanto más alto", Encanto.coste(arma, 5).oro > Encanto.coste(arma, 0).oro)
+    fallar(errores, "la mochila grande vale más que la pequeña", Datos.item("mochila_4").precio > Datos.item("mochila_1").precio * 10)
   end)
   paso("movimiento", function()
     local mundo = Mundo.nuevo()

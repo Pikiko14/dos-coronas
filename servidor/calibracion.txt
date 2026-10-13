@@ -1,38 +1,38 @@
 Calibración de combate (sin pociones, sin moverse, puntos del árbol gastados, equipo del escalón)
 oficio    nv  criatura                nv | tiempo  vida- resultado
-guerrero   5  Escarabajo de seto       5 |   8.7s    10%  gana
-guerrero  10  Gárgola                10 |  13.4s    18%  gana
-guerrero  20  Quimera menor           19 |  11.2s    19%  gana
-guerrero  30  Liche de Eclipse        27 |  12.1s    14%  gana
-guerrero   8  Alma pálida            11 |  17.1s    41%  gana
-guerrero   8  Cultista de Umbra       13 |  23.7s    94%  gana
-guerrero   8  Hidra sombría          21 |  13.3s   100%  PIERDE
-guerrero  12  Demonio de marea        17 |  26.9s    87%  gana
-guerrero  20  Titán de escoria       25 |  64.2s    89%  gana
-mago       5  Escarabajo de seto       5 |   8.1s    25%  gana
-mago      10  Gárgola                10 |   7.7s    28%  gana
-mago      20  Quimera menor           19 |  10.5s    17%  gana
-mago      30  Liche de Eclipse        27 |  11.8s    11%  gana
-mago       8  Alma pálida            11 |  14.8s    58%  gana
-mago       8  Cultista de Umbra       13 |  19.2s    97%  gana
-mago       8  Hidra sombría          21 |   4.9s   100%  PIERDE
-mago      12  Demonio de marea        17 |  19.7s   100%  PIERDE
-mago      20  Titán de escoria       25 |  17.5s   100%  PIERDE
-cazador    5  Escarabajo de seto       5 |   8.5s    23%  gana
-cazador   10  Gárgola                10 |  11.2s    32%  gana
-cazador   20  Quimera menor           19 |   9.1s    31%  gana
-cazador   30  Liche de Eclipse        27 |   9.1s    21%  gana
-cazador    8  Alma pálida            11 |  17.2s    87%  gana
-cazador    8  Cultista de Umbra       13 |  15.8s   100%  PIERDE
-cazador    8  Hidra sombría          21 |   5.2s   100%  PIERDE
-cazador   12  Demonio de marea        17 |  19.7s   100%  PIERDE
-cazador   20  Titán de escoria       25 |  24.8s   100%  PIERDE
-clerigo    5  Escarabajo de seto       5 |  11.3s    26%  gana
-clerigo   10  Gárgola                10 |  12.3s    30%  gana
-clerigo   20  Quimera menor           19 |  19.7s    15%  gana
-clerigo   30  Liche de Eclipse        27 |  22.7s     9%  gana
-clerigo    8  Alma pálida            11 |  41.8s    79%  gana
-clerigo    8  Cultista de Umbra       13 |  44.0s    54%  gana
-clerigo    8  Hidra sombría          21 |  32.2s   100%  PIERDE
-clerigo   12  Demonio de marea        17 |  49.1s    54%  gana
-clerigo   20  Titán de escoria       25 |  68.4s    39%  gana
+guerrero   5  Escarabajo de seto       5 |   7.6s    11%  gana
+guerrero  10  Gárgola                10 |  12.5s    19%  gana
+guerrero  20  Medusa errante          20 |  16.6s    14%  gana
+guerrero  30  Demonio rey             29 |  21.6s    17%  gana
+guerrero   8  Alma pálida            11 |  18.7s    56%  gana
+guerrero   8  Cultista de Umbra       13 |  23.3s    99%  gana
+guerrero   8  Hidra sombría          21 |  13.6s   100%  PIERDE
+guerrero  12  Demonio de marea        17 |  24.9s    69%  gana
+guerrero  20  Dragón de brasas       26 |  34.6s    47%  gana
+mago       5  Escarabajo de seto       5 |   8.1s    28%  gana
+mago      10  Gárgola                10 |   7.2s    29%  gana
+mago      20  Medusa errante          20 |   9.7s    31%  gana
+mago      30  Demonio rey             29 |  11.4s    48%  gana
+mago       8  Alma pálida            11 |  14.4s    53%  gana
+mago       8  Cultista de Umbra       13 |  18.4s   100%  PIERDE
+mago       8  Hidra sombría          21 |   3.0s   100%  PIERDE
+mago      12  Demonio de marea        17 |  21.0s   100%  PIERDE
+mago      20  Dragón de brasas       26 |  13.1s   100%  PIERDE
+cazador    5  Escarabajo de seto       5 |   9.6s    25%  gana
+cazador   10  Gárgola                10 |  11.2s    35%  gana
+cazador   20  Medusa errante          20 |  15.2s    36%  gana
+cazador   30  Demonio rey             29 |  18.0s    34%  gana
+cazador    8  Alma pálida            11 |  16.9s    68%  gana
+cazador    8  Cultista de Umbra       13 |  18.4s   100%  PIERDE
+cazador    8  Hidra sombría          21 |   8.2s   100%  PIERDE
+cazador   12  Demonio de marea        17 |  17.1s   100%  PIERDE
+cazador   20  Dragón de brasas       26 |  25.0s   100%  PIERDE
+clerigo    5  Escarabajo de seto       5 |   9.6s    25%  gana
+clerigo   10  Gárgola                10 |  13.1s    31%  gana
+clerigo   20  Medusa errante          20 |  17.1s    23%  gana
+clerigo   30  Demonio rey             29 |  16.3s    22%  gana
+clerigo    8  Alma pálida            11 |  27.1s    53%  gana
+clerigo    8  Cultista de Umbra       13 |  33.9s    58%  gana
+clerigo    8  Hidra sombría          21 |  23.4s   100%  PIERDE
+clerigo   12  Demonio de marea        17 |  42.5s    72%  gana
+clerigo   20  Dragón de brasas       26 |  33.5s    44%  gana

@@ -135,30 +135,31 @@ D.barra = {
   clerigo = { "curar", "bendicion", "castigo", "consagrar", "sanacion", "juicio" },
 }
 
--- Continente ampliado (ver ESCALA). Las arterias de camino unen las ciudades de cada fila.
+-- Las diez ciudades: cinco en el continente del Alba (oeste) y cinco en el de Umbra (este); caminos curvos
+-- unen las de cada continente y los puertos (puerto = true) tienen barquero para cruzar el mar.
 -- Cada ciudad trae su bioma: el halo alrededor y los monstruos que lo habitan.
 D.ciudades = {
   { id = "auroria", nombre = "Auroria", faccion = "albor", x = 168, y = 190, capital = true, bioma = "trigal" },
-  { id = "puerto_sol", nombre = "Puerto del Sol", faccion = "albor", x = 120, y = 108, acceso = "sur", bioma = "muelle" },
+  { id = "puerto_sol", nombre = "Puerto del Sol", faccion = "albor", puerto = true, x = 120, y = 108, acceso = "sur", bioma = "muelle" },
   { id = "henar", nombre = "Campos de Henar", faccion = "albor", x = 250, y = 108, acceso = "sur", bioma = "campos" },
   { id = "liria", nombre = "Liria", faccion = "albor", x = 120, y = 312, acceso = "norte", bioma = "senda" },
   { id = "alba", nombre = "Bastión del Alba", faccion = "albor", x = 250, y = 312, acceso = "norte", bioma = "colina" },
   { id = "nocturnia", nombre = "Nocturnia", faccion = "umbra", x = 480, y = 190, capital = true, bioma = "velo" },
-  { id = "puerto_sombra", nombre = "Puerto Sombra", faccion = "umbra", x = 430, y = 108, acceso = "sur", bioma = "marea" },
+  { id = "puerto_sombra", nombre = "Puerto Sombra", faccion = "umbra", puerto = true, x = 430, y = 108, acceso = "sur", bioma = "marea" },
   { id = "velo", nombre = "Ciénaga del Velo", faccion = "umbra", x = 552, y = 108, acceso = "sur", bioma = "cienaga" },
   { id = "nox", nombre = "Nox", faccion = "umbra", x = 430, y = 312, acceso = "norte", bioma = "pinar" },
   { id = "eclipse", nombre = "Bastión del Eclipse", faccion = "umbra", x = 552, y = 312, acceso = "norte", bioma = "eclipse" },
 }
 
--- Las ciudades se reparten por todo el continente: cada centro tiene su sitio (en casillas del mapa
+-- Las ciudades se reparten por los dos continentes habitados (ver continentes.lua): cada centro tiene su sitio (en fracciones del mapa
 -- final). Albor al oeste y Umbra al este, cada capital en medio de su mitad y las demas al norte
 -- y al sur, bien separadas para dejar sitio a las zonas de criaturas entre ellas.
 local W, H = D.MAPA_W, D.MAPA_H
 local CENTROS = {
-  auroria = { 0.20, 0.50 }, puerto_sol = { 0.26, 0.20 }, henar = { 0.38, 0.15 },
-  liria = { 0.26, 0.80 }, alba = { 0.38, 0.85 },
-  nocturnia = { 0.80, 0.50 }, puerto_sombra = { 0.74, 0.20 }, velo = { 0.62, 0.15 },
-  nox = { 0.74, 0.80 }, eclipse = { 0.62, 0.85 },
+  auroria = { 0.170, 0.50 }, puerto_sol = { 0.265, 0.34 }, henar = { 0.150, 0.25 },
+  liria = { 0.150, 0.74 }, alba = { 0.255, 0.70 },
+  nocturnia = { 0.830, 0.50 }, puerto_sombra = { 0.735, 0.34 }, velo = { 0.845, 0.23 },
+  nox = { 0.855, 0.77 }, eclipse = { 0.735, 0.68 },
 }
 for _, c in ipairs(D.ciudades) do
   local ancho = c.capital and 72 or 48
@@ -175,9 +176,12 @@ D.biomas = {
   colina = { suelo = "hierba", nombre = "Colinas del Alba" },
   velo = { suelo = "hierba_osc", nombre = "Velo de Nocturnia" },
   marea = { suelo = "arena", nombre = "Marea de Sombra" },
-  cienaga = { suelo = "hierba_osc", nombre = "Ciénaga del Velo" },
+  cienaga = { suelo = "pantano", nombre = "Ciénaga del Velo" },
   pinar = { suelo = "bosque", nombre = "Pinar de Nox" },
   eclipse = { suelo = "cicatriz", nombre = "Ruinas del Eclipse" },
+  altiplano = { suelo = "roca", nombre = "Altiplano" },
+  ventisca = { suelo = "nieve", nombre = "Ventisca" },
+  islote = { suelo = "hierba", nombre = "Islote desierto" },
 }
 
 D.misiones = {
@@ -421,10 +425,10 @@ require("compartido.dominio.items").generar(D)
 
 -- Mochilas: el tipo de mochila equipada decide cuántos espacios tiene la bolsa.
 local MOCHILAS = {
-  { nombre = "Morral de tela", slots = 12, nivel = 1, precio = 45, sprite = 672 },
-  { nombre = "Mochila de cuero", slots = 16, nivel = 5, precio = 180, sprite = 674 },
-  { nombre = "Mochila de viajero", slots = 20, nivel = 10, precio = 520, sprite = 675 },
-  { nombre = "Mochila de corona", slots = 24, nivel = 15, precio = 1300, sprite = 676 },
+  { nombre = "Morral de tela", slots = 12, nivel = 1, precio = 72, sprite = 672 },
+  { nombre = "Mochila de cuero", slots = 16, nivel = 5, precio = 290, sprite = 674 },
+  { nombre = "Mochila de viajero", slots = 20, nivel = 10, precio = 830, sprite = 675 },
+  { nombre = "Mochila de corona", slots = 24, nivel = 15, precio = 2080, sprite = 676 },
 }
 for tier, m in ipairs(MOCHILAS) do
   add({
@@ -440,10 +444,10 @@ function D.capacidadBolsa(equipo)
   return it and it.slots or D.BOLSA_BASE
 end
 
-add({ id = "pocion_vida", nombre = "Poción de vida", apila = 20, precio = 18, cura = 0.42, hoja = "equipment", sprite = 705 })
-add({ id = "pocion_mana", nombre = "Poción de maná", apila = 20, precio = 16, mana = 0.42, hoja = "equipment", sprite = 704 })
+add({ id = "pocion_vida", nombre = "Poción de vida", apila = 20, precio = 28, cura = 0.42, hoja = "equipment", sprite = 705 })
+add({ id = "pocion_mana", nombre = "Poción de maná", apila = 20, precio = 24, mana = 0.42, hoja = "equipment", sprite = 704 })
 add({ id = "cristal", nombre = "Cristal enemigo", apila = 20, precio = 1, hoja = "equipment", sprite = 359, quest = true })
-add({ id = "polvo_arcano", nombre = "Polvo arcano", apila = 99, precio = 6, hoja = "equipment", sprite = 699, texto = "Material para encantar el equipo." })
+add({ id = "polvo_arcano", nombre = "Polvo arcano", apila = 99, precio = 12, hoja = "equipment", sprite = 699, texto = "Material para encantar el equipo." })
 -- Objetos del Item Mall (se pagan con monedas especiales, ver dominio/mall.lua)
 for _, o in ipairs(Mall.OBJETOS) do
   add({ id = o.id, nombre = o.nombre, apila = 20, mall = true, monedas = o.precio, bono = o.bono, forja = o.forja,
@@ -451,13 +455,15 @@ for _, o in ipairs(Mall.OBJETOS) do
 end
 
 D.muebles = {
-  cama = { nombre = "Cama", precio = 80, sprite = { hoja = "town", indice = 18 }, texto = "Al dormir aquí fijas tu retorno." },
-  cofre = { nombre = "Cofre", precio = 70, sprite = { hoja = "town", indice = 65 }, texto = "Guarda objetos aparte de la bolsa." },
-  estandarte = { nombre = "Estandarte", precio = 50, sprite = { hoja = "equipment", indice = 455 }, texto = "Tu facción, en la pared." },
-  mesa = { nombre = "Mesa", precio = 40, sprite = { hoja = "town", indice = 7 }, texto = "Un lugar para dejar el mapa." },
+  cama = { nombre = "Cama", precio = 120, sprite = { hoja = "town", indice = 18 }, texto = "Al dormir aquí fijas tu retorno." },
+  cofre = { nombre = "Cofre", precio = 105, sprite = { hoja = "town", indice = 65 }, texto = "Guarda objetos aparte de la bolsa." },
+  estandarte = { nombre = "Estandarte", precio = 75, sprite = { hoja = "equipment", indice = 455 }, texto = "Tu facción, en la pared." },
+  mesa = { nombre = "Mesa", precio = 60, sprite = { hoja = "town", indice = 7 }, texto = "Un lugar para dejar el mapa." },
 }
 
-D.precioCasa = { normal = 380, capital = 720 }
+D.precioCasa = { normal = 760, capital = 1440 }
+-- Lo que paga el mercader al comprarte un objeto: esta fraccion de su precio.
+D.FACTOR_VENTA = 0.40
 
 function D.capital(faccion)
   for _, c in ipairs(D.ciudades) do

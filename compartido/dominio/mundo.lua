@@ -20,6 +20,7 @@ local Admin = require("compartido.dominio.admin")
 local Comercio = require("compartido.dominio.comercio")
 local Mall = require("compartido.dominio.mall")
 local Mazmorras = require("compartido.dominio.mazmorras")
+local Viaje = require("compartido.dominio.viaje")
 
 local Mundo = {}
 Mundo.__index = Mundo
@@ -2186,7 +2187,7 @@ function Mundo:vender(p, index)
   local it = Datos.item(slot.id)
   if not it or it.quest or it.mall then return "No se puede vender." end
   local cant = slot.cant or 1
-  p.oro = p.oro + math.floor((it.precio or 1) * 0.45) * cant
+  p.oro = p.oro + math.floor((it.precio or 1) * Datos.FACTOR_VENTA) * cant
   table.remove(p.bolsa, index)
 end
 
@@ -2477,6 +2478,7 @@ function Mundo:interactuar(p)
   if mejor then
     if mejor.rol == "mercado" then return { panel = "mercado" } end
     if mejor.rol == "heraldo" then return { panel = "guerra" } end
+    if mejor.rol == "barquero" then return { panel = "viaje" } end
     if mejor.rol == "encantador" then return { panel = "encantar" } end
     if mejor.rol == "oficios" or mejor.rol == "capitan" or mejor.rol == "contacto" then return { panel = "oficios" } end
     if mejor.rol == "comercio" then return { panel = "mercancias" } end
@@ -2778,10 +2780,26 @@ function Mundo:aplicarGuardado(p, data)
     -- guardados anteriores al árbol: solo el poder inicial y todos los puntos por gastar
     p.habilidades = data.habilidades or Arbol.iniciales(p.clase)
   end
-  p.vinculo = data.vinculo or p.vinculo
+  -- Una posición guardada solo vale si sigue siendo tierra firme de tu continente (o de la isla de la
+  -- Cicatriz a partir del nivel 20): así los personajes de un mundo anterior no aparecen en el mar.
+  local mapaMundo = self.mapas.mundo
+  local function posValida(x, y)
+    x, y = tonumber(x), tonumber(y)
+    if not x or not y then return false end
+    local tx, ty = math.floor(x), math.floor(y)
+    if not Mapa.transitable(mapaMundo, tx, ty) then return false end
+    local cont = mapaMundo.cont[tx] and mapaMundo.cont[tx][ty] or 0
+    return cont == (p.faccion == "umbra" and 2 or 1) or (cont == 3 and (p.nivel or 1) >= 20)
+  end
+  local inicio = { x = p.x, y = p.y }
+  if data.vinculo and posValida(data.vinculo.x, data.vinculo.y) then p.vinculo = data.vinculo end
   p.z = data.z or 0
   if data.x and data.y and not (tonumber(data.x) == 0 and tonumber(data.y) == 0) then
-    p.x, p.y = data.x, data.y
+    if posValida(data.x, data.y) then
+      p.x, p.y = data.x, data.y
+    else
+      p.x, p.y, p.z = inicio.x, inicio.y, 0
+    end
   end
   for _, c in ipairs(self.mapas.mundo.ciudades) do
     for _, par in ipairs(c.parcelas) do
@@ -3056,6 +3074,7 @@ function Mundo:accion(pid, nombre, datos)
     local err = self:entregarMision(p, datos.id)
     if err then self:mensaje("sistema", "", err, p) end
   end
+  if nombre == "viaje" and p then return self:accionViaje(p, datos or {}) end
   if nombre:sub(1, 9) == "comercio_" and p then return self:accionComercio(p, nombre, datos or {}) end
   if nombre:sub(1, 7) == "gremio_" and p then return self:accionGremio(p, nombre, datos or {}) end
   if nombre:sub(1, 6) == "grupo_" and p then return self:accionGrupo(p, nombre, datos or {}) end
@@ -3083,5 +3102,6 @@ Admin.instalar(Mundo)
 Comercio.instalar(Mundo)
 Mall.instalar(Mundo)
 Mazmorras.instalar(Mundo)
+Viaje.instalar(Mundo)
 
 return Mundo

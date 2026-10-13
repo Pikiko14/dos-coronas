@@ -17,12 +17,12 @@ M.NIVEL_MAX = 30
 
 -- sprite: hoja y casilla de la lámina de criaturas del cliente (render/personajes.lua).
 M.especies = {
-  gatito = { nombre = "Gatito", nivel = 1, precio = 150, rol = "ataque", atk = 1.25, desc = "Rápido y mordedor: el que más pega." },
-  murcielago = { nombre = "Murciélago", nivel = 5, precio = 500, rol = "vampiro", atk = 0.85, desc = "Te devuelve parte de lo que muerde." },
-  limo = { nombre = "Limo guardián", nivel = 8, precio = 900, rol = "guardian", atk = 0.45, desc = "Amortigua los golpes que recibes." },
-  flor = { nombre = "Flor curativa", nivel = 12, precio = 1600, rol = "sanador", atk = 0.35, desc = "Te cura un poco cada pocos segundos." },
-  hada = { nombre = "Hada", nivel = 16, precio = 2600, rol = "mana", atk = 0.4, desc = "Te devuelve maná mientras luchas." },
-  avispa = { nombre = "Avispa", nivel = 20, precio = 4200, rol = "veneno", atk = 0.9, desc = "Su aguijón envenena a tu objetivo." },
+  gatito = { nombre = "Gatito", nivel = 1, precio = 240, rol = "ataque", atk = 1.25, desc = "Rápido y mordedor: el que más pega." },
+  murcielago = { nombre = "Murciélago", nivel = 5, precio = 800, rol = "vampiro", atk = 0.85, desc = "Te devuelve parte de lo que muerde." },
+  limo = { nombre = "Limo guardián", nivel = 8, precio = 1450, rol = "guardian", atk = 0.45, desc = "Amortigua los golpes que recibes." },
+  flor = { nombre = "Flor curativa", nivel = 12, precio = 2550, rol = "sanador", atk = 0.35, desc = "Te cura un poco cada pocos segundos." },
+  hada = { nombre = "Hada", nivel = 16, precio = 4150, rol = "mana", atk = 0.4, desc = "Te devuelve maná mientras luchas." },
+  avispa = { nombre = "Avispa", nivel = 20, precio = 6700, rol = "veneno", atk = 0.9, desc = "Su aguijón envenena a tu objetivo." },
 }
 M.orden = { "gatito", "murcielago", "limo", "flor", "hada", "avispa" }
 

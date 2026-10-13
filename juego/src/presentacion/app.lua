@@ -124,6 +124,7 @@ function App.dibujar()
   end
   local mod = App.modulos[App.estado]
   if mod and mod.dibujar then mod.dibujar(App, w, h) end
+  require("src.presentacion.ayudas").cursor(Interfaz)
 end
 
 function App.salir()

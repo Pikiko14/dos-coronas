@@ -8,7 +8,7 @@ local Util = require("compartido.dominio.util")
 local M = {}
 
 M.NIVEL_MAX = 10
-M.COSTE_CAMBIO = 300
+M.COSTE_CAMBIO = 500
 
 M.OFICIOS = {
   trader = {

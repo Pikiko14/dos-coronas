@@ -1,5 +1,6 @@
 local Datos = require("compartido.dominio.datos")
 local Util = require("compartido.dominio.util")
+local Continentes = require("compartido.dominio.continentes")
 
 local M = {}
 
@@ -337,90 +338,43 @@ local function estamparCiudad(mapa, ciudad)
   npcEn(-17, 0, "gremio", "Escribano del gremio")
   npcEn(17, 0, "oficios", "Maestro de oficios")
   npcEn(-14, 2, "subastas", "Subastador")
+  if ciudad.puerto then npcEn(0, -6, "barquero", "Barquero de " .. ciudad.nombre) end
   local gy = (ciudad.acceso == "norte" and not grande) and 2 or (h - 3)
   npc(medio - 2, gy, "guardia", "Guardia de " .. ciudad.nombre)
   npc(medio + 2, gy, "guardia", "Guardia de " .. ciudad.nombre)
 end
 
-function M.mundo(rng)
+-- Copia profunda de una estructura con referencias compartidas.
+local function copiaProfunda(v, vistos)
+  if type(v) ~= "table" then return v end
+  vistos = vistos or {}
+  if vistos[v] then return vistos[v] end
+  local n = {}
+  vistos[v] = n
+  for k, x in pairs(v) do
+    if type(x) == "table" then n[k] = copiaProfunda(x, vistos) else n[k] = x end
+  end
+  return n
+end
+
+-- Mundo abierto: varios continentes separados por mar (ver continentes.lua), con costas orgánicas,
+-- biomas irregulares, caminos curvos entre las ciudades de cada continente, lagos y cordilleras.
+local function generarMundo(rng)
   local mapa = M.nuevo(Datos.MAPA_W, Datos.MAPA_H)
   local cx, cy = mapa.w / 2, mapa.h / 2
-  local rx, ry = mapa.w * 0.46, mapa.h * 0.46
   local E = Datos.ESCALA
-  -- Arterias: entre la fila norte de ciudades y las capitales, y entre las capitales y la fila sur.
-  local norteAbajo, surArriba, capArriba, capAbajo = 0, math.huge, math.huge, 0
-  local oeste, este = math.huge, 0
-  local capX = {}
-  for _, c in ipairs(Datos.ciudades) do
-    if c.capital then
-      capArriba, capAbajo = math.min(capArriba, c.y), math.max(capAbajo, c.y + 56)
-      capX[#capX + 1] = math.floor(c.x + 36)
-    end
-  end
-  for _, c in ipairs(Datos.ciudades) do
-    local alto = c.capital and 56 or 36
-    local ancho = c.capital and 72 or 48
-    if not c.capital then
-      if c.y + alto <= capArriba then norteAbajo = math.max(norteAbajo, c.y + alto)
-      else surArriba = math.min(surArriba, c.y) end
-    end
-    oeste, este = math.min(oeste, c.x + ancho / 2), math.max(este, c.x + ancho / 2)
-  end
-  local ARTERIA_N = math.floor((norteAbajo + capArriba) / 2)
-  local ARTERIA_S = math.floor((capAbajo + surArriba) / 2)
-  local CAMINO_O, CAMINO_E = math.floor(oeste), math.floor(este)
-  mapa.arterias = { norte = ARTERIA_N, sur = ARTERIA_S, oeste = CAMINO_O, este = CAMINO_E, verticales = capX }
-  for y = 0, mapa.h - 1 do
-    for x = 0, mapa.w - 1 do
-      local d = math.sqrt(((x - cx) / rx) ^ 2 + ((y - cy) / ry) ^ 2) + ruido(x, y)
-      local lado = x < cx and "albor" or "umbra"
-      local onda = math.sin(x * 0.04 / E) * 10 * E
-      local claro = math.sin(x * 0.05 / E + 1.2) * math.sin(y * 0.05 / E)
-      local cicatriz = math.abs(x - cx) < (12 * E + math.sin(y * 0.08 / E) * 3 * E)
-      if d > 0.97 then
-        setSuelo(mapa, x, y, "agua", "agua", nil)
-        setBloque(mapa, x, y, true)
-      elseif d > 0.90 then
-        setSuelo(mapa, x, y, "arena", "costa", lado)
-      elseif cicatriz and d < 0.90 then
-        setSuelo(mapa, x, y, "cicatriz", "cicatriz", nil)
-      elseif d < 0.86 and (y > cy + 70 * E + onda or claro > 0.62) then
-        setSuelo(mapa, x, y, "bosque", "bosque", lado)
-      elseif lado == "umbra" then
-        setSuelo(mapa, x, y, "hierba_osc", "umbra", "umbra")
-      else
-        setSuelo(mapa, x, y, "hierba", "albor", "albor")
-      end
-    end
-  end
-  local function centroCiudad(c)
-    local ancho = c.capital and 72 or 48
-    local alto = c.capital and 56 or 36
-    return c.x + ancho / 2, c.y + alto / 2
-  end
-  for y = 1, mapa.h - 2 do
-    for x = 1, mapa.w - 2 do
-      local b = mapa.bioma[x] and mapa.bioma[x][y]
-      if b and b ~= "agua" and b ~= "cicatriz" then
-        local mejor, md
-        for _, c in ipairs(Datos.ciudades) do
-          local ccx, ccy = centroCiudad(c)
-          local dx, dy = x - ccx, y - ccy
-          local d2 = dx * dx + dy * dy
-          if not md or d2 < md then mejor, md = c, d2 end
-        end
-        if mejor and md <= (110 * E) ^ 2 and Datos.biomas[mejor.bioma] then
-          local def = Datos.biomas[mejor.bioma]
-          setSuelo(mapa, x, y, def.suelo, mejor.bioma, mejor.faccion)
-        end
-      end
-    end
-  end
+  -- 1) terreno: continentes, playas, biomas, zonas altas, bosques y manchas de tierra
+  local ciudadesBase = {}
   for _, c in ipairs(Datos.ciudades) do
     local copia = {}
     for k, v in pairs(c) do copia[k] = v end
-    estamparCiudad(mapa, copia)
-    mapa.ciudades[#mapa.ciudades + 1] = copia
+    ciudadesBase[#ciudadesBase + 1] = copia
+  end
+  Continentes.generar(mapa, ciudadesBase, setSuelo, setBloque)
+  -- 2) las ciudades se estampan sobre el terreno
+  for _, c in ipairs(ciudadesBase) do
+    estamparCiudad(mapa, c)
+    mapa.ciudades[#mapa.ciudades + 1] = c
   end
   local function despejar(c, radio)
     local def = Datos.biomas[c.bioma]
@@ -432,7 +386,7 @@ function M.mundo(rng)
         if not dentro and x > 0 and y > 0 and x < mapa.w - 1 and y < mapa.h - 1 then
           local actual = mapa.bioma[x] and mapa.bioma[x][y]
           local s = mapa.suelo[x] and mapa.suelo[x][y]
-          if s and actual ~= "agua" and actual ~= "cicatriz" and actual ~= "ciudad" then
+          if s and actual ~= "agua" and actual ~= "cicatriz" and actual ~= "ciudad" and actual ~= "costa" then
             setSuelo(mapa, x, y, suelo, bio, c.faccion)
             setBloque(mapa, x, y, false)
           end
@@ -441,6 +395,7 @@ function M.mundo(rng)
     end
   end
   for _, c in ipairs(mapa.ciudades) do despejar(c, 5) end
+  -- 3) caminos
   local function pintar(x, y)
     for dy = -1, 1 do
       for dx = -1, 1 do
@@ -466,30 +421,117 @@ function M.mundo(rng)
       pintar(math.floor(x0 + dx * t + 0.5), math.floor(y0 + dy * t + 0.5))
     end
   end
-  linea(CAMINO_O, ARTERIA_N, CAMINO_E, ARTERIA_N)
-  linea(CAMINO_O, ARTERIA_S, CAMINO_E, ARTERIA_S)
-  for _, vx in ipairs(capX) do linea(vx, ARTERIA_N, vx, ARTERIA_S) end
-  linea(cx, ARTERIA_N, cx, ARTERIA_S)
-  for _, c in ipairs(mapa.ciudades) do
+  -- Curva de Catmull-Rom por los puntos de control: devuelve casillas separadas ~1.
+  local function curva(pts)
+    local salida = {}
+    local n = #pts
+    for i = 1, n - 1 do
+      local p0, p1, p2, p3 = pts[math.max(1, i - 1)], pts[i], pts[i + 1], pts[math.min(n, i + 2)]
+      local largo = math.max(1, math.sqrt((p2.x - p1.x) ^ 2 + (p2.y - p1.y) ^ 2))
+      local pasos = math.ceil(largo)
+      for k = 0, pasos - 1 do
+        local t = k / pasos
+        local t2, t3 = t * t, t * t * t
+        local function c(a, b, cc, d)
+          return 0.5 * ((2 * b) + (-a + cc) * t + (2 * a - 5 * b + 4 * cc - d) * t2 + (-a + 3 * b - 3 * cc + d) * t3)
+        end
+        salida[#salida + 1] = { x = c(p0.x, p1.x, p2.x, p3.x), y = c(p0.y, p1.y, p2.y, p3.y) }
+      end
+    end
+    salida[#salida + 1] = { x = pts[n].x, y = pts[n].y }
+    return salida
+  end
+  local function puertaHacia(c, otra)
+    local mejor, md
     for _, a in ipairs(c.accesos) do
-      local meta = math.abs(a.y - ARTERIA_N) <= math.abs(a.y - ARTERIA_S) and ARTERIA_N or ARTERIA_S
-      local paso = meta > a.y and 1 or -1
-      local y = a.y + paso
-      local guardia = 0
-      while guardia < 260 do
-        guardia = guardia + 1
-        pintar(a.x, y)
-        if y == meta then break end
-        y = y + paso
+      local d = (a.x - otra.cx) ^ 2 + (a.y - otra.cy) ^ 2
+      if not md or d < md then mejor, md = a, d end
+    end
+    return mejor
+  end
+  mapa.caminos = {}
+  local function trazarCamino(a, b)
+    local ga, gb = puertaHacia(a, b), puertaHacia(b, a)
+    local sa = ga.y <= a.y + 1 and -1 or 1
+    local sb = gb.y <= b.y + 1 and -1 or 1
+    local p0 = { x = ga.x, y = ga.y + sa * 6 }
+    local p1 = { x = gb.x, y = gb.y + sb * 6 }
+    local largo = math.max(1, math.sqrt((p1.x - p0.x) ^ 2 + (p1.y - p0.y) ^ 2))
+    local nx, ny = -(p1.y - p0.y) / largo, (p1.x - p0.x) / largo
+    local mejor
+    for intento = 1, 8 do
+      local amp = math.min(44, largo * 0.24) * (intento <= 6 and 1 or 0.3)
+      local pts = { { x = ga.x + 0.5, y = ga.y + 0.5 }, { x = p0.x + 0.5, y = p0.y + 0.5 } }
+      local n = math.max(1, math.floor(largo / 38))
+      for i = 1, n do
+        local t = i / (n + 1)
+        local off = (rng:int(-100, 100) / 100) * amp * math.sqrt(math.sin(math.pi * t))
+        pts[#pts + 1] = { x = p0.x + (p1.x - p0.x) * t + nx * off + 0.5, y = p0.y + (p1.y - p0.y) * t + ny * off + 0.5 }
+      end
+      pts[#pts + 1] = { x = p1.x + 0.5, y = p1.y + 0.5 }
+      pts[#pts + 1] = { x = gb.x + 0.5, y = gb.y + 0.5 }
+      local ruta = curva(pts)
+      local agua = 0
+      for _, p in ipairs(ruta) do
+        local s = mapa.suelo[math.floor(p.x)] and mapa.suelo[math.floor(p.x)][math.floor(p.y)]
+        if s == "agua" or s == nil then agua = agua + 1 end
+      end
+      if agua == 0 or intento == 8 then mejor = ruta break end
+    end
+    for _, p in ipairs(mejor) do pintar(math.floor(p.x), math.floor(p.y)) end
+    -- puntos de la ruta (para las caravanas): empiezan y acaban fuera de las murallas, donde ya se puede herir
+    local puntos = {}
+    local ini, fin = math.min(7, math.floor(#mejor / 3)), math.max(#mejor - 7, math.ceil(#mejor * 2 / 3))
+    for i = ini, fin, 4 do puntos[#puntos + 1] = { x = mejor[i].x, y = mejor[i].y } end
+    puntos[#puntos + 1] = { x = mejor[fin].x, y = mejor[fin].y }
+    mapa.caminos[#mapa.caminos + 1] = { a = a.id, b = b.id, puntos = puntos }
+  end
+  -- árbol de expansión mínima de las ciudades de cada continente y, además, cada ciudad con su vecina
+  -- más cercana (así hay algún circuito y no solo un árbol)
+  for _, k in pairs(mapa.continentes) do
+    local lista = {}
+    for _, cid in ipairs(k.ciudades) do
+      for _, c in ipairs(mapa.ciudades) do if c.id == cid then lista[#lista + 1] = c end end
+    end
+    if #lista >= 2 then
+      local dentro, hecho = { [lista[1].id] = true }, {}
+      local function dist(a, b) return math.sqrt((a.cx - b.cx) ^ 2 + (a.cy - b.cy) ^ 2) end
+      local function unir(a, b)
+        local clave = a.id < b.id and (a.id .. "|" .. b.id) or (b.id .. "|" .. a.id)
+        if not hecho[clave] then hecho[clave] = true trazarCamino(a, b) end
+      end
+      for _ = 1, #lista - 1 do
+        local mejor, ma, mb
+        for _, a in ipairs(lista) do
+          if dentro[a.id] then
+            for _, b in ipairs(lista) do
+              if not dentro[b.id] and (not mejor or dist(a, b) < mejor) then mejor, ma, mb = dist(a, b), a, b end
+            end
+          end
+        end
+        if mb then dentro[mb.id] = true unir(ma, mb) end
+      end
+      for _, a in ipairs(lista) do
+        local mejor, vecina
+        for _, b in ipairs(lista) do
+          if b ~= a and (not mejor or dist(a, b) < mejor) then mejor, vecina = dist(a, b), b end
+        end
+        if vecina then unir(a, vecina) end
       end
     end
   end
+  -- 4) Isla de la Cicatriz: plaza de guerra en el centro con sus cruces de camino
+  local isla = mapa.cont[math.floor(cx)][math.floor(cy)] == 3
   local px0, px1 = math.floor(cx) - 14, math.floor(cx) + 14
   local py0, py1 = math.floor(cy) - 10, math.floor(cy) + 10
+  if isla then
+    linea(math.floor(cx), math.floor(cy) - 60, math.floor(cx), math.floor(cy) + 60)
+    linea(math.floor(cx) - 45, math.floor(cy), math.floor(cx) + 45, math.floor(cy))
+  end
   for y = py0, py1 do
     for x = px0, px1 do
       local cruz = math.abs(x - cx) <= 1 or math.abs(y - cy) <= 1
-      if M.get(mapa, x, y) and not cruz then
+      if M.get(mapa, x, y) and not cruz and mapa.suelo[x][y] ~= "agua" then
         local lado = mapa.lado[x] and mapa.lado[x][y]
         setSuelo(mapa, x, y, "plaza", "cicatriz", lado)
         setBloque(mapa, x, y, false)
@@ -497,6 +539,40 @@ function M.mundo(rng)
     end
   end
   mapa.portal = { x = cx + 0.5, y = cy + 0.5 }
+  -- 5) puertos: ciudades con barquero (el embarcadero de la isla se añade con los puestos)
+  mapa.puertos = {}
+  for _, c in ipairs(mapa.ciudades) do
+    for _, n in ipairs(c.npcs) do
+      if n.rol == "barquero" then
+        mapa.puertos[#mapa.puertos + 1] = {
+          id = c.id, nombre = c.nombre, x = n.x, y = n.y + 1.6, cont = c.cont, faccion = c.faccion,
+        }
+      end
+    end
+  end
+  -- 6) escala de niveles: la distancia a la ciudad más cercana fija el nivel de cada zona. Se ajusta
+  -- para que el nivel máximo se alcance en el interior de los continentes (nivel 30 hacia el 93% de
+  -- la distancia máxima), así hay zonas de todos los niveles aunque cada continente sea pequeño.
+  M.DIST_BASE = 40
+  do
+    local distancias = {}
+    for y = 6, mapa.h - 6, 7 do
+      for x = 6, mapa.w - 6, 7 do
+        local k = mapa.cont[x][y]
+        if (k == 1 or k == 2) and mapa.suelo[x][y] ~= "agua" then
+          local md
+          for _, c in ipairs(mapa.ciudades) do
+            local d2 = (c.cx - x) ^ 2 + (c.cy - y) ^ 2
+            if not md or d2 < md then md = d2 end
+          end
+          distancias[#distancias + 1] = math.sqrt(md)
+        end
+      end
+    end
+    table.sort(distancias)
+    local q = distancias[math.max(1, math.floor(#distancias * 0.93))] or 200
+    M.DIST_POR_NIVEL = math.max(3.0, math.min(6.5, (q - M.DIST_BASE) / 28))
+  end
   local function cercaCiudad(x, y, margen)
     for _, c in ipairs(mapa.ciudades) do
       if x >= c.x - margen and x < c.x + c.w + margen and y >= c.y - margen and y < c.y + c.h + margen then
@@ -519,14 +595,14 @@ function M.mundo(rng)
       return false
     end
     local intentos = 0
-    while #mapa.lagos < 22 and intentos < 600 do
+    while #mapa.lagos < 30 and intentos < 900 do
       intentos = intentos + 1
       local x = rng:int(50, mapa.w - 50)
       local y = rng:int(50, mapa.h - 50)
-      local d = math.sqrt(((x - cx) / rx) ^ 2 + ((y - cy) / ry) ^ 2)
+      local k = mapa.cont[x][y]
       local b = mapa.bioma[x] and mapa.bioma[x][y]
       local r = rng:int(5, 13)
-      if d < 0.72 and math.abs(x - cx) > 30 * E and b ~= "agua" and b ~= "cicatriz" and b ~= "costa" and not hayCamino(x, y, r + 4) then
+      if (k == 1 or k == 2) and mapa.distAgua[x][y] > r + 16 and b ~= "agua" and b ~= "cicatriz" and b ~= "costa" and not hayCamino(x, y, r + 4) then
         local ya = false
         for _, l in ipairs(mapa.lagos) do
           if (l.x - x) ^ 2 + (l.y - y) ^ 2 < (l.r + r + 14) ^ 2 then ya = true end
@@ -554,14 +630,9 @@ function M.mundo(rng)
       end
     end
   end
-  -- Cordilleras: picos de 2x2 casillas a lo largo de la frontera entre las zonas de
-  -- dos ciudades vecinas, con huecos para pasar. Nunca pisan caminos, plazas, costa
-  -- ni la cicatriz, así que las ciudades siguen conectadas por los caminos.
-  local centros = {}
-  for _, c in ipairs(Datos.ciudades) do
-    local ccx, ccy = centroCiudad(c)
-    centros[#centros + 1] = { x = ccx, y = ccy }
-  end
+  -- Cordilleras: cadenas de picos de 2x2 casillas que siguen crestas del ruido fractal (curvas, no
+  -- rectas), con huecos para pasar. Nunca pisan caminos, plazas, ciudades ni la costa, así que las
+  -- ciudades siguen conectadas por los caminos.
   local function libre(x, y)
     local s = M.get(mapa, x, y)
     local b = mapa.bioma[x] and mapa.bioma[x][y]
@@ -572,26 +643,25 @@ function M.mundo(rng)
   end
   for y = 6, mapa.h - 8, 2 do
     for x = 6, mapa.w - 8, 2 do
-      local d1, d2
-      for _, c in ipairs(centros) do
-        local d = math.sqrt((x - c.x) ^ 2 + (y - c.y) ^ 2)
-        if not d1 or d < d1 then d1, d2 = d, d1
-        elseif not d2 or d < d2 then d2 = d end
-      end
-      local ancho = 2 + 5 * azar(math.floor(x / 6), math.floor(y / 6), 21)
-      if d2 and d2 - d1 < ancho and d1 > 14 and azar(math.floor(x / 20), math.floor(y / 20), 22) >= 0.12
-        and azar(x, y, 23) < 0.8 and not cercaCiudad(x, y, 10)
-        and libre(x, y) and libre(x + 1, y) and libre(x, y + 1) and libre(x + 1, y + 1) then
-        for dy = 0, 1 do
-          for dx = 0, 1 do
-            setSuelo(mapa, x + dx, y + dy, "montana", nil, nil)
-            setBloque(mapa, x + dx, y + dy, true)
+      local k = mapa.cont[x][y]
+      if (k == 1 or k == 2) and mapa.distAgua[x][y] > 9 then
+        local r = Continentes.fbm(x / 90, y / 90, 91, 3)
+        local cresta = 1 - math.abs(r * 2 - 1)
+        local grosor = 0.952 - 0.025 * azar(math.floor(x / 18), math.floor(y / 18), 24)
+        if cresta > grosor and azar(math.floor(x / 14), math.floor(y / 14), 22) >= 0.15 and azar(x, y, 23) < 0.85
+          and not cercaCiudad(x, y, 12)
+          and libre(x, y) and libre(x + 1, y) and libre(x, y + 1) and libre(x + 1, y + 1) then
+          for dy = 0, 1 do
+            for dx = 0, 1 do
+              setSuelo(mapa, x + dx, y + dy, "montana", nil, nil)
+              setBloque(mapa, x + dx, y + dy, true)
+            end
           end
+          mapa.props[#mapa.props + 1] = {
+            x = x, y = y, ancho = 2, alto = 2,
+            tipo = k == 1 and "montana_albor" or "montana_umbra",
+          }
         end
-        mapa.props[#mapa.props + 1] = {
-          x = x, y = y, ancho = 2, alto = 2,
-          tipo = x < cx and "montana_albor" or "montana_umbra",
-        }
       end
     end
   end
@@ -599,11 +669,13 @@ function M.mundo(rng)
     for x = 2, mapa.w - 3 do
       local b = mapa.bioma[x] and mapa.bioma[x][y]
       local s = M.get(mapa, x, y)
-      if s and s ~= "camino" and s ~= "plaza" and s ~= "agua" and s ~= "montana" and b ~= "ciudad" and b ~= "costa" and not cercaCiudad(x, y, 6) then
-        local bosque = b == "senda" or b == "pinar" or b == "bosque"
-        local seco = b == "cienaga" or b == "velo" or b == "eclipse" or b == "cicatriz"
+      if s and s ~= "camino" and s ~= "plaza" and s ~= "agua" and s ~= "montana" and b ~= "ciudad" and b ~= "costa" and b ~= "islote" and not cercaCiudad(x, y, 6) then
+        local bosque = b == "senda" or b == "pinar" or b == "bosque" or b == "ventisca"
+        local seco = b == "cienaga" or b == "velo" or b == "eclipse" or b == "cicatriz" or b == "altiplano"
         local mata = (b == "trigal" or b == "campos" or b == "colina") and azar(x, y, 7) < 0.012 and math.sin(x * 0.05) * math.sin(y * 0.05) > 0.3
-        if (bosque and azar(x, y, 1) < 0.085) or (seco and azar(x, y, 2) < 0.045) or mata then
+        local pb = b == "ventisca" and 0.03 or 0.085
+        local ps = b == "altiplano" and 0.012 or 0.045
+        if (bosque and azar(x, y, 1) < pb) or (seco and azar(x, y, 2) < ps) or mata then
           local tipo = "arbol"
           if seco then tipo = "arbol_seco"
           elseif bosque then tipo = "arbol_pino" end
@@ -669,18 +741,23 @@ function M.mundo(rng)
       local b = mapa.bioma[x] and mapa.bioma[x][y]
       local ok = false
       for _, bb in ipairs(biomas) do if b == bb then ok = true end end
-      if ok and areaBuena(x, y, 4) and not cercaCiudad(x, y, minCiudad) and not cercaDePuesto(x, y, minPuesto) then
+      if ok and mapa.cont[x][y] <= 2 and areaBuena(x, y, 4) and not cercaCiudad(x, y, minCiudad) and not cercaDePuesto(x, y, minPuesto) then
         return x, y
       end
     end
   end
-  -- 1) puestos de comercio a lo largo de las dos arterias
-  for _, y0 in ipairs({ ARTERIA_N, ARTERIA_S }) do
-    for _, f in ipairs({ 0.1, 0.28, 0.46, 0.64, 0.82 }) do
-      local x = math.floor(CAMINO_O + (CAMINO_E - CAMINO_O) * f)
-      for _, dy in ipairs({ -7, 7, -10, 10 }) do
-        local y = y0 + dy
-        if areaBuena(x, y, 4) and not cercaCiudad(x, y, 16) and not cercaDePuesto(x, y, 30) and math.abs(x - cx) > 24 then
+  -- 1) puestos de comercio junto a los caminos entre ciudades
+  for _, cam in ipairs(mapa.caminos) do
+    local pts = cam.puntos
+    for _, f in ipairs({ 0.25, 0.5, 0.75 }) do
+      local p = pts[math.max(1, math.min(#pts, math.floor(#pts * f)))]
+      local q = pts[math.max(1, math.min(#pts, math.floor(#pts * f) + 1))]
+      local dx, dy = q.x - p.x, q.y - p.y
+      local l = math.max(0.01, math.sqrt(dx * dx + dy * dy))
+      for _, lado in ipairs({ 1, -1 }) do
+        local x = math.floor(p.x + (-dy / l) * 8 * lado)
+        local y = math.floor(p.y + (dx / l) * 8 * lado)
+        if areaBuena(x, y, 4) and not cercaCiudad(x, y, 16) and not cercaDePuesto(x, y, 40) then
           nuevoPuesto("comercio", "Puesto del camino", x, y, { { "comercio", "Mercader del camino" }, { "establo", "Mozo de posta" } })
           break
         end
@@ -702,6 +779,14 @@ function M.mundo(rng)
     { { "encantador", "Maestro de encantos" } }, 40)
   repartir(2, { "trigal", "senda", "cienaga" }, "ermita", "Ermita del criador",
     { { "criador", "Criador de mascotas" }, { "establo", "Mozo de cuadra" } }, 40)
+  -- Embarcadero de la isla de la Cicatriz: el barquero que la une con los puertos de los continentes.
+  if mapa.cont[math.floor(cx)][math.floor(cy)] == 3 then
+    local pu = nuevoPuesto("embarcadero", "Embarcadero de la Cicatriz", math.floor(cx), math.floor(cy) + 26,
+      { { "barquero", "Barquero de la Cicatriz" } })
+    pu.npcs[1].faccion = nil
+    mapa.puertos[#mapa.puertos + 1] = { id = "cicatriz", nombre = "Embarcadero de la Cicatriz", x = pu.npcs[1].x, y = pu.npcs[1].y + 1.6, cont = 3 }
+    linea(math.floor(cx), math.floor(cy) + 10, math.floor(cx), math.floor(cy) + 25)
+  end
   -- 3) lista de todos los PNJ para los iconos del mapa
   mapa.npcsMapa = {}
   for _, c in ipairs(mapa.ciudades) do
@@ -718,7 +803,7 @@ function M.mundo(rng)
       local y = rng:int(2, mapa.h - 3)
       local b = mapa.bioma[x] and mapa.bioma[x][y]
       local s = M.get(mapa, x, y)
-      local ok = M.transitable(mapa, x, y) and b == bioma and b ~= "ciudad" and s ~= "camino" and s ~= "plaza"
+      local ok = M.transitable(mapa, x, y) and mapa.cont[x][y] <= 3 and b == bioma and b ~= "ciudad" and s ~= "camino" and s ~= "plaza"
       if ok and cercaCiudad(x, y, 8) then ok = false end
       if ok and cercaDePuesto(x, y, 14) then ok = false end
       if ok and not dentroCiudad(mapa.ciudades, x, y) then return x + 0.5, y + 0.5 end
@@ -736,22 +821,39 @@ function M.mundo(rng)
       if x > 2 and y > 2 and x < mapa.w - 3 and y < mapa.h - 3 then
         local s = M.get(mapa, x, y)
         local b = mapa.bioma[x] and mapa.bioma[x][y]
-        local ok = M.transitable(mapa, x, y) and b ~= "ciudad" and b ~= "cicatriz" and s ~= "camino" and s ~= "plaza"
+        local ok = M.transitable(mapa, x, y) and mapa.cont[x][y] == c.cont and b ~= "ciudad" and b ~= "cicatriz" and s ~= "camino" and s ~= "plaza"
         if ok and cercaCiudad(x, y, 10) then ok = false end
         if ok and cercaDePuesto(x, y, 12) then ok = false end
         if ok then return x + 0.5, y + 0.5 end
       end
     end
   end
-  M.DIST_BASE, M.DIST_POR_NIVEL = 40, 6.5
+  -- Nivel de la zona en un punto: depende de lo lejos que está de la ciudad MÁS CERCANA, así una
+  -- criatura nunca sale en una zona de otro nivel aunque el anillo de otra ciudad pase por ahí.
+  local function nivelZona(x, y)
+    local md
+    for _, c in ipairs(mapa.ciudades) do
+      local d2 = (c.x + c.w / 2 - x) ^ 2 + (c.y + c.h / 2 - y) ^ 2
+      if not md or d2 < md then md = d2 end
+    end
+    return math.max(1, math.min(Datos.NIVEL_MAX, math.floor((math.sqrt(md) - M.DIST_BASE) / M.DIST_POR_NIVEL + 0.5)))
+  end
+  M.nivelZona = nivelZona
+  M.TOLERANCIA_NIVEL = 2
   for _, mon in ipairs(Datos.monstruos) do
     if not mon.noCampamento then
-      local cant = mon.elite and 2 or (mon.nivel <= 8 and 7 or (mon.nivel >= 20 and 4 or 5))
+      local cant = mon.elite and 2 or (mon.nivel <= 8 and 4 or 3)
       for _, c in ipairs(mapa.ciudades) do
         local propia = mon.bioma == c.bioma
-        local camps = mon.elite and (propia and 1 or 0) or (propia and 3 or 1)
+        -- menos campamentos: dos en la ciudad de su bioma y uno en la mitad de las demás
+        local camps = mon.elite and (propia and 1 or 0) or (propia and 2 or rng:int(0, 1))
         for _ = 1, camps do
-          local x, y = puntoAnillo(c, M.DIST_BASE + mon.nivel * M.DIST_POR_NIVEL)
+          local x, y
+          for _ = 1, 8 do
+            x, y = puntoAnillo(c, M.DIST_BASE + mon.nivel * M.DIST_POR_NIVEL)
+            if x and math.abs(nivelZona(x, y) - mon.nivel) <= M.TOLERANCIA_NIVEL then break end
+            x = nil
+          end
           if x then
             mapa.campamentos[#mapa.campamentos + 1] = {
               x = x, y = y, monstruo = mon.id, cantidad = cant, radio = 4, ciudad = c.id,
@@ -765,7 +867,7 @@ function M.mundo(rng)
   -- anaden campamentos donde no hay ninguno cerca; su nivel depende de lo lejos que estan de la ciudad
   -- mas proxima (mismo reparto por anillos), asi el centro del mapa es la zona mas peligrosa.
   do
-    local CELDA, HUECO = 34, 28
+    local CELDA, HUECO = 46, 36
     local function campamentoCerca(x, y, r)
       for _, k in ipairs(mapa.campamentos) do
         if not k.z and (k.x - x) ^ 2 + (k.y - y) ^ 2 < r * r then return true end
@@ -778,7 +880,7 @@ function M.mundo(rng)
         if x > 2 and y > 2 and x < mapa.w - 3 and y < mapa.h - 3 then
           local s = M.get(mapa, x, y)
           local b = mapa.bioma[x] and mapa.bioma[x][y]
-          local ok = M.transitable(mapa, x, y) and b ~= "ciudad" and s ~= "camino" and s ~= "plaza"
+          local ok = M.transitable(mapa, x, y) and mapa.cont[x][y] <= 3 and b ~= "ciudad" and s ~= "camino" and s ~= "plaza"
           if ok and (cercaCiudad(x, y, 10) or cercaDePuesto(x, y, 12) or campamentoCerca(x, y, HUECO)) then ok = false end
           if ok then
             local cerca, md
@@ -795,9 +897,35 @@ function M.mundo(rng)
               local mon = posibles[rng:int(1, #posibles)]
               mapa.campamentos[#mapa.campamentos + 1] = {
                 x = x + 0.5, y = y + 0.5, monstruo = mon.id, radio = 4, ciudad = cerca.id,
-                cantidad = mon.nivel <= 8 and 7 or (mon.nivel >= 20 and 4 or 5),
+                cantidad = mon.nivel <= 8 and 4 or 3,
               }
             end
+          end
+        end
+      end
+    end
+  end
+  -- Isla de la Cicatriz: la zona de guerra, con criaturas del nivel máximo repartidas por toda la isla
+  do
+    local altas = {}
+    for _, mon in ipairs(Datos.monstruos) do
+      if not mon.noCampamento and not mon.elite and mon.nivel >= 26 then altas[#altas + 1] = mon end
+    end
+    local isla = {}
+    for gy = 24, mapa.h - 24, 30 do
+      for gx = 24, mapa.w - 24, 30 do
+        local x, y = gx + rng:int(-9, 9), gy + rng:int(-9, 9)
+        if mapa.cont[x][y] == 3 and M.transitable(mapa, x, y) then
+          local s = M.get(mapa, x, y)
+          local ok = s ~= "camino" and s ~= "plaza" and Util.dist(x, y, cx, cy) > 26 and not cercaDePuesto(x, y, 14)
+          for _, k in ipairs(isla) do
+            if (k.x - x) ^ 2 + (k.y - y) ^ 2 < 22 * 22 then ok = false end
+          end
+          if ok and #altas > 0 then
+            local mon = altas[rng:int(1, #altas)]
+            local camp = { x = x + 0.5, y = y + 0.5, monstruo = mon.id, radio = 4, ciudad = "cicatriz", isla = true, cantidad = 3 }
+            isla[#isla + 1] = camp
+            mapa.campamentos[#mapa.campamentos + 1] = camp
           end
         end
       end
@@ -900,6 +1028,20 @@ function M.mundo(rng)
     end
   end
   return mapa
+end
+
+-- El mapa del mundo es siempre el mismo: se genera una vez por proceso y cada mundo recibe una copia
+-- con sus propias ciudades (las parcelas cambian de dueño); el terreno se comparte porque no cambia.
+local cacheMundo
+function M.mundo()
+  if not cacheMundo then
+    cacheMundo = generarMundo(Util.rng(Datos.SEMILLA + 17))
+    cacheMundo.distAgua = nil
+  end
+  local m = {}
+  for k, v in pairs(cacheMundo) do m[k] = v end
+  m.ciudades = copiaProfunda(cacheMundo.ciudades)
+  return m
 end
 
 function M.batalla()
@@ -1161,6 +1303,7 @@ function M.zonas(mapa)
   local FRANJAS = { { 1, 10, "cercanias" }, { 11, 20, "tierras medias" }, { 21, 99, "tierras salvajes" } }
   local nombres = {}
   for _, c in ipairs(mapa.ciudades or {}) do nombres[c.id] = c.nombre end
+  nombres.cicatriz = "Isla de la Cicatriz"
   local por = {}
   for _, camp in ipairs(mapa.campamentos or {}) do
     if not camp.z and camp.ciudad then

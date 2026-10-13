@@ -20,6 +20,7 @@ local FAMILIA = {
   camino = "pavimento", calle = "pavimento", plaza = "pavimento",
   agua = "agua", muralla = "muralla", teja = "edificio", teja_umbra = "edificio",
   fachada = "edificio", empedrado = "empedrado", madera = "madera", tejado = "edificio", mazmorra = "mazmorra",
+  nieve = "nieve", roca = "roca", pantano = "pantano",
 }
 
 local img
@@ -174,6 +175,10 @@ local DECORADO = {
   eclipse = { { "grieta", 0.04 }, { "restos", 0.007 }, { "piedra", 0.025 }, { "hierba_seca", 0.025 } },
   cicatriz = { { "grieta", 0.045 }, { "restos", 0.008 }, { "piedra", 0.025 } },
   costa = { { "hierba_seca", 0.03 }, { "piedra", 0.014 }, { "tronco", 0.006 } },
+  bosque = { { "seta_marron", 0.014 }, { "seta_roja", 0.008 }, { "tocon", 0.012 }, { "tronco", 0.008 }, { "helecho", 0.045 }, { "hojas", 0.02 } },
+  altiplano = { { "piedra", 0.035 }, { "grieta", 0.02 }, { "hierba_seca", 0.012 } },
+  ventisca = { { "piedra", 0.022 }, { "grieta", 0.01 }, { "tronco", 0.004 } },
+  islote = { { "flor_blanca", 0.02 }, { "matas", 0.03 }, { "piedra", 0.01 } },
   albor = { { "flor_amarilla", 0.022 }, { "flor_blanca", 0.018 }, { "flor_roja", 0.008 }, { "matas", 0.035 }, { "hierba_alta", 0.02 }, { "piedra", 0.005 } },
   umbra = { { "seta_roja", 0.012 }, { "hierba_seca", 0.03 }, { "matas", 0.025 }, { "piedra", 0.007 }, { "flor_blanca", 0.012 }, { "hojas", 0.012 } },
   ciudad = { { "flor_amarilla", 0.03 }, { "flor_roja", 0.02 }, { "flores_mixtas", 0.025 }, { "matas", 0.025 }, { "jarron", 0.004 }, { "cubo", 0.004 } },
@@ -283,6 +288,147 @@ local function dibujarInterior(mapa, x, y, px, py)
   end
 end
 
+-- Suelos propios (nieve, roca, pantano): se dibujan por código, con 4 variantes cada uno, y se funden con
+-- los suelos vecinos mediante franjas suaves en vez de cortar de golpe de un tile a otro.
+local PROC = { nieve = true, roca = true, pantano = true }
+local COLOR_SUELO = {
+  nieve = { 0.88, 0.93, 1.0 }, roca = { 0.50, 0.50, 0.55 }, pantano = { 0.17, 0.27, 0.20 },
+  hierba = { 0.38, 0.62, 0.28 }, tierra = { 0.55, 0.40, 0.24 }, arena = { 0.85, 0.78, 0.52 },
+}
+local variantesProc = {}
+local franjaV, franjaH
+
+local function ruidoTile(i, j, sal)
+  local n = (i * 374761393 + j * 668265263 + sal * 1274126177) % 2147483647
+  n = (n * 1103515245 + 12345) % 2147483647
+  return (n % 10007) / 10007
+end
+
+local function crearVariantes(tipo)
+  local lista = {}
+  for v = 1, 4 do
+    local d = love.image.newImageData(32, 32)
+    local base = COLOR_SUELO[tipo]
+    -- manchas suaves dentro del tile (nunca tocan el borde, así los tiles encajan sin costuras)
+    local function mancha(cx, cy, rx, ry, color, fuerza)
+      for py = math.max(1, math.floor(cy - ry)), math.min(30, math.ceil(cy + ry)) do
+        for px = math.max(1, math.floor(cx - rx)), math.min(30, math.ceil(cx + rx)) do
+          local dx, dy = (px - cx) / rx, (py - cy) / ry
+          local k = 1 - (dx * dx + dy * dy)
+          if k > 0 then
+            local a = math.min(1, k * 2.2) * fuerza
+            local r, g, b = d:getPixel(px, py)
+            d:setPixel(px, py, r + (color[1] - r) * a, g + (color[2] - g) * a, b + (color[3] - b) * a, 1)
+          end
+        end
+      end
+    end
+    for py = 0, 31 do
+      for px = 0, 31 do
+        local g2 = ruidoTile(px, py, v * 13 + 2) - 0.5
+        local r, gg, b = base[1], base[2], base[3]
+        if tipo == "nieve" then
+          local k = 1 + g2 * 0.035
+          r, gg, b = r * k, gg * k, b * (k + 0.005)
+          if ruidoTile(px, py, v * 17 + 3) > 0.988 then r, gg, b = 1, 1, 1 end
+        elseif tipo == "roca" then
+          local k = 1 + g2 * 0.14
+          r, gg, b = r * k, gg * k, b * k
+          if ruidoTile(px, py, v * 17 + 3) > 0.975 then r, gg, b = r * 1.18, gg * 1.18, b * 1.18 end
+        else
+          local k = 1 + g2 * 0.16
+          r, gg, b = r * k, gg * k, b * k
+        end
+        d:setPixel(px, py, math.min(1, r), math.min(1, gg), math.min(1, b), 1)
+      end
+    end
+    if tipo == "nieve" then
+      mancha(8 + ruidoTile(v, 1, 5) * 16, 8 + ruidoTile(v, 2, 5) * 16, 9, 6, { 0.78, 0.87, 0.97 }, 0.35)
+    elseif tipo == "roca" then
+      mancha(8 + ruidoTile(v, 1, 6) * 16, 8 + ruidoTile(v, 2, 6) * 16, 8, 6, { 0.38, 0.38, 0.43 }, 0.3)
+      for c = 1, 2 do
+        local x, y = math.floor(ruidoTile(v, c, 5) * 22) + 5, math.floor(ruidoTile(c, v, 6) * 22) + 5
+        for _ = 1, 8 do
+          if x >= 2 and x <= 29 and y >= 2 and y <= 29 then
+            d:setPixel(x, y, 0.22, 0.22, 0.26, 1)
+            if ruidoTile(x, y, v + 30) > 0.5 then d:setPixel(x + 1, y, 0.3, 0.3, 0.34, 1) end
+          end
+          x = x + (ruidoTile(x, y, v + 40) > 0.5 and 1 or -1)
+          y = y + (ruidoTile(x, y, v + 50) > 0.35 and 1 or 0)
+        end
+      end
+    else
+      -- pantano: charcos de agua oscura, manchas de barro y cañas
+      if ruidoTile(v, 3, 9) < 0.7 then
+        mancha(9 + ruidoTile(v, 1, 7) * 14, 9 + ruidoTile(v, 2, 7) * 14, 4 + ruidoTile(v, 4, 7) * 4, 3 + ruidoTile(v, 5, 7) * 3, { 0.09, 0.19, 0.21 }, 0.85)
+      end
+      if ruidoTile(v, 6, 9) < 0.5 then
+        mancha(8 + ruidoTile(v, 7, 7) * 16, 8 + ruidoTile(v, 8, 7) * 16, 5, 4, { 0.27, 0.23, 0.15 }, 0.5)
+      end
+      for c = 1, 2 do
+        local x, y = math.floor(ruidoTile(v, c, 7) * 24) + 4, math.floor(ruidoTile(c, v, 8) * 20) + 9
+        for k = 0, 4 do d:setPixel(x, y - k, 0.34, 0.5, 0.28, 1) end
+        d:setPixel(x + 1, y - 3, 0.42, 0.58, 0.32, 1)
+      end
+    end
+    local img = love.graphics.newImage(d)
+    img:setFilter("nearest", "nearest")
+    lista[v] = img
+  end
+  return lista
+end
+
+local function franjas()
+  if franjaV then return end
+  local dv = love.image.newImageData(1, 16)
+  for i = 0, 15 do dv:setPixel(0, i, 1, 1, 1, 1 - i / 15) end
+  franjaV = love.graphics.newImage(dv)
+  franjaV:setFilter("linear", "linear")
+  local dh = love.image.newImageData(16, 1)
+  for i = 0, 15 do dh:setPixel(i, 0, 1, 1, 1, 1 - i / 15) end
+  franjaH = love.graphics.newImage(dh)
+  franjaH:setFilter("linear", "linear")
+end
+
+local function colorVecino(mapa, x, y)
+  local g = familia(mapa, x, y)
+  if g == "hierba" and suelo(mapa, x, y) == "hierba_osc" then return { 0.28, 0.40, 0.34 } end
+  return COLOR_SUELO[g]
+end
+
+-- Franjas de color del vecino sobre los cuatro bordes del tile cuando el suelo vecino es distinto y
+-- alguno de los dos es un suelo propio: la frontera se ve difuminada.
+local function fundirBordes(mapa, x, y, px, py, fam)
+  franjas()
+  local ANCHO = 11
+  local lados = { { 0, -1 }, { 0, 1 }, { -1, 0 }, { 1, 0 } }
+  for _, l in ipairs(lados) do
+    local g = familia(mapa, x + l[1], y + l[2])
+    if g and g ~= fam and (PROC[g] or PROC[fam]) and COLOR_SUELO[g] then
+      local c = colorVecino(mapa, x + l[1], y + l[2])
+      if c then
+        love.graphics.setColor(c[1], c[2], c[3], 0.62)
+        if l[2] == -1 then love.graphics.draw(franjaV, px, py, 0, TILE, ANCHO / 16)
+        elseif l[2] == 1 then love.graphics.draw(franjaV, px, py + TILE, 0, TILE, -ANCHO / 16)
+        elseif l[1] == -1 then love.graphics.draw(franjaH, px, py, 0, ANCHO / 16, TILE)
+        else love.graphics.draw(franjaH, px + TILE, py, 0, -ANCHO / 16, TILE) end
+      end
+    end
+  end
+end
+
+local function dibujarProcedural(mapa, x, y, px, py, fam, tipo)
+  if not variantesProc[fam] then variantesProc[fam] = crearVariantes(fam) end
+  local v = 1 + math.floor(hash(x, y, 3) * 4)
+  local k = 0.985 + hash(x, y, 9) * 0.03
+  love.graphics.setColor(k, k, k, 1)
+  love.graphics.draw(variantesProc[fam][v], px, py)
+  fundirBordes(mapa, x, y, px, py, fam)
+  if not (mapa.bloque[x] and mapa.bloque[x][y]) then
+    decorar(mapa, x, y, px, py, tipo, "tierra")
+  end
+end
+
 function T.dibujarSuelo(mapa, x, y, px, py, cuadroAgua)
   local tipo = suelo(mapa, x, y)
   if not tipo then
@@ -316,11 +462,14 @@ function T.dibujarSuelo(mapa, x, y, px, py, cuadroAgua)
       love.graphics.rectangle("fill", px + 5, py + 9, 20, 1)
       love.graphics.rectangle("fill", px + 12, py + 10, 8, 1)
     end
+  elseif PROC[f] then
+    dibujarProcedural(mapa, x, y, px, py, f, tipo)
   elseif f == "edificio" then
     -- el edificio se pinta aparte; debajo va el patio
     dibujarBase(mapa, x, y, px, py)
   else
     local base = dibujarBase(mapa, x, y, px, py)
+    if f == "hierba" or f == "tierra" or f == "arena" then fundirBordes(mapa, x, y, px, py, f) end
     if f == "pavimento" then dibujarPavimento(mapa, x, y, px, py, base) end
     if f ~= "pavimento" then
       decorar(mapa, x, y, px, py, tipo, NOMBRE_FAMILIA_BASE[base])

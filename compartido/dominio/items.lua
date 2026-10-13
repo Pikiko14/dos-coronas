@@ -100,7 +100,9 @@ local AMULETOS = { 720, 721, 722, 723, 724, 725, 726, 727 }
 local function redondear(v) return math.floor(v + 0.5) end
 
 -- Precio: crece más rápido que la potencia para que lo bueno cueste.
-local function precio(base, mul) return math.floor(base * mul ^ 1.5) end
+-- FACTOR_PRECIO sube o baja los precios de todo el equipo de una vez.
+M.FACTOR_PRECIO = 1.7
+local function precio(base, mul) return math.floor(base * mul ^ 1.5 * M.FACTOR_PRECIO) end
 
 local function redondeado(it)
   for _, k in ipairs({ "atk", "matk", "def", "mdef", "hp", "mp" }) do

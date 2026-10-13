@@ -489,3 +489,37 @@ CRIATURAS CADA DOS NIVELES, CAMPAMENTOS Y MONEDAS
 == Sprites de clase y monturas nuevas ==
 - Las 4 clases (guerrero, mago, cazador, clerigo) tienen sprite propio por faccion, hecho por codigo sobre personajes del pack (render/propias.lua): paleta del Alba (acero azulado, blanco, oro) o del Ocaso (negro, violeta, carmesi) y un escudo de la clase en el pecho (espada, estrella, flecha, cruz).
 - Cuatro monturas de viaje nuevas, que no piden oficio activo ni llevan carga: Corcel real (nv 12), Lobo de guerra (nv 16), Bisonte acorazado (nv 20, la de mas vida) y Corcel de fuego (nv 25, la mas rapida). Se compran en la cuadra; su aspecto sigue la faccion del jinete. Se puede tener hasta 7 monturas. Ir montado no permite atacar.
+
+== Interfaz mas amigable ==
+- Aviso "[E] ..." sobre la barra de poderes cuando hay algo con lo que interactuar a mano: PNJ ("Hablar con ..."), puertas de mazmorra (avisa si te falta nivel), cofre y salida dentro de la mazmorra, tu casa, el altar del campo de batalla y el portal de guerra.
+- Los mensajes de sistema (errores de compra, premios, avisos) salen tambien como avisos emergentes arriba del centro durante unos segundos (rojo si es un error), no solo en el chat.
+- Botones desactivados con motivo: al pasar el raton explican por que (te faltan monedas/oro, nivel, acercate al mozo de cuadra...). Ya aplicado en Item Mall, Cuadra, Forja y Mercancias; se puede dar el motivo como 4.o parametro de Interfaz.boton.
+- Cursor de mano sobre todo lo que se puede pulsar; ayudas al pasar el raton por los botones Mapa, Trato, Ayuda y Menu.
+- Oro, monedas y precios con separador de miles (12.500).
+- Codigo: juego/src/presentacion/ayudas.lua.
+
+== Nuevo HUD: pantalla completa y estilo moderno ==
+- Sin panel derecho: el juego ocupa toda la pantalla. Arriba a la izquierda vida, mana, experiencia y oro; arriba a la derecha el minimapa con los botones Mapa, Ayuda y Menu; abajo a la derecha la lista de batalla.
+- C abre el panel Personaje (retrato, datos, estadisticas y equipo; clic en una pieza para quitarla). I abre la bolsa. Esc cierra el panel abierto o, si no hay ninguno, abre el menu (ahi estan los Ajustes).
+- Clic derecho sobre otro jugador: menu para Tratar (comerciar), Invitar al gremio, Invitar al grupo o Mirar. Ya no hay boton Trato (T sigue funcionando).
+- Estilo: cristal oscuro azulado con acentos dorados y cian, esquinas redondeadas, degradados y sombras. Todo sale de las piezas base de interfaz.lua (caja, marco, casilla, boton, barra; paleta en I.TEMA).
+
+== Criaturas armoniosas y mercado con pestañas ==
+- Los campamentos ya no mezclan niveles: el nivel de una zona depende de lo lejos que esta de la ciudad MAS CERCANA y cada criatura solo sale donde su nivel encaja (maximo 2-3 niveles de diferencia). Antes habia criaturas de nivel 25 en zonas de nivel 6 porque el anillo de una ciudad pasaba por la zona de otra.
+- Menos criaturas: de unas 2.970 a unas 1.000 en el mundo (campamentos de 3-4 criaturas, dos por criatura en su ciudad y uno en la mitad de las demas, rejilla de relleno mas amplia). Ajustes en Mapa.mundo (cant, camps, CELDA, HUECO, TOLERANCIA_NIVEL).
+- Mercado con pestañas arriba: Pociones, Armas, Armadura, Escudos, Accesorios, Mochilas y Vender (la bolsa se vende desde esa pestaña, ya que la bolsa no esta en el lateral).
+
+== Mapa nuevo: continentes, costas organicas y barco ==
+- El mundo son tres continentes separados por mar (compartido/dominio/continentes.lua): Continente del Alba (oeste, las 5 ciudades de Albor), Continente de Umbra (este, las 5 de Umbra) e Isla de la Cicatriz (centro, la zona de guerra con el portal y las criaturas de nivel maximo), mas unos islotes decorativos. Las costas salen de ruido fractal (penínsulas, golfos, playas), no de elipses.
+- Terreno variado: bosques, tierra, zonas altas de roca y nieve (Altiplano y Ventisca), pantano en la Cienaga del Velo, lagos y cordilleras que siguen crestas curvas. Suelos nuevos dibujados por codigo (nieve, roca, pantano) que se funden con los vecinos con bordes suaves.
+- Caminos curvos que unen las ciudades de cada continente (arbol de expansion minima mas el vecino mas cercano), con puestos de comercio junto a ellos. Ya no hay arterias rectas.
+- Entre continentes se viaja en barco: Barquero de Puerto del Sol, de Puerto Sombra y del Embarcadero de la Cicatriz (E). Pasaje de 40 de oro + 0,12 por casilla de distancia; si vas montado, bajas. A pie no se cruza el mar (el mapa M avisa).
+- Los personajes guardados en una posicion que ya no es tierra firme de su continente vuelven a su capital.
+- Los niveles de las zonas siguen la distancia a la ciudad mas cercana, con una escala ajustada al mapa (Mapa.DIST_POR_NIVEL).
+- El mapa del mundo se genera una vez por proceso y cada mundo recibe una copia con sus ciudades (el terreno se comparte). Capturas de terreno: love juego --foto (terr_*.png).
+
+== Economia revisada ==
+- Referencia: lo que da una criatura de tu nivel (su oro directo + el oro que suelta) es unas 9 monedas en el nivel 1, 66 en el 12 y 215 en el 30. Los precios se calibran en "criaturas necesarias".
+- El equipo cuesta mas (Items.FACTOR_PRECIO = 1.7): un conjunto completo (arma + 4 piezas) vale de 30 a 45 criaturas del nivel de su escalon (antes ~20). Pociones 28/24, polvo arcano 12, mochilas 72/290/830/2.080, muebles +50%, casas 760/1.440, gremio 2.500, cambiar de oficio 500, mascotas +60%. Encantar cuesta el 12% del precio de la pieza por nivel (antes 10%).
+- Vender paga el 40% del precio (Datos.FACTOR_VENTA; antes 45%).
+- Monturas: el Caballo pide nivel 10 y vale 1.000 de oro. Las monturas de viaje valen unas 40 criaturas de su nivel: Corcel real 2.500 (nv 12), Lobo de guerra 3.600 (nv 16), Bisonte acorazado 4.800 (nv 20), Corcel de fuego 7.000 (nv 25). Buey 900 y carreta 4.500 sin cambios.

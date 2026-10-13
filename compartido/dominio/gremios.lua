@@ -9,7 +9,7 @@ local Util = require("compartido.dominio.util")
 local M = {}
 
 M.NIVEL_MINIMO = 8
-M.COSTE = 1500
+M.COSTE = 2500
 M.MAX_MIEMBROS = 25
 M.INVITACION_SEG = 60
 

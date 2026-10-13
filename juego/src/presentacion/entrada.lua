@@ -239,6 +239,8 @@ function Entrada.manejar(app, id)
   if id == "poc_vida" then app.actuar("pocion", { id = "pocion_vida" }) return end
   if id == "poc_mana" then app.actuar("pocion", { id = "pocion_mana" }) return end
   if id:sub(1, 6) == "canal_" then Interfaz.canal = id:sub(7) return end
+  if id:sub(1, 6) == "viaje_" then app.actuar("viaje", { destino = id:sub(7) }) Interfaz.panel = nil return end
+  if id:sub(1, 9) == "merc_tab_" then Interfaz.mercadoTab = id:sub(10) Interfaz.scroll = 0 return end
   if id:sub(1, 6) == "bolsa_" then
     local i = tonumber(id:sub(7))
     Interfaz.sel = i
@@ -409,6 +411,13 @@ function Entrada.clicMundo(app, mx, my, boton)
     app.actuar("mirar", { id = ent.id })
     return
   end
+  if ent and boton == 2 and ent.kind == "jugador" and ent.id ~= jugador.id and not mundo:puedeDanar(jugador, ent) then
+    -- clic derecho sobre otro jugador: menú de tratar, gremio, grupo
+    app.actuar("objetivo", { id = ent.id, persigue = false })
+    local esc = Interfaz.escala or 1
+    Interfaz.menuJugador = { id = ent.id, x = mx / esc, y = my / esc }
+    return
+  end
   if ent and (boton == 1 or boton == 2) then
     local hostil = mundo:puedeDanar(jugador, ent)
     app.actuar("objetivo", { id = ent.id, persigue = hostil or boton == 2 })
@@ -423,6 +432,12 @@ function Entrada.raton(app, mx, my, boton)
   local estado = app.estado
   if estado == "menu" or estado == "crear" or estado == "cuenta" or estado == "personajes" or (estado == "juego" and app.jugador) then
     local id = Interfaz.consumir(mx, my)
+    if Interfaz.menuJugador then
+      if id and id:sub(1, 4) == "ctx_" then Entrada.menuJugador(app, id) return end
+      -- un clic fuera del menú lo cierra (si fue sobre el mundo, no mueve al personaje)
+      Interfaz.menuJugador = nil
+      if id == nil or id == "panel" then return end
+    end
     if id == "mapa_area" then
       -- puede ser el inicio de un arrastre o un clic para viajar: se decide al soltar
       Interfaz.mapaArrastre = true
@@ -434,6 +449,17 @@ function Entrada.raton(app, mx, my, boton)
   if estado == "juego" and app.jugador then
     Entrada.clicMundo(app, mx, my, boton)
   end
+end
+
+-- Acciones del menú del clic derecho (ids ctx_*).
+function Entrada.menuJugador(app, id)
+  local m = Interfaz.menuJugador
+  Interfaz.menuJugador = nil
+  if not m then return end
+  if id == "ctx_trato" then app.actuar("comercio_invitar", { id = m.id })
+  elseif id == "ctx_gremio" then app.actuar("gremio_invitar", { id = m.id })
+  elseif id == "ctx_grupo" then app.actuar("grupo_invitar", { id = m.id })
+  elseif id == "ctx_mirar" then app.actuar("mirar", { id = m.id }) end
 end
 
 -- Manda al servidor el oro escrito en el comercio (el servidor lo vuelve a validar).
@@ -473,6 +499,17 @@ function Entrada.viajarPorMapa(app, mx, my)
   if wx < 1 or wy < 1 or wx > g.mw - 1 or wy > g.mh - 1 then return end
   if p.modo ~= "mundo" or (p.z or 0) > 0 then
     Interfaz.aviso = "Solo se viaja por el mapa desde el mundo abierto."
+    return
+  end
+  -- el mar y los otros continentes no se alcanzan a pie
+  local mundoMapa = app.mundo.mapas.mundo
+  local c1 = mundoMapa.cont[math.floor(p.x)] and mundoMapa.cont[math.floor(p.x)][math.floor(p.y)] or 0
+  local c2 = mundoMapa.cont[math.floor(wx)] and mundoMapa.cont[math.floor(wx)][math.floor(wy)] or 0
+  if c2 == 0 then
+    Interfaz.aviso = "Ahí solo hay mar."
+    return
+  elseif c1 ~= c2 then
+    Interfaz.aviso = "Ese sitio está en otro continente: usa el barquero de un puerto."
     return
   end
   app.actuar("objetivo", { id = nil, persigue = false })
@@ -558,6 +595,7 @@ function Entrada.tecla(app, tecla)
     return
   end
   if tecla == "escape" then
+    if Interfaz.menuJugador then Interfaz.menuJugador = nil return end
     if Ajustes.esperando then Ajustes.esperando = nil return end
     if app.estado == "cuenta" then app.estado = "menu" Interfaz.foco = nil return end
     if app.estado == "conectando" then
@@ -635,7 +673,7 @@ function Entrada.tecla(app, tecla)
   local bolsa = (Ajustes.teclas and Ajustes.teclas.bolsa) or "i"
   local interactuar = (Ajustes.teclas and Ajustes.teclas.interactuar) or "e"
   if tecla == bolsa then Interfaz.panel = (Interfaz.panel ~= "bolsa") and "bolsa" or nil end
-  if tecla == "p" then Interfaz.panel = (Interfaz.panel ~= "equipo") and "equipo" or nil end
+  if tecla == "p" or tecla == "c" then Interfaz.panel = (Interfaz.panel ~= "equipo") and "equipo" or nil end
   if tecla == "n" then
     local p = app.jugador
     local idx = p and (p.mascotaActiva or (p.mascotas and #p.mascotas > 0 and 1))

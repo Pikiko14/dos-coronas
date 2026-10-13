@@ -335,12 +335,16 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     fallar(errores, "el mapa se dibuja", ok, tostring(err))
     local g = Interfaz.mapaGeom
     -- clic corto en el centro del mapa: manda al personaje a ese sitio
-    local mx, my = g.ax + g.aw / 2, g.ay + g.ah / 2
+    local esc = Interfaz.escala or 1
+    local sc = g.s0 * (Interfaz.mapaZoom or 1)
+    local wx, wy = pj.x + 30, pj.y - 20
+    local mx = (g.ax + g.aw / 2) + (wx - Interfaz.mapaCx) * sc * esc
+    local my = (g.ay + g.ah / 2) + (wy - Interfaz.mapaCy) * sc * esc
     Entrada.raton(app, mx, my, 1)
     Entrada.soltarRaton(app, mx, my)
     local destino
     for _, l in ipairs(llamadas) do if l[1] == "destino" then destino = l[2] end end
-    fallar(errores, "el clic en el mapa viaja al sitio", destino and math.abs(destino.x - g.mw / 2) < 2 and math.abs(destino.y - g.mh / 2) < 2,
+    fallar(errores, "el clic en el mapa viaja al sitio", destino and math.abs(destino.x - wx) < 2 and math.abs(destino.y - wy) < 2,
       destino and (destino.x .. "," .. destino.y) or "sin destino")
     fallar(errores, "queda marcado el destino", Interfaz.mapaDestino ~= nil)
     ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
@@ -353,6 +357,17 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local viajo = false
     for _, l in ipairs(llamadas) do if l[1] == "destino" then viajo = true end end
     fallar(errores, "arrastrar el mapa no viaja", not viajo)
+    -- el mar y otros continentes no se alcanzan a pie
+    Interfaz.mapaDestino = nil
+    llamadas = {}
+    local cx2, cy2 = mundo.mapas.mundo.w / 2, mundo.mapas.mundo.h / 2
+    local mx2 = (g.ax + g.aw / 2) + (cx2 - Interfaz.mapaCx) * sc * esc
+    local my2 = (g.ay + g.ah / 2) + (cy2 - Interfaz.mapaCy) * sc * esc
+    Entrada.raton(app, mx2, my2, 1)
+    Entrada.soltarRaton(app, mx2, my2)
+    local fue = false
+    for _, l in ipairs(llamadas) do if l[1] == "destino" then fue = true end end
+    fallar(errores, "no se viaja a pie a otro continente", not fue and Interfaz.aviso and Interfaz.aviso:find("otro continente"), tostring(Interfaz.aviso))
     Interfaz.panel, Interfaz.mapaDestino = nil, nil
   end)
   paso("interfaz: alertas de invitación y ventana de comercio", function()
@@ -698,6 +713,54 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     end
     fallar(errores, "las monturas de carga siguen con su hoja", Personajes.monturaDe("buey", "albor").hoja ~= nil)
   end)
+  paso("ayudas de interfaz: números, avisos [E], avisos emergentes y motivos", function()
+    local Ayudas = require("src.presentacion.ayudas")
+    fallar(errores, "números con puntos de miles", Ayudas.num(0) == "0" and Ayudas.num(999) == "999" and Ayudas.num(1000) == "1.000"
+      and Ayudas.num(1234567) == "1.234.567" and Ayudas.num(nil) == "0" and Ayudas.num(12500.7) == "12.500")
+    local mundo = Mundo.nuevo()
+    local p = mundo:crearPersonaje({ nombre = "Guia", faccion = "albor", clase = "guerrero", nivel = 12 })
+    -- junto a un PNJ sale el aviso de hablar con él
+    local npc
+    for _, e in pairs(mundo.entidades) do if e.kind == "npc" and e.rol == "mercado" and e.faccion == "albor" then npc = e break end end
+    p.x, p.y, p.z, p.modo = npc.x + 1, npc.y, 0, "mundo"
+    local t = Ayudas.interaccion(mundo, p)
+    fallar(errores, "aviso junto a un PNJ", t and t:find("^%[E%] Hablar con") and t:find(npc.nombre, 1, true) ~= nil, tostring(t))
+    p.x, p.y = npc.x + 30, npc.y + 30
+    -- junto a la puerta de una mazmorra
+    local z = mundo.mapas.mundo.mazmorras[1]
+    p.x, p.y = z.x + 0.5, z.y + 1.5
+    t = Ayudas.interaccion(mundo, p)
+    fallar(errores, "aviso de la puerta de mazmorra", t and t:find("Entrar en " .. z.nombre, 1, true) ~= nil, tostring(t))
+    p.nivel = 1
+    t = Ayudas.interaccion(mundo, p)
+    fallar(errores, "avisa si falta nivel", t and t:find("nivel insuficiente", 1, true) ~= nil, tostring(t))
+    -- dentro: salida y cofre
+    mundo.entidades[p.id].nivel = 30
+    p.nivel = 30
+    mundo:interactuar(p)
+    t = Ayudas.interaccion(mundo, p)
+    fallar(errores, "aviso de salida dentro de la mazmorra", t and t:find("Salir de", 1, true) ~= nil, tostring(t))
+    -- avisos emergentes: lo viejo no se repite, lo nuevo del sistema sí aparece
+    Ayudas.olvidarAvisos()
+    mundo:mensaje("sistema", "", "Mensaje viejo", p)
+    Ayudas.actualizarAvisos(mundo, p)
+    mundo:mensaje("sistema", "", "Te faltan 5 de oro.", p)
+    mundo:mensaje("mundo", "Otro", "charla", nil)
+    Ayudas.actualizarAvisos(mundo, p)
+    local cv = love.graphics.newCanvas(400, 300)
+    love.graphics.push("all")
+    love.graphics.setCanvas(cv)
+    local ok, err = pcall(Ayudas.dibujarAvisos, 400, love.graphics.getFont())
+    love.graphics.pop()
+    fallar(errores, "se dibujan los avisos emergentes", ok, tostring(err))
+    -- botón desactivado con motivo: la pista sale al pasar el ratón
+    Interfaz.limpiar()
+    Interfaz.pista = nil
+    local mx, my = love.mouse.getPosition()
+    Interfaz.boton(mx - 10, my - 10, 60, 30, "Comprar", "x", false, "Necesitas nivel 5.")
+    fallar(errores, "el botón desactivado explica el motivo", Interfaz.pista == "Necesitas nivel 5.", tostring(Interfaz.pista))
+    Interfaz.pista = nil
+  end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Clic", faccion = "albor", clase = "mago" })
@@ -714,12 +777,170 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local lista = {}
     for i = 1, 4 do lista[i] = Interfaz.consumir(1280 - lado + 20 + (i - 1) * 40, 8) end
     local ayuda
-    for x = 1280 - lado + 4, 1279, 4 do
-      local id = Interfaz.consumir(x, 160)
+    for x = 1280 - 140, 1279, 4 do
+      local id = Interfaz.consumir(x, 155)
       if id == "hud_ayuda" then ayuda = id end
     end
-    fallar(errores, "los botones del panel lateral reciben clics", ayuda == "hud_ayuda", tostring(ayuda))
+    fallar(errores, "los botones del minimapa reciben clics", ayuda == "hud_ayuda", tostring(ayuda))
     fallar(errores, "el hueco de la barra de poderes responde", Interfaz.consumir((1280 - lado) / 2 - 175, 720 - consola - 34) == "hab_1")
+  end)
+  paso("interfaz: clic derecho sobre un jugador abre el menú de trato, gremio y grupo", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local Entrada = require("src.presentacion.entrada")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Yo", faccion = "albor", clase = "guerrero", nivel = 10 })
+    local otro = mundo:crearPersonaje({ nombre = "Amigo", faccion = "albor", clase = "mago", nivel = 10 })
+    local rival = mundo:crearPersonaje({ nombre = "Rival", faccion = "umbra", clase = "mago", nivel = 10 })
+    local llamadas = {}
+    local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
+    Interfaz.escala, Interfaz.panel, Interfaz.menuJugador = 1, nil, nil
+    Dibujo.fijarVista(0, 0, 1280, 570)
+    local cam = Dibujo.camara(pj, 1, mundo:mapaDe(pj))
+    local x, y = Dibujo.pantallaAMundo(cam, 300, 300)
+    otro.x, otro.y, otro.z, otro.modo = x, y, pj.z or 0, pj.modo
+    rival.x, rival.y = x + 40, y + 40
+    Entrada.clicMundo(app, 300, 300, 2)
+    fallar(errores, "el clic derecho abre el menú del jugador", Interfaz.menuJugador and Interfaz.menuJugador.id == otro.id)
+    fallar(errores, "elige al jugador como objetivo sin perseguirlo", llamadas[1] and llamadas[1][1] == "objetivo" and llamadas[1][2].id == otro.id and not llamadas[1][2].persigue)
+    pj.gremioNombre = "Probados"
+    Interfaz.hud(mundo, pj, 1280, 720)
+    local m = Interfaz.menuJugador
+    local ids = {}
+    for yy = m.y, m.y + 200, 4 do
+      local id = Interfaz.consumir(m.x + 6 + 100, yy)
+      if id and id:sub(1, 4) == "ctx_" then ids[id] = true end
+    end
+    fallar(errores, "el menú ofrece tratar, gremio, grupo y mirar", ids.ctx_trato and ids.ctx_gremio and ids.ctx_grupo and ids.ctx_mirar)
+    llamadas = {}
+    Entrada.menuJugador(app, "ctx_trato")
+    fallar(errores, "tratar manda la invitación de comercio", llamadas[1] and llamadas[1][1] == "comercio_invitar" and llamadas[1][2].id == otro.id and Interfaz.menuJugador == nil)
+    Interfaz.menuJugador = { id = otro.id, x = 300, y = 300 }
+    llamadas = {}
+    Entrada.menuJugador(app, "ctx_gremio")
+    fallar(errores, "el menú invita al gremio", llamadas[1] and llamadas[1][1] == "gremio_invitar" and llamadas[1][2].id == otro.id)
+    Interfaz.menuJugador = { id = otro.id, x = 300, y = 300 }
+    llamadas = {}
+    Entrada.menuJugador(app, "ctx_grupo")
+    fallar(errores, "el menú invita al grupo", llamadas[1] and llamadas[1][1] == "grupo_invitar" and llamadas[1][2].id == otro.id)
+    -- Esc cierra el menú
+    Interfaz.menuJugador = { id = otro.id, x = 300, y = 300 }
+    Entrada.tecla(app, "escape")
+    fallar(errores, "Esc cierra el menú", Interfaz.menuJugador == nil)
+    -- sin gremio o con un rival de otra corona, esas opciones no responden
+    pj.gremioNombre = nil
+    Interfaz.menuJugador = { id = rival.id, x = 300, y = 300 }
+    Interfaz.hud(mundo, pj, 1280, 720)
+    local sinGremio = false
+    for yy = 300, 500, 4 do
+      local id = Interfaz.consumir(300 + 6 + 100, yy)
+      if id == "ctx_gremio" or id == "ctx_grupo" then sinGremio = true end
+    end
+    fallar(errores, "sin gremio o de otra corona no se puede invitar", not sinGremio)
+    Interfaz.menuJugador = nil
+    -- la bolsa ya no está en el lateral: no hay casillas de bolsa fuera del panel de bolsa
+    Interfaz.panel = nil
+    Interfaz.hud(mundo, pj, 1280, 720)
+    local hayBolsa = false
+    for yy = 0, 720, 6 do for xx = 0, 1280, 6 do
+      local id = Interfaz.consumir(xx, yy)
+      if id and id:sub(1, 6) == "bolsa_" then hayBolsa = true end
+    end end
+    fallar(errores, "el HUD no dibuja la bolsa (se abre con I)", not hayBolsa)
+    Interfaz.panel = "bolsa"
+    Interfaz.hud(mundo, pj, 1280, 720)
+    local hayBolsa2 = false
+    for yy = 0, 720, 6 do for xx = 0, 1280, 6 do
+      local id = Interfaz.consumir(xx, yy)
+      if id and id:sub(1, 6) == "bolsa_" then hayBolsa2 = true end
+    end end
+    fallar(errores, "con I se ve la bolsa", hayBolsa2)
+    Entrada.tecla(app, "escape")
+    fallar(errores, "Esc cierra el panel", Interfaz.panel == nil)
+    Interfaz.panel = nil
+    Entrada.tecla(app, "c")
+    fallar(errores, "C abre el panel del personaje", Interfaz.panel == "equipo")
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el panel del personaje se dibuja", ok, tostring(err))
+    Interfaz.panel = nil
+    -- el juego ocupa todo el ancho
+    local lado = Interfaz.medidas()
+    fallar(errores, "sin panel lateral: el juego ocupa toda la pantalla", lado == 0)
+  end)
+  paso("interfaz: el mercado tiene pestañas por categoría y una para vender", function()
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Tienda", faccion = "albor", clase = "guerrero", nivel = 12 })
+    pj.oro = 99999
+    Interfaz.escala, Interfaz.panel, Interfaz.scroll = 1, "mercado", 0
+    for _, tab in ipairs({ "pociones", "armas", "armadura", "escudos", "accesorios", "mochilas", "vender" }) do
+      Interfaz.mercadoTab = tab
+      local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+      fallar(errores, "se dibuja la pestaña " .. tab, ok, tostring(err))
+    end
+    Interfaz.mercadoTab = "pociones"
+    Interfaz.hud(mundo, pj, 1280, 720)
+    local pestanas = {}
+    for x = 400, 900, 4 do
+      local id = Interfaz.consumir(x, 60 + 42 + 14)
+      if id and id:sub(1, 9) == "merc_tab_" then pestanas[id] = true end
+    end
+    local n = 0
+    for _ in pairs(pestanas) do n = n + 1 end
+    fallar(errores, "las siete pestañas responden al clic", n == 7, tostring(n))
+    local armas = Interfaz.listaItemsClase(pj, "armas")
+    local armadura = Interfaz.listaItemsClase(pj, "armadura")
+    local solo = #armas > 0 and #armadura > 0 and #Interfaz.listaItemsClase(pj, "pociones") == 2
+    for _, id in ipairs(armas) do solo = solo and Datos.item(id).hueco == "arma" end
+    for _, id in ipairs(armadura) do local hh = Datos.item(id).hueco solo = solo and (hh == "cabeza" or hh == "pecho" or hh == "piernas" or hh == "pies") end
+    fallar(errores, "cada pestaña lista solo lo suyo", solo)
+    -- vender: la bolsa se lista en la pestaña y cada fila vende con su casilla
+    pj.bolsa = { { id = "pocion_vida", cant = 3 } }
+    Interfaz.mercadoTab = "vender"
+    Interfaz.hud(mundo, pj, 1280, 720)
+    local vende = false
+    for yy = 140, 200, 4 do for xx = 780, 900, 4 do
+      if Interfaz.consumir(xx, yy) == "bolsa_1" then vende = true end
+    end end
+    fallar(errores, "la pestaña Vender ofrece la bolsa", vende)
+    Interfaz.panel, Interfaz.mercadoTab = nil, "pociones"
+  end)
+  paso("interfaz: el barquero ofrece los puertos y el mapa nombra los continentes", function()
+    local Entrada = require("src.presentacion.entrada")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Marino", faccion = "albor", clase = "guerrero", nivel = 10 })
+    local origen
+    for _, pu in ipairs(mundo.mapas.mundo.puertos) do if pu.id == "puerto_sol" then origen = pu end end
+    pj.x, pj.y, pj.oro = origen.x, origen.y, 1000
+    local llamadas = {}
+    local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
+    Interfaz.escala, Interfaz.panel = 1, "viaje"
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el panel del barquero se dibuja", ok, tostring(err))
+    local ids = {}
+    for y = 100, 520, 4 do for x = 400, 900, 4 do
+      local id = Interfaz.consumir(x, y)
+      if id and id:sub(1, 6) == "viaje_" then ids[id] = true end
+    end end
+    fallar(errores, "ofrece los otros dos puertos", ids.viaje_puerto_sombra and ids.viaje_cicatriz and not ids.viaje_puerto_sol)
+    Entrada.manejar(app, "viaje_cicatriz")
+    fallar(errores, "navegar manda la acción y cierra el panel", llamadas[1] and llamadas[1][1] == "viaje" and llamadas[1][2].destino == "cicatriz" and Interfaz.panel == nil)
+    -- sin dinero el botón no responde y explica por qué
+    pj.oro = 5
+    Interfaz.panel = "viaje"
+    Interfaz.hud(mundo, pj, 1280, 720)
+    local hay = false
+    for y = 100, 520, 4 do for x = 400, 900, 4 do
+      if Interfaz.consumir(x, y) == "viaje_puerto_sombra" then hay = true end
+    end end
+    fallar(errores, "sin oro no se puede navegar", not hay)
+    -- lejos de un puerto el panel pide acercarse
+    pj.x, pj.y = origen.x + 60, origen.y + 60
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "lejos del puerto el panel se dibuja", ok, tostring(err))
+    -- el mapa del mundo con los continentes
+    Interfaz.panel = "mapa"
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el mapa con nombres de continentes se dibuja", ok, tostring(err))
+    Interfaz.panel = nil
   end)
   paso("interfaz: alforjas de la montura", function()
     local mundo = Mundo.nuevo()
@@ -1068,6 +1289,41 @@ local function avanzarFoto(app)
     local id = app.mundo:idNuevo()
     app.mundo.entidades[id] = { id = id, kind = "cofre_mz", nombre = "Cofre", x = m.jefe.x + 2, y = m.jefe.y + 3, z = 0, modo = "mz1", vivo = true, hasta = 1e9, reclamado = {}, mz = "mz1" }
   elseif foto.paso == "mzfin" then
+    foto.paso = "terr_nieve"
+    app.jugador.modo = "mundo"
+    local function sitio(tipo)
+      local mapa = app.mundo.mapas.mundo
+      local mejor
+      for y = 40, mapa.h - 40, 5 do
+        for x = 40, mapa.w - 40, 5 do
+          if mapa.suelo[x][y] == tipo and mapa.suelo[x + 5][y] == tipo and mapa.suelo[x - 5][y] == tipo and mapa.suelo[x][y + 5] == tipo then
+            local vecinos = {}
+            for dy = -9, 9, 3 do for dx = -9, 9, 3 do vecinos[mapa.suelo[x + dx][y + dy] or "?"] = true end end
+            local n = 0
+            for _ in pairs(vecinos) do n = n + 1 end
+            if not mejor or n > mejor.n then mejor = { x = x, y = y, n = n } end
+          end
+        end
+      end
+      return mejor
+    end
+    app.sitios = { nieve = sitio("nieve"), roca = sitio("roca"), pantano = sitio("pantano"), agua = sitio("agua") }
+    local s = app.sitios.nieve
+    if s then app.jugador.x, app.jugador.y = s.x + 0.5, s.y + 0.5 end
+  elseif foto.paso == "terr_nieve" then
+    foto.paso = "terr_roca"
+    local s = app.sitios.roca
+    if s then app.jugador.x, app.jugador.y = s.x + 0.5, s.y + 0.5 end
+  elseif foto.paso == "terr_roca" then
+    foto.paso = "terr_pantano"
+    local s = app.sitios.pantano
+    if s then app.jugador.x, app.jugador.y = s.x + 0.5, s.y + 0.5 end
+  elseif foto.paso == "terr_pantano" then
+    foto.paso = "terr_costa"
+    local mapa = app.mundo.mapas.mundo
+    local p = mapa.puertos[1]
+    app.jugador.x, app.jugador.y = p.x, p.y
+  elseif foto.paso == "terr_costa" then
     foto.paso = "poderes"
     app.jugador.modo = "mundo"; app.jugador.x, app.jugador.y = app.mundo.mapas.mundo.mazmorras[1].x + 0.5, app.mundo.mapas.mundo.mazmorras[1].y + 3
     local j = app.jugador
@@ -1108,6 +1364,7 @@ local function avanzarFoto(app)
   elseif foto.paso == "arbol" then
     foto.paso = "mercado"
     Interfaz.panel = "mercado"
+    Interfaz.mercadoTab = "armas"
     app.jugador.habilidades = nil
     app.jugador.nivel = 9
     Interfaz.scroll = 0
