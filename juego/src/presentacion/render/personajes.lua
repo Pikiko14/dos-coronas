@@ -111,6 +111,8 @@ P.monturas = {
   lobo_guerra = { porFaccion = "montura_lobo" },
   bisonte_guerra = { porFaccion = "montura_bisonte" },
   corcel_fuego = { porFaccion = "montura_fuego" },
+  -- el dragon del Item Mall es mas grande: se dibuja a escala y el jinete va mas alto
+  dragon = { porFaccion = "montura_dragon", escala = 1.35, altura = 20, extraFrente = 14 },
 }
 
 -- Dibujo de una montura para un jinete de esa facción.
@@ -121,7 +123,7 @@ function P.monturaDe(especie, faccion)
   local f = faccion == "umbra" and "umbra" or "albor"
   local k = especie .. "|" .. f
   if not cacheMonturas[k] then
-    cacheMonturas[k] = { generada = m.porFaccion .. "_" .. f, hoja = "Characters/Animal.png", idx = 0 }
+    cacheMonturas[k] = { generada = m.porFaccion .. "_" .. f, hoja = "Characters/Animal.png", idx = 0, escala = m.escala, altura = m.altura, extraFrente = m.extraFrente }
   end
   return cacheMonturas[k]
 end
@@ -201,6 +203,18 @@ function P.de(e)
   end
 end
 
+-- Aspecto de quien va montado: igual que a pie, salvo los addons de jinete (hoja Riding), que ya traen
+-- su propio caballo: sobre una montura se usa el personaje base de su clase, asi todas las monturas
+-- se ven igual con cualquier addon y no se montan dos caballos uno sobre otro.
+function P.jineteDe(e, def)
+  def = def or P.de(e)
+  if e.montado and def and def.celda then
+    local c = P.clases[e.clase or "guerrero"] or P.clases.guerrero
+    return c[e.faccion or "albor"] or c.albor
+  end
+  return def
+end
+
 -- Dibuja la criatura con los pies en (sx, sy). mov: está andando; reloj: segundos.
 function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa)
   -- las skins propias del mall se dibujan por código (render/propias.lua)
@@ -219,8 +233,9 @@ function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa)
   local ox = (def.idx % 4) * c * 3
   local oy = math.floor(def.idx / 4) * c * 4
   local fila = FILA_DIR[dir or 1] or 0
-  love.graphics.draw(img, Arte.quad(img, ox + col * c, oy + fila * c, c, c), sx, sy, 0, 1, 1, c / 2, c - 2)
-  return c
+  local k = def.escala or 1
+  love.graphics.draw(img, Arte.quad(img, ox + col * c, oy + fila * c, c, c), sx, sy, 0, k, k, c / 2, c - 2)
+  return c * k
 end
 
 -- Cuerpo de un personaje caído: la misma imagen, en escala de grises.

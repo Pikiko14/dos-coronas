@@ -107,6 +107,11 @@ for _, s in ipairs(MAS) do
   M.ORDEN_ADDONS[#M.ORDEN_ADDONS + 1] = s[1]
 end
 
+M.MONTURAS = {
+  dragon = { nombre = "Dragón", precio = 1500, desc = "Exclusiva: un dragón que te lleva a la guerra. Dorado en el Alba, violeta en el Ocaso. La más rápida y la que más aguanta; no pide oficio y se puede pelear montado." },
+}
+M.ORDEN_MONTURAS = { "dragon" }
+
 function M.duracion(bono)
   local d = M.BONOS[bono]
   return (d and d.largo) and M.DURACION_EXP_SEG or M.DURACION_SEG
@@ -207,6 +212,23 @@ function M.instalar(Mundo)
     return nil
   end
 
+  -- Compra una montura del mall (permanente). Va a tu lista de monturas; se monta con O.
+  function Mundo:comprarMonturaMall(p, id)
+    if p.kind ~= "jugador" then return "Solo los jugadores compran monturas." end
+    local d = M.MONTURAS[id]
+    if not d then return "Esa montura no está en el mall." end
+    p.monturas = p.monturas or {}
+    for _, t in ipairs(p.monturas) do
+      if t == id then return "Ya tienes esa montura." end
+    end
+    if (p.monedas or 0) < d.precio then return "Te faltan monedas: cuesta " .. d.precio .. "." end
+    p.monedas = p.monedas - d.precio
+    p.monturas[#p.monturas + 1] = id
+    self:marcarProgreso(p)
+    self:mensaje("sistema", "", d.nombre .. " es tuyo. Pulsa O para montar.", p)
+    return nil
+  end
+
   -- Pone o quita un addon que ya tienes.
   function Mundo:alternarAddon(p, id)
     if p.kind ~= "jugador" then return "Solo los jugadores llevan addons." end
@@ -222,6 +244,7 @@ function M.instalar(Mundo)
     if nombre == "mall_comprar" then err = self:comprarMall(p, tostring(datos.id))
     elseif nombre == "mall_addon_comprar" then err = self:comprarAddon(p, tostring(datos.id))
     elseif nombre == "mall_addon" then err = self:alternarAddon(p, tostring(datos.id))
+    elseif nombre == "mall_montura_comprar" then err = self:comprarMonturaMall(p, tostring(datos.id))
     end
     if err then self:mensaje("sistema", "", err, p) end
     return nil

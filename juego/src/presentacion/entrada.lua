@@ -240,6 +240,7 @@ function Entrada.manejar(app, id)
   if id == "poc_mana" then app.actuar("pocion", { id = "pocion_mana" }) return end
   if id:sub(1, 6) == "canal_" then Interfaz.canal = id:sub(7) return end
   if id:sub(1, 6) == "viaje_" then app.actuar("viaje", { destino = id:sub(7) }) Interfaz.panel = nil return end
+  if id:sub(1, 8) == "est_tab_" then Interfaz.establoTab = id:sub(9) return end
   if id:sub(1, 9) == "merc_tab_" then Interfaz.mercadoTab = id:sub(10) Interfaz.scroll = 0 return end
   if id:sub(1, 6) == "bolsa_" then
     local i = tonumber(id:sub(7))
@@ -314,6 +315,8 @@ function Entrada.manejar(app, id)
   if id == "mall_tab_obj" then Interfaz.mallTab, Interfaz.mallScroll = "objetos", 0 return end
   if id == "mall_tab_forja" then Interfaz.mallTab, Interfaz.mallScroll = "forja", 0 return end
   if id == "mall_tab_add" then Interfaz.mallTab, Interfaz.mallScroll = "addons", 0 return end
+  if id == "mall_tab_mont" then Interfaz.mallTab, Interfaz.mallScroll = "monturas", 0 return end
+  if id:sub(1, 12) == "mall_mt_buy_" then app.actuar("mall_montura_comprar", { id = id:sub(13) }) return end
   if id:sub(1, 9) == "mall_buy_" then app.actuar("mall_comprar", { id = id:sub(10) }) return end
   if id:sub(1, 12) == "mall_ad_buy_" then app.actuar("mall_addon_comprar", { id = id:sub(13) }) return end
   if id:sub(1, 8) == "mall_ad_" then app.actuar("mall_addon", { id = id:sub(9) }) return end

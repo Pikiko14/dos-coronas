@@ -2,8 +2,7 @@
 --   * num: números con separador de miles (12.500) para oro, monedas y precios.
 --   * aviso de interacción: "[E] Hablar con ..." cuando hay algo con lo que interactuar a mano
 --     (PNJ, puertas de mazmorra, cofres, casas, portal de guerra...).
---   * avisos emergentes: los mensajes de sistema (errores de compra, premios...) aparecen un momento
---     en pantalla y no solo en el chat.
+--   (los mensajes de sistema van solo al chat, pestaña Sistema: no hay avisos emergentes)
 --   * cursor de mano sobre lo que se puede pulsar.
 local Datos = require("compartido.dominio.datos")
 local Ajustes = require("src.presentacion.ajustes")
@@ -107,67 +106,6 @@ function A.dibujarInteraccion(mundo, p, vw, vh, fuente)
   love.graphics.setColor(1, 0.95, 0.8, 1)
   love.graphics.printf(t, x, y + 5, w, "center")
 end
-
--- ----------------------------------------------------------------------------- avisos emergentes
-local PALABRAS_ERROR = { "^No ", "^Necesitas", "^Te faltan", "^Aún no", "^Ya ", "llena", "^Solo ", "^Cuesta", "^Esa ", "^Ese ", "insuficiente", "^Acércate", "^Tu bolsa", "^Aquí no" }
-
-local function esError(texto)
-  for _, pat in ipairs(PALABRAS_ERROR) do
-    if texto:find(pat) then return true end
-  end
-  return false
-end
-
-local visto, epoca
-local avisos = {}
-local DURA = 4.5
-
-function A.actualizarAvisos(mundo, p)
-  local msgs = mundo.mensajes or {}
-  local ultimo = msgs[#msgs]
-  if epoca ~= mundo.epoca then
-    -- primera vez o servidor distinto: no se repite el historial
-    epoca, visto = mundo.epoca, ultimo and ultimo.id or 0
-    avisos = {}
-    return
-  end
-  for _, m in ipairs(msgs) do
-    if (m.id or 0) > visto then
-      visto = m.id
-      if m.canal == "sistema" and not m.marquesina and not m.evento and (m.para == nil or m.para == p.id) and m.texto and m.texto ~= "" then
-        avisos[#avisos + 1] = { texto = m.texto, t = love.timer.getTime(), error = esError(m.texto) }
-        if #avisos > 4 then table.remove(avisos, 1) end
-      end
-    end
-  end
-end
-
-function A.dibujarAvisos(vw, fuente)
-  local ahora = love.timer.getTime()
-  for i = #avisos, 1, -1 do
-    if ahora - avisos[i].t > DURA then table.remove(avisos, i) end
-  end
-  if #avisos == 0 then return end
-  love.graphics.setFont(fuente)
-  local y = 150
-  for _, a in ipairs(avisos) do
-    local edad = ahora - a.t
-    local alfa = math.min(1, (DURA - edad) / 0.8, edad / 0.12 + 0.2)
-    local ancho = math.min(520, fuente:getWidth(a.texto) + 28)
-    local _, lineas = fuente:getWrap(a.texto, ancho - 20)
-    local alto = #lineas * fuente:getHeight() + 12
-    local x = vw / 2 - ancho / 2
-    love.graphics.setColor(0.07, 0.06, 0.05, 0.9 * alfa)
-    love.graphics.rectangle("fill", x, y, ancho, alto, 6, 6)
-    if a.error then love.graphics.setColor(0.95, 0.4, 0.3, alfa) else love.graphics.setColor(0.9, 0.75, 0.35, alfa) end
-    love.graphics.rectangle("line", x + 0.5, y + 0.5, ancho - 1, alto - 1, 6, 6)
-    love.graphics.setColor(1, 0.96, 0.88, alfa)
-    love.graphics.printf(a.texto, x + 10, y + 6, ancho - 20, "center")
-    y = y + alto + 6
-  end
-end
-
-function A.olvidarAvisos() avisos, visto, epoca = {}, nil, nil end
 
 -- ------------------------------------------------------------------------------------- cursor
 local mano, puesto

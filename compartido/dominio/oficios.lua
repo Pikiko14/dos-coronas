@@ -444,7 +444,7 @@ function M.instalar(Mundo)
       local tengo = false
       for _, t in ipairs(p.monturas or {}) do if t == id then tengo = true end end
       cat[#cat + 1] = { id = id, nombre = d.nombre, nivel = d.nivel, precio = d.precio, vel = d.vel, carga = d.carga,
-        oficio = d.oficio, desc = d.desc, tengo = tengo }
+        oficio = d.oficio, requiereOficio = d.requiereOficio and true or false, desc = d.desc, tengo = tengo }
     end
     return { catalogo = cat, montado = p.montado, cerca = self:npcCerca(p, "establo") }
   end

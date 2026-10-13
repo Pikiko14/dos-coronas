@@ -492,7 +492,7 @@ CRIATURAS CADA DOS NIVELES, CAMPAMENTOS Y MONEDAS
 
 == Interfaz mas amigable ==
 - Aviso "[E] ..." sobre la barra de poderes cuando hay algo con lo que interactuar a mano: PNJ ("Hablar con ..."), puertas de mazmorra (avisa si te falta nivel), cofre y salida dentro de la mazmorra, tu casa, el altar del campo de batalla y el portal de guerra.
-- Los mensajes de sistema (errores de compra, premios, avisos) salen tambien como avisos emergentes arriba del centro durante unos segundos (rojo si es un error), no solo en el chat.
+- Los mensajes de sistema (errores de compra, premios, "Aun no"...) salen solo en el chat, pestana Sistema (los avisos emergentes se quitaron porque se amontonaban).
 - Botones desactivados con motivo: al pasar el raton explican por que (te faltan monedas/oro, nivel, acercate al mozo de cuadra...). Ya aplicado en Item Mall, Cuadra, Forja y Mercancias; se puede dar el motivo como 4.o parametro de Interfaz.boton.
 - Cursor de mano sobre todo lo que se puede pulsar; ayudas al pasar el raton por los botones Mapa, Trato, Ayuda y Menu.
 - Oro, monedas y precios con separador de miles (12.500).
@@ -523,3 +523,11 @@ CRIATURAS CADA DOS NIVELES, CAMPAMENTOS Y MONEDAS
 - El equipo cuesta mas (Items.FACTOR_PRECIO = 1.7): un conjunto completo (arma + 4 piezas) vale de 30 a 45 criaturas del nivel de su escalon (antes ~20). Pociones 28/24, polvo arcano 12, mochilas 72/290/830/2.080, muebles +50%, casas 760/1.440, gremio 2.500, cambiar de oficio 500, mascotas +60%. Encantar cuesta el 12% del precio de la pieza por nivel (antes 10%).
 - Vender paga el 40% del precio (Datos.FACTOR_VENTA; antes 45%).
 - Monturas: el Caballo pide nivel 10 y vale 1.000 de oro. Las monturas de viaje valen unas 40 criaturas de su nivel: Corcel real 2.500 (nv 12), Lobo de guerra 3.600 (nv 16), Bisonte acorazado 4.800 (nv 20), Corcel de fuego 7.000 (nv 25). Buey 900 y carreta 4.500 sin cambios.
+
+== Dragon del Item Mall y combate montado ==
+- Nueva pestana "Monturas" en el Item Mall (tecla L): el Dragon cuesta 1.500 Monedas Corona, es permanente y se monta con O. Es la montura mas rapida (+55%) y la que mas aguanta (1.200 de vida); no pide oficio y no se vende en la cuadra. Su sprite se dibuja por codigo sobre la criatura roja del pack (Monster2): dorado en el Alba y violeta en el Ocaso, con la paleta de las clases y las skins exclusivas; el jinete va mas alto sobre el. Se pueden tener hasta 8 monturas.
+- Ahora se puede pelear montado en cualquier montura (ataque automatico y poderes); los golpes que recibes bajan primero la vida de la montura.
+- Montado, todos los addons se ven igual sobre cualquier montura: de frente la cabeza de la montura va delante del jinete (no le tapa la cara) y el jinete va mas alto; de lado y de espalda el jinete va encima. Los addons de jinete (hoja Riding) ya traen su caballo, asi que sobre una montura se usa el personaje base de la clase (Personajes.jineteDe).
+- La cuadra tiene dos pestanas: "Transporte (oficio)" (buey, caballo, carreta) y "Monturas normales" (corcel real, lobo, bisonte, corcel de fuego).
+- Coordenadas de tu casilla (X, Y) en un recuadro a la izquierda del minimapa.
+- Solo las monturas de oficio (buey, caballo, carreta) tienen vida: se ve una barra bajo su icono (O) solo con el oficio activo. Las monturas normales (corcel, lobo, bisonte, dragon...) no tienen vida y los golpes van al jinete.

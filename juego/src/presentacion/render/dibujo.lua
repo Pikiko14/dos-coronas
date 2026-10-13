@@ -419,10 +419,12 @@ function D.entidad(e, sx, sy, mundo, jugador)
     -- el cuerpo del caído: misma imagen en gris
     alto = Personajes.dibujarGris(def, e.dir or 1, sx, pies, 0.9)
   elseif def then
+    def = Personajes.jineteDe(e, def)
     local reloj = (e.anim or 0) / 8
     local rojo = (e.flash or 0) > 0
     local anda = e.mov or (math.abs(e.velx or 0) + math.abs(e.vely or 0) > 0.08)
     local piesJinete = pies
+    local montaFrente
 
     if e.montado then
       -- la montura va debajo y el jinete algo más arriba
@@ -434,13 +436,21 @@ function D.entidad(e, sx, sy, mundo, jugador)
         love.graphics.draw(img, Arte.quad(img, 128, 128 + fila * 32, 32, 32), sx, pies, 0, 1.25, 1.25, 16, 28)
         piesJinete = pies - 14
       elseif m then
-        Personajes.dibujar(m, e.dir or 1, anda, reloj, sx, pies)
-        piesJinete = pies - 10
+        if (e.dir or 1) == 1 then
+          -- de frente la cabeza de la montura queda delante del jinete: se pinta el jinete antes
+          -- (algo mas alto) y la montura encima, asi no le tapa la cara
+          montaFrente = m
+          piesJinete = pies - (m.altura or 10) - (m.extraFrente or 8)
+        else
+          Personajes.dibujar(m, e.dir or 1, anda, reloj, sx, pies)
+          piesJinete = pies - (m.altura or 10)
+        end
       end
     end
     -- montado, la que camina es la montura: el jinete va quieto (sin mover los pies)
     alto = Personajes.dibujar(def, e.dir or 1, anda and not e.montado, reloj, sx, piesJinete, rojo and { 1, 0.6, 0.6 } or nil)
-    if e.montado then alto = alto + 10 end
+    if montaFrente then Personajes.dibujar(montaFrente, 1, anda, reloj, sx, pies) end
+    if e.montado then alto = alto + math.max(10, pies - piesJinete) end
   elseif e.kind == "estatua" then
     Objetos.dibujar(e.faccion == "umbra" and "estatua_umbra" or "estatua_albor", 0, sx, pies)
     alto = 64

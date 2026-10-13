@@ -5,7 +5,7 @@
 -- Se bajan solas dentro de casas y campos de batalla.
 local M = {}
 
-M.MAX = 7
+M.MAX = 8
 -- Vida de las monturas: si vas montado, los golpes bajan primero la vida de la montura. Al
 -- llegar a cero cae (la carga queda en el suelo), te bajas y no puedes usarla un rato.
 M.VIDA_MULT = 1
@@ -45,6 +45,12 @@ M.especies.corcel_fuego = {
   nombre = "Corcel de fuego", nivel = 25, precio = 7000, vel = 0.50, carga = 0, vida = 520,
   desc = "Dorado como el sol del Alba o rojo como el ascua del Ocaso. El más rápido.",
 }
+-- Montura del Item Mall (no se vende en la cuadra): se compra con Monedas Corona. Es la más rápida y
+-- la que más aguanta; no pide oficio.
+M.especies.dragon = {
+  nombre = "Dragón", nivel = 1, precio = 0, vel = 0.55, carga = 0, vida = 1200, mall = true,
+  desc = "Montura exclusiva del Item Mall.",
+}
 M.orden = { "buey", "caballo", "carreta", "corcel_real", "lobo_guerra", "bisonte_guerra", "corcel_fuego" }
 
 function M.instalar(Mundo)
@@ -64,6 +70,9 @@ end
 -- Los golpes al jinete bajan antes la vida de su montura. Devuelve true si la montura los absorbe.
 function Mundo:danarMontura(p, cantidad, origen)
   if not p.montado or p.kind ~= "jugador" then return false end
+  -- solo las monturas de oficio (transporte) tienen vida: en las normales los golpes van al jinete
+  local def = M.especies[p.montado]
+  if not (def and def.requiereOficio) then return false end
   local hp, max = self:vidaMontura(p, p.montado)
   hp = hp - cantidad
   p.monturaVida[p.montado] = math.max(0, hp)

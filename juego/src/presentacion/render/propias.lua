@@ -285,6 +285,9 @@ local DISENOS = {
   montura_lobo_umbra = montura(6, { neutro = { 0.5, 0.42, 0.65 } }),
   montura_bisonte_albor = montura(4, { neutro = { 1.0, 0.82, 0.58 } }),
   montura_bisonte_umbra = montura(4, { neutro = { 0.58, 0.46, 0.7 } }),
+  -- dragon del Item Mall: la criatura roja de la hoja Monster2, dorada en el Alba y violeta en el Ocaso
+  montura_dragon_albor = montura(5, { hoja = "Characters/Monster2.png", ra = { 0.9, 0.16, 0.09, 1.2 }, va = 1.08, rb = { 0.5, 0.75, 0.0, 1.0 }, vb = 1.0 }),
+  montura_dragon_umbra = montura(5, { hoja = "Characters/Monster2.png", ra = { 0.9, 0.16, -0.2, 0.8 }, va = 0.7, rb = { 0.5, 0.75, 0.0, 1.0 }, vb = 1.0 }),
   -- corcel de fuego: dorado con silla azul en el Alba; ascua con silla violeta en el Ocaso
   montura_fuego_albor = montura(5, { ra = { 0.03, 0.16, 0.04, 1.25 }, va = 1.5, rb = { 0.9, 0.03, 0.62, 1.0 }, vb = 1.0 }),
   montura_fuego_umbra = montura(5, { ra = { 0.03, 0.16, -0.075, 1.3 }, va = 0.75, rb = { 0.9, 0.03, -0.2, 1.0 }, vb = 1.1 }),

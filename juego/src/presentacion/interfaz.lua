@@ -524,13 +524,14 @@ function I.hud(mundo, p, w, h)
       love.graphics.rectangle("line", x + 1, by0 + 1, lado_c - 2, lado_c - 2, 3, 3)
     end
     texto("O", x + 4, by0 + 2, { 1, 0.9, 0.5 }, f)
-    if p.montado and p.monturaHpMax and p.monturaHpMax > 0 then
-      -- vida de la montura bajo el icono
+    if p.montado and p.job and p.monturaHpMax and p.monturaHpMax > 0 then
+      -- vida de la montura bajo el icono: solo con el oficio activo (las monturas normales no tienen vida)
       local frac = math.max(0, math.min(1, (p.monturaHp or 0) / p.monturaHpMax))
       love.graphics.setColor(0, 0, 0, 0.8)
-      love.graphics.rectangle("fill", x, by0 - 8, lado_c, 6)
+      love.graphics.rectangle("fill", x, by0 + lado_c + 3, lado_c, 7, 3, 3)
       love.graphics.setColor(0.95, 0.6, 0.2, 1)
-      love.graphics.rectangle("fill", x + 1, by0 - 7, (lado_c - 2) * frac, 4)
+      love.graphics.rectangle("fill", x + 1, by0 + lado_c + 4, math.max(0, (lado_c - 2) * frac), 5, 2, 2)
+      if sobre(x, by0 + lado_c + 3, lado_c, 7) then I.pista = "Vida de la montura: " .. (p.monturaHp or 0) .. " / " .. p.monturaHpMax end
     end
     texto(p.montado and "bajar" or "montar", x + lado_c / 2 - f:getWidth(p.montado and "bajar" or "montar") / 2, by0 + lado_c - 15, { 1, 1, 1 }, f)
     I.registrar(x, by0, lado_c, lado_c, "hud_montura")
@@ -620,10 +621,8 @@ function I.hud(mundo, p, w, h)
   elseif p.invGrupo then
     I.alerta("Invitación a un grupo", p.invGrupo.nombre .. " te invita a su grupo.", nil, "gp_acepta", "gp_rechaza", vw, h)
   end
-  -- ayudas comunes: aviso de interacción ([E] ...) y avisos emergentes de los mensajes del sistema
-  Ayudas.actualizarAvisos(mundo, p)
+  -- ayuda común: aviso de interacción ([E] ...); los mensajes del sistema van al chat
   if not I.panel and not I.foco then Ayudas.dibujarInteraccion(mundo, p, vw, vh, f) end
-  Ayudas.dibujarAvisos(vw, f)
   if I.pista and I.pista ~= "" then
     local s = I.escala or 1
     local mx, my = love.mouse.getPosition()
@@ -878,6 +877,17 @@ function I.flotantes(mundo, p, vw, vh)
   local mx0 = vw - lado - 10
   minimapaLocal(mundo, p, mx0, 10, lado)
   I.registrar(mx0, 10, lado, lado, "hud_mapa")
+  -- coordenadas de tu casilla, al lado del minimapa
+  do
+    local cx, cy = math.floor(p.x or 0), math.floor(p.y or 0)
+    local txt = { "X " .. cx, "Y " .. cy }
+    local ancho = math.max(f:getWidth(txt[1]), f:getWidth(txt[2])) + 14
+    marco(mx0 - ancho - 6, 10, ancho, 38, true)
+    I.registrar(mx0 - ancho - 6, 10, ancho, 38, "panel")
+    texto(txt[1], mx0 - ancho + 1, 13, { 0.92, 0.95, 1 })
+    texto(txt[2], mx0 - ancho + 1, 28, { 0.92, 0.95, 1 })
+    if sobre(mx0 - ancho - 6, 10, ancho, 38) then I.pista = "Tus coordenadas en el mapa (X hacia la derecha, Y hacia abajo)." end
+  end
   local botones = { { "Mapa", "hud_mapa" }, { "Ayuda", "hud_ayuda" }, { "Menú", "hud_menu" } }
   local bww = (lado - (#botones - 1) * 3) / #botones
   local cy = 10 + lado + 6
@@ -1534,9 +1544,10 @@ function I.panelMall(mundo, p, w, h)
   love.graphics.setColor(1, 0.85, 0.3)
   love.graphics.print(Mall.MONEDA .. ": " .. Ayudas.num(m.monedas), px + 14, py + 40)
   I.mallTab = I.mallTab or "objetos"
-  I.boton(px + 316, py + 36, 104, 28, "Objetos", "mall_tab_obj", I.mallTab ~= "objetos")
-  I.boton(px + 426, py + 36, 104, 28, "Forja", "mall_tab_forja", I.mallTab ~= "forja")
-  I.boton(px + 536, py + 36, 104, 28, "Addons", "mall_tab_add", I.mallTab ~= "addons")
+  I.boton(px + 300, py + 36, 82, 28, "Objetos", "mall_tab_obj", I.mallTab ~= "objetos")
+  I.boton(px + 386, py + 36, 82, 28, "Forja", "mall_tab_forja", I.mallTab ~= "forja")
+  I.boton(px + 472, py + 36, 82, 28, "Addons", "mall_tab_add", I.mallTab ~= "addons")
+  I.boton(px + 558, py + 36, 82, 28, "Monturas", "mall_tab_mont", I.mallTab ~= "monturas")
   local y0 = py + 76
   if I.mallTab == "objetos" or I.mallTab == "forja" then
     -- los pergaminos de forja van en su pestana; el resto en "Objetos"
@@ -1572,6 +1583,34 @@ function I.panelMall(mundo, p, w, h)
       I.boton(px + 504, y + 10, 130, 32, "Comprar", "mall_buy_" .. o.id, (m.monedas or 0) >= o.precio,
         "Te faltan " .. Ayudas.num(o.precio - (m.monedas or 0)) .. " Monedas Corona.")
      end
+    end
+  elseif I.mallTab == "monturas" then
+    local tengoM = {}
+    for _, id in ipairs(p.monturas or {}) do tengoM[id] = true end
+    for i, id in ipairs(Mall.ORDEN_MONTURAS) do
+      local d = Mall.MONTURAS[id]
+      local y = y0 + (i - 1) * 96
+      love.graphics.setColor(0.10, 0.13, 0.25)
+      love.graphics.rectangle("fill", px + 14, y, pw - 28, 90, 8, 8)
+      local def = Personajes.monturaDe(id, p.faccion)
+      if def then Personajes.dibujar(def, 1, true, love.timer.getTime(), px + 70, y + 80) end
+      love.graphics.setColor(0.98, 0.9, 0.7)
+      love.graphics.print(d.nombre .. (p.montado == id and "   (montado)" or ""), px + 130, y + 8)
+      love.graphics.setColor(0.72, 0.78, 0.68)
+      love.graphics.printf(d.desc, px + 130, y + 30, 340, "left")
+      local M2 = Monturas.especies[id]
+      if M2 then
+        love.graphics.setColor(0.6, 0.85, 1)
+        love.graphics.print("Velocidad +" .. math.floor(M2.vel * 100) .. "%    Vida " .. M2.vida, px + 130, y + 70)
+      end
+      if tengoM[id] then
+        I.boton(px + 504, y + 28, 130, 32, "La tienes", "mall_mt_ya", false, "Ya es tuya: pulsa O para montar.")
+      else
+        love.graphics.setColor(1, 0.85, 0.3)
+        love.graphics.printf(Ayudas.num(d.precio) .. " mon.", px + 410, y + 36, 80, "right")
+        I.boton(px + 504, y + 28, 130, 32, "Comprar", "mall_mt_buy_" .. id, (m.monedas or 0) >= d.precio,
+          "Te faltan " .. Ayudas.num(d.precio - (m.monedas or 0)) .. " Monedas Corona.")
+      end
     end
   else
     local tengo = {}
@@ -1693,7 +1732,7 @@ function I.panelViaje(mundo, p, w, h)
 end
 
 function I.panelEstablo(mundo, p, w, h)
-  local px, py, pw, ph = w / 2 - 340, 60, 680, 560
+  local px, py, pw, ph = w / 2 - 340, 60, 680, 470
   caja(px, py, pw, ph, "Cuadra")
   I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
   local d = I.datosPanel.establo
@@ -1704,8 +1743,27 @@ function I.panelEstablo(mundo, p, w, h)
   end
   love.graphics.setColor(0.85, 0.82, 0.7)
   love.graphics.print("Oro: " .. Ayudas.num(p.oro) .. (d.montado and "   (vas montado: tecla O para bajar)" or ""), px + 14, py + 38)
-  for i, m in ipairs(d.catalogo) do
-    local y = py + 66 + (i - 1) * 62
+  -- pestanas: monturas de transporte (piden el oficio activo) y monturas normales (de viaje)
+  I.establoTab = I.establoTab or "transporte"
+  local pestanas = { { "transporte", "Transporte (oficio)" }, { "normales", "Monturas normales" } }
+  for k, t in ipairs(pestanas) do
+    local tx, ty, tw = px + 14 + (k - 1) * 214, py + 64, 208
+    local activa = I.establoTab == t[1]
+    local hover = sobre(tx, ty, tw, 28)
+    love.graphics.setColor(activa and 0.27 or (hover and 0.16 or 0.09), activa and 0.4 or (hover and 0.24 or 0.13), activa and 0.8 or (hover and 0.5 or 0.27), 0.97)
+    love.graphics.rectangle("fill", tx, ty, tw, 28, 7, 7)
+    love.graphics.setColor(activa and I.TEMA.acento[1] or 0.35, activa and I.TEMA.acento[2] or 0.5, activa and I.TEMA.acento[3] or 0.9, activa and 1 or 0.7)
+    love.graphics.rectangle("line", tx + 0.5, ty + 0.5, tw - 1, 27, 7, 7)
+    love.graphics.setColor(activa and 1 or 0.85, activa and 0.95 or 0.88, activa and 0.8 or 0.95)
+    love.graphics.printf(t[2], tx, ty + 5, tw, "center")
+    I.registrar(tx, ty, tw, 28, "est_tab_" .. t[1])
+  end
+  local lista = {}
+  for _, m in ipairs(d.catalogo) do
+    if (m.requiereOficio and true or false) == (I.establoTab == "transporte") then lista[#lista + 1] = m end
+  end
+  for i, m in ipairs(lista) do
+    local y = py + 102 + (i - 1) * 62
     love.graphics.setColor(0.10, 0.13, 0.25)
     love.graphics.rectangle("fill", px + 14, y, pw - 28, 56, 6, 6)
     local def = Personajes.monturaDe(m.id, p.faccion)
@@ -1733,6 +1791,8 @@ function I.panelEstablo(mundo, p, w, h)
       I.boton(px + pw - 28 - 150, y + 4, 150, 32, "Comprar", "mt_buy_" .. m.id, d.cerca and nivelOk and true or false, motivo)
     end
   end
+  love.graphics.setColor(0.65, 0.78, 1)
+  love.graphics.printf(I.establoTab == "transporte" and "Transporte: cargan mercancía y solo se usan con el oficio activo." or "Normales: sin oficio, para viajar rápido; se puede pelear montado.", px + 14, py + ph - 76, pw - 28, "left")
   love.graphics.setColor(0.7, 0.68, 0.6)
   love.graphics.printf("Se compran en las cuadras. Pulsa O para montar o bajar de la última que usaste. Las monturas se bajan solas en las casas y en las guerras. Ir cargado te frena, salvo con montura.",
     px + 14, py + ph - 50, pw - 28, "left")

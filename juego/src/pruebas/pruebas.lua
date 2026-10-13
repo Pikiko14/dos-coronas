@@ -713,7 +713,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     end
     fallar(errores, "las monturas de carga siguen con su hoja", Personajes.monturaDe("buey", "albor").hoja ~= nil)
   end)
-  paso("ayudas de interfaz: números, avisos [E], avisos emergentes y motivos", function()
+  paso("ayudas de interfaz: números, avisos [E] y motivos", function()
     local Ayudas = require("src.presentacion.ayudas")
     fallar(errores, "números con puntos de miles", Ayudas.num(0) == "0" and Ayudas.num(999) == "999" and Ayudas.num(1000) == "1.000"
       and Ayudas.num(1234567) == "1.234.567" and Ayudas.num(nil) == "0" and Ayudas.num(12500.7) == "12.500")
@@ -740,19 +740,6 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     mundo:interactuar(p)
     t = Ayudas.interaccion(mundo, p)
     fallar(errores, "aviso de salida dentro de la mazmorra", t and t:find("Salir de", 1, true) ~= nil, tostring(t))
-    -- avisos emergentes: lo viejo no se repite, lo nuevo del sistema sí aparece
-    Ayudas.olvidarAvisos()
-    mundo:mensaje("sistema", "", "Mensaje viejo", p)
-    Ayudas.actualizarAvisos(mundo, p)
-    mundo:mensaje("sistema", "", "Te faltan 5 de oro.", p)
-    mundo:mensaje("mundo", "Otro", "charla", nil)
-    Ayudas.actualizarAvisos(mundo, p)
-    local cv = love.graphics.newCanvas(400, 300)
-    love.graphics.push("all")
-    love.graphics.setCanvas(cv)
-    local ok, err = pcall(Ayudas.dibujarAvisos, 400, love.graphics.getFont())
-    love.graphics.pop()
-    fallar(errores, "se dibujan los avisos emergentes", ok, tostring(err))
     -- botón desactivado con motivo: la pista sale al pasar el ratón
     Interfaz.limpiar()
     Interfaz.pista = nil
@@ -760,6 +747,163 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     Interfaz.boton(mx - 10, my - 10, 60, 30, "Comprar", "x", false, "Necesitas nivel 5.")
     fallar(errores, "el botón desactivado explica el motivo", Interfaz.pista == "Necesitas nivel 5.", tostring(Interfaz.pista))
     Interfaz.pista = nil
+  end)
+  paso("interfaz: el dragon del Item Mall", function()
+    local Entrada = require("src.presentacion.entrada")
+    local Propias = require("src.presentacion.render.propias")
+    local Personajes = require("src.presentacion.render.personajes")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Dragonero", faccion = "umbra", clase = "mago", nivel = 10 })
+    pj.mall = { monedas = 2000, bonos = {}, addons = {} }
+    local llamadas = {}
+    local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
+    Interfaz.escala, Interfaz.panel, Interfaz.mallTab = 1, "mall", "objetos"
+    Interfaz.hud(mundo, pj, 1280, 720)
+    local tab
+    for y = 80, 120, 4 do for x = 640, 1000, 4 do if Interfaz.consumir(x, y) == "mall_tab_mont" then tab = true end end end
+    fallar(errores, "el mall tiene la pestana de monturas", tab)
+    Entrada.manejar(app, "mall_tab_mont")
+    fallar(errores, "la pestana se abre", Interfaz.mallTab == "monturas")
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "la pestana de monturas se dibuja", ok, tostring(err))
+    local compra
+    for y = 110, 260, 4 do for x = 640, 1000, 4 do
+      local id = Interfaz.consumir(x, y)
+      if id == "mall_mt_buy_dragon" then compra = true end
+    end end
+    fallar(errores, "ofrece comprar el dragon con monedas", compra)
+    llamadas = {}
+    Entrada.manejar(app, "mall_mt_buy_dragon")
+    fallar(errores, "comprar manda la accion", llamadas[1] and llamadas[1][1] == "mall_montura_comprar" and llamadas[1][2].id == "dragon")
+    -- sin monedas el boton no responde; con el dragon ya comprado dice que la tienes
+    pj.mall.monedas = 5
+    Interfaz.hud(mundo, pj, 1280, 720)
+    local hay = false
+    for y = 110, 260, 4 do for x = 640, 1000, 4 do if Interfaz.consumir(x, y) == "mall_mt_buy_dragon" then hay = true end end end
+    fallar(errores, "sin monedas no se puede comprar", not hay)
+    pj.monturas = { "dragon" }
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "con el dragon comprado se dibuja", ok, tostring(err))
+    -- el sprite del dragon, en las dos facciones, con cada clase encima
+    local cv = love.graphics.newCanvas(400, 300)
+    for _, f in ipairs({ "albor", "umbra" }) do
+      fallar(errores, "hoja del dragon " .. f, Propias.hoja("montura_dragon_" .. f) ~= nil)
+      local d = Personajes.monturaDe("dragon", f)
+      fallar(errores, "el dragon es grande y el jinete va alto", d.escala and d.escala > 1.2 and d.altura and d.altura > 14)
+      for _, clase in ipairs({ "guerrero", "mago", "cazador", "clerigo" }) do
+        for dir = 1, 4 do
+          love.graphics.push("all")
+          love.graphics.setCanvas(cv)
+          local ok2, err2 = pcall(function()
+            Personajes.dibujar(d, dir, true, 0.3, 100, 100)
+            Personajes.dibujar(Personajes.clases[clase][f], dir, false, 0, 100, 100 - d.altura)
+          end)
+          love.graphics.pop()
+          fallar(errores, "se dibuja el dragon con " .. clase .. " " .. f, ok2, tostring(err2))
+        end
+      end
+    end
+    -- con el dragon montado y sin oficio, el HUD ofrece montar/bajar
+    pj.montado = "dragon"
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el HUD con el dragon se dibuja", ok, tostring(err))
+    Interfaz.panel, Interfaz.mallTab = nil, "objetos"
+  end)
+  paso("todas las monturas se ven bien con todos los addons del servidor", function()
+    local Personajes = require("src.presentacion.render.personajes")
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local Mall = require("compartido.dominio.mall")
+    local Monturas = require("compartido.dominio.monturas")
+    local mundo = Mundo.nuevo()
+    local cv = love.graphics.newCanvas(300, 300)
+    local n = 0
+    local ids = {}
+    for id in pairs(Mall.ADDONS) do ids[#ids + 1] = id end
+    table.sort(ids)
+    local monturas = {}
+    for id in pairs(Monturas.especies) do monturas[#monturas + 1] = id end
+    table.sort(monturas)
+    for _, addon in ipairs(ids) do
+      fallar(errores, "el addon " .. addon .. " tiene sprite", Personajes.skins[addon] ~= nil)
+      for _, faccion in ipairs({ "albor", "umbra" }) do
+        local e = { id = "x", kind = "jugador", clase = "mago", faccion = faccion, addon = addon, x = 10, y = 10, vivo = true, dir = 1 }
+        -- a pie se ve el addon; montado, nunca un jinete que ya trae su caballo
+        local a_pie = Personajes.jineteDe(e)
+        fallar(errores, addon .. " a pie conserva su aspecto", a_pie == Personajes.skins[addon])
+        e.montado = "caballo"
+        local montado = Personajes.jineteDe(e)
+        fallar(errores, addon .. " montado no lleva otro caballo debajo", montado and montado.celda == nil)
+        for _, montura in ipairs(monturas) do
+          e.montado = montura
+          for dir = 1, 4 do
+            e.dir = dir
+            love.graphics.push("all")
+            love.graphics.setCanvas(cv)
+            local ok, err = pcall(Dibujo.entidad, e, 150, 150, mundo, e)
+            love.graphics.pop()
+            fallar(errores, "se dibuja " .. addon .. " sobre " .. montura .. " mirando " .. dir, ok, tostring(err))
+            n = n + 1
+          end
+        end
+      end
+    end
+    fallar(errores, "se probaron todas las combinaciones", n >= #ids * #monturas * 8, tostring(n))
+  end)
+  paso("interfaz: la cuadra separa transporte y monturas normales por pestanas", function()
+    local Entrada = require("src.presentacion.entrada")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Cuadra", faccion = "albor", clase = "guerrero", nivel = 30 })
+    pj.oro = 100000
+    local info = mundo:infoMonturas(pj)
+    info.cerca = true
+    Interfaz.datosPanel.establo = info
+    local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function() end }
+    Interfaz.escala, Interfaz.panel = 1, "establo"
+    local function botones()
+      Interfaz.hud(mundo, pj, 1280, 720)
+      local ids = {}
+      for y = 150, 460, 4 do for x = 400, 900, 4 do
+        local id = Interfaz.consumir(x, y)
+        if id and (id:sub(1, 7) == "mt_buy_" or id:sub(1, 7) == "mt_alt_") then ids[id:sub(8)] = true end
+      end end
+      return ids
+    end
+    Entrada.manejar(app, "est_tab_transporte")
+    local a = botones()
+    fallar(errores, "la pestana de transporte muestra buey, caballo y carreta", a.buey and a.caballo and a.carreta and not a.corcel_real and not a.lobo_guerra)
+    Entrada.manejar(app, "est_tab_normales")
+    local b = botones()
+    fallar(errores, "la pestana normal muestra las de viaje", b.corcel_real and b.lobo_guerra and b.bisonte_guerra and b.corcel_fuego and not b.buey and not b.caballo)
+    fallar(errores, "el dragon no sale en la cuadra", not a.dragon and not b.dragon)
+    Interfaz.establoTab = "transporte"
+    Interfaz.hud(mundo, pj, 1280, 720)
+    local tabs = {}
+    for y = 110, 160, 4 do for x = 400, 900, 4 do
+      local id = Interfaz.consumir(x, y)
+      if id and id:sub(1, 8) == "est_tab_" then tabs[id] = true end
+    end end
+    fallar(errores, "las dos pestanas reciben clics", tabs.est_tab_transporte and tabs.est_tab_normales)
+    Interfaz.panel, Interfaz.datosPanel.establo = nil, nil
+  end)
+  paso("interfaz: coordenadas junto al minimapa y vida de montura solo con oficio", function()
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Coord", faccion = "albor", clase = "guerrero", nivel = 12 })
+    pj.x, pj.y = 305.7, 278.2
+    pj.monturas, pj.montado = { "buey", "corcel_real" }, "buey"
+    Interfaz.escala, Interfaz.panel = 1, nil
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el HUD con coordenadas se dibuja", ok, tostring(err))
+    local hay = false
+    for x = 1040, 1135, 4 do if Interfaz.consumir(x, 28) == "panel" then hay = true end end
+    fallar(errores, "hay un recuadro de coordenadas a la izquierda del minimapa", hay)
+    -- montura de oficio con el oficio activo: barra de vida bajo el icono
+    pj.job, pj.monturaHp, pj.monturaHpMax = "trader", 300, 500
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "con oficio y montura de oficio se dibuja la vida", ok, tostring(err))
+    -- montura normal sin oficio: sin vida
+    pj.job, pj.montado, pj.monturaHp, pj.monturaHpMax = nil, "corcel_real", nil, nil
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "una montura normal se dibuja sin vida", ok, tostring(err))
   end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()
@@ -1323,8 +1467,10 @@ local function avanzarFoto(app)
     local mapa = app.mundo.mapas.mundo
     local p = mapa.puertos[1]
     app.jugador.x, app.jugador.y = p.x, p.y
+    app.jugador.montado = "dragon"
   elseif foto.paso == "terr_costa" then
     foto.paso = "poderes"
+    app.jugador.montado = nil
     app.jugador.modo = "mundo"; app.jugador.x, app.jugador.y = app.mundo.mapas.mundo.mazmorras[1].x + 0.5, app.mundo.mapas.mundo.mazmorras[1].y + 3
     local j = app.jugador
     local tipos = { "golpe", "tajo", "grito", "escudo", "curar", "bendicion", "consagrar",
@@ -1444,9 +1590,10 @@ local function avanzarFoto(app)
     local cat = {}
     for k, id in ipairs(Mont.orden) do
       local d = Mont.especies[id]
-      cat[#cat + 1] = { id = id, nombre = d.nombre, nivel = d.nivel, precio = d.precio, vel = d.vel, carga = d.carga, oficio = d.oficio, desc = d.desc, tengo = k % 3 == 1 }
+      cat[#cat + 1] = { id = id, nombre = d.nombre, nivel = d.nivel, precio = d.precio, vel = d.vel, carga = d.carga, oficio = d.oficio, requiereOficio = d.requiereOficio and true or false, desc = d.desc, tengo = k % 3 == 1 }
     end
     Interfaz.datosPanel.establo = { montado = "corcel_real", cerca = true, catalogo = cat }
+    Interfaz.establoTab = "normales"
   elseif foto.paso == "establo" then
     foto.paso = "subastas"
     Interfaz.panel = "subastas"

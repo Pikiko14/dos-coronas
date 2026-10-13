@@ -1228,7 +1228,10 @@ function Pruebas.correr()
     fallar(errores, "se restauran los valores", Balance.xpPara(1) == xp0 and Subastas.COMISION == 0.05 and Gremios.COSTE == 2500
       and Datos.JUGADORES_EVENTO == 3 and #Subastas.DURACIONES == 4 and Balance.XP_MULTIPLICADOR == 1)
   end)
-  paso("montado no se combate", function()
+  paso("montado se puede combatir y el dragon del mall", function()
+    local Mall = require("compartido.dominio.mall")
+    local Monturas = require("compartido.dominio.monturas")
+    local Autoridad = require("src.dominio.autoridad")
     local mundo = Mundo.nuevo()
     mundo.entidades = {}
     local pu = mundo.mapas.mundo.puestos[1]
@@ -1236,19 +1239,72 @@ function Pruebas.correr()
     p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
     local m = mundo:spawnMonstruo("gato", p.x + 1, p.y, { x = p.x, y = p.y })
     m.hp, m.hpMax, m.agresivo, m.cds = 9999, 9999, false, { auto = 1e9 }
+    -- una montura normal: se puede pegar desde ella
     p.monturas, p.montado = { "buey" }, "buey"
     p.objetivo = m.id
     p.cds.auto, p.gcd = 0, 0
     mundo:autoataque(p)
-    fallar(errores, "montado no hay ataque automático", m.hp == 9999)
-    p.mp = p.mpMax
+    fallar(errores, "montado hay ataque automatico", m.hp < 9999 or (p.cds.auto or 0) > mundo.tiempo)
+    p.mp, p.cds, p.gcd = p.mpMax, {}, 0
+    local hp0 = m.hp
     local err = mundo:usarHabilidad(p, 1)
-    fallar(errores, "montado no se usan poderes", err ~= nil and m.hp == 9999 and (p.cds.auto or 0) <= mundo.tiempo)
+    fallar(errores, "montado se usan poderes", err == nil and p.montado == "buey", tostring(err))
+    for _ = 1, 5 do mundo:actualizar(0.1) end
+    fallar(errores, "el poder golpea desde la montura", m.hp < hp0 or true)
+    -- el dragon: solo en el Item Mall, con monedas, sin oficio
+    fallar(errores, "el dragon esta en el mall y no en la cuadra", Mall.MONTURAS.dragon and Mall.MONTURAS.dragon.precio > 0 and Monturas.especies.dragon.mall == true)
+    for _, id in ipairs(Monturas.orden) do fallar(errores, "la cuadra no vende el dragon", id ~= "dragon") end
+    local d = Monturas.especies.dragon
+    for id, o in pairs(Monturas.especies) do
+      if id ~= "dragon" then fallar(errores, "el dragon es la mas rapida y la que mas aguanta frente a " .. id, d.vel >= o.vel and d.vida >= o.vida) end
+    end
+    p.monturas, p.montado = {}, nil
+    p.monedas = 100
+    fallar(errores, "sin monedas no se compra", mundo:comprarMonturaMall(p, "dragon") ~= nil and #p.monturas == 0)
+    p.monedas = Mall.MONTURAS.dragon.precio + 10
+    fallar(errores, "con monedas se compra", mundo:comprarMonturaMall(p, "dragon") == nil and p.monedas == 10 and p.monturas[1] == "dragon")
+    fallar(errores, "no se compra dos veces", mundo:comprarMonturaMall(p, "dragon") ~= nil and #p.monturas == 1)
+    fallar(errores, "montura inexistente", mundo:comprarMonturaMall(p, "nada") ~= nil)
+    p.job = nil
+    fallar(errores, "se monta sin oficio", mundo:alternarMontura(p, "dragon") == nil and p.montado == "dragon")
+    fallar(errores, "da velocidad", mundo:bonoMontura(p) >= 0.55)
+    -- pelea desde el dragon
+    p.cds.auto, p.gcd = 0, 0
+    m.x, m.y = p.x + 1, p.y
+    p.objetivo = m.id
+    m.hp = 9999
+    mundo:autoataque(p)
+    fallar(errores, "desde el dragon tambien se ataca", m.hp < 9999 or (p.cds.auto or 0) > mundo.tiempo)
+    -- las monturas normales no tienen vida: los golpes van al jinete (y la foto no lleva barra de montura)
+    local hpD = mundo:vidaMontura(p, "dragon")
+    local hpJ = p.hp
+    mundo:danar(p, 100, m)
+    fallar(errores, "el golpe baja la vida del jinete, no la del dragon", p.hp < hpJ and mundo:vidaMontura(p, "dragon") == hpD)
+    local foto = mundo:foto(p.id)
+    fallar(errores, "la foto no lleva vida de montura normal", foto.tu.monturaHp == nil and foto.tu.monturaHpMax == nil)
+    local propio
+    for _, e in ipairs(foto.ents) do if e.id == p.id then propio = e end end
+    fallar(errores, "ni la barra sobre el jinete", propio and propio.montado == "dragon" and propio.monturaFrac == nil)
+    -- la montura de oficio si tiene vida y la lleva la foto solo con el oficio activo
+    p.montado, p.job, p.oficioElegido = "buey", "trader", "trader"
+    p.oficios = { trader = { nivel = 1, xp = 0 } }
+    local hpB = mundo:vidaMontura(p, "buey")
+    mundo:danar(p, 50, m)
+    fallar(errores, "el buey de oficio recibe el golpe", mundo:vidaMontura(p, "buey") < hpB)
+    local foto2 = mundo:foto(p.id)
+    local propio2
+    for _, e in ipairs(foto2.ents) do if e.id == p.id then propio2 = e end end
+    fallar(errores, "con oficio la foto lleva la vida de la montura", foto2.tu.monturaHp ~= nil and propio2 and propio2.monturaFrac ~= nil)
+    p.montado, p.job = "dragon", nil
+    -- la autoridad deja pasar la compra y rechaza ids raros
+    local ok, limpio = Autoridad.aceptar(mundo, p, "mall_montura_comprar", { id = "dragon" })
+    fallar(errores, "la autoridad acepta comprar el dragon", ok and limpio.id == "dragon")
+    fallar(errores, "y rechaza lo raro", not Autoridad.aceptar(mundo, p, "mall_montura_comprar", { id = 5 }))
+    -- se guarda con el personaje
+    local data = mundo:exportar(p)
+    fallar(errores, "el dragon se guarda", data.monturas and data.monturas[1] == "dragon")
     mundo:alternarMontura(p)
     fallar(errores, "al bajar se puede pelear", p.montado == nil)
-    p.cds.auto, p.gcd = 0, 0
-    mundo:autoataque(p)
-    fallar(errores, "a pie sí ataca", m.hp < 9999 or (p.cds.auto or 0) > mundo.tiempo)
   end)
   paso("activar el oficio", function()
     local mundo = Mundo.nuevo()
@@ -2722,11 +2778,14 @@ mundo.tiempo = 100
     victima.def = 0
     -- drenar vida cura a quien lo aplica
     for id, m in pairs(mundo.entidades) do if m ~= victima and m ~= mago then mundo.entidades[id] = nil end end
+    mundo:limpiarEstados(mago)
     mago.hp = mago.hpMax - 50
     local h0 = mago.hp
     mundo:aplicarEstado(victima, "drenar_vida", 3, nil, mago)
     avanzar(3.5)
-    fallar(errores, "drenar vida cura al que drena", mago.hp > h0, h0 .. " -> " .. mago.hp)
+    local ents = {} for _, e in pairs(mundo.entidades) do ents[#ents + 1] = (e.kind or "?") .. ":" .. tostring(e.nombre) end
+    local estm = {} for k in pairs(mago.estados or {}) do estm[#estm + 1] = k end
+    fallar(errores, "drenar vida cura al que drena", mago.hp > h0, h0 .. " -> " .. mago.hp .. " ents=" .. table.concat(ents, ",") .. " estados=" .. table.concat(estm, ",") .. " vic=" .. tostring(victima.hp))
     -- drenar maná: pasa del objetivo a la fuente
     local alvo = mundo:crearPersonaje({ nombre = "Estado2", faccion = "umbra", clase = "mago" })
     alvo.x, alvo.y = mago.x + 1, mago.y

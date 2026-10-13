@@ -1153,7 +1153,6 @@ end
 
 function Mundo:usarHabilidad(p, slot, tx, ty)
   if not p.vivo or (p.aturdido or 0) > 0 then return "No puedes actuar." end
-  if p.montado then return "No puedes luchar montado: baja de la montura (O)." end
   local idh = Datos.barra[p.clase][slot]
   local rango = idh and Arbol.rango(p, idh) or 0
   if rango < 1 then return idh and "Aún no conoces ese poder: abre el árbol (K)." or nil end
@@ -1341,7 +1340,6 @@ end
 
 function Mundo:autoataque(p)
   local o = p.objetivo and self.entidades[p.objetivo]
-  if p.montado then return end -- montado no se combate
   if not o or not o.vivo or not self:puedeDanar(p, o) then return end
   if not self:mismoLugar(p, o) then return end
   local rango = self:alcance(p)
@@ -2824,7 +2822,7 @@ function Mundo:compactar(e)
     flash = (e.flash or 0) > 0 and e.flash or nil,
     burbuja = e.burbuja,
     est = self:estadosVisibles(e), especie = e.especie, gremio = e.gremioEtiqueta,
-    montado = e.montado, monturaFrac = e.montado and (function() local hp, mx = self:vidaMontura(e, e.montado) return hp / mx end)() or nil, job = e.job, addon = e.kind == "jugador" and e.addonActivo or nil,
+    montado = e.montado, monturaFrac = (e.montado and e.job and require("compartido.dominio.monturas").especies[e.montado] and require("compartido.dominio.monturas").especies[e.montado].requiereOficio) and (function() local hp, mx = self:vidaMontura(e, e.montado) return hp / mx end)() or nil, job = e.job, addon = e.kind == "jugador" and e.addonActivo or nil,
     item = e.kind == "loot" and e.item or nil, bien = e.kind == "loot" and e.bien or nil,
     oroSuelo = (e.kind == "loot" and (e.oro or 0) > 0) and true or nil, buscado = (e.kind == "jugador" and self:esBuscado(e)) and true or nil,
     categoria = e.categoria, enGrupo = (e.kind == "jugador" and e.grupoId) and true or nil,
@@ -2870,7 +2868,8 @@ function Mundo:foto(pid)
     tu.cdPocion = p.cdPocion
     tu.invComercio = self:resumenInvitacionComercio(p)
     tu.llevaCristales = p.llevaCristales
-    if p.montado then
+    local defMontura = p.montado and require("compartido.dominio.monturas").especies[p.montado]
+    if defMontura and defMontura.requiereOficio then
       local hp, mx = self:vidaMontura(p, p.montado)
       tu.monturaHp, tu.monturaHpMax = math.floor(hp), mx
     end

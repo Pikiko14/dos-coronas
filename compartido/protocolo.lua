@@ -35,7 +35,7 @@ P.ACCIONES = {
   "comercio_oro", "comercio_item", "comercio_responder", "comercio_quitar", "comercio_ok", "comercio_no", "mover_bolsa",
   "mirar", "aprender", "olvidar", "encantar", "mascota_adoptar", "mascota_invocar",
   "gremio_info", "gremio_crear", "gremio_invitar", "gremio_responder", "gremio_salir", "gremio_expulsar",
-  "gremio_rango", "gremio_disolver", "mall_comprar", "mall_addon_comprar", "mall_addon", "oficio_elegir", "oficio_alternar", "oficio_info", "mercancia_info", "mercancia_comprar",
+  "gremio_rango", "gremio_disolver", "mall_comprar", "mall_addon_comprar", "mall_addon", "mall_montura_comprar", "oficio_elegir", "oficio_alternar", "oficio_info", "mercancia_info", "mercancia_comprar",
   "mercancia_vender", "robar", "perista_vender", "montura_comprar", "montura_alternar", "montura_info", "escoltar",
   "grupo_invitar", "grupo_responder", "grupo_salir", "grupo_expulsar", "grupo_lider", "grupo_disolver",
   "subasta_info", "subasta_publicar", "subasta_pujar", "subasta_comprar", "subasta_cancelar", "subasta_cobrar",
