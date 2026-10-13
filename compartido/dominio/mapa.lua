@@ -869,6 +869,36 @@ function M.mundo(rng)
       end
     end
   end
+  -- Puertas de las tres mazmorras, en sitios despejados y bien separados entre sí (Datos.mazmorras).
+  mapa.mazmorras = {}
+  local TODOS = { "senda", "pinar", "colina", "campos", "bosque", "marea", "cienaga", "eclipse", "muelle", "velo" }
+  local function lejosDeOtras(x, y, d)
+    for _, z in ipairs(mapa.mazmorras) do
+      if math.abs(z.x - x) < d and math.abs(z.y - y) < d then return false end
+    end
+    return true
+  end
+  for _, def in ipairs(Datos.mazmorras) do
+    local x, y
+    for _, d in ipairs({ 260, 160, 80, 0 }) do
+      for _, biomas in ipairs({ def.biomas, TODOS }) do
+        for _ = 1, 25 do
+          x, y = buscarSitio(biomas, 26, 20)
+          if x and lejosDeOtras(x, y, d) then break end
+          x = nil
+        end
+        if x then break end
+      end
+      if x then break end
+    end
+    if x then
+      limpiar(x, y, 3)
+      mapa.mazmorras[#mapa.mazmorras + 1] = { id = def.id, x = x, y = y, nombre = def.nombre }
+      mapa.props[#mapa.props + 1] = { x = x, y = y, tipo = "puerta_mazmorra", mz = def.id }
+      mapa.props[#mapa.props + 1] = { x = x - 3, y = y + 1, tipo = "farol" }
+      mapa.props[#mapa.props + 1] = { x = x + 3, y = y + 1, tipo = "farol" }
+    end
+  end
   return mapa
 end
 

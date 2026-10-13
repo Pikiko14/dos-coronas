@@ -19,7 +19,7 @@ local FAMILIA = {
   arena = "arena", tierra = "tierra", cicatriz = "tierra", montana = "tierra",
   camino = "pavimento", calle = "pavimento", plaza = "pavimento",
   agua = "agua", muralla = "muralla", teja = "edificio", teja_umbra = "edificio",
-  fachada = "edificio", empedrado = "empedrado", madera = "madera", tejado = "edificio",
+  fachada = "edificio", empedrado = "empedrado", madera = "madera", tejado = "edificio", mazmorra = "mazmorra",
 }
 
 local img
@@ -253,7 +253,7 @@ end
 local function dibujarMuralla(mapa, x, y, px, py)
   local im = imagenes()
   local v = math.floor(hash(x, y, 2) * 3)
-  love.graphics.setColor(1, 1, 1, 1)
+  if mapa.mazmorra then love.graphics.setColor(0.5, 0.5, 0.58, 1) else love.graphics.setColor(1, 1, 1, 1) end
   love.graphics.draw(im.a5, Arte.quad(im.a5, v * 32, 8 * 32, 32, 32), px, py)
   if familia(mapa, x, y - 1) ~= "muralla" then
     -- remate más claro en el borde superior
@@ -297,6 +297,25 @@ function T.dibujarSuelo(mapa, x, y, px, py, cuadroAgua)
     dibujarMuralla(mapa, x, y, px, py)
   elseif f == "empedrado" or f == "madera" then
     dibujarInterior(mapa, x, y, px, py)
+  elseif f == "mazmorra" then
+    -- losas de piedra de la lÃ¡mina interior, con el tinte de cada mazmorra y un veteado sutil
+    local im = imagenes()
+    local t = mapa.tinte or { 1, 1, 1 }
+    love.graphics.setColor(t[1], t[2], t[3], 1)
+    love.graphics.draw(im.ia5, Arte.quad(im.ia5, 5 * 32, 2 * 32, 32, 32), px, py)
+    local r = hash(x, y, 5)
+    if r < 0.30 then
+      love.graphics.setColor(0, 0, 0.05, 0.10 + r * 0.35)
+      love.graphics.rectangle("fill", px, py, TILE, TILE)
+    elseif r > 0.93 then
+      love.graphics.setColor(1, 1, 1, 0.07)
+      love.graphics.rectangle("fill", px, py, TILE, TILE)
+    end
+    if hash(x, y, 6) < 0.04 then
+      love.graphics.setColor(0, 0, 0, 0.25)
+      love.graphics.rectangle("fill", px + 5, py + 9, 20, 1)
+      love.graphics.rectangle("fill", px + 12, py + 10, 8, 1)
+    end
   elseif f == "edificio" then
     -- el edificio se pinta aparte; debajo va el patio
     dibujarBase(mapa, x, y, px, py)

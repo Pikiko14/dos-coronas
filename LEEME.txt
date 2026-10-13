@@ -479,3 +479,9 @@ CRIATURAS CADA DOS NIVELES, CAMPAMENTOS Y MONEDAS
 == Novedades: skins exclusivas, forja y AoE apuntado ==
 - Item Mall: pestana "Forja" con pergaminos de forja; pestana "Addons" con dos skins exclusivas (Hada de Cristal y Caballero Solar), dibujadas por codigo sobre sprites del pack (juego/src/presentacion/render/propias.lua).
 - Habilidades en area (meteoro, lluvia de flechas, etc.): se apuntan con el raton dentro de la zona habilitada y se lanzan con clic.
+
+== Mazmorras ==
+- Tres mazmorras (Cripta del Olvido nv 10+, Foso de las Brasas nv 18+, Santuario del Eclipse nv 25+), cada una con su puerta de piedra en un punto distinto del mapa (se ven como rombos violeta en el mapa del mundo).
+- Con E junto a la puerta entras (hace falta el nivel minimo y no estar en combate). Dentro hay salas con criaturas y un jefe al fondo; la puerta de salida esta en la sala de entrada (E). Si mueres dentro reapareces en el mundo.
+- Al caer el jefe sale un cofre durante 150 s: cada jugador puede abrirlo una vez con E y recibe 600 de oro y un premio: un objeto o addon del Item Mall, o una pieza de equipo del escalon maximo (nivel 30). El jefe vuelve a los 5 minutos.
+- Codigo: compartido/dominio/mazmorras.lua (mapas y logica) y Datos.mazmorras (datos de cada una).

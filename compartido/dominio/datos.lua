@@ -490,5 +490,35 @@ function D.cuadro(def, dir, frame)
   return def.base + n * paso
 end
 
+-- Mazmorras: tres cuevas con su puerta en distintos lugares del mapa. Dentro hay salas con criaturas
+-- y, al fondo, un jefe; al caer deja un cofre con un premio (cualquier objeto o addon del mall, o un
+-- arma o armadura del escalón más alto). Cada mazmorra es su propio mapa (modo = id).
+--   biomas: donde se busca el sitio de su puerta. tinte: color del suelo. jefe.vida/dano: multiplicadores.
+D.mazmorras = {
+  {
+    id = "mz1", nombre = "Cripta del Olvido", nivelMin = 10, biomas = { "colina", "senda", "campos", "bosque" }, tinte = { 0.8, 0.85, 1.0 },
+    desc = "Un osario bajo la colina. Esqueletos, espectros y un caballero que no descansa.",
+    monstruos = { { "esqueleto", 13 }, { "espectro", 12 }, { "gargola", 14 }, { "alma", 13 } },
+    jefe = { monstruo = "caballero", nombre = "Señor de la Cripta", nivel = 17, vida = 9, dano = 1.7 },
+  },
+  {
+    id = "mz2", nombre = "Foso de las Brasas", nivelMin = 18, biomas = { "pinar", "cienaga", "marea", "senda" }, tinte = { 1.0, 0.8, 0.7 },
+    desc = "Galerías de escoria al rojo vivo. Gólems, demonios y un titán que despierta con el calor.",
+    monstruos = { { "golem", 20 }, { "demonio_foso", 22 }, { "escorpion_carmesi", 23 }, { "dragon_brasas", 24 } },
+    jefe = { monstruo = "titan", nombre = "Titán del Foso", nivel = 26, vida = 9, dano = 1.7 },
+  },
+  {
+    id = "mz3", nombre = "Santuario del Eclipse", nivelMin = 25, biomas = { "eclipse", "velo", "cienaga", "pinar" }, tinte = { 0.85, 0.75, 1.0 },
+    desc = "El templo donde la luz se apaga. Liches, ojos del abismo y el Behemot de guerra.",
+    monstruos = { { "ojo_abismo", 28 }, { "liche", 28 }, { "demonio_rey", 29 }, { "hidra_ceniza", 29 } },
+    jefe = { monstruo = "behemot", nombre = "Behemot del Eclipse", nivel = 30, vida = 4, dano = 1.3 },
+  },
+}
+
+function D.mazmorra(id)
+  for _, m in ipairs(D.mazmorras) do
+    if m.id == id then return m end
+  end
+end
 
 return D

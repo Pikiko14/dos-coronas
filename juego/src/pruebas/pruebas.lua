@@ -1020,7 +1020,26 @@ local function avanzarFoto(app)
       end
     end
   elseif foto.paso == "montana" then
+    foto.paso = "mzpuerta"
+    local z = app.mundo.mapas.mundo.mazmorras[1]
+    app.jugador.x, app.jugador.y = z.x + 0.5, z.y + 2.5
+  elseif foto.paso == "mzpuerta" then
+    foto.paso = "mzsala"
+    local m = app.mundo.mapas.mz1
+    app.jugador.modo, app.jugador.x, app.jugador.y = "mz1", m.entrada.x, m.entrada.y
+  elseif foto.paso == "mzsala" then
+    foto.paso = "mzjefe"
+    local m = app.mundo.mapas.mz1
+    app.jugador.x, app.jugador.y = m.grupos[1].x, m.grupos[1].y + 4
+  elseif foto.paso == "mzjefe" then
+    foto.paso = "mzfin"
+    local m = app.mundo.mapas.mz1
+    app.jugador.x, app.jugador.y = m.jefe.x, m.jefe.y + 5
+    local id = app.mundo:idNuevo()
+    app.mundo.entidades[id] = { id = id, kind = "cofre_mz", nombre = "Cofre", x = m.jefe.x + 2, y = m.jefe.y + 3, z = 0, modo = "mz1", vivo = true, hasta = 1e9, reclamado = {}, mz = "mz1" }
+  elseif foto.paso == "mzfin" then
     foto.paso = "poderes"
+    app.jugador.modo = "mundo"; app.jugador.x, app.jugador.y = app.mundo.mapas.mundo.mazmorras[1].x + 0.5, app.mundo.mapas.mundo.mazmorras[1].y + 3
     local j = app.jugador
     local tipos = { "golpe", "tajo", "grito", "escudo", "curar", "bendicion", "consagrar",
       "castigo", "fuego", "nova", "lluvia", "trampa", "preciso", "carga" }

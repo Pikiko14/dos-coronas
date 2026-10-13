@@ -2624,6 +2624,20 @@ function I.panelMapa(mundo, p, w, h)
     end
     if d < 400 and (not cd or d < cd) then cerca, cd = z, d end
   end
+  -- puertas de mazmorra: rombo violeta con su nombre y nivel mínimo
+  for _, z in ipairs(mundoMapa.mazmorras or {}) do
+    local x0, y0 = aP(z.x, z.y)
+    local def = Datos.mazmorra(z.id)
+    love.graphics.setColor(0, 0, 0, 0.8)
+    love.graphics.polygon("fill", x0, y0 - 8, x0 - 7, y0, x0, y0 + 8, x0 + 7, y0)
+    love.graphics.setColor(0.75, 0.45, 1, 1)
+    love.graphics.polygon("fill", x0, y0 - 6, x0 - 5, y0, x0, y0 + 6, x0 + 5, y0)
+    local etiqueta = z.nombre .. (def and ("  nv " .. def.nivelMin .. "+") or "")
+    love.graphics.setColor(0, 0, 0, 0.75)
+    love.graphics.print(etiqueta, x0 + 11, y0 - 6)
+    love.graphics.setColor(0.9, 0.75, 1, 1)
+    love.graphics.print(etiqueta, x0 + 10, y0 - 7)
+  end
   -- destino elegido con un clic: una cruz hasta que llegues
   local dst = I.mapaDestino
   if dst then
@@ -2732,6 +2746,7 @@ function I.panelAyuda(w, h)
     "Chat: Enter. Escribe /m para hablar al mundo y /f para hablar a tu facción. Las ciudades de tu facción son refugio.",
     "La guerra, una vez al día: batalla por cristales o captura del estandarte. Empieza con 3 jugadores por equipo.",
     "Las casas se compran al mayordomo. Dentro puedes poner cama, cofre, mesa y estandarte.",
+    "Mazmorras: tres puertas de piedra repartidas por el mapa (violeta en el mapa). Con E junto a la puerta entras si tienes el nivel; al fondo hay un jefe y, al caer, un cofre con premio para cada jugador: objetos o addons del mall, o equipo del escalÃ³n mÃ¡ximo.",
   }, "\n\n")
   love.graphics.setColor(0.92, 0.88, 0.78)
   love.graphics.printf(texto, 100, 110, w - 200, "left")

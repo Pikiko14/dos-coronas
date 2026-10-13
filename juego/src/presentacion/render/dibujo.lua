@@ -450,6 +450,13 @@ function D.entidad(e, sx, sy, mundo, jugador)
   elseif e.kind == "altar" then
     Objetos.dibujar("altar_cristal", 0, sx, pies)
     alto = 64
+  elseif e.kind == "cofre_mz" then
+    -- cofre de premio de la mazmorra: late con un brillo dorado
+    local br = 0.3 + 0.15 * math.sin((mundo.tiempo or 0) * 4)
+    love.graphics.setColor(1, 0.82, 0.3, br)
+    love.graphics.ellipse("fill", sx, pies - 8, 26, 16, 20)
+    Objetos.cofre(sx, pies)
+    alto = 40
   elseif e.kind == "bandera" then
     if not e.portador then Objetos.dibujar(e.faccion == "umbra" and "bandera_umbra" or "bandera_albor", 0, sx, pies) end
     alto = 64

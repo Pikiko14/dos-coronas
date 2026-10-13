@@ -129,4 +129,27 @@ function O.cofre(sx, sy)
   love.graphics.draw(img, Arte.quad(img, 0, 128, 32, 32), sx, sy, 0, 1, 1, 16, 30)
 end
 
+-- Puerta de mazmorra: un portÃ³n de piedra con un resplandor y el nombre encima. Es un prop del mapa
+-- (tipo "puerta_mazmorra"; salida = true la pinta como la puerta de salida de dentro).
+O.personalizados = O.personalizados or {}
+O.personalizados.puerta_mazmorra = function(p, sx, sy)
+  local def = require("compartido.dominio.datos").mazmorra(p.mz)
+  local t = love.timer.getTime()
+  local c = def and def.tinte or { 1, 1, 1 }
+  love.graphics.setColor(c[1] * 0.5, c[2] * 0.5, c[3] * 0.9, 0.22 + 0.08 * math.sin(t * 2.4))
+  love.graphics.ellipse("fill", sx, sy - 24, 54, 38, 24)
+  love.graphics.setColor(0, 0, 0, 0.35)
+  love.graphics.ellipse("fill", sx, sy - 1, 40, 9, 20)
+  O.puerta("umbra", p.salida and true or false, sx, sy, 0.8)
+  if def then
+    local f = love.graphics.getFont()
+    local texto = p.salida and "Salida" or (def.nombre .. "  (nivel " .. def.nivelMin .. "+)")
+    local w = f:getWidth(texto)
+    love.graphics.setColor(0, 0, 0, 0.75)
+    love.graphics.print(texto, sx - w / 2 + 1, sy - 82 + 1)
+    love.graphics.setColor(1, 0.9, 0.55, 1)
+    love.graphics.print(texto, sx - w / 2, sy - 82)
+  end
+end
+
 return O

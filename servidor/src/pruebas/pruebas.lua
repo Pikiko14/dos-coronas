@@ -3080,6 +3080,121 @@ mundo.tiempo = 100
       fallar(errores, "almacén implementa " .. m, type(almacen[m]) == "function")
     end
   end)
+  paso("mazmorras: tres puertas, jefe, cofre y premios", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local Mall = require("compartido.dominio.mall")
+    local Items = require("compartido.dominio.items")
+    local mundo = Mundo.nuevo()
+    local puertas = mundo.mapas.mundo.mazmorras
+    fallar(errores, "hay tres puertas en el mundo", #puertas == 3)
+    local mundoMapa = mundo.mapas.mundo
+    for i, z in ipairs(puertas) do
+      fallar(errores, "la puerta " .. z.id .. " está en suelo firme", Mapa.transitable(mundoMapa, z.x, z.y + 1) and not mundo:ciudadEn(z.x, z.y))
+      for j = i + 1, #puertas do
+        local o = puertas[j]
+        fallar(errores, "las puertas están separadas", math.abs(z.x - o.x) + math.abs(z.y - o.y) > 100, z.id .. "/" .. o.id)
+      end
+    end
+    for _, def in ipairs(Datos.mazmorras) do
+      local mapa = mundo.mapas[def.id]
+      fallar(errores, def.id .. ": tiene mapa propio", mapa and mapa.mazmorra == def.id)
+      fallar(errores, def.id .. ": la entrada se puede pisar", Mapa.transitable(mapa, math.floor(mapa.entrada.x), math.floor(mapa.entrada.y)))
+      local cam = Mapa.buscar(mapa, mapa.entrada.x, mapa.entrada.y, mapa.jefe.x, mapa.jefe.y)
+      fallar(errores, def.id .. ": hay camino de la entrada al jefe", cam ~= nil and #cam > 10)
+      for _, g in ipairs(mapa.grupos) do
+        fallar(errores, def.id .. ": los grupos salen en suelo libre", Mapa.transitable(mapa, math.floor(g.x), math.floor(g.y)))
+      end
+      local mons, jefes = 0, 0
+      for _, e in pairs(mundo.entidades) do
+        if e.kind == "monstruo" and e.modo == def.id then
+          mons = mons + 1
+          if e.jefeMz then jefes = jefes + 1 end
+          fallar(errores, def.id .. ": criatura en suelo libre", Mapa.transitable(mapa, math.floor(e.x), math.floor(e.y)))
+        end
+      end
+      fallar(errores, def.id .. ": criaturas y un jefe", mons >= 20 and jefes == 1, mons .. "/" .. jefes)
+    end
+    -- entrar: nivel mínimo y puerta cerca
+    local p = mundo:crearPersonaje({ nombre = "Explorador", faccion = "albor", clase = "guerrero", nivel = 5 })
+    local z, def = puertas[1], Datos.mazmorra(puertas[1].id)
+    p.x, p.y, p.z, p.modo = z.x + 0.5, z.y + 1.5, 0, "mundo"
+    p.bolsa, p.equipo.mochila = {}, "mochila_4"
+    mundo:interactuar(p)
+    fallar(errores, "con poco nivel no entra", p.modo == "mundo")
+    p.nivel = def.nivelMin
+    mundo:interactuar(p)
+    fallar(errores, "con nivel suficiente entra", p.modo == def.id and p.zona == def.nombre)
+    fallar(errores, "aparece en la entrada de su mapa", Util.dist(p.x, p.y, mundo.mapas[def.id].entrada.x, mundo.mapas[def.id].entrada.y) < 0.1)
+    fallar(errores, "su mapa es el de la mazmorra", mundo:mapaDe(p) == mundo.mapas[def.id])
+    local mons
+    for _, e in pairs(mundo.entidades) do if e.kind == "monstruo" and e.modo == def.id and not e.jefeMz then mons = e break end end
+    fallar(errores, "las criaturas de dentro no se ven desde fuera", not mundo:mismoLugar(mons, mundo:crearPersonaje({ nombre = "Fuera", faccion = "umbra", clase = "mago" })))
+    -- el exportado guarda el sitio del mundo
+    local ex = mundo:exportar(p)
+    fallar(errores, "al guardar dentro, vuelve a la puerta", ex.modo == "mundo" and math.abs(ex.x - (z.x + 0.5)) < 1 and ex.x > 0)
+    -- salir por la puerta de la sala de entrada
+    mundo:interactuar(p)
+    fallar(errores, "con E junto a la salida, sale", p.modo == "mundo" and Util.dist(p.x, p.y, z.x + 0.5, z.y + 0.5) < 3)
+    -- morir dentro devuelve al mundo
+    mundo:interactuar(p)
+    fallar(errores, "vuelve a entrar", p.modo == def.id)
+    mundo:morir(p, nil)
+    p.respawn = 0
+    mundo:revivir(p)
+    fallar(errores, "morir dentro: reaparece en el mundo", p.modo == "mundo" and p.vivo)
+    -- el jefe cae y deja un cofre
+    p.x, p.y = z.x + 0.5, z.y + 1.5
+    mundo:interactuar(p)
+    local jefe
+    for _, e in pairs(mundo.entidades) do if e.jefeMz and e.mz == def.id then jefe = e end end
+    fallar(errores, "el jefe es muy fuerte", jefe and jefe.hpMax > 3000 and jefe.elite, jefe and tostring(jefe.hpMax))
+    p.x, p.y = jefe.x + 1, jefe.y
+    p.oro = 0
+    mundo:morir(jefe, p)
+    local cofre
+    for _, e in pairs(mundo.entidades) do if e.kind == "cofre_mz" and e.modo == def.id then cofre = e end end
+    fallar(errores, "al caer el jefe sale un cofre", cofre ~= nil)
+    fallar(errores, "el jefe tarda en volver", jefe.respawn - mundo.tiempo > 200)
+    local n0 = #p.bolsa
+    mundo:interactuar(p)
+    fallar(errores, "abrir el cofre da premio y oro", (#p.bolsa > n0 or p.oro >= 600) and p.oro >= 600, tostring(p.oro))
+    local oro1, bolsa1 = p.oro, #p.bolsa
+    mundo:interactuar(p)
+    fallar(errores, "el cofre solo se abre una vez por jugador", p.oro == oro1 and #p.bolsa == bolsa1)
+    -- reparto de premios: equipo del escalón máximo, objetos del mall y addons
+    local tiers, objetos, addons = 0, 0, 0
+    local g = mundo:crearPersonaje({ nombre = "Suerte", faccion = "albor", clase = "mago", nivel = 30 })
+    for _ = 1, 400 do
+      g.bolsa, g.equipo.mochila, g.addons = {}, "mochila_4", {}
+      local ok = mundo:premioMazmorra(g)
+      fallar(errores, "el premio siempre se entrega", ok == true)
+      local s = g.bolsa[1]
+      if next(g.addons) then
+        addons = addons + 1
+        fallar(errores, "el addon existe en el mall", Mall.ADDONS[next(g.addons)] ~= nil)
+      elseif s then
+        local it = Datos.item(s.id)
+        if it and it.tier == #Items.TIER then tiers = tiers + 1 end
+        if Mall.objeto(s.id) then objetos = objetos + 1 end
+      end
+    end
+    fallar(errores, "salen piezas de equipo del escalón máximo", tiers > 100, tostring(tiers))
+    fallar(errores, "salen objetos del mall", objetos > 60, tostring(objetos))
+    fallar(errores, "salen addons del mall", addons > 20, tostring(addons))
+    -- bolsa llena: no se pierde el cofre
+    local llena = mundo:crearPersonaje({ nombre = "Lleno", faccion = "albor", clase = "guerrero", nivel = 30 })
+    llena.modo, llena.x, llena.y = def.id, cofre.x, cofre.y
+    llena.equipo.mochila, llena.bolsa = nil, {}
+    for i = 1, 60 do llena.bolsa[i] = { id = "pocion_vida", cant = 1 } end
+    local antes = llena.oro
+    cofre.reclamado = {}
+    local huboAviso = false
+    for _ = 1, 30 do
+      mundo:reclamarCofre(llena, cofre)
+      if not cofre.reclamado[llena.id] then huboAviso = true break end
+    end
+    fallar(errores, "con la bolsa llena el cofre sigue sin reclamar (salvo addon/monedas)", huboAviso or llena.oro > antes)
+  end)
   paso("movimiento", function()
     local mundo = Mundo.nuevo()
     local c

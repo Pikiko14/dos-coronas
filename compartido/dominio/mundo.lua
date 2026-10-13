@@ -19,6 +19,7 @@ local Encuentros = require("compartido.dominio.encuentros")
 local Admin = require("compartido.dominio.admin")
 local Comercio = require("compartido.dominio.comercio")
 local Mall = require("compartido.dominio.mall")
+local Mazmorras = require("compartido.dominio.mazmorras")
 
 local Mundo = {}
 Mundo.__index = Mundo
@@ -63,7 +64,9 @@ function Mundo.nuevo()
     estandarte = Mapa.estandarte(),
     casa = Mapa.casa(),
   }
+  self:crearMapasMazmorras()
   self:poblar()
+  self:poblarMazmorras()
   -- el mundo se genera con semilla fija; después el azar del juego vuelve a ser libre
   math.randomseed(os.time() + math.floor((os.clock() * 1000) % 100000))
   return self
@@ -78,7 +81,14 @@ function Mundo:mapaDe(e)
   if not e or e.modo == "casa" then return self.mapas.casa end
   if e.modo == "batalla" then return self.mapas.batalla end
   if e.modo == "estandarte" then return self.mapas.estandarte end
-  return self.mapas.mundo
+  return self.mapas[e.modo] or self.mapas.mundo
+end
+
+-- ¿Se mueve por rutas calculadas (mundo abierto a ras de suelo o mazmorra)?
+function Mundo:enRutas(e)
+  if e.modo == "mundo" then return (e.z or 0) == 0 end
+  local m = self.mapas[e.modo]
+  return m ~= nil and m.mazmorra ~= nil
 end
 
 function Mundo:ciudadEn(x, y)
@@ -615,7 +625,7 @@ end
 
 function Mundo:fijarDestino(e, x, y)
   e.metaX, e.metaY = x, y
-  if e.modo == "mundo" and (e.z or 0) == 0 then
+  if self:enRutas(e) then
     local cam, mas = rutaHacia(self, e, x, y)
     e.camino, e.caminoCortado = cam or { { x = x, y = y } }, mas
   else
@@ -635,7 +645,7 @@ function Mundo:direccionCamino(e, dt)
   local w = cam[1]
   if not w then
     -- ruta larga: terminó un tramo, se calcula el siguiente hacia la meta
-    if e.caminoCortado and e.metaX and e.modo == "mundo" and (e.z or 0) == 0 and not e.persigue
+    if e.caminoCortado and e.metaX and self:enRutas(e) and not e.persigue
       and Util.dist(e.x, e.y, e.metaX, e.metaY) > 2.5 then
       local nuevo, mas = rutaHacia(self, e, e.metaX, e.metaY)
       if nuevo and #nuevo > 0 then
@@ -658,7 +668,7 @@ function Mundo:direccionCamino(e, dt)
   e.bloqueado = (e.bloqueado or 0) + (dt or 0)
   if e.bloqueado > ESPERA_BLOQUEO then
     e.bloqueado = nil
-    if e.metaX and e.modo == "mundo" and (e.z or 0) == 0 then
+    if e.metaX and self:enRutas(e) then
       local nuevo, mas = rutaHacia(self, e, e.metaX, e.metaY)
       e.camino, e.caminoCortado = nuevo, mas
     else
@@ -687,7 +697,7 @@ function Mundo:direccionAutomatica(e, dt)
       self:encarar(e, o.x - e.x, o.y - e.y)
       return 0, 0
     end
-    if e.modo == "mundo" and (e.z or 0) == 0 then
+    if self:enRutas(e) then
       if (e.recalc or 0) <= self.tiempo then
         e.recalc = self.tiempo + 0.45
         e.metaX, e.metaY = o.x, o.y
@@ -962,7 +972,8 @@ function Mundo:morir(e, origen)
     end
     e.respawn = self.tiempo + (e.elite and Datos.RESPAWN_ELITE or Datos.RESPAWN_MONSTRUO)
     if e.efimero then e.borrar = true end
-    if e.elite then
+    if e.jefeMz then self:jefeMazmorraCae(e, origen) end
+    if e.elite and not e.jefeMz then
       self:mensaje("sistema", "", e.nombre .. " ha caído.", origen)
     end
   elseif e.kind == "jugador" or e.kind == "bot" then
@@ -1074,6 +1085,10 @@ function Mundo:revivir(e)
     if e.modo == "batalla" or e.modo == "estandarte" then
       local sp = self.mapas[e.modo].spawns[e.faccion]
       e.x, e.y = sp.x, sp.y
+    elseif self:enMazmorra(e) then
+      -- muere en una mazmorra: vuelve al punto de reaparición del mundo
+      e.modo, e.z, e.zona = "mundo", 0, nil
+      e.x, e.y = v.x, v.y
     else
       local c = self:ciudadPropiaCerca(e, e.x, e.y)
       if c then
@@ -2419,6 +2434,7 @@ function Mundo:npcCerca(p, rol)
 end
 
 function Mundo:interactuar(p)
+  if self:enMazmorra(p) then return self:interactuarMazmorra(p) end
   if p.modo == "casa" then
     if Util.dist(p.x, p.y, self.mapas.casa.salida.x, self.mapas.casa.salida.y) < 1.3 then
       self:salirCasa(p)
@@ -2499,6 +2515,10 @@ function Mundo:interactuar(p)
         end
       end
     end
+  end
+  if p.modo == "mundo" then
+    local r = self:interactuarPuertaMazmorra(p)
+    if r then return r end
   end
   if p.modo == "mundo" and Util.dist(p.x, p.y, self.mapas.mundo.portal.x, self.mapas.mundo.portal.y) < 2.2 then
     return { panel = "guerra" }
@@ -2603,7 +2623,7 @@ function Mundo:actualizar(dt)
         local cerca = false
         for k = 1, nv do
           local t = vivos[k]
-          if t.modo == "mundo" then
+          if t.modo == e.modo then
             local dx, dy = t.x - e.x, t.y - e.y
             if dx * dx + dy * dy < DISTANCIA_DESPIERTA2 then cerca = true break end
           end
@@ -2624,7 +2644,7 @@ function Mundo:actualizar(dt)
       elseif e.kind == "mascota" then self:actualizarMascota(e, dt)
       elseif e.kind == "caravana" then self:actualizarCaravana(e, dt)
       elseif e.kind == "bandera" then self:actualizarBandera(e)
-      elseif (e.kind == "loot" or e.kind == "cuerpo" or e.kind == "cristal") and self.tiempo > (e.hasta or 0) then e.borrar = true
+      elseif (e.kind == "loot" or e.kind == "cuerpo" or e.kind == "cristal" or e.kind == "cofre_mz") and self.tiempo > (e.hasta or 0) then e.borrar = true
       elseif e.kind == "altar" and not e.vivo and e.respawn and self.tiempo >= e.respawn then
         -- el núcleo se regenera pasado un tiempo
         e.vivo, e.hp, e.respawn = true, e.hpMax, nil
@@ -3062,5 +3082,6 @@ Encuentros.instalar(Mundo)
 Admin.instalar(Mundo)
 Comercio.instalar(Mundo)
 Mall.instalar(Mundo)
+Mazmorras.instalar(Mundo)
 
 return Mundo
