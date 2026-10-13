@@ -166,28 +166,343 @@ function I.fondo(ruta, w, h, velo)
   love.graphics.rectangle("fill", 0, 0, w, h)
 end
 
-function I.menu(hayPartida, w, h)
-  I.limpiar()
-  I.fondo("Titles1/Castle.png", w, h, 0.3)
-  love.graphics.setColor(0, 0, 0, 0.42)
-  love.graphics.rectangle("fill", w / 2 - 270, 36, 540, 352, 14, 14)
-  I.persona("guerrero", w / 2 - 330, h - 60, 1.7, "albor")
-  I.persona("mago", w / 2 + 330, h - 60, 1.7, "umbra")
-  love.graphics.setFont(I.grande)
-  love.graphics.setColor(0.95, 0.82, 0.35)
-  love.graphics.printf("DOS CORONAS", 0, 64, w, "center")
+local function sobre(x, y, w, h)
+  local s = I.escala or 1
+  local mx, my = love.mouse.getPosition()
+  mx, my = mx / s, my / s
+  return mx >= x and mx <= x + w and my >= y and my <= y + h
+end
+
+local function fuentePortada(cual, px)
+  I._fuentesPortada = I._fuentesPortada or {}
+  if I._fuentesPortada[cual] then return I._fuentesPortada[cual] end
+  local ruta = "arte/fuentes/SourceSans3-Regular.ttf"
+  local f = love.filesystem.getInfo(ruta) and love.graphics.newFont(ruta, px) or love.graphics.newFont(px)
+  I._fuentesPortada[cual] = f
+  return f
+end
+
+local function iconoPortada(tipo, cx, cy)
+  love.graphics.setLineWidth(1.6)
+  if tipo == "casa" then
+    love.graphics.polygon("line", cx, cy - 7, cx - 8, cy - 1, cx + 8, cy - 1)
+    love.graphics.rectangle("line", cx - 5, cy - 1, 10, 8)
+  elseif tipo == "persona" then
+    love.graphics.circle("line", cx, cy - 4, 3.2)
+    love.graphics.arc("line", "open", cx, cy + 8, 6, math.pi * 1.15, math.pi * 1.85)
+  elseif tipo == "engranaje" then
+    love.graphics.circle("line", cx, cy, 3.2)
+    love.graphics.circle("line", cx, cy, 6.5)
+  elseif tipo == "usuario" then
+    love.graphics.circle("line", cx, cy - 5, 4)
+    love.graphics.arc("line", "open", cx, cy + 10, 7, math.pi * 1.12, math.pi * 1.88)
+  elseif tipo == "candado" then
+    love.graphics.rectangle("line", cx - 5, cy - 1, 10, 8, 2, 2)
+    love.graphics.arc("line", "open", cx, cy - 1, 3.4, math.pi, 0)
+  elseif tipo == "ojo" then
+    love.graphics.ellipse("line", cx, cy, 7, 4.2)
+    love.graphics.circle("fill", cx, cy, 1.7)
+  elseif tipo == "ojo_off" then
+    love.graphics.ellipse("line", cx, cy, 7, 4.2)
+    love.graphics.line(cx - 7, cy + 5, cx + 7, cy - 5)
+  elseif tipo == "espada" then
+    love.graphics.line(cx, cy - 10, cx, cy + 3)
+    love.graphics.line(cx - 5, cy + 1, cx + 5, cy + 1)
+    love.graphics.line(cx, cy + 3, cx, cy + 9)
+  elseif tipo == "gente" then
+    love.graphics.circle("line", cx - 3, cy - 5, 2.8)
+    love.graphics.circle("line", cx + 4, cy - 4, 2.3)
+    love.graphics.arc("line", "open", cx - 2, cy + 7, 6, math.pi * 1.1, math.pi * 1.95)
+  elseif tipo == "estrella" then
+    local pts = {}
+    for i = 0, 9 do
+      local ang = -math.pi / 2 + i * math.pi / 5
+      local rad = (i % 2 == 0) and 8 or 3.3
+      pts[#pts + 1] = cx + math.cos(ang) * rad
+      pts[#pts + 1] = cy + math.sin(ang) * rad
+    end
+    love.graphics.polygon("line", pts)
+  elseif tipo == "corona" then
+    love.graphics.polygon("line", cx - 9, cy + 5, cx - 9, cy - 3, cx - 4, cy + 2, cx, cy - 7, cx + 4, cy + 2, cx + 9, cy - 3, cx + 9, cy + 5)
+  elseif tipo == "mas" then
+    love.graphics.circle("line", cx - 2, cy - 3, 3.2)
+    love.graphics.line(cx + 5, cy + 1, cx + 5, cy + 8)
+    love.graphics.line(cx + 2, cy + 4.5, cx + 8, cy + 4.5)
+  end
+  love.graphics.setLineWidth(1)
+end
+
+local function imgPortada(nombre)
+  I._imgPortada = I._imgPortada or {}
+  if I._imgPortada[nombre] ~= nil then return I._imgPortada[nombre] or nil end
+  local ruta = "arte/portada/" .. nombre
+  if not love.filesystem.getInfo(ruta) then I._imgPortada[nombre] = false return nil end
+  local img = love.graphics.newImage(ruta)
+  img:setFilter("linear", "linear")
+  I._imgPortada[nombre] = img
+  return img
+end
+
+local function dibujarImagen(img, x, y, w, h)
+  local iw, ih = img:getDimensions()
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.draw(img, x, y, 0, w / iw, h / ih)
+end
+
+local function dibujarBotonSkin(img, x, y, w, h)
+  local iw, ih = img:getDimensions()
+  if not I._quadBoton then
+    local cap = math.floor(iw * 0.16)
+    I._quadBoton = {
+      love.graphics.newQuad(0, 0, cap, ih, iw, ih),
+      love.graphics.newQuad(cap, 0, iw - cap * 2, ih, iw, ih),
+      love.graphics.newQuad(iw - cap, 0, cap, ih, iw, ih),
+      cap, iw, ih,
+    }
+  end
+  local q = I._quadBoton
+  local cw = math.min(w * 0.18, h * (q[4] / q[6]))
+  love.graphics.draw(img, q[1], x, y, 0, cw / q[4], h / q[6])
+  love.graphics.draw(img, q[2], x + cw, y, 0, (w - cw * 2) / (q[5] - q[4] * 2), h / q[6])
+  love.graphics.draw(img, q[3], x + w - cw, y, 0, cw / q[4], h / q[6])
+end
+
+local function botonPortada(x, y, w, h, texto, id)
+  local hover = sobre(x, y, w, h)
+  local piel = imgPortada("boton.png")
+  if piel then
+    love.graphics.setColor(hover and 1 or 0.92, hover and 1 or 0.92, hover and 1 or 0.96, 1)
+    dibujarBotonSkin(piel, x, y, w, h)
+  else
+    relleno(x, y, w, h, 9, { 0.20, 0.48, 0.96 }, { 0.10, 0.28, 0.72 }, 1)
+  end
   love.graphics.setFont(I.fuente)
-  love.graphics.setColor(0.8, 0.78, 0.7)
-  love.graphics.printf("Albor contra Umbra", 0, 118, w, "center")
-  love.graphics.setColor(0.9, 0.86, 0.72)
-  love.graphics.printf("Para jugar, inicia sesión o crea una cuenta.", 0, 156, w, "center")
-  local y = 210
-  I.boton(w / 2 - 170, y, 340, 48, "Iniciar sesión", "menu_entrar")
-  I.boton(w / 2 - 170, y + 60, 340, 48, "Crear cuenta", "menu_registro")
-  I.boton(w / 2 - 170, y + 120, 340, 42, "Salir", "menu_salir")
-  love.graphics.setColor(0.7, 0.68, 0.6)
-  love.graphics.printf("Los eventos empiezan con 3 jugadores por equipo, una vez al día.", 0, h - 48, w, "center")
-  love.graphics.printf("Arte: pack de gráficos new-sprites", 0, h - 28, w, "center")
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.printf(texto, x, y + h / 2 - 9, w, "center")
+  I.registrar(x, y, w, h, id)
+end
+
+-- Pantalla de entrada: paisaje, marca a la izquierda y tarjeta de cuenta a la derecha.
+function I.portada(form, w, h, forzar)
+  I.limpiar()
+  form = form or { modo = "entrar", usuario = "", clave = "", error = "" }
+  local modo = forzar or form.modo or "entrar"
+  local ajustes = I.portadaPanel == "ajustes"
+  local crear = modo == "crear" and not ajustes
+  if love.filesystem.getInfo("arte/hojas/new-sprites/Titles1/Portada.jpg") then
+    I.fondo("Titles1/Portada.jpg", w, h, 0.08)
+  else
+    I.fondo("Titles1/Castle.png", w, h, 0.28)
+  end
+  love.graphics.setColor(0.02, 0.05, 0.12, 0.22)
+  love.graphics.rectangle("fill", 0, 0, w, 72)
+
+  local margen = math.max(28, math.min(64, w * 0.045))
+  local barra = 58
+  love.graphics.setColor(0.03, 0.05, 0.12, 0.62)
+  love.graphics.rectangle("fill", 0, 0, w, barra)
+  love.graphics.setColor(0.78, 0.64, 0.32, 0.45)
+  love.graphics.rectangle("fill", 0, barra - 1, w, 1)
+  love.graphics.setFont(fuentePortada("marca", 15))
+  love.graphics.setColor(0.95, 0.82, 0.42)
+  love.graphics.polygon("fill", margen, 22, margen + 6, 29, margen, 36, margen - 6, 29)
+  love.graphics.print("DOS CORONAS", margen + 16, 20)
+
+  local nav = {
+    { "casa", "Inicio", "portada_inicio", not ajustes },
+    { "engranaje", "Ajustes", "portada_ajustes", ajustes },
+  }
+  local nx = w - margen - 240
+  for _, n in ipairs(nav) do
+    local hover = sobre(nx, 8, 112, 42)
+    love.graphics.setColor(n[4] and 0.98 or (hover and 0.95 or 0.82), n[4] and 0.86 or 0.9, n[4] and 0.45 or 0.84)
+    iconoPortada(n[1], nx + 16, 29)
+    love.graphics.setFont(fuentePortada("nav", 16))
+    love.graphics.print(n[2], nx + 30, 20)
+    if n[4] then
+      local ancho = fuentePortada("nav", 16):getWidth(n[2])
+      love.graphics.setColor(0.93, 0.75, 0.28)
+      love.graphics.rectangle("fill", nx + 30, 44, ancho, 2)
+    end
+    I.registrar(nx, 8, 112, 42, n[3])
+    nx = nx + 118
+  end
+
+  local panel = imgPortada("panel.png")
+  local tarjetaW = math.min(400, math.max(300, w * 0.3))
+  local tarjetaH = tarjetaW * (panel and (select(2, panel:getDimensions()) / panel:getWidth()) or 1.12)
+  if ajustes then tarjetaH = math.max(tarjetaH, 420) end
+  if tarjetaH > h - 168 then
+    tarjetaH = h - 168
+    if panel and not ajustes then tarjetaW = tarjetaH * (panel:getWidth() / select(2, panel:getDimensions())) end
+  end
+  local tx = w - margen - tarjetaW
+  local ty = math.max(barra + 18, math.min(h * 0.14, (h - tarjetaH) * 0.38))
+  local colW = math.max(260, tx - margen - 48)
+
+  local logo = imgPortada("logo.png")
+  local bajo = barra + 12
+  if logo then
+    local iw, ih = logo:getDimensions()
+    local lw = math.min(colW, 480)
+    local lh = lw * ih / iw
+    love.graphics.setColor(0.04, 0.07, 0.12, 0.55)
+    love.graphics.rectangle("fill", margen + lw * 0.08, bajo + lh * 0.76, lw * 0.84, lh * 0.2, 10, 10)
+    dibujarImagen(logo, margen, bajo, lw, lh)
+    bajo = bajo + lh + 6
+  end
+  local anchoFrase = math.min(440, colW)
+  love.graphics.setColor(0.03, 0.05, 0.1, 0.62)
+  love.graphics.rectangle("fill", margen, bajo - 6, anchoFrase + 16, 56, 10, 10)
+  love.graphics.setFont(I.fuente)
+  love.graphics.setColor(0.05, 0.04, 0.02, 0.9)
+  love.graphics.printf("Dos reinos, un mismo destino.\nElige tu camino, escribe tu historia.", margen + 10, bajo + 1, anchoFrase, "left")
+  love.graphics.setColor(1, 0.98, 0.93)
+  love.graphics.printf("Dos reinos, un mismo destino.\nElige tu camino, escribe tu historia.", margen + 8, bajo, anchoFrase, "left")
+  bajo = bajo + 58
+  local iconos = imgPortada("iconos.png")
+  if iconos then
+    local iw, ih = iconos:getDimensions()
+    local dw = math.min(colW, 440)
+    local dh = dw * ih / iw
+    love.graphics.setColor(0.03, 0.06, 0.1, 0.5)
+    love.graphics.rectangle("fill", margen - 6, bajo + dh * 0.55, dw + 12, dh * 0.48, 10, 10)
+    dibujarImagen(iconos, margen, bajo, dw, dh)
+  end
+
+  if panel then
+    dibujarImagen(panel, tx, ty, tarjetaW, tarjetaH)
+  else
+    love.graphics.setColor(0.04, 0.07, 0.15, 0.9)
+    love.graphics.rectangle("fill", tx, ty, tarjetaW, tarjetaH, 18, 18)
+  end
+  I.registrar(tx, ty, tarjetaW, tarjetaH, "panel")
+
+  local borde = math.floor(tarjetaW * 0.09)
+  local ix = tx + borde
+  local iw = tarjetaW - borde * 2
+  love.graphics.setFont(fuentePortada("marca", 16))
+  love.graphics.setColor(0.95, 0.84, 0.48)
+  local encabezado = ajustes and "AJUSTES" or (crear and "CREAR CUENTA" or "INICIAR SESIÓN")
+  love.graphics.printf(encabezado, tx, ty + math.floor(tarjetaH * 0.1), tarjetaW, "center")
+
+  local function pies()
+    local band = imgPortada("bandera.png")
+    if band then
+      local bw0, bh0 = band:getDimensions()
+      local bh = math.min(210, h * 0.3)
+      dibujarImagen(band, 6, h - bh - 4, bh * bw0 / bh0, bh)
+    end
+    I.persona("guerrero", 118, h - 8, 1.05, "albor")
+    I.persona("mago", w - 56, h - 8, 1.05, "umbra")
+    love.graphics.setFont(I.fuente)
+  end
+
+  if ajustes then
+    love.graphics.setFont(I.fuente)
+    love.graphics.setColor(0.86, 0.88, 0.94)
+    love.graphics.printf("Tamaño de la ventana", ix, ty + 96, iw, "left")
+    botonPortada(ix, ty + 124, (iw - 12) / 2, 42, "1280×720", "aj_1280")
+    botonPortada(ix + (iw + 12) / 2, ty + 124, (iw - 12) / 2, 42, "1600×900", "aj_1600")
+    botonPortada(ix, ty + 176, iw, 44, Ajustes.completo and "Ventana" or "Pantalla completa", "aj_completo")
+    botonPortada(ix, ty + 232, iw, 44, "Volver", "portada_inicio")
+    botonPortada(ix, ty + 286, iw, 44, "Salir", "menu_salir")
+    pies()
+    return
+  end
+
+  local altoCampo = 44
+  local function campo(etiqueta, valor, y, id, secreto, icono)
+    love.graphics.setColor(0.05, 0.08, 0.16, 0.94)
+    love.graphics.rectangle("fill", ix, y, iw, altoCampo, 8, 8)
+    local foco = I.foco == id
+    love.graphics.setColor(foco and 0.95 or 0.62, foco and 0.78 or 0.58, foco and 0.38 or 0.42, foco and 1 or 0.75)
+    love.graphics.setLineWidth(1.4)
+    love.graphics.rectangle("line", ix + 0.5, y + 0.5, iw - 1, altoCampo - 1, 8, 8)
+    love.graphics.setLineWidth(1)
+    love.graphics.setColor(0.78, 0.7, 0.48)
+    iconoPortada(icono, ix + 22, y + altoCampo / 2)
+    local muestra = (secreto and not form.verClave) and string.rep("•", #(valor or "")) or (valor or "")
+    love.graphics.setFont(I.fuente)
+    if muestra == "" and not foco then
+      love.graphics.setColor(0.58, 0.62, 0.7)
+      love.graphics.print(etiqueta, ix + 42, y + altoCampo / 2 - 9)
+    else
+      love.graphics.setColor(0.97, 0.98, 1)
+      love.graphics.print(muestra .. (foco and "|" or ""), ix + 42, y + altoCampo / 2 - 9)
+    end
+    I.registrar(ix, y, secreto and (iw - 42) or iw, altoCampo, "foco_" .. id)
+    if secreto and id == "clave" then
+      love.graphics.setColor(0.75, 0.78, 0.86)
+      iconoPortada(form.verClave and "ojo" or "ojo_off", ix + iw - 22, y + altoCampo / 2)
+      I.registrar(ix + iw - 42, y, 42, altoCampo, "cuenta_ver")
+    end
+  end
+
+  local y = ty + math.floor(tarjetaH * 0.16)
+  local hueco = 14
+  campo("Usuario", form.usuario, y, "usuario", false, "usuario")
+  y = y + altoCampo + hueco
+  campo("Contraseña", form.clave, y, "clave", true, "candado")
+  if crear then
+    y = y + altoCampo + hueco
+    campo("Repite la contraseña", form.clave2, y, "clave2", true, "candado")
+  end
+  y = y + altoCampo + 18
+  if not crear and form.error and form.error ~= "" and I._toastClave ~= form.error then
+    I._toastClave = form.error
+    I._toast = { texto = form.error, hasta = love.timer.getTime() + 4.2 }
+  end
+  local altoBtn = 46
+  botonPortada(ix, y, iw, altoBtn, crear and "Crear cuenta" or "Entrar  →", "cuenta_ok")
+  y = y + altoBtn + 8
+  local sep = imgPortada("separador.png")
+  if sep then
+    local sw, sh = sep:getDimensions()
+    local dw = math.min(iw * 0.72, 220)
+    dibujarImagen(sep, ix + (iw - dw) / 2, y, dw, dw * sh / sw)
+    y = y + 22
+  else
+    y = y + 8
+  end
+  if crear then
+    botonPortada(ix, y, iw, altoBtn, "Ya tengo cuenta", "menu_entrar")
+  else
+    botonPortada(ix, y, iw, altoBtn, "Crear cuenta", "menu_registro")
+    y = y + altoBtn + 6
+    botonPortada(ix, y, iw, altoBtn, "Salir", "menu_salir")
+    y = y + altoBtn + 4
+    local hover = sobre(ix, y, iw, 22)
+    love.graphics.setFont(fuentePortada("mini", 13))
+    love.graphics.setColor(0.55, 0.78, 1, hover and 1 or 0.85)
+    love.graphics.printf("Recuperar contraseña", ix, y, iw, "center")
+    I.registrar(ix, y, iw, 22, "cuenta_recuperar")
+  end
+
+  pies()
+  local aviso = I._toast
+  if aviso and love.timer.getTime() < aviso.hasta then
+    local queda = aviso.hasta - love.timer.getTime()
+    local alfa = math.min(1, queda / 0.35)
+    local f = fuentePortada("mini", 15)
+    love.graphics.setFont(f)
+    local tw = math.min(560, f:getWidth(aviso.texto) + 56)
+    local x = (w - tw) / 2
+    local yy = h - 72
+    love.graphics.setColor(0.07, 0.05, 0.03, 0.94 * alfa)
+    love.graphics.rectangle("fill", x, yy, tw, 42, 12, 12)
+    love.graphics.setColor(0.93, 0.76, 0.34, alfa)
+    love.graphics.setLineWidth(1.4)
+    love.graphics.rectangle("line", x + 0.5, yy + 0.5, tw - 1, 41, 12, 12)
+    love.graphics.setLineWidth(1)
+    love.graphics.setColor(1, 0.97, 0.9, alfa)
+    love.graphics.printf(aviso.texto, x + 16, yy + 12, tw - 32, "center")
+    love.graphics.setFont(I.fuente)
+  end
+end
+
+function I.menu(_, w, h)
+  I.portada({ modo = "entrar", usuario = Ajustes.ultimoUsuario or "", clave = "", error = "" }, w, h, "entrar")
 end
 
 function I.crear(estado, w, h)
@@ -2837,8 +3152,7 @@ function I.panelVivienda(mundo, p, w, h)
   end
   love.graphics.setColor(0.95, 0.9, 0.75)
   love.graphics.print(ciudad.nombre, w / 2 - 250, 140)
-  local precio = 100000
-  if Datos.precioCasa then precio = ciudad.capital and Datos.precioCasa.capital or Datos.precioCasa.normal end
+  local nombres = { pequena = "Pequeña", mediana = "Mediana", grande = "Grande" }
   local fila, visibles = 48, 6
   local maxScroll = math.max(0, #ciudad.parcelas - visibles)
   I.casaScrollMax = maxScroll
@@ -2846,9 +3160,14 @@ function I.panelVivienda(mundo, p, w, h)
   for i, par in ipairs(ciudad.parcelas) do
     if i > I.casaScroll and i <= I.casaScroll + visibles then
       local y = 176 + (i - 1 - I.casaScroll) * fila
-      local txt = par.dueno and (par.dueno == p.id and "Tu casa" or "Ocupada") or ("Libre  ·  " .. Ayudas.num(precio) .. " oro")
-      love.graphics.setColor(0.92, 0.88, 0.75)
-      love.graphics.print("Parcela " .. i .. "   " .. txt, w / 2 - 250, y)
+      local precio = mundo:precioDeCasa(par)
+      local estado = par.dueno and (par.dueno == p.id and "Tu casa" or "Ocupada") or ("Libre  ·  " .. Ayudas.num(precio) .. " oro")
+      love.graphics.setFont(pequena())
+      love.graphics.setColor(0.95, 0.9, 0.75)
+      love.graphics.print("Casa " .. i .. "  ·  " .. (nombres[par.tamano] or "Mediana"), w / 2 - 250, y - 2)
+      love.graphics.setColor(0.78, 0.74, 0.62)
+      love.graphics.print(estado, w / 2 - 250, y + 14)
+      love.graphics.setFont(I.fuente)
       if not par.dueno then I.boton(w / 2 + 40, y - 6, 140, 30, "Comprar", "casa_comprar_" .. par.id) end
       if par.dueno == p.id then I.boton(w / 2 + 190, y - 6, 100, 30, "Entrar", "casa_entrar_" .. par.id) end
     end
@@ -3225,46 +3544,7 @@ function I.personajes(lista, usuario, w, h, errorTxt)
 end
 
 function I.cuenta(form, w, h)
-  I.limpiar()
-  -- iniciar sesión: lago nocturno con hadas; registro: la puerta alada de la cueva
-  I.fondo(form.modo == "crear" and "Titles1/Gates.png" or "Titles1/Fountain.png", w, h, 0.28)
-  love.graphics.setColor(0.03, 0.03, 0.06, 0.62)
-  love.graphics.rectangle("fill", w / 2 - 270, 28, 540, 490, 16, 16)
-  love.graphics.setColor(0.85, 0.72, 0.35, 0.55)
-  love.graphics.rectangle("line", w / 2 - 270 + 0.5, 28.5, 539, 489, 16, 16)
-  love.graphics.setFont(I.grande)
-  love.graphics.setColor(0.95, 0.86, 0.55)
-  love.graphics.printf(form.modo == "crear" and "Crear cuenta" or "Iniciar sesión", 0, 48, w, "center")
-  love.graphics.setFont(I.fuente)
-  love.graphics.setColor(0.8, 0.78, 0.7)
-  local ayuda = form.modo == "crear"
-    and "El servidor crea la cuenta. Después podrás tener hasta 4 personajes."
-    or "El servidor comprueba el usuario y la clave. jugar.bat lo abre por ti."
-  love.graphics.printf(ayuda, w / 2 - 280, 100, 560, "center")
-  I.boton(w / 2 - 220, 150, 210, 36, "Iniciar sesión", "menu_entrar", form.modo ~= "entrar")
-  I.boton(w / 2 + 10, 150, 210, 36, "Crear cuenta", "menu_registro", form.modo ~= "crear")
-  local function campo(etiqueta, valor, y, id, secreto, pista)
-    love.graphics.setColor(0.9, 0.86, 0.75)
-    love.graphics.print(etiqueta, w / 2 - 180, y)
-    love.graphics.setColor(0.11, 0.15, 0.28)
-    love.graphics.rectangle("fill", w / 2 - 180, y + 22, 360, 36, 4, 4)
-    love.graphics.setColor(1, 0.95, 0.85)
-    local muestra = secreto and string.rep("•", #(valor or "")) or (valor or "")
-    if muestra == "" and I.foco ~= id then
-      love.graphics.setColor(0.55, 0.5, 0.42)
-      muestra = pista
-    end
-    love.graphics.print(muestra .. (I.foco == id and "_" or ""), w / 2 - 168, y + 30)
-    I.registrar(w / 2 - 180, y + 22, 360, 36, "foco_" .. id)
-  end
-  campo("Usuario", form.usuario, 210, "usuario", false, "3 a 16 letras o números")
-  campo("Clave", form.clave, 290, "clave", true, "mínimo 4 caracteres")
-  if form.error and form.error ~= "" then
-    love.graphics.setColor(1, 0.45, 0.4)
-    love.graphics.printf(form.error, w / 2 - 240, 360, 480, "center")
-  end
-  I.boton(w / 2 - 180, 410, 360, 46, form.modo == "crear" and "Registrarme" or "Entrar", "cuenta_ok")
-  I.boton(w / 2 - 180, 468, 360, 36, "Volver al menú", "cuenta_volver")
+  I.portada(form, w, h)
 end
 
 function I.panelPausa(w, h)

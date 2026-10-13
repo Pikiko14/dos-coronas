@@ -255,42 +255,80 @@ local function estamparCiudad(mapa, ciudad)
   else
     ciudad.spawn = { x = x0 + medio + 0.5, y = y0 + h - 2.5 }
   end
-  local bw, bh = 6, 4
+  -- Formas de casa: ancho x alto, filas de tejado (techo) y, por columna, cuántas filas se recortan por
+  -- arriba (cima). Cada columna lleva su propio tejado sobre su fachada, así las alas más bajas de las
+  -- casas en L y en T tienen tejado y no quedan paredes sin cubrir. La puerta va en la fila de abajo.
+  local FORMAS = {
+    { tamano = "pequena", w = 3, h = 3, techo = 1 },
+    { tamano = "pequena", w = 4, h = 3, techo = 1 },
+    { tamano = "pequena", w = 5, h = 3, techo = 1 },
+    { tamano = "mediana", w = 5, h = 4, techo = 2 },
+    { tamano = "mediana", w = 6, h = 4, techo = 2 },
+    { tamano = "mediana", w = 6, h = 4, techo = 2, cima = { 0, 0, 0, 0, 1, 1 } },
+    { tamano = "grande", w = 7, h = 5, techo = 2 },
+    { tamano = "grande", w = 7, h = 5, techo = 2, cima = { 2, 2, 0, 0, 0, 0, 0 } },
+    { tamano = "grande", w = 7, h = 5, techo = 2, cima = { 2, 2, 0, 0, 0, 2, 2 } },
+    { tamano = "mediana", w = 6, h = 5, techo = 2, cima = { 0, 0, 0, 0, 2, 2 } },
+  }
+  local function recorte(forma, xx) return forma.cima and forma.cima[xx + 1] or 0 end
+  local function hueco(forma, xx, yy) return yy < recorte(forma, xx) end
   local puertas = {}
-  local function cabe(ex, ey)
-    for yy = 0, bh - 1 do
-      for xx = 0, bw - 1 do
-        local lx, ly = ex + xx, ey + yy
-        if lx <= 0 or ly <= 0 or lx >= w - 1 or ly >= h - 1 then return false end
-        if avenida(lx, ly) or enPlaza(lx, ly) then return false end
+  local function libre(forma, ex, ey)
+    for yy = 0, forma.h - 1 do
+      for xx = 0, forma.w - 1 do
+        if not hueco(forma, xx, yy) then
+          local lx, ly = ex + xx, ey + yy
+          if lx <= 0 or ly <= 0 or lx >= w - 1 or ly >= h - 1 then return false end
+          if avenida(lx, ly) or enPlaza(lx, ly) then return false end
+        end
       end
     end
     return true
   end
-  for ey = 2, h - 2 - bh, 6 do
-    for ex = 2, w - 2 - bw, 8 do
-      if cabe(ex, ey) then
-        local dx = ex + math.floor((bw - 1) / 2)
-        local dy = ey + bh - 1
-        for yy = 0, bh - 1 do
-          for xx = 0, bw - 1 do
-            local lx, ly = ex + xx, ey + yy
-            local tx, ty = x0 + lx, y0 + ly
-            if lx == dx and ly == dy then
-              setBloque(mapa, tx, ty, false)
-              setSuelo(mapa, tx, ty, "adoquin", "ciudad", ciudad.faccion)
-            else
-              setBloque(mapa, tx, ty, true)
-              setSuelo(mapa, tx, ty, yy < 2 and techo or "fachada", "ciudad", ciudad.faccion)
-            end
+  local function poner(forma, ex, ey)
+    local fondo = {}
+    for yy = 0, forma.h - 1 do
+      for xx = 0, forma.w - 1 do
+        if not hueco(forma, xx, yy) and yy == forma.h - 1 then fondo[#fondo + 1] = xx end
+      end
+    end
+    local dx = ex + fondo[math.ceil(#fondo / 2)]
+    local dy = ey + forma.h - 1
+    local vacio = {}
+    for yy = 0, forma.h - 1 do
+      for xx = 0, forma.w - 1 do
+        local sinCasa = hueco(forma, xx, yy)
+        local puerta = xx + ex == dx and yy + ey == dy
+        if sinCasa then vacio[xx .. "," .. yy] = true end
+        if not sinCasa then
+          local tx, ty = x0 + ex + xx, y0 + ey + yy
+          if puerta then
+            setBloque(mapa, tx, ty, false)
+            setSuelo(mapa, tx, ty, "adoquin", "ciudad", ciudad.faccion)
+          else
+            setBloque(mapa, tx, ty, true)
+            setSuelo(mapa, tx, ty, (yy - recorte(forma, xx)) < forma.techo and techo or "fachada", "ciudad", ciudad.faccion)
           end
         end
-        mapa.edificios[#mapa.edificios + 1] = {
-          x = x0 + ex, y = y0 + ey, w = bw, h = bh,
-          faccion = ciudad.faccion, puertaX = x0 + dx, puertaY = y0 + dy,
-        }
-        puertas[#puertas + 1] = { x = x0 + dx, y = y0 + dy }
       end
+    end
+    mapa.edificios[#mapa.edificios + 1] = {
+      x = x0 + ex, y = y0 + ey, w = forma.w, h = forma.h,
+      faccion = ciudad.faccion, puertaX = x0 + dx, puertaY = y0 + dy,
+      techo = forma.techo, vacio = vacio, tamano = forma.tamano, cima = forma.cima,
+    }
+    puertas[#puertas + 1] = { x = x0 + dx, y = y0 + dy, tamano = forma.tamano }
+  end
+  local n = 0
+  for ey = 2, h - 7, 6 do
+    for ex = 2, w - 9, 8 do
+      n = n + 1
+      local puesta = false
+      for k = 0, #FORMAS - 1 do
+        local forma = FORMAS[((n + k - 1) % #FORMAS) + 1]
+        if libre(forma, ex, ey) then poner(forma, ex, ey) puesta = true break end
+      end
+      if not puesta and libre(FORMAS[1], ex, ey) then poner(FORMAS[1], ex, ey) end
     end
   end
   table.sort(puertas, function(a, b)
@@ -303,7 +341,7 @@ local function estamparCiudad(mapa, ciudad)
     usada[idx] = true
     local n = #ciudad.parcelas + 1
     local p = puertas[idx]
-    ciudad.parcelas[n] = { id = ciudad.id .. "_" .. n, x = p.x, y = p.y, dueno = nil }
+    ciudad.parcelas[n] = { id = ciudad.id .. "_" .. n, x = p.x, y = p.y, dueno = nil, tamano = p.tamano or "mediana" }
   end
   for i = 1, #puertas do tomar(i) end
   local function npc(nx, ny, rol, nombre)
@@ -951,19 +989,6 @@ local function generarMundo(rng)
   end
   mapa.escaleras = {}
   mapa.alto = {}
-  for _, c in ipairs(mapa.ciudades) do
-    if c.capital then
-      local sx, sy = c.x + 8, c.y + 6
-      mapa.escaleras[#mapa.escaleras + 1] = { x = sx, y = sy, de = 0, a = 1 }
-      mapa.escaleras[#mapa.escaleras + 1] = { x = sx, y = sy + 3, de = 1, a = 0 }
-      for y = c.y + 4, c.y + 12 do
-        for x = c.x + 4, c.x + 14 do
-          mapa.alto[x] = mapa.alto[x] or {}
-          mapa.alto[x][y] = true
-        end
-      end
-    end
-  end
   -- Zonas elevadas (mesetas y cumbres): una plataforma a la que se sube por una escalera y donde
   -- salen criaturas más fuertes que las de su zona. Solo se ve y se pisa estando arriba (z = 1).
   mapa.mesetas = {}
@@ -1291,8 +1316,8 @@ function M.estandarte()
   return mapa
 end
 
-function M.casa()
-  local w, h = 22, 16
+function M.casa(w, h)
+  w, h = w or 22, h or 16
   local mapa = M.nuevo(w, h)
   local puerta = math.floor(w / 2)
   for y = 0, h - 1 do
@@ -1303,13 +1328,12 @@ function M.casa()
     end
   end
   mapa.salida = { x = puerta + 0.5, y = h - 2.5 }
-  -- Hueco del muro sur: la puerta de salida. El jugador aparece más adentro, en salida.
   mapa.puerta = { x = puerta + 0.5, y = h - 0.5 }
   mapa.muebles = {
-    cama = { x = 4.5, y = 4.5 },
-    cofre = { x = w - 4.5, y = 4.5 },
-    estandarte = { x = 4.5, y = 9.5 },
-    mesa = { x = puerta + 0.5, y = 8.5 },
+    cama = { x = 3.5, y = 3.5 },
+    cofre = { x = w - 3.5, y = 3.5 },
+    estandarte = { x = 3.5, y = math.max(5.5, h - 6.5) },
+    mesa = { x = puerta + 0.5, y = math.max(5.5, math.floor(h * 0.5) + 0.5) },
   }
   return mapa
 end

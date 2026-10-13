@@ -63,7 +63,9 @@ function Mundo.nuevo()
     mundo = Mapa.mundo(self.rng),
     batalla = Mapa.batalla(),
     estandarte = Mapa.estandarte(),
-    casa = Mapa.casa(),
+    casa = Mapa.casa(22, 16),
+    casaPequena = Mapa.casa(14, 11),
+    casaMediana = Mapa.casa(18, 13),
   }
   self:crearMapasMazmorras()
   self:poblar()
@@ -78,8 +80,16 @@ function Mundo:idNuevo()
   return "e" .. self.seq
 end
 
+function Mundo:interior(p)
+  local t = p and (p.casaTamano or p.tamano)
+  if t == "pequena" then return self.mapas.casaPequena end
+  if t == "mediana" then return self.mapas.casaMediana end
+  return self.mapas.casa
+end
+
 function Mundo:mapaDe(e)
-  if not e or e.modo == "casa" then return self.mapas.casa end
+  if not e then return self.mapas.casa end
+  if e.modo == "casa" then return self:interior(e) end
   if e.modo == "batalla" then return self.mapas.batalla end
   if e.modo == "estandarte" then return self.mapas.estandarte end
   return self.mapas[e.modo] or self.mapas.mundo
@@ -1444,7 +1454,7 @@ function Mundo:actualizarJugador(e, dt)
   end
   self:pisarEscalera(e)
   if e.modo == "casa" and e.kind == "jugador" then
-    local puerta = self.mapas.casa and self.mapas.casa.puerta
+    local puerta = self:interior(e).puerta
     if puerta and Util.dist(e.x, e.y, puerta.x, puerta.y) < 0.45 then self:salirCasa(e) end
   end
   if e.modo == "estandarte" then self:tocarBandera(e) end
@@ -2365,6 +2375,12 @@ function Mundo:cancelarComercio(p)
   if p.sesion then self:cerrarComercio(self.sesiones[p.sesion], false) end
 end
 
+function Mundo:precioDeCasa(parcela)
+  local t = parcela and parcela.tamano or "mediana"
+  local tabla = Datos.precioCasa or {}
+  return tabla[t] or tabla.mediana or 75000
+end
+
 function Mundo:comprarCasa(p, parcelaId)
   self:marcarProgreso(p)
   local parcela, ciudad
@@ -2376,12 +2392,13 @@ function Mundo:comprarCasa(p, parcelaId)
   if not parcela then return "Esa parcela no existe." end
   if parcela.dueno then return "Ya tiene dueño." end
   if ciudad.faccion ~= p.faccion then return "Solo puedes comprar en tu facción." end
-  local precio = ciudad.capital and Datos.precioCasa.capital or Datos.precioCasa.normal
+  local precio = self:precioDeCasa(parcela)
   if p.oro < precio then return "Necesitas " .. precio .. " de oro." end
   p.oro = p.oro - precio
   parcela.dueno = p.id
-  p.casas[parcelaId] = { muebles = {}, cofre = {} }
-  self:mensaje("sistema", "", "La casa de " .. ciudad.nombre .. " es tuya.", p)
+  p.casas[parcelaId] = { muebles = {}, cofre = {}, tamano = parcela.tamano or "mediana" }
+  local nombreTam = ({ pequena = "pequeña", mediana = "mediana", grande = "grande" })[parcela.tamano or "mediana"]
+  self:mensaje("sistema", "", "La casa " .. nombreTam .. " de " .. ciudad.nombre .. " es tuya.", p)
   return nil
 end
 
@@ -2399,12 +2416,15 @@ function Mundo:entrarCasa(p, parcelaId)
   if p.modo == "mundo" and not enPuerta and not enMayordomo then
     return "Acércate a la puerta o habla con el mayordomo."
   end
+  local casa = p.casas[parcelaId]
+  casa.tamano = casa.tamano or parcela.tamano or "grande"
   p.retorno = { x = parcela.x + 0.5, y = parcela.y + 1.4, modo = "mundo", z = p.z or 0 }
   p.modo = "casa"
   p.z = 0
   p.zona = "Tu casa"
   p.casaId = parcelaId
-  p.x, p.y = self.mapas.casa.salida.x, self.mapas.casa.salida.y
+  p.casaTamano = casa.tamano
+  p.x, p.y = self:interior(p).salida.x, self:interior(p).salida.y
   p.camino, p.deseoX, p.deseoY = nil, 0, 0
   return nil
 end
@@ -2416,6 +2436,7 @@ function Mundo:salirCasa(p)
   p.x, p.y = r.x, r.y
   if r.z then p.z = r.z end
   p.casaId = nil
+  p.casaTamano = nil
 end
 
 function Mundo:ponerMueble(p, tipo)
@@ -2433,22 +2454,22 @@ function Mundo:ponerMueble(p, tipo)
   end
   if p.oro < m.precio then return "Cuesta " .. m.precio .. " de oro." end
   p.oro = p.oro - m.precio
-  local def = self.mapas.casa.muebles[tipo]
+  local def = self:interior(p).muebles[tipo]
   casa.muebles[tipo] = { x = def.x, y = def.y, rot = 0 }
   return nil
 end
 
 -- Posición del mueble colocado. `true` (casas antiguas) usa el sitio por defecto.
 function Mundo:posMueble(casa, tipo)
-  local base = self.mapas.casa.muebles[tipo]
+  local base = self:interior(casa).muebles[tipo]
   local v = casa and casa.muebles and casa.muebles[tipo]
   if not base or not v then return nil end
   if type(v) == "table" then return v.x or base.x, v.y or base.y, (v.rot or 0) % 4 end
   return base.x, base.y, 0
 end
 
-function Mundo:sitioMueble(x, y)
-  local mapa = self.mapas.casa
+function Mundo:sitioMueble(x, y, tamano)
+  local mapa = self:interior({ casaTamano = tamano })
   local tx, ty = math.floor(x), math.floor(y)
   if tx < 1 or ty < 1 or tx > mapa.w - 2 or ty > mapa.h - 2 then return nil end
   local puerta = mapa.puerta
@@ -2461,7 +2482,7 @@ function Mundo:moverMueble(p, tipo, x, y)
   local casa = p.casaId and p.casas and p.casas[p.casaId]
   if not casa or not casa.muebles[tipo] then return "Ese mueble no está colocado." end
   if not Datos.muebles[tipo] then return end
-  local nx, ny = self:sitioMueble(x, y)
+  local nx, ny = self:sitioMueble(x, y, casa.tamano or p.casaTamano)
   if not nx then return "Ahí no cabe." end
   for otro in pairs(casa.muebles) do
     if otro ~= tipo then
@@ -2549,7 +2570,7 @@ end
 function Mundo:interactuar(p)
   if self:enMazmorra(p) then return self:interactuarMazmorra(p) end
   if p.modo == "casa" then
-    local puerta = self.mapas.casa.puerta
+    local puerta = self:interior(p).puerta
     if puerta and Util.dist(p.x, p.y, puerta.x, puerta.y) < 1.45 then
       self:salirCasa(p)
       return { panel = nil }
@@ -2927,6 +2948,12 @@ function Mundo:aplicarGuardado(p, data)
       p.x, p.y, p.z = inicio.x, inicio.y, 0
     end
   end
+  -- si estaba en un piso alto que ya no existe (la plataforma de las capitales), baja al suelo
+  if (p.z or 0) > 0 then
+    local alto = mapaMundo.alto
+    local tx, ty = math.floor(p.x), math.floor(p.y)
+    if not (alto and alto[tx] and alto[tx][ty]) then p.z = 0 end
+  end
   for _, c in ipairs(self.mapas.mundo.ciudades) do
     for _, par in ipairs(c.parcelas) do
       if p.casas[par.id] then par.dueno = p.id end
@@ -2944,7 +2971,7 @@ function Mundo:compactar(e)
     nivel = e.nivel, hoja = e.hoja, base = e.base, cuadros = e.cuadros,
     tam = e.tam, paso = e.paso, porDir = e.porDir, elite = e.elite,
     estructura = e.estructura, llevaBandera = e.llevaBandera, equipo = e.equipo,
-    rol = e.rol, casaId = e.casaId, anim = e.anim, portador = e.portador,
+    rol = e.rol, casaId = e.casaId, casaTamano = e.casaTamano, anim = e.anim, portador = e.portador,
     mov = e.mov and true or nil, objetivo = (e.kind == "monstruo") and e.objetivo or nil,
     respawn = (e.kind == "monstruo" or e.kind == "puerta") and e.respawn or nil,
     flash = (e.flash or 0) > 0 and e.flash or nil,
@@ -2978,7 +3005,7 @@ function Mundo:foto(pid)
       hp = p.hp, hpMax = p.hpMax, mp = p.mp, mpMax = p.mpMax, cds = {},
       misiones = p.misiones, casas = p.casas, sesion = p.sesion, zona = p.zona,
       atk = p.atk, def = p.def, matk = p.matk, mdef = p.mdef, spd = p.spd, clase = p.clase, faccion = p.faccion,
-      nombre = p.nombre, modo = p.modo, casaId = p.casaId, objetivo = p.objetivo,
+      nombre = p.nombre, modo = p.modo, casaId = p.casaId, casaTamano = p.casaTamano, objetivo = p.objetivo,
       z = p.z or 0, habilidades = p.habilidades, encantos = p.encantos, xpSig = Datos.xpPara(p.nivel),
       mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
       job = p.job, oficioElegido = p.oficioElegido, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,

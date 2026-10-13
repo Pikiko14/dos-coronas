@@ -396,13 +396,14 @@ function marcarCasaPropia(mapa, jugador, cam, radio)
       and math.abs(e.x + e.w / 2 - jugador.x) < radio + 4
       and math.abs(e.y + e.h / 2 - jugador.y) < radio + 4 then
       local rx, ry = e.x * TILE - cam.x, e.y * TILE - cam.y
-      local rw, rh = e.w * TILE, e.h * TILE
       love.graphics.setColor(1, 0.78, 0.22, 0.38)
-      love.graphics.rectangle("fill", rx, ry, rw, rh)
-      love.graphics.setColor(1, 0.92, 0.38, 1)
-      love.graphics.setLineWidth(3)
-      love.graphics.rectangle("line", rx + 1.5, ry + 1.5, rw - 3, rh - 3)
-      love.graphics.setLineWidth(1)
+      for fy = 0, e.h - 1 do
+        for fx = 0, e.w - 1 do
+          if not (e.vacio and e.vacio[fx .. "," .. fy]) then
+            love.graphics.rectangle("fill", rx + fx * TILE, ry + fy * TILE, TILE, TILE)
+          end
+        end
+      end
       love.graphics.setColor(0.12, 0.07, 0.02, 0.9)
       love.graphics.print("Tu casa", rx + 8, ry - 16)
       love.graphics.setColor(1, 0.95, 0.55, 1)

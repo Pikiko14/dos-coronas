@@ -34,11 +34,39 @@ function Entrada.manejar(app, id)
   if id == "menu_entrar" or id == "menu_registro" then
     app.cuenta = {
       modo = id == "menu_registro" and "crear" or "entrar",
-      usuario = (id == "menu_entrar") and Ajustes.ultimoUsuario or "", clave = "", error = "",
+      usuario = (id == "menu_entrar") and Ajustes.ultimoUsuario or "", clave = "", clave2 = "", error = "",
     }
     app.estado = "cuenta"
+    Interfaz.portadaPanel = nil
     -- con el usuario recordado, el cursor va directo a la clave
     Interfaz.foco = (app.cuenta.usuario ~= "") and "clave" or "usuario"
+    return
+  end
+  if id == "portada_inicio" or id == "portada_cuenta" then
+    app.cuenta = app.cuenta or { usuario = "", clave = "", error = "" }
+    app.cuenta.modo = "entrar"
+    app.cuenta.error = ""
+    app.estado = id == "portada_inicio" and "menu" or "cuenta"
+    Interfaz.portadaPanel = nil
+    if Interfaz.foco == "clave2" or not Interfaz.foco then
+      Interfaz.foco = (app.cuenta.usuario ~= "") and "clave" or "usuario"
+    end
+    return
+  end
+  if id == "portada_ajustes" then
+    Interfaz.portadaPanel = "ajustes"
+    Interfaz.foco = nil
+    return
+  end
+  if id == "cuenta_ver" then
+    if app.cuenta then app.cuenta.verClave = not app.cuenta.verClave end
+    return
+  end
+  if id == "cuenta_recuperar" then
+    if app.cuenta then
+      app.cuenta.error = "El servidor no recupera claves. Entra con la tuya o crea otra cuenta."
+      Interfaz._toastClave = nil
+    end
     return
   end
   if id == "cuenta_volver" or id == "cuenta_salir" then
@@ -52,6 +80,12 @@ function Entrada.manejar(app, id)
   if id == "foco_clave" then Interfaz.foco = "clave" return end
   if id == "cuenta_ok" then
     cuenta = app.cuenta
+    cuenta.error = ""
+    Interfaz._toastClave = nil
+    if cuenta.modo == "crear" and (cuenta.clave2 or "") ~= (cuenta.clave or "") then
+      cuenta.error = "Las claves no coinciden."
+      return
+    end
     if cuenta.usuario and cuenta.usuario ~= "" and cuenta.usuario ~= Ajustes.ultimoUsuario then
       Ajustes.ultimoUsuario = cuenta.usuario
       Ajustes.guardar()
@@ -433,7 +467,7 @@ function Entrada.clicMundo(app, mx, my, boton)
   local cam = Dibujo.camara(jugador, app.zoom, mundo:mapaDe(jugador))
   local x, y = Dibujo.pantallaAMundo(cam, mx, my)
   if jugador.modo == "casa" then
-    local mapa = mundo.mapas.casa
+    local mapa = mundo:mapaDe(jugador)
     local puerta = mapa and mapa.puerta
     if puerta and Util.dist(x, y, puerta.x, puerta.y) < 0.75 then
       app.actuar("casa_salir")
@@ -618,8 +652,10 @@ function Entrada.texto(app, t)
     if #app.creacion.nombre < 16 then app.creacion.nombre = app.creacion.nombre .. t end
   elseif Interfaz.foco == "usuario" then
     if #app.cuenta.usuario < 16 and t:match("^[%w_]$") then app.cuenta.usuario = app.cuenta.usuario .. t end
-  elseif Interfaz.foco == "clave" then
-    if #app.cuenta.clave < 64 and t:byte() >= 32 then app.cuenta.clave = app.cuenta.clave .. t end
+  elseif Interfaz.foco == "clave" or Interfaz.foco == "clave2" then
+    local campo = Interfaz.foco == "clave2" and "clave2" or "clave"
+    app.cuenta[campo] = app.cuenta[campo] or ""
+    if #app.cuenta[campo] < 64 and t:byte() >= 32 then app.cuenta[campo] = app.cuenta[campo] .. t end
   elseif Interfaz.foco == "chat" then
     if #Interfaz.texto < 120 then Interfaz.texto = Interfaz.texto .. t end
   elseif Interfaz.foco and Interfaz.foco:sub(1, 4) == "sub_" then
@@ -651,9 +687,13 @@ end
 function Entrada.tecla(app, tecla)
   if tecla == "escape" and app.apuntando then app.apuntando = nil return end
   -- en el formulario de cuenta, Tab salta entre usuario y clave (Mayús + Tab, al revés)
-  if tecla == "tab" and app.estado == "cuenta" then
-
-    if Interfaz.foco == "usuario" then Interfaz.foco = "clave"
+  if tecla == "tab" and (app.estado == "cuenta" or app.estado == "menu") then
+    local crear = app.estado == "cuenta" and app.cuenta and app.cuenta.modo == "crear"
+    if crear then
+      if Interfaz.foco == "usuario" then Interfaz.foco = "clave"
+      elseif Interfaz.foco == "clave" then Interfaz.foco = "clave2"
+      else Interfaz.foco = "usuario" end
+    elseif Interfaz.foco == "usuario" then Interfaz.foco = "clave"
     else Interfaz.foco = "usuario" end
     return
   end
@@ -690,6 +730,7 @@ function Entrada.tecla(app, tecla)
     if Interfaz.foco == "nombre" then app.creacion.nombre = Util.popUtf8(app.creacion.nombre)
     elseif Interfaz.foco == "usuario" then app.cuenta.usuario = Util.popUtf8(app.cuenta.usuario or "")
     elseif Interfaz.foco == "clave" then app.cuenta.clave = Util.popUtf8(app.cuenta.clave or "")
+    elseif Interfaz.foco == "clave2" then app.cuenta.clave2 = Util.popUtf8(app.cuenta.clave2 or "")
     elseif Interfaz.foco == "chat" then Interfaz.texto = Util.popUtf8(Interfaz.texto or "")
     elseif Interfaz.foco == "com_oro" then Interfaz.comOro = Util.popUtf8(Interfaz.comOro or "")
     elseif Interfaz.foco and Interfaz.foco:sub(1, 4) == "sub_" then
@@ -701,7 +742,7 @@ function Entrada.tecla(app, tecla)
   end
   if tecla == "return" or tecla == "kpenter" then
     if app.estado == "juego" and Interfaz.foco == "com_oro" then Entrada.fijarOroComercio(app) return end
-    if app.estado == "cuenta" then Entrada.manejar(app, "cuenta_ok") return end
+    if app.estado == "cuenta" or app.estado == "menu" then Entrada.manejar(app, "cuenta_ok") return end
     if app.estado == "crear" then Entrada.manejar(app, "crear_entrar") return end
     if app.estado == "juego" and Interfaz.foco == "chat" then
       app.actuar("chat", { texto = Interfaz.texto })

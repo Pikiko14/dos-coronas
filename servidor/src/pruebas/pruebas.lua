@@ -140,10 +140,19 @@ function Pruebas.correr()
       for _, par in ipairs(c.parcelas) do if par.dueno then enVenta = false end end
     end
     fallar(errores, "cada casa de cada ciudad está en venta", enVenta and #auroria.parcelas > 3, tostring(#auroria.parcelas))
+    local tamanos = {}
+    for _, c in ipairs(mundo.mapas.mundo.ciudades) do
+      for _, par in ipairs(c.parcelas) do
+        if par.tamano ~= "pequena" and par.tamano ~= "mediana" and par.tamano ~= "grande" then enVenta = false end
+        tamanos[par.tamano] = true
+      end
+    end
+    fallar(errores, "hay casas pequeñas, medianas y grandes", tamanos.pequena and tamanos.mediana and tamanos.grande and enVenta)
     local par = auroria.parcelas[1]
     jugador.x, jugador.y = auroria.spawn.x, auroria.spawn.y
     mundo:accion(jugador.id, "casa_comprar", { id = par.id })
     fallar(errores, "compra casa", par.dueno == jugador.id)
+    fallar(errores, "cobra según el tamaño", jugador.oro == 150000 - mundo:precioDeCasa(par), tostring(jugador.oro))
     jugador.x, jugador.y = par.x + 0.5, par.y + 1.2
     mundo:accion(jugador.id, "casa_entrar", { id = par.id })
     fallar(errores, "entrar casa", jugador.modo == "casa")
@@ -165,10 +174,11 @@ function Pruebas.correr()
     fallar(errores, "hay mayordomo en la ciudad", mayo ~= nil)
     jugador.x, jugador.y = mayo.x + 0.4, mayo.y
     mundo:accion(jugador.id, "casa_entrar", { id = par.id })
-    local salida = mundo.mapas.casa.salida
+    local interior = mundo:interior(jugador)
+    local salida = interior.salida
     fallar(errores, "desde el mayordomo entra en la casa", jugador.modo == "casa" and jugador.casaId == par.id
       and math.abs(jugador.x - salida.x) < 0.01 and math.abs(jugador.y - salida.y) < 0.01)
-    local puerta = mundo.mapas.casa.puerta
+    local puerta = interior.puerta
     fallar(errores, "la casa tiene puerta de salida", puerta ~= nil)
     jugador.x, jugador.y = puerta.x, puerta.y - 1
     local aviso = mundo:interactuar(jugador)
@@ -3625,7 +3635,8 @@ mundo.tiempo = 100
     fallar(errores, "nivel 12 no compra la poción grande", mundo:comprar(p, "pocion_vida_grande") ~= nil and p.oro == oroVenta)
     fallar(errores, "nivel 12 compra la mediana", mundo:comprar(p, "pocion_vida_mediana") == nil and mundo:contarItem(p, "pocion_vida_mediana") == 1)
     -- casas, gremio y muebles
-    fallar(errores, "las casas cuestan 100000 de oro", Datos.precioCasa.normal == 100000 and Datos.precioCasa.capital == 100000)
+    fallar(errores, "la casa pequeña cuesta 50000, la mediana 75000 y la grande 100000",
+      Datos.precioCasa.pequena == 50000 and Datos.precioCasa.mediana == 75000 and Datos.precioCasa.grande == 100000)
     fallar(errores, "fundar un gremio cuesta unos miles de oro", Gremios.COSTE >= 2000 and Gremios.COSTE <= 5000)
     -- encantar: el oro crece con la pieza y con el nivel de encanto
     local Encanto = require("compartido.dominio.encanto")
@@ -3739,6 +3750,25 @@ mundo.tiempo = 100
     fallar(errores, "xml mazmorras", #Datos.mazmorras == 3 and Datos.mazmorras[1].jefe.monstruo == "caballero")
     fallar(errores, "xml monturas: el dragon no sale en la cuadra", require("compartido.dominio.monturas").especies.dragon
       and #require("compartido.dominio.monturas").orden == 7)
+  end)
+  paso("casas: formas variadas, cada tejado sobre su fachada y puerta en la fila de abajo", function()
+    local mapa = Mundo.nuevo().mapas.mundo
+    local tamanos, formas, mal = {}, {}, 0
+    for _, e in ipairs(mapa.edificios) do
+      tamanos[e.tamano] = true
+      formas[e.w .. "x" .. e.h .. (e.cima and "L" or "")] = true
+      -- cada columna con casa: tejado arriba y al menos una fila de fachada debajo; la puerta en la fila de abajo
+      for fx = 0, e.w - 1 do
+        local c = e.cima and e.cima[fx + 1] or 0
+        if e.h - c - e.techo < 1 then mal = mal + 1 end
+      end
+      if e.puertaY ~= e.y + e.h - 1 then mal = mal + 1 end
+    end
+    local n = 0
+    for _ in pairs(formas) do n = n + 1 end
+    fallar(errores, "casas bien formadas", mal == 0, tostring(mal))
+    fallar(errores, "tres tamanos de casa", tamanos.pequena and tamanos.mediana and tamanos.grande)
+    fallar(errores, "varias formas de casa", n >= 6, tostring(n))
   end)
   paso("red y paneles", function()
     local Servidor = require("src.aplicacion.servicio_servidor")

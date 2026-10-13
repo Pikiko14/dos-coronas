@@ -2,8 +2,10 @@ local Interfaz = require("src.presentacion.interfaz")
 
 local Menu = {}
 
-function Menu.dibujar(_, w, h)
-  Interfaz.menu(false, w, h)
+function Menu.dibujar(app, w, h)
+  local form = app and app.cuenta
+  if form then Interfaz.portada(form, w, h, "entrar")
+  else Interfaz.menu(false, w, h) end
 end
 
 function Menu.cargando()

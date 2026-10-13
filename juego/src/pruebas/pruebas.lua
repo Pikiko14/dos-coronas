@@ -546,7 +546,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     Dibujo.muebleElegido = "mesa"
     camCasa = Dibujo.camara(dueno, 1, mundo:mapaDe(dueno))
     ok, err = pcall(Dibujo.escena, mundo, dueno, camCasa, 200, 200)
-    fallar(errores, "el interior dibuja la puerta y los muebles", ok and mundo.mapas.casa.puerta ~= nil, tostring(err))
+    fallar(errores, "el interior dibuja la puerta y los muebles", ok and mundo:interior(dueno).puerta ~= nil, tostring(err))
     Dibujo.muebleElegido = nil
     -- el punto de impacto nunca sale de la zona habilitada
     local ix, iy, fuera = Dibujo.puntoApuntado(app.apuntando, pj, cam, 5, 5)

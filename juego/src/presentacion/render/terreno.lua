@@ -490,34 +490,56 @@ local function dibujarEdificio(e, ox, oy)
   local im = imagenes()
   local roja = TEJADO[e.faccion] or TEJADO.albor
   local pared = PARED[e.faccion] or PARED.albor
-  local filasTecho = 2
+  local filasTecho = e.techo or 2
+  local puertaX, puertaY = e.puertaX - e.x, e.puertaY - e.y
+  -- cada columna puede empezar más abajo (alas bajas de las casas en L y en T): su tejado va sobre su fachada
+  local function cima(fx) return e.cima and e.cima[fx + 1] or 0 end
+  local function solido(fx, fy)
+    if fx < 0 or fy < 0 or fx >= e.w or fy >= e.h then return false end
+    if e.vacio and e.vacio[fx .. "," .. fy] then return false end
+    return true
+  end
+  local function esTecho(fx, fy) return fy - cima(fx) < filasTecho end
   for fy = 0, e.h - 1 do
     for fx = 0, e.w - 1 do
-      local px = (e.x + fx) * TILE - ox
-      local py = (e.y + fy) * TILE - oy
-      local techo = fy < filasTecho
-      local m = Auto.mascara(function(dx, dy)
-        if dx ~= 0 and dy ~= 0 then return false end
-        local nx, ny = fx + dx, fy + dy
-        if nx < 0 or nx >= e.w or ny < 0 or ny >= e.h then return false end
-        return (ny < filasTecho) == techo
-      end)
-      love.graphics.setColor(1, 1, 1, 1)
-      local k = techo and roja or pared
-      Auto.muro(im.a3, k[1] * 64, k[2] * 64, m, px, py)
+      if solido(fx, fy) then
+        local px = (e.x + fx) * TILE - ox
+        local py = (e.y + fy) * TILE - oy
+        local techo = esTecho(fx, fy)
+        local m = Auto.mascara(function(dx, dy)
+          if dx ~= 0 and dy ~= 0 then return false end
+          local nx, ny = fx + dx, fy + dy
+          return solido(nx, ny) and esTecho(nx, ny) == techo
+        end)
+        love.graphics.setColor(1, 1, 1, 1)
+        local k = techo and roja or pared
+        Auto.muro(im.a3, k[1] * 64, k[2] * 64, m, px, py)
+        if fy == e.h - 1 then
+          love.graphics.setColor(0, 0, 0, 0.18)
+          love.graphics.rectangle("fill", px, py + TILE, TILE, 4)
+        end
+      end
     end
   end
-  -- ventanas; la entrada es el hueco de la fachada, sin el letrero de madera
+  -- ventanas en la primera fila de fachada de las columnas 1 y w-2 (si no son la puerta)
   love.graphics.setColor(1, 1, 1, 1)
-  local filaPared = e.y + filasTecho
   for _, fx in ipairs({ 1, e.w - 2 }) do
-    if fx ~= e.puertaX - e.x then
-      love.graphics.draw(im.b, Arte.quad(im.b, 32, 4 * 32, 32, 32), (e.x + fx) * TILE - ox, filaPared * TILE - oy)
+    local fy = cima(fx) + filasTecho
+    if fx ~= puertaX and solido(fx, fy) and fy < e.h and not (fx == puertaX and fy == puertaY) then
+      love.graphics.draw(im.b, Arte.quad(im.b, 32, 4 * 32, 32, 32), (e.x + fx) * TILE - ox, (e.y + fy) * TILE - oy)
     end
   end
-  -- sombra bajo el alero
-  love.graphics.setColor(0, 0, 0, 0.18)
-  love.graphics.rectangle("fill", e.x * TILE - ox, (e.y + e.h) * TILE - oy, e.w * TILE, 4)
+  -- la puerta: marco de piedra y hoja de madera sobre la pared de la fila de abajo
+  local dx, dy = (e.x + puertaX) * TILE - ox, (e.y + puertaY) * TILE - oy
+  local hierro = e.faccion == "umbra"
+  love.graphics.setColor(0.2, 0.17, 0.15, 1)
+  love.graphics.rectangle("fill", dx + 5, dy + 5, 22, TILE - 5, 8, 8)
+  if hierro then love.graphics.setColor(0.3, 0.3, 0.36, 1) else love.graphics.setColor(0.5, 0.31, 0.15, 1) end
+  love.graphics.rectangle("fill", dx + 7, dy + 8, 18, TILE - 8, 7, 7)
+  love.graphics.setColor(0, 0, 0, 0.3)
+  love.graphics.rectangle("fill", dx + 15, dy + 8, 2, TILE - 8)
+  love.graphics.setColor(0.95, 0.8, 0.3, 1)
+  love.graphics.circle("fill", dx + 21, dy + 21, 1.6)
 end
 
 -- Bloques cacheados ----------------------------------------------------
