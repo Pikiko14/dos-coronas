@@ -298,7 +298,7 @@ function T.dibujarSuelo(mapa, x, y, px, py, cuadroAgua)
   elseif f == "empedrado" or f == "madera" then
     dibujarInterior(mapa, x, y, px, py)
   elseif f == "mazmorra" then
-    -- losas de piedra de la lÃ¡mina interior, con el tinte de cada mazmorra y un veteado sutil
+    -- losas de piedra de la lámina interior, con el tinte de cada mazmorra y un veteado sutil
     local im = imagenes()
     local t = mapa.tinte or { 1, 1, 1 }
     love.graphics.setColor(t[1], t[2], t[3], 1)

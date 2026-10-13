@@ -492,7 +492,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     fallar(errores, "el registro empieza vacío", app.cuenta.usuario == "" and Interfaz.foco == "usuario")
     Interfaz.foco = nil
   end)
-  paso("interfaz: los poderes de Ã¡rea se apuntan en la zona habilitada", function()
+  paso("interfaz: los poderes de área se apuntan en la zona habilitada", function()
     local Entrada = require("src.presentacion.entrada")
     local Dibujo = require("src.presentacion.render.dibujo")
     local mundo = Mundo.nuevo()
@@ -508,7 +508,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     Entrada.lanzarHabilidad(app, slotDe("meteoro"))
     fallar(errores, "el meteoro entra en modo apuntar sin lanzarse", #llamadas == 0 and app.apuntando and app.apuntando.slot == slotDe("meteoro")
       and app.apuntando.rango > 5 and app.apuntando.aoe > 2)
-    -- la zona habilitada y el Ã¡rea bajo el cursor se dibujan
+    -- la zona habilitada y el área bajo el cursor se dibujan
     Dibujo.apuntando = app.apuntando
     local cam = Dibujo.camara(pj, 1, mundo:mapaDe(pj))
     local mx, my = 300, 300
@@ -533,7 +533,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     Entrada.lanzarHabilidad(app, slotDe("meteoro"))
     Entrada.lanzarHabilidad(app, slotDe("meteoro"))
     fallar(errores, "pulsar de nuevo el poder lo lanza", llamadas[1] and llamadas[1][1] == "habilidad" and app.apuntando == nil)
-    -- en enfriamiento no se entra en modo apuntar (el servidor avisarÃ¡)
+    -- en enfriamiento no se entra en modo apuntar (el servidor avisará)
     llamadas = {}
     pj.cds[Datos.barra.mago[slotDe("meteoro")]] = mundo.tiempo + 20
     Entrada.lanzarHabilidad(app, slotDe("meteoro"))
@@ -667,6 +667,36 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local l = llamadas[1]
     fallar(errores, "forjar manda la pieza y el pergamino", l and l[1] == "encantar" and l[2].donde == "equipo" and l[2].ref == "arma" and l[2].pergamino == "pergamino_forja")
     Interfaz.panel, Interfaz.mallTab = nil, "objetos"
+  end)
+  paso("sprites de clases y monturas por código", function()
+    local Propias = require("src.presentacion.render.propias")
+    local Personajes = require("src.presentacion.render.personajes")
+    local cv = love.graphics.newCanvas(300, 200)
+    for _, clase in ipairs({ "guerrero", "mago", "cazador", "clerigo" }) do
+      for _, faccion in ipairs({ "albor", "umbra" }) do
+        local def = Personajes.de({ kind = "jugador", clase = clase, faccion = faccion })
+        fallar(errores, "clase " .. clase .. "/" .. faccion .. " usa su sprite propio", def and def.generada == "clase_" .. clase .. "_" .. faccion)
+        local h = Propias.hoja(def.generada)
+        fallar(errores, "hoja de " .. def.generada, h ~= nil and h:getWidth() == 96 and h:getHeight() == 128)
+        love.graphics.push("all")
+        love.graphics.setCanvas(cv)
+        local ok, err = pcall(Personajes.dibujar, def, 2, true, 0.3, 100, 100)
+        love.graphics.pop()
+        fallar(errores, "se dibuja " .. def.generada, ok, tostring(err))
+      end
+    end
+    for _, esp in ipairs({ "corcel_real", "lobo_guerra", "bisonte_guerra", "corcel_fuego" }) do
+      for _, faccion in ipairs({ "albor", "umbra" }) do
+        local def = Personajes.monturaDe(esp, faccion)
+        fallar(errores, "montura " .. esp .. "/" .. faccion, def and def.generada and Propias.hoja(def.generada) ~= nil)
+        love.graphics.push("all")
+        love.graphics.setCanvas(cv)
+        local ok, err = pcall(Personajes.dibujar, def, 3, true, 0.5, 100, 100)
+        love.graphics.pop()
+        fallar(errores, "se dibuja " .. esp, ok, tostring(err))
+      end
+    end
+    fallar(errores, "las monturas de carga siguen con su hoja", Personajes.monturaDe("buey", "albor").hoja ~= nil)
   end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()
@@ -1149,17 +1179,17 @@ local function avanzarFoto(app)
   elseif foto.paso == "mercancias" then
     foto.paso = "establo"
     Interfaz.panel = "establo"
-    app.jugador.montado = "caballo"
+    app.jugador.invGremio = nil
+    app.jugador.montado = "corcel_real"
     app.jugador.nivel = 14
     app.jugador.oro = 3000
-    Interfaz.datosPanel.establo = {
-      montado = "caballo", cerca = true,
-      catalogo = {
-        { id = "buey", nombre = "Buey de carga", nivel = 5, precio = 900, vel = 0.10, carga = 22, desc = "Lento pero fuerte: carga mucho más.", tengo = true },
-        { id = "caballo", nombre = "Caballo", nivel = 10, precio = 2400, vel = 0.40, carga = 6, desc = "El más rápido para cruzar el mapa.", tengo = true },
-        { id = "carreta", nombre = "Carreta cubierta", nivel = 14, precio = 4500, vel = 0.06, carga = 90, oficio = "trader", desc = "Una carreta de mercader: carga enorme. Solo para comerciantes.", tengo = false },
-      },
-    }
+    local Mont = require("compartido.dominio.monturas")
+    local cat = {}
+    for k, id in ipairs(Mont.orden) do
+      local d = Mont.especies[id]
+      cat[#cat + 1] = { id = id, nombre = d.nombre, nivel = d.nivel, precio = d.precio, vel = d.vel, carga = d.carga, oficio = d.oficio, desc = d.desc, tengo = k % 3 == 1 }
+    end
+    Interfaz.datosPanel.establo = { montado = "corcel_real", cerca = true, catalogo = cat }
   elseif foto.paso == "establo" then
     foto.paso = "subastas"
     Interfaz.panel = "subastas"
@@ -1247,7 +1277,7 @@ function Pruebas.tickFoto(app, dt)
       if pr.tipo:find("risco") and (not r0 or math.abs(pr.x - 56) + math.abs(pr.y - 26) < math.abs(r0.x - 56) + math.abs(r0.y - 26)) then r0 = pr end
     end
     app.jugador.x, app.jugador.y = (r0 and r0.x + 1 or 46) + 0.5, (r0 and r0.y + 4 or 24) + 0.5
-    -- si hay huecos a la vista, mejor enseÃ±arlos
+    -- si hay huecos a la vista, mejor enseñarlos
     local g0
     for gx, col in pairs(app.mundo.mapas.batalla.decorado) do for gy, t in pairs(col) do if t == "grieta" and (not g0 or math.abs(gx - 46) + math.abs(gy - 26) < math.abs(g0[1] - 46) + math.abs(g0[2] - 26)) then g0 = { gx, gy } end end end
     if g0 and not os.getenv("DC_FOTO_RISCO") then app.jugador.x, app.jugador.y = g0[1] + 0.5, g0[2] + 4.5 end

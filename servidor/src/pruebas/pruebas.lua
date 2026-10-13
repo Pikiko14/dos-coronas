@@ -1341,6 +1341,30 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     fallar(errores, "el servidor no lanza caravanas por su cuenta", mundo:contarCaravanas() == 0, tostring(mundo:contarCaravanas()))
     mundo.restaurarAjustes()
   end)
+  paso("monturas de viaje: cuatro nuevas sin oficio", function()
+    local Monturas = require("compartido.dominio.monturas")
+    local mundo = Mundo.nuevo()
+    local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "umbra", clase = "guerrero", nivel = 30 })
+    p.oro = 100000
+    fallar(errores, "hay siete especies y el tope las permite todas", #Monturas.orden == 7 and Monturas.MAX >= 7)
+    local nuevas = { "corcel_real", "lobo_guerra", "bisonte_guerra", "corcel_fuego" }
+    for _, id in ipairs(nuevas) do
+      local d = Monturas.especies[id]
+      fallar(errores, id .. " es de viaje: sin oficio ni carga", d and not d.requiereOficio and not d.oficio and d.carga == 0 and d.vel > 0 and d.vida > 0)
+      fallar(errores, id .. " se compra", mundo:comprarMontura(p, id) == nil)
+    end
+    p.job = nil
+    fallar(errores, "se monta sin oficio activo", mundo:alternarMontura(p, "corcel_real") == nil and p.montado == "corcel_real")
+    local vel = mundo:bonoMontura(p)
+    fallar(errores, "da velocidad", vel > 0.3, tostring(vel))
+    mundo:revisarMontura(p)
+    fallar(errores, "revisar no la baja (no es de carga)", p.montado == "corcel_real")
+    fallar(errores, "cambia a otra", mundo:alternarMontura(p, "bisonte_guerra") == nil and p.montado == "bisonte_guerra" or p.montado == nil)
+    -- las de carga siguen pidiendo oficio
+    p.montado = nil
+    p.monturas[#p.monturas + 1] = "buey"
+    fallar(errores, "el buey sigue pidiendo oficio", mundo:alternarMontura(p, "buey") ~= nil)
+  end)
   paso("monturas de carga solo con el oficio activo", function()
     local mundo = Mundo.nuevo()
     mundo.entidades = {}
@@ -2271,7 +2295,7 @@ mundo.tiempo = 100
     local nuevo = mundo:crearPersonaje({ nombre = "Recien", faccion = "albor", clase = "guerrero" })
     mundo:aplicarGuardado(nuevo, { clase = "guerrero", nivel = 1, xp = 0, oro = 140, monedas = 0 })
     fallar(errores, "un personaje nuevo recibe 5000 monedas", nuevo.monedas == 5000 and Mall.MONEDAS_INICIALES == 5000, tostring(nuevo.monedas))
-    -- uno que ya existÃ­a sin haberlas recibido las recibe al entrar (sumadas a las que tuviera)
+    -- uno que ya existía sin haberlas recibido las recibe al entrar (sumadas a las que tuviera)
     local viejo = mundo:crearPersonaje({ nombre = "Viejo", faccion = "albor", clase = "guerrero" })
     mundo:aplicarGuardado(viejo, { clase = "guerrero", nivel = 5, xp = 0, oro = 10, guardado = true, monedas = 42 })
     fallar(errores, "un personaje anterior las recibe una vez", viejo.monedas == 5042, tostring(viejo.monedas))
@@ -2281,7 +2305,7 @@ mundo.tiempo = 100
     local otra = mundo:crearPersonaje({ nombre = "Vuelve", faccion = "albor", clase = "guerrero" })
     mundo:aplicarGuardado(otra, require("compartido.dominio.util").jsonDec(require("compartido.dominio.util").jsonEnc(ex)))
     fallar(errores, "volver a entrar no repite el regalo", otra.monedas == 5042, tostring(otra.monedas))
-    -- si las gastÃ³, no se le vuelven a dar
+    -- si las gastó, no se le vuelven a dar
     otra.monedas = 7
     local ex2 = mundo:exportar(otra)
     local ultima = mundo:crearPersonaje({ nombre = "Gastada", faccion = "albor", clase = "guerrero" })

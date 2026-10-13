@@ -129,7 +129,7 @@ function O.cofre(sx, sy)
   love.graphics.draw(img, Arte.quad(img, 0, 128, 32, 32), sx, sy, 0, 1, 1, 16, 30)
 end
 
--- Puerta de mazmorra: un portÃ³n de piedra con un resplandor y el nombre encima. Es un prop del mapa
+-- Puerta de mazmorra: un portón de piedra con un resplandor y el nombre encima. Es un prop del mapa
 -- (tipo "puerta_mazmorra"; salida = true la pinta como la puerta de salida de dentro).
 O.personalizados = O.personalizados or {}
 O.personalizados.puerta_mazmorra = function(p, sx, sy)

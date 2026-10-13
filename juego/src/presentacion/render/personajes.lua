@@ -10,24 +10,15 @@ local FILA_DIR = { [1] = 0, [2] = 3, [3] = 2, [4] = 1 } -- sur, norte, este, oes
 local CICLO = { 0, 1, 2, 1 }
 
 -- Qué personaje usa cada oficio y facción.
-P.clases = {
-  guerrero = {
-    albor = { hoja = "Characters/Actor3.png", idx = 6 },
-    umbra = { hoja = "Characters/Evil.png", idx = 7 },
-  },
-  mago = {
-    albor = { hoja = "Characters/Actor2.png", idx = 7 },
-    umbra = { hoja = "Characters/Evil.png", idx = 3 },
-  },
-  cazador = {
-    albor = { hoja = "Characters/Actor5.png", idx = 2 },
-    umbra = { hoja = "Characters/Evil.png", idx = 0 },
-  },
-  clerigo = {
-    albor = { hoja = "Characters/Actor5.png", idx = 5 },
-    umbra = { hoja = "Characters/Actor5.png", idx = 6 },
-  },
-}
+-- Los personajes de clase se dibujan por codigo sobre sprites del pack (render/propias.lua): paleta
+-- de la facción y escudo de la clase en el pecho.
+local function claseGenerada(clase, faccion)
+  return { generada = "clase_" .. clase .. "_" .. faccion, hoja = "Characters/Actor1.png", idx = 0 }
+end
+P.clases = {}
+for _, clase in ipairs({ "guerrero", "mago", "cazador", "clerigo" }) do
+  P.clases[clase] = { albor = claseGenerada(clase, "albor"), umbra = claseGenerada(clase, "umbra") }
+end
 
 -- Aspecto de cada oficio mientras esta activo (sustituye al de la clase).
 P.oficios = {
@@ -115,7 +106,25 @@ P.monturas = {
   buey = { hoja = "Characters/Animal.png", idx = 4 },
   caballo = { hoja = "Characters/Animal.png", idx = 5 },
   carreta = { vehiculo = true },
+  -- las cuatro monturas nuevas se dibujan por codigo con la paleta de la facción del jinete
+  corcel_real = { porFaccion = "montura_corcel" },
+  lobo_guerra = { porFaccion = "montura_lobo" },
+  bisonte_guerra = { porFaccion = "montura_bisonte" },
+  corcel_fuego = { porFaccion = "montura_fuego" },
 }
+
+-- Dibujo de una montura para un jinete de esa facción.
+local cacheMonturas = {}
+function P.monturaDe(especie, faccion)
+  local m = P.monturas[especie]
+  if not m or not m.porFaccion then return m end
+  local f = faccion == "umbra" and "umbra" or "albor"
+  local k = especie .. "|" .. f
+  if not cacheMonturas[k] then
+    cacheMonturas[k] = { generada = m.porFaccion .. "_" .. f, hoja = "Characters/Animal.png", idx = 0 }
+  end
+  return cacheMonturas[k]
+end
 
 P.monstruos = {
   jefe_manada = { hoja = "Characters/Animal.png", idx = 6, tinte = { 1, 0.55, 0.5 } },
@@ -194,7 +203,7 @@ end
 
 -- Dibuja la criatura con los pies en (sx, sy). mov: está andando; reloj: segundos.
 function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa)
-  -- las skins propias del mall se dibujan por cÃ³digo (render/propias.lua)
+  -- las skins propias del mall se dibujan por código (render/propias.lua)
   local img = def.generada and require("src.presentacion.render.propias").hoja(def.generada) or Arte.img(def.hoja)
   local col = mov and CICLO[(math.floor(reloj * 8) % 4) + 1] or 1
   local c = tinte or def.tinte

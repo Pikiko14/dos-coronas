@@ -50,7 +50,7 @@ function A.aceptar(mundo, pj, nombre, datos)
     if not slot or slot < 1 or slot > 6 then return false end
     slot = math.floor(slot)
     local limpio = { slot = slot }
-    -- poderes de Ã¡rea (meteoro...): se puede apuntar a un punto, siempre dentro de su alcance
+    -- poderes de área (meteoro...): se puede apuntar a un punto, siempre dentro de su alcance
     local x, y = tonumber(datos.x), tonumber(datos.y)
     if x and y and finito(x) and finito(y) and pj and pj.x then
       local idh = Datos.barra[pj.clase] and Datos.barra[pj.clase][slot]
@@ -70,7 +70,7 @@ function A.aceptar(mundo, pj, nombre, datos)
     return true, { nombre = datos.nombre, etiqueta = datos.etiqueta }
   end
   -- los jugadores del mundo se identifican con ids de texto ("e12"); los miembros de un gremio, con su
-  -- nÃºmero en la base de datos
+  -- número en la base de datos
   local function idEntidad(v)
     if type(v) ~= "string" or #v > 16 or not v:match("^e%d+$") then return nil end
     return v

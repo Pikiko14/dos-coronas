@@ -426,7 +426,7 @@ function D.entidad(e, sx, sy, mundo, jugador)
 
     if e.montado then
       -- la montura va debajo y el jinete algo más arriba
-      local m = Personajes.monturas[e.montado]
+      local m = Personajes.monturaDe(e.montado, e.faccion)
       if m and m.vehiculo then
         local img = Arte.img("Characters/Vehicle.png")
         local fila = ({ [1] = 0, [4] = 1, [3] = 2, [2] = 3 })[e.dir or 1] or 0

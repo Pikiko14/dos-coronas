@@ -418,11 +418,23 @@ function I.hud(mundo, p, w, h)
   pocion("pocion_vida", 7, "7", "poc_vida")
   pocion("pocion_mana", 8, "8", "poc_mana")
   -- montar / desmontar: icono a la derecha de los poderes (tecla O)
-  if p.monturas and #p.monturas > 0 and (p.job or p.montado) then
+  local libre = false
+  for _, id in ipairs(p.monturas or {}) do
+    local dm = Monturas.especies[id]
+    if dm and not dm.requiereOficio then libre = true end
+  end
+  if p.monturas and #p.monturas > 0 and (p.job or p.montado or libre) then
     local x = bx0 + total + sep + 6
     casilla(x, by0, lado_c)
     local especie = p.montado or p.monturas[1]
-    local def = Personajes.monturas[especie]
+    if not p.job and not p.montado then
+      -- sin oficio activo solo valen las monturas de viaje
+      for _, id in ipairs(p.monturas) do
+        local dm = Monturas.especies[id]
+        if dm and not dm.requiereOficio then especie = id break end
+      end
+    end
+    local def = Personajes.monturaDe(especie, p.faccion)
     if def and def.hoja then
       Personajes.dibujar(def, 1, false, 0, x + lado_c / 2, by0 + lado_c - 6)
     elseif def and def.vehiculo then
@@ -1416,7 +1428,7 @@ function I.panelMontura(mundo, p, w, h)
   local M = p.montado and Monturas.especies[p.montado]
   love.graphics.setColor(0.13, 0.11, 0.14)
   love.graphics.rectangle("fill", px + 14, py + 44, pw - 28, 84, 6, 6)
-  local def = p.montado and Personajes.monturas[p.montado]
+  local def = p.montado and Personajes.monturaDe(p.montado, p.faccion)
   if def and def.hoja then Personajes.dibujar(def, 1, false, love.timer.getTime(), px + 56, py + 112) end
   if def and def.vehiculo then
     local img = Arte.img("Characters/Vehicle.png")
@@ -1609,7 +1621,7 @@ function I.estadoBonos(mundo, p, x, y)
 end
 
 function I.panelEstablo(mundo, p, w, h)
-  local px, py, pw, ph = w / 2 - 340, 70, 680, 480
+  local px, py, pw, ph = w / 2 - 340, 60, 680, 560
   caja(px, py, pw, ph, "Cuadra")
   I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
   local d = I.datosPanel.establo
@@ -1621,33 +1633,33 @@ function I.panelEstablo(mundo, p, w, h)
   love.graphics.setColor(0.85, 0.82, 0.7)
   love.graphics.print("Oro: " .. math.floor(p.oro or 0) .. (d.montado and "   (vas montado: tecla O para bajar)" or ""), px + 14, py + 38)
   for i, m in ipairs(d.catalogo) do
-    local y = py + 70 + (i - 1) * 100
+    local y = py + 66 + (i - 1) * 62
     love.graphics.setColor(0.13, 0.11, 0.14)
-    love.graphics.rectangle("fill", px + 14, y, pw - 28, 90, 6, 6)
-    local def = Personajes.monturas[m.id]
-    if def and def.hoja then Personajes.dibujar(def, 1, false, love.timer.getTime(), px + 54, y + 70) end
+    love.graphics.rectangle("fill", px + 14, y, pw - 28, 56, 6, 6)
+    local def = Personajes.monturaDe(m.id, p.faccion)
+    if def and def.hoja then Personajes.dibujar(def, 1, false, love.timer.getTime(), px + 54, y + 50) end
     if def and def.vehiculo then
       local img = Arte.img("Characters/Vehicle.png")
       love.graphics.setColor(1, 1, 1)
-      love.graphics.draw(img, Arte.quad(img, 128, 128, 32, 32), px + 54, y + 70, 0, 1.6, 1.6, 16, 28)
+      love.graphics.draw(img, Arte.quad(img, 128, 128, 32, 32), px + 54, y + 50, 0, 1.3, 1.3, 16, 28)
     end
     local nivelOk = (p.nivel or 1) >= m.nivel
     love.graphics.setColor(nivelOk and 0.95 or 0.6, nivelOk and 0.9 or 0.58, nivelOk and 0.75 or 0.52)
-    love.graphics.print(m.nombre .. "   " .. m.precio .. " oro  (nv " .. m.nivel .. ")", px + 100, y + 8)
+    love.graphics.print(m.nombre .. "   " .. m.precio .. " oro  (nv " .. m.nivel .. ")", px + 100, y + 4)
     love.graphics.setColor(0.72, 0.78, 0.68)
-    love.graphics.printf(m.desc, px + 100, y + 30, 340, "left")
+    love.graphics.printf(m.desc, px + 100, y + 22, 330, "left")
     love.graphics.setColor(0.6, 0.85, 1)
-    love.graphics.print("Velocidad +" .. math.floor(m.vel * 100) .. "%    Carga +" .. m.carga, px + 100, y + 70)
+    love.graphics.print("Vel +" .. math.floor(m.vel * 100) .. "%" .. (m.carga > 0 and ("  Carga +" .. m.carga) or ""), px + pw - 28 - 150, y + 40)
     local montadoAqui = d.montado == m.id
     if m.tengo then
-      I.boton(px + pw - 28 - 150, y + 28, 150, 32, montadoAqui and "Bajar" or "Montar", "mt_alt_" .. m.id)
+      I.boton(px + pw - 28 - 150, y + 4, 150, 32, montadoAqui and "Bajar" or "Montar", "mt_alt_" .. m.id)
     else
-      I.boton(px + pw - 28 - 150, y + 28, 150, 32, "Comprar", "mt_buy_" .. m.id, d.cerca and nivelOk and true or false)
+      I.boton(px + pw - 28 - 150, y + 4, 150, 32, "Comprar", "mt_buy_" .. m.id, d.cerca and nivelOk and true or false)
     end
   end
   love.graphics.setColor(0.7, 0.68, 0.6)
   love.graphics.printf("Se compran en las cuadras. Pulsa O para montar o bajar de la última que usaste. Las monturas se bajan solas en las casas y en las guerras. Ir cargado te frena, salvo con montura.",
-    px + 14, py + ph - 58, pw - 28, "left")
+    px + 14, py + ph - 50, pw - 28, "left")
 end
 
 -- ---------------------------------------------------------------------------------------
@@ -2746,7 +2758,7 @@ function I.panelAyuda(w, h)
     "Chat: Enter. Escribe /m para hablar al mundo y /f para hablar a tu facción. Las ciudades de tu facción son refugio.",
     "La guerra, una vez al día: batalla por cristales o captura del estandarte. Empieza con 3 jugadores por equipo.",
     "Las casas se compran al mayordomo. Dentro puedes poner cama, cofre, mesa y estandarte.",
-    "Mazmorras: tres puertas de piedra repartidas por el mapa (violeta en el mapa). Con E junto a la puerta entras si tienes el nivel; al fondo hay un jefe y, al caer, un cofre con premio para cada jugador: objetos o addons del mall, o equipo del escalÃ³n mÃ¡ximo.",
+    "Mazmorras: tres puertas de piedra repartidas por el mapa (violeta en el mapa). Con E junto a la puerta entras si tienes el nivel; al fondo hay un jefe y, al caer, un cofre con premio para cada jugador: objetos o addons del mall, o equipo del escalón máximo.",
   }, "\n\n")
   love.graphics.setColor(0.92, 0.88, 0.78)
   love.graphics.printf(texto, 100, 110, w - 200, "left")

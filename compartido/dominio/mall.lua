@@ -27,7 +27,7 @@ M.ORDEN_BONOS = { "exp", "str", "atk", "def", "int", "mdef", "matk", "mvel" }
 -- Objetos del mall (se registran en Datos.items). precio = en monedas.
 M.OBJETOS = {
   -- Pergaminos de forja: se usan en el Maestro de encantos y suben una pieza +1 SIN fallar y sin
-  -- gastar oro ni polvo, hasta el nivel indicado (forja). Van en su pestaÃ±a del mall.
+  -- gastar oro ni polvo, hasta el nivel indicado (forja). Van en su pestaña del mall.
   { id = "pergamino_forja", forja = 6, nombre = "Pergamino de forja", precio = 60, sprite = 697, color = { 1, 0.62, 0.2 },
     texto = "Forja una pieza +1 sin fallar ni gastar oro ni polvo (hasta +6). Se usa en el Maestro de encantos." },
   { id = "pergamino_forja_sagrado", forja = 10, nombre = "Pergamino de forja sagrado", precio = 160, sprite = 697, color = { 1, 0.9, 0.35 },
