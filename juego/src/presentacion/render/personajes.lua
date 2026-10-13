@@ -1,7 +1,7 @@
 -- Personajes y criaturas con las hojas "Characters" del pack nuevo.
 -- Hoja normal: 4x2 personajes, cada uno de 3 cuadros x 4 filas (abajo, izquierda,
--- derecha, arriba) con cuadros de 32x32. Hoja "$": un solo personaje o una criatura
--- grande por fila, con cuadros de 64x64.
+-- derecha, arriba) con cuadros de 32x32. Hoja "$": una criatura grande por fila,
+-- con 3 cuadros de caminar. BigMonster1 usa 64 px; BigMonster2 usa 80 px (celda).
 local Arte = require("src.presentacion.render.arte")
 
 local P = {}
@@ -134,7 +134,7 @@ P.monstruos = {
   reina_avispa = { hoja = "Characters/Monster3.png", idx = 2, tinte = { 1, 0.9, 0.5 } },
   oso_gigante = { hoja = "Characters/$BigMonster1.png", fila = 2, tinte = { 0.85, 0.7, 0.55 } },
   coloso = { hoja = "Characters/$BigMonster1.png", fila = 1, tinte = { 0.7, 0.75, 0.85 } },
-  gigante_guerra = { hoja = "Characters/$BigMonster2.png", fila = 2, tinte = { 1, 0.7, 0.7 } },
+  gigante_guerra = { hoja = "Characters/$BigMonster2.png", fila = 2, celda = 80, tinte = { 1, 0.7, 0.7 } },
   bandido = { hoja = "Characters/People7.png", idx = 1, tinte = { 0.85, 0.75, 0.75 } },
   asaltante = { hoja = "Characters/Actor3.png", idx = 6 },
   saqueador = { hoja = "Characters/Evil.png", idx = 6, tinte = { 0.9, 0.8, 0.8 } },
@@ -165,9 +165,9 @@ P.monstruos = {
   golem = { hoja = "Characters/Monster1.png", idx = 4 },
   demonio_foso = { hoja = "Characters/Monster2.png", idx = 5 },
   titan = { hoja = "Characters/$BigMonster1.png", fila = 1 },
-  dragon = { hoja = "Characters/$BigMonster2.png", fila = 1 },
+  dragon = { hoja = "Characters/$BigMonster2.png", fila = 1, celda = 80 },
   liche = { hoja = "Characters/Evil.png", idx = 5 },
-  behemot = { hoja = "Characters/$BigMonster2.png", fila = 2 },
+  behemot = { hoja = "Characters/$BigMonster2.png", fila = 2, celda = 80 },
   gallina = { hoja = "Characters/Animal.png", idx = 2 },
   planta_roja = { hoja = "Characters/Monster2.png", idx = 0 },
   esqueleto = { hoja = "Characters/Monster1.png", idx = 1 },
@@ -224,9 +224,10 @@ function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa)
   if c then love.graphics.setColor(c[1], c[2], c[3], alfa or 1)
   else love.graphics.setColor(1, 1, 1, alfa or 1) end
   if def.fila then
-    local q = Arte.quad(img, col * 64, def.fila * 64, 64, 64)
-    love.graphics.draw(img, q, sx, sy, 0, 1, 1, 32, 62)
-    return 64
+    local celda = def.celda or 64
+    local q = Arte.quad(img, col * celda, def.fila * celda, celda, celda)
+    love.graphics.draw(img, q, sx, sy, 0, 1, 1, celda / 2, celda - 2)
+    return celda
   end
   -- hojas con casillas de 32 px (la mayoria) o de 48 px (jinetes, hoja Riding)
   local c = def.celda or 32

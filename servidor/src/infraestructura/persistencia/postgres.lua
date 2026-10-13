@@ -62,6 +62,10 @@ local function sentenciasDe(pid, ex, hp, mp)
     "vinculo_modo=" .. (v.x and Pg.literal(v.modo or "mundo") or "NULL"),
     "vinculo_x=" .. (v.x and real(v.x) or "NULL"), "vinculo_y=" .. (v.y and real(v.y) or "NULL"),
     "guardado=TRUE",
+    "autopocion=" .. Pg.literal(ex.autoPocion and true or false),
+    "autopocion_umbral=" .. entero((tonumber(ex.autoPocionUmbral) or 0.5) * 100 + 0.5),
+    "automana=" .. Pg.literal(ex.autoMana and true or false),
+    "automana_umbral=" .. entero((tonumber(ex.autoManaUmbral) or 0.5) * 100 + 0.5),
   }
   if hp then sets[#sets + 1] = "hp=" .. entero(hp) end
   if mp then sets[#sets + 1] = "mp=" .. entero(mp) end
@@ -222,6 +226,10 @@ function M.abrir()
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS z INT NOT NULL DEFAULT 0;
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS monedas INT NOT NULL DEFAULT 0;
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS regalo_mall BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS autopocion BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS autopocion_umbral INT NOT NULL DEFAULT 50;
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS automana BOOLEAN NOT NULL DEFAULT FALSE;
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS automana_umbral INT NOT NULL DEFAULT 50;
     CREATE TABLE IF NOT EXISTS personaje_addon (
       personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
       addon TEXT NOT NULL,
@@ -507,7 +515,7 @@ end
 function M.cargar(personajeId)
   return con(function(conn)
     local filas, err = conn:consulta(
-      "SELECT id, nombre, faccion, clase, nivel, xp, oro, monedas, regalo_mall, x, y, z, modo, hp, mp, guardado, " ..
+      "SELECT id, nombre, faccion, clase, nivel, xp, oro, monedas, regalo_mall, autopocion, autopocion_umbral, automana, automana_umbral, x, y, z, modo, hp, mp, guardado, " ..
       "vinculo_modo, vinculo_x, vinculo_y FROM personajes WHERE id = " .. tonumber(personajeId)
     )
     if not filas or not filas[1] then return nil, err or "No está ese personaje." end
@@ -516,6 +524,8 @@ function M.cargar(personajeId)
     local datos = {
       nombre = row.nombre, faccion = row.faccion, clase = row.clase,
       nivel = tonumber(row.nivel) or 1, xp = tonumber(row.xp) or 0, oro = tonumber(row.oro) or 0, monedas = tonumber(row.monedas) or 0, regaloMall = row.regalo_mall == "t",
+      autoPocion = row.autopocion == "t", autoPocionUmbral = (tonumber(row.autopocion_umbral) or 50) / 100,
+      autoMana = row.automana == "t", autoManaUmbral = (tonumber(row.automana_umbral) or 50) / 100,
       x = tonumber(row.x), y = tonumber(row.y),
       hp = tonumber(row.hp), mp = tonumber(row.mp), dbId = pid,
     }

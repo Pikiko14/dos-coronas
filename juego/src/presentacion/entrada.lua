@@ -8,6 +8,11 @@ local Config = require("src.infraestructura.config")
 
 local Entrada = {}
 
+local function beberPocion(app, tipo)
+  local pj = app.jugador
+  app.actuar("pocion", { id = Datos.pocionAlUsar(pj and pj.bolsa, pj and pj.nivel, tipo) })
+end
+
 function Entrada.deseo()
   if Entrada.auto then return Entrada.auto.x, Entrada.auto.y end
   if Interfaz.foco then return 0, 0 end
@@ -236,8 +241,26 @@ function Entrada.manejar(app, id)
     return
   end
   if id:sub(1, 4) == "hab_" then Entrada.lanzarHabilidad(app, tonumber(id:sub(5))) return end
-  if id == "poc_vida" then app.actuar("pocion", { id = "pocion_vida" }) return end
-  if id == "poc_mana" then app.actuar("pocion", { id = "pocion_mana" }) return end
+  if id == "poc_vida" then beberPocion(app, "vida") return end
+  if id == "poc_mana" then beberPocion(app, "mana") return end
+  if id == "menu_autopocion" then Interfaz.panel = "autopocion" return end
+  -- Lua no trata "|" como alternativa: %a+ sí reconoce vida/mana y on/menos/mas.
+  local cual, orden = id:match("^auto_(%a+)_(%a+)$")
+  if (cual == "vida" or cual == "mana") and (orden == "on" or orden == "menos" or orden == "mas") then
+    local pj = app.jugador
+    if not pj then return end
+    local claveOn = cual == "mana" and "autoMana" or "autoPocion"
+    local claveUmbral = cual == "mana" and "autoManaUmbral" or "autoPocionUmbral"
+    local pct = math.floor(((pj[claveUmbral] or 0.5) * 100) + 0.5)
+    if orden == "menos" then pct = math.max(20, pct - 10)
+    elseif orden == "mas" then pct = math.min(90, pct + 10) end
+    local on = pj[claveOn] and true or false
+    if orden == "on" then on = not on end
+    -- el panel lee el valor al momento; el servidor lo confirma en la siguiente foto
+    pj[claveOn], pj[claveUmbral] = on, pct / 100
+    app.actuar("autopocion", { cual = cual, on = on, umbral = pct / 100 })
+    return
+  end
   if id:sub(1, 6) == "canal_" then Interfaz.canal = id:sub(7) return end
   if id:sub(1, 6) == "viaje_" then app.actuar("viaje", { destino = id:sub(7) }) Interfaz.panel = nil return end
   if id:sub(1, 8) == "est_tab_" then Interfaz.establoTab = id:sub(9) return end
@@ -687,7 +710,8 @@ function Entrada.tecla(app, tecla)
   if tecla == "l" then Interfaz.panel = (Interfaz.panel ~= "mall") and "mall" or nil end
   if tecla == "y" then app.actuar("oficio_alternar", {}) end
   if tecla == "u" then Interfaz.panel = (Interfaz.panel ~= "montura") and "montura" or nil end
-  if tecla == "r" then
+  if tecla == "r" then Interfaz.panel = (Interfaz.panel ~= "autopocion") and "autopocion" or nil end
+  if tecla == "b" then
     -- robar: el objetivo elegido o la caravana / comerciante más cercano
     local p = app.jugador
     local mejor, md
@@ -718,8 +742,8 @@ function Entrada.tecla(app, tecla)
   if tecla == "1" or tecla == "2" or tecla == "3" or tecla == "4" or tecla == "5" or tecla == "6" then
     Entrada.lanzarHabilidad(app, tonumber(tecla))
   end
-  if tecla == "7" then app.actuar("pocion", { id = "pocion_vida" }) end
-  if tecla == "8" then app.actuar("pocion", { id = "pocion_mana" }) end
+  if tecla == "7" then beberPocion(app, "vida") end
+  if tecla == "8" then beberPocion(app, "mana") end
 end
 
 return Entrada

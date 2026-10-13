@@ -1049,6 +1049,7 @@ Mundo.CUERPO_SEG = 300
 Mundo.PUNTOS_CRISTAL = 300      -- lo que vale entregar el cristal del núcleo enemigo
 Mundo.DISTANCIA_DESPIERTA = 45    -- casillas: lejos de todo jugador, las criaturas se actualizan 1 vez por segundo
 Mundo.POCION_CD = 3          -- segundos entre una poción y la siguiente
+Mundo.AUTOPOCION_UMBRAL = 0.5 -- con la autopoción encendida, bebe vida al bajar de esta fracción
 function Mundo:dejarCuerpo(e)
   local id = self:idNuevo()
   self.entidades[id] = {
@@ -1366,6 +1367,7 @@ function Mundo:actualizarJugador(e, dt)
     if self.tiempo >= (e.respawn or 0) then self:revivir(e) end
     return
   end
+  if e.kind == "jugador" then self:beberAutopocion(e) end
   -- la mascota vuelve sola tras una muerte o una guerra
   if e.kind == "jugador" and e.mascotaActiva and not e.mascotaId and e.modo ~= "batalla" and e.modo ~= "estandarte"
     and (e.mascotaDescanso or 0) <= self.tiempo then
@@ -2156,22 +2158,74 @@ end
 
 function Mundo:usarPocionId(p, id)
   if (p.cdPocion or 0) > self.tiempo then return "La poción aún no." end
+  local it = Datos.item(id)
+  if not it or not (it.cura or it.mana) then return "No tienes esa poción." end
+  if it.nivel and (p.nivel or 1) < it.nivel then return "Necesitas nivel " .. it.nivel .. "." end
   local idx
   for i, s in ipairs(p.bolsa) do if s.id == id then idx = i break end end
   if not idx then return "No tienes esa poción." end
-  local it = Datos.item(id)
-  if it.cura then p.hp = math.min(p.hpMax, p.hp + math.floor(p.hpMax * it.cura)) end
-  if it.mana then p.mp = math.min(p.mpMax, p.mp + math.floor(p.mpMax * it.mana)) end
+  local function tirada(minimo, maximo)
+    minimo = math.floor(tonumber(minimo) or 0)
+    maximo = math.floor(tonumber(maximo) or minimo)
+    if maximo < minimo then minimo, maximo = maximo, minimo end
+    if minimo >= maximo then return minimo end
+    return math.random(minimo, maximo)
+  end
+  if it.cura then p.hp = math.min(p.hpMax, p.hp + tirada(it.cura, it.curaMax)) end
+  if it.mana then p.mp = math.min(p.mpMax, p.mp + tirada(it.mana, it.manaMax)) end
   p.bolsa[idx].cant = p.bolsa[idx].cant - 1
   if p.bolsa[idx].cant <= 0 then table.remove(p.bolsa, idx) end
   p.cdPocion = self.tiempo + Mundo.POCION_CD
   return nil
 end
 
+-- Bebe la poción de vida o la de maná si el jugador la dejó encendida y está por debajo de su umbral.
+-- Comparten enfriamiento: si las dos hacen falta a la vez, primero va la vida.
+-- Si no hay poción o aún está el enfriamiento, no dice nada: se reintenta en el siguiente paso.
+function Mundo:beberAutopocion(p)
+  if (p.cdPocion or 0) > self.tiempo then return end
+  local function intentar(id, on, umbral, campo, color)
+    if not on then return false end
+    local maximo = p[campo .. "Max"]
+    if not maximo or maximo <= 0 then return false end
+    if p[campo] / maximo > (umbral or Mundo.AUTOPOCION_UMBRAL) then return false end
+    local antes = p[campo]
+    if self:usarPocionId(p, id) then return false end
+    local ganada = math.floor(p[campo] - antes)
+    if ganada > 0 then self:numero(p, "+" .. ganada, color) end
+    return true
+  end
+  local idVida = Datos.elegirPocion(p.bolsa, p.nivel, "vida")
+  local idMana = Datos.elegirPocion(p.bolsa, p.nivel, "mana")
+  if not idVida or not intentar(idVida, p.autoPocion, p.autoPocionUmbral, "hp", { 0.45, 1, 0.5 }) then
+    if idMana then intentar(idMana, p.autoMana, p.autoManaUmbral, "mp", { 0.55, 0.75, 1 }) end
+  end
+end
+
+function Mundo:configurarAutopocion(p, datos)
+  datos = datos or {}
+  local mana = datos.cual == "mana"
+  local on = datos.on and true or false
+  local claveOn = mana and "autoMana" or "autoPocion"
+  local claveUmbral = mana and "autoManaUmbral" or "autoPocionUmbral"
+  local umbral = datos.umbral or p[claveUmbral] or Mundo.AUTOPOCION_UMBRAL
+  local cambio = on ~= (p[claveOn] and true or false) or math.abs(umbral - (p[claveUmbral] or Mundo.AUTOPOCION_UMBRAL)) > 0.001
+  p[claveOn] = on
+  p[claveUmbral] = umbral
+  if not cambio then return end
+  local pct = math.floor(umbral * 100 + 0.5)
+  local nombre = mana and "maná" or "vida"
+  self:mensaje("sistema", "", on
+    and ("Autopoción de " .. nombre .. " activada: al bajar del " .. pct .. "%.")
+    or ("Autopoción de " .. nombre .. " desactivada. El umbral queda en " .. pct .. "%."), p)
+  self:marcarProgreso(p)
+end
+
 function Mundo:comprar(p, itemId)
   self:marcarProgreso(p)
   local it = Datos.item(itemId)
   if not it or it.quest or it.mall then return "No está a la venta." end
+  if (it.cura or it.mana) and it.nivel and (p.nivel or 1) < it.nivel then return "Necesitas nivel " .. it.nivel .. "." end
   if p.oro < it.precio then return "Oro insuficiente." end
   if not self:darItem(p, itemId, 1) then return "Bolsa llena." end
   p.oro = p.oro - it.precio
@@ -2325,30 +2379,35 @@ function Mundo:comprarCasa(p, parcelaId)
 end
 
 function Mundo:entrarCasa(p, parcelaId)
-  local parcela
+  local parcela, ciudad
   for _, c in ipairs(self.mapas.mundo.ciudades) do
     for _, par in ipairs(c.parcelas) do
-      if par.id == parcelaId then parcela = par end
+      if par.id == parcelaId then parcela, ciudad = par, c end
     end
   end
-  if not parcela or parcela.dueno ~= p.id then return "No es tu casa." end
-  if Util.dist(p.x, p.y, parcela.x + 0.5, parcela.y + 0.5) > 2.2 and p.modo == "mundo" then
-    return "Acércate a la puerta."
+  if not parcela or parcela.dueno ~= p.id or not (p.casas and p.casas[parcelaId]) then return "No es tu casa." end
+  if p.modo ~= "mundo" and p.modo ~= "casa" then return "Aquí no puedes entrar en casa." end
+  local enPuerta = Util.dist(p.x, p.y, parcela.x + 0.5, parcela.y + 0.5) <= 2.2
+  local enMayordomo = self:npcCerca(p, "mayordomo") and self:ciudadEn(p.x, p.y) == ciudad
+  if p.modo == "mundo" and not enPuerta and not enMayordomo then
+    return "Acércate a la puerta o habla con el mayordomo."
   end
-  p.retorno = { x = parcela.x + 0.5, y = parcela.y + 1.4, modo = "mundo" }
+  p.retorno = { x = parcela.x + 0.5, y = parcela.y + 1.4, modo = "mundo", z = p.z or 0 }
   p.modo = "casa"
+  p.z = 0
   p.zona = "Tu casa"
   p.casaId = parcelaId
   p.x, p.y = self.mapas.casa.salida.x, self.mapas.casa.salida.y
-  p.camino = nil
+  p.camino, p.deseoX, p.deseoY = nil, 0, 0
   return nil
 end
 
 function Mundo:salirCasa(p)
   if p.modo ~= "casa" then return end
   local r = p.retorno or p.vinculo
-  p.modo = "mundo"
+  p.modo = (r and r.modo) or "mundo"
   p.x, p.y = r.x, r.y
+  if r.z then p.z = r.z end
   p.casaId = nil
 end
 
@@ -2729,6 +2788,10 @@ function Mundo:exportar(p)
     mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
     job = p.oficioElegido, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
     monturas = p.monturas, monturaPreferida = p.monturaPreferida,
+    autoPocion = p.autoPocion and true or false,
+    autoPocionUmbral = p.autoPocionUmbral or Mundo.AUTOPOCION_UMBRAL,
+    autoMana = p.autoMana and true or false,
+    autoManaUmbral = p.autoManaUmbral or Mundo.AUTOPOCION_UMBRAL,
     monedas = p.monedas, regaloMall = p.regaloMall, addons = p.addons, addonActivo = p.addonActivo, bonos = p.bonos,
     z = z,
   }
@@ -2750,6 +2813,15 @@ function Mundo:aplicarGuardado(p, data)
   p.job = nil
   if p.oficioElegido and self:pesoCarga(p) > 0 then p.job = p.oficioElegido end
   p.monturas, p.monturaPreferida = data.monturas or {}, data.monturaPreferida
+  p.autoPocion = data.autoPocion and true or false
+  p.autoMana = data.autoMana and true or false
+  local function umbralGuardado(v)
+    v = tonumber(v)
+    if v and v >= 0.2 and v <= 0.9 then return v end
+    return Mundo.AUTOPOCION_UMBRAL
+  end
+  p.autoPocionUmbral = umbralGuardado(data.autoPocionUmbral)
+  p.autoManaUmbral = umbralGuardado(data.autoManaUmbral)
   -- item mall: monedas, addons y bonos (los ya terminados se descartan)
   -- las monedas iniciales del mall se dan UNA vez a cada personaje (nuevo o ya existente)
   p.monedas = data.monedas or 0
@@ -2866,6 +2938,10 @@ function Mundo:foto(pid)
     tu.grupo = self:resumenGrupo(p)
     tu.mall = self:resumenMall(p)
     tu.cdPocion = p.cdPocion
+    tu.autoPocion = p.autoPocion and true or false
+    tu.autoPocionUmbral = p.autoPocionUmbral or Mundo.AUTOPOCION_UMBRAL
+    tu.autoMana = p.autoMana and true or false
+    tu.autoManaUmbral = p.autoManaUmbral or Mundo.AUTOPOCION_UMBRAL
     tu.invComercio = self:resumenInvitacionComercio(p)
     tu.llevaCristales = p.llevaCristales
     local defMontura = p.montado and require("compartido.dominio.monturas").especies[p.montado]
@@ -3021,6 +3097,7 @@ function Mundo:accion(pid, nombre, datos)
     local err = self:usarPocionId(p, datos.id)
     if err then self:mensaje("sistema", "", err, p) end
   end
+  if nombre == "autopocion" then self:configurarAutopocion(p, datos) end
   if nombre == "comprar" then
     local err = self:comprar(p, datos.id)
     if err then self:mensaje("sistema", "", err, p) end

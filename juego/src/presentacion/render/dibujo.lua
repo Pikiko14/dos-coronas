@@ -420,7 +420,7 @@ function D.entidad(e, sx, sy, mundo, jugador)
   local alto = 32
   local def = Personajes.de(e)
   love.graphics.setColor(0, 0, 0, 0.3)
-  love.graphics.ellipse("fill", sx, pies - 1, def and def.fila and 20 or 11, def and def.fila and 7 or 4)
+  love.graphics.ellipse("fill", sx, pies - 1, def and def.fila and ((def.celda or 64) > 64 and 26 or 20) or 11, def and def.fila and 7 or 4)
   if e.kind == "caravana" then
     -- carreta cubierta de las hojas de vehículos
     local img = Arte.img("Characters/Vehicle.png")
@@ -525,9 +525,12 @@ function D.entidad(e, sx, sy, mundo, jugador)
     end
   end
   if jugador and jugador.objetivo == e.id then
+    local celda = def and def.fila and (def.celda or 64)
+    local lado = celda and math.floor(celda * 0.85) or 30
+    local arriba = celda and (celda - 6) or 28
     love.graphics.setColor(1, 0.25, 0.2, 0.9)
     love.graphics.setLineWidth(1.5)
-    love.graphics.rectangle("line", sx - 15, pies - 28, 30, 30, 3, 3)
+    love.graphics.rectangle("line", sx - lado / 2, pies - arriba, lado, lado, 3, 3)
     love.graphics.setLineWidth(1)
   end
   return alto

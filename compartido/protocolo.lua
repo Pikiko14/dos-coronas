@@ -29,7 +29,7 @@ P.CUENTA = { REGISTRAR = "registrar", ENTRAR = "entrar", CREAR = "crear" }
 -- No hay acción de guardar: el servidor guarda solo (periódicamente, al salir y al cerrar).
 P.ACCIONES = {
   "deseo", "destino", "objetivo", "habilidad", "chat", "equipar", "desequipar",
-  "pocion", "comprar", "vender", "interactuar", "guerra", "salir_guerra", "viaje",
+  "pocion", "autopocion", "comprar", "vender", "interactuar", "guerra", "salir_guerra", "viaje",
   "casa_comprar", "casa_entrar", "casa_salir", "mueble", "cofre_guardar",
   "cofre_sacar", "mision_aceptar", "mision_entregar", "comercio_invitar",
   "comercio_oro", "comercio_item", "comercio_responder", "comercio_quitar", "comercio_ok", "comercio_no", "mover_bolsa",

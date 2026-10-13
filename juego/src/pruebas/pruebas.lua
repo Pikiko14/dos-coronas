@@ -65,7 +65,7 @@ function Pruebas.correr()
   paso("objetos y terreno", function()
     local Objetos = require("src.presentacion.render.objetos")
     for _, nombre in ipairs({ "arbol", "arbol_pino", "arbol_seco", "farol", "pozo", "estatua_albor",
-      "estatua_umbra", "columna_albor", "columna_umbra", "bandera_albor", "bandera_umbra", "altar_cristal", "restos" }) do
+      "estatua_umbra", "columna_albor", "columna_umbra", "bandera_albor", "bandera_umbra", "altar_cristal", "restos", "huevo" }) do
       fallar(errores, "objeto " .. nombre, Objetos.existe(nombre))
     end
     local Terreno = require("src.presentacion.render.terreno")
@@ -168,6 +168,8 @@ function Pruebas.correr()
     fallar(errores, "la skin se dibuja", ok, tostring(err))
     local it = Datos.item("pergamino_atk")
     fallar(errores, "los pergaminos tienen tinte", it and it.tinte and it.mall == true)
+    local exp = Datos.item("tarjeta_exp")
+    fallar(errores, "la experiencia doble usa el icono x2", exp and exp.hoja == "bonos" and exp.sprite == 0)
 Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    local okS, errS = pcall(Interfaz.hud, mundo, pj, 1280, 720)    fallar(errores, "el mall se dibuja desplazado", okS, tostring(errS))    fallar(errores, "hay más addons que filas (necesita rueda)", (Interfaz.mallScrollMax or 0) >= 7, tostring(Interfaz.mallScrollMax))
     Interfaz.mallTab, Interfaz.mallScroll = "objetos", 1
     local okO, errO = pcall(Interfaz.hud, mundo, pj, 1280, 720)
@@ -588,6 +590,12 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       end
     end
     fallar(errores, "cada criatura se dibuja", #faltan == 0, table.concat(faltan, ", "))
+    local dragon = P.monstruos.dragon
+    local hoja = Arte.img(dragon.hoja)
+    fallar(errores, "el dragón joven usa el cuadro de 80 de su lámina", dragon.celda == 80 and dragon.fila == 1
+      and hoja:getWidth() == dragon.celda * 3 and hoja:getHeight() >= (dragon.fila + 1) * dragon.celda)
+    local alto = P.dibujar(dragon, 1, false, 0, 100, 100)
+    fallar(errores, "el dragón joven se dibuja entero", alto == 80, tostring(alto))
   end)
   paso("interfaz: los botones del mall mandan la acción correcta", function()
     local Entrada = require("src.presentacion.entrada")
@@ -1106,10 +1114,13 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     fallar(errores, "las siete pestañas responden al clic", n == 7, tostring(n))
     local armas = Interfaz.listaItemsClase(pj, "armas")
     local armadura = Interfaz.listaItemsClase(pj, "armadura")
-    local solo = #armas > 0 and #armadura > 0 and #Interfaz.listaItemsClase(pj, "pociones") == 2
+    local pociones = Interfaz.listaItemsClase(pj, "pociones")
+    local bajas = Interfaz.listaItemsClase({ clase = "guerrero", nivel = 1 }, "pociones")
+    local altas = Interfaz.listaItemsClase({ clase = "guerrero", nivel = 22 }, "pociones")
+    local solo = #armas > 0 and #armadura > 0 and #pociones == 4 and #bajas == 2 and #altas == 6
     for _, id in ipairs(armas) do solo = solo and Datos.item(id).hueco == "arma" end
     for _, id in ipairs(armadura) do local hh = Datos.item(id).hueco solo = solo and (hh == "cabeza" or hh == "pecho" or hh == "piernas" or hh == "pies") end
-    fallar(errores, "cada pestaña lista solo lo suyo", solo)
+    fallar(errores, "cada pestaña lista solo lo suyo", solo, #bajas .. "/" .. #pociones .. "/" .. #altas)
     -- vender: la bolsa se lista en la pestaña y cada fila vende con su casilla
     pj.bolsa = { { id = "pocion_vida", cant = 3 } }
     Interfaz.mercadoTab = "vender"

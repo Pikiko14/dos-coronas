@@ -7,10 +7,10 @@
 -->
 <habilidades>
   <!-- ---- guerrero ---- -->
-  <habilidad id="golpe" nombre="Golpe" clase="guerrero" tipo="enemigo" cd="1.6" coef="1.15" desc="Un golpe firme con el arma." mana="0" rango="1.45">
+  <habilidad id="golpe" nombre="Golpe" clase="guerrero" tipo="enemigo" cd="1.5" coef="1.10" desc="Un golpe firme con el arma." mana="10" rango="1.45">
     <estado tipo="sangrar" prob="0.12"/>
   </habilidad>
-  <habilidad id="tajo" nombre="Tajo" clase="guerrero" tipo="alrededor" cd="7" coef="1.5" desc="Golpea a todos los enemigos cercanos." mana="14" rango="2.1">
+  <habilidad id="tajo" nombre="Tajo" clase="guerrero" tipo="alrededor" cd="7" coef="1.8" desc="Golpea a todos los enemigos cercanos." mana="14" rango="2.5">
     <estado tipo="sangrar" prob="0.3"/>
   </habilidad>
   <habilidad id="grito" nombre="Grito de guerra" clase="guerrero" tipo="buff_alrededor" buff="grito" cd="16" desc="Aumenta el ataque de los aliados cercanos." dur="8" mana="18" rango="4.5"/>

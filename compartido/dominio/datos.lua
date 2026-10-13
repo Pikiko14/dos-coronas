@@ -153,7 +153,7 @@ end
 -- Objetos del Item Mall (se pagan con monedas especiales, ver dominio/mall.lua)
 for _, o in ipairs(Mall.OBJETOS) do
   add({ id = o.id, nombre = o.nombre, apila = 20, mall = true, monedas = o.precio, bono = o.bono, forja = o.forja,
-    hoja = "equipment", sprite = o.sprite, texto = o.texto, tinte = o.color or (o.bono and Mall.BONOS[o.bono].color) })
+    hoja = o.hoja or "equipment", sprite = o.sprite, texto = o.texto, tinte = o.color or (o.bono and Mall.BONOS[o.bono].color) })
 end
 
 D.muebles = Config.mapa("muebles", "mueble", false)
@@ -173,6 +173,48 @@ end
 
 function D.item(id)
   return D.items[id]
+end
+
+-- Una poción de vida tiene cura; una de maná tiene mana y no cura.
+function D.esTipoPocion(it, tipo)
+  if not it or it.quest or it.mall then return false end
+  if tipo == "mana" then return it.mana ~= nil and it.cura == nil end
+  return it.cura ~= nil
+end
+
+-- La más fuerte que el nivel permite beber. Si hay empate, gana la de más nivel.
+function D.elegirPocion(bolsa, nivel, tipo)
+  local mejor, fuerza, nv
+  nivel = nivel or 1
+  for _, s in ipairs(bolsa or {}) do
+    local it = D.items[s.id]
+    if D.esTipoPocion(it, tipo) and (s.cant or 1) > 0 and nivel >= (it.nivel or 1) then
+      local f = tipo == "mana" and it.mana or it.cura
+      local ln = it.nivel or 1
+      if not mejor or f > fuerza or (f == fuerza and ln > nv) then
+        mejor, fuerza, nv = s.id, f, ln
+      end
+    end
+  end
+  return mejor
+end
+
+function D.contarPociones(bolsa, tipo)
+  local n = 0
+  for _, s in ipairs(bolsa or {}) do
+    if D.esTipoPocion(D.items[s.id], tipo) then n = n + (s.cant or 1) end
+  end
+  return n
+end
+
+-- La que se bebe con la tecla: la mejor usable, o cualquiera que tengas para que el servidor diga el nivel.
+function D.pocionAlUsar(bolsa, nivel, tipo)
+  local id = D.elegirPocion(bolsa, nivel, tipo)
+  if id then return id end
+  for _, s in ipairs(bolsa or {}) do
+    if D.esTipoPocion(D.items[s.id], tipo) and (s.cant or 1) > 0 then return s.id end
+  end
+  return tipo == "mana" and "pocion_mana" or "pocion_vida"
 end
 
 function D.cuadro(def, dir, frame)

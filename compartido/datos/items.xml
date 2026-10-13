@@ -2,11 +2,15 @@
 <!--
   Objetos que no son equipo: pociones, materiales y mochilas (el equipo se calcula con equipo.xml).
   hoja/sprite: icono en la lamina de objetos; apila: cuantos caben en una casilla; precio en oro; quest: no se vende;
-  cura/mana: fraccion que restauran; hueco=mochila: slots = espacios que da la bolsa.
+  cura/mana y curaMax/manaMax: puntos que restauran (mínimo y máximo); hueco=mochila: slots = espacios que da la bolsa.
 -->
 <items>
-  <item id="pocion_vida" nombre="Poción de vida" apila="20" cura="0.42" hoja="equipment" precio="28" sprite="705"/>
-  <item id="pocion_mana" nombre="Poción de maná" apila="20" hoja="equipment" mana="0.42" precio="24" sprite="704"/>
+  <item id="pocion_vida" nombre="Poción de vida" apila="20" cura="50" curaMax="110" hoja="equipment" nivel="1" precio="28" sprite="705" texto="Restaura de 50 a 110 de vida."/>
+  <item id="pocion_vida_mediana" nombre="Poción de vida mediana" apila="20" cura="111" curaMax="190" hoja="pociones" nivel="12" precio="62" sprite="0" texto="Restaura de 111 a 190 de vida."/>
+  <item id="pocion_vida_grande" nombre="Poción de vida grande" apila="20" cura="191" curaMax="300" hoja="pociones" nivel="22" precio="130" sprite="1" texto="Restaura de 191 a 300 de vida."/>
+  <item id="pocion_mana" nombre="Poción de maná" apila="20" hoja="equipment" mana="50" manaMax="110" nivel="1" precio="24" sprite="704" texto="Restaura de 50 a 110 de maná."/>
+  <item id="pocion_mana_mediana" nombre="Poción de maná mediana" apila="20" hoja="pociones" mana="111" manaMax="190" nivel="12" precio="54" sprite="2" texto="Restaura de 111 a 190 de maná."/>
+  <item id="pocion_mana_grande" nombre="Poción de maná grande" apila="20" hoja="pociones" mana="191" manaMax="300" nivel="22" precio="114" sprite="3" texto="Restaura de 191 a 300 de maná."/>
   <item id="cristal" nombre="Cristal enemigo" apila="20" hoja="equipment" precio="1" quest="true" sprite="359"/>
   <item id="polvo_arcano" nombre="Polvo arcano" apila="99" hoja="equipment" precio="12" sprite="699" texto="Material para encantar el equipo."/>
   <item id="mochila_1" nombre="Morral de tela" nivel="1" hoja="equipment" hueco="mochila" precio="72" slots="12" sprite="672" texto="Bolsa de 12 espacios." tier="1"/>

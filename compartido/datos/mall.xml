@@ -35,7 +35,9 @@
   <objeto id="pergamino_forja_sagrado" nombre="Pergamino de forja sagrado" forja="10" precio="160" sprite="697" texto="Forja una pieza +1 sin fallar ni gastar oro ni polvo (hasta +10). Se usa en el Maestro de encantos.">
     <color lista="1,0.9,0.35"/>
   </objeto>
-  <objeto id="tarjeta_exp" nombre="Tarjeta de experiencia doble" bono="exp" precio="50" sprite="699" texto="Durante 1 hora ganas el doble de experiencia."/>
+  <objeto id="tarjeta_exp" nombre="Tarjeta de experiencia doble" bono="exp" hoja="bonos" precio="50" sprite="0" texto="Durante 1 hora ganas el doble de experiencia.">
+    <color lista="1,1,1"/>
+  </objeto>
   <objeto id="pergamino_str" nombre="Pergamino de fuerza" bono="str" precio="25" sprite="697" texto="+20% de vida y +5% de ataque durante 30 minutos."/>
   <objeto id="pergamino_atk" nombre="Pergamino de ataque" bono="atk" precio="20" sprite="697" texto="+15% de ataque durante 30 minutos."/>
   <objeto id="pergamino_def" nombre="Pergamino de defensa" bono="def" precio="20" sprite="697" texto="+15% de defensa durante 30 minutos."/>

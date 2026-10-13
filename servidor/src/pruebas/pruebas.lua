@@ -140,6 +140,19 @@ function Pruebas.correr()
     mundo:accion(jugador.id, "mueble", { tipo = "cama" })
     fallar(errores, "cama", jugador.casas[par.id].muebles.cama == true)
     mundo:accion(jugador.id, "casa_salir")
+    local mayo
+    for _, e in pairs(mundo.entidades) do
+      if e.rol == "mayordomo" and mundo:ciudadEn(e.x, e.y) == auroria then mayo = e end
+    end
+    fallar(errores, "hay mayordomo en la ciudad", mayo ~= nil)
+    jugador.x, jugador.y = mayo.x + 0.4, mayo.y
+    mundo:accion(jugador.id, "casa_entrar", { id = par.id })
+    local salida = mundo.mapas.casa.salida
+    fallar(errores, "desde el mayordomo entra en la casa", jugador.modo == "casa" and jugador.casaId == par.id
+      and math.abs(jugador.x - salida.x) < 0.01 and math.abs(jugador.y - salida.y) < 0.01)
+    mundo:salirCasa(jugador)
+    jugador.x, jugador.y = par.x + 40, par.y + 40
+    fallar(errores, "lejos no entra", mundo:entrarCasa(jugador, par.id) ~= nil and jugador.modo == "mundo")
     local extras = {}
     for i = 1, 2 do
       extras[#extras + 1] = mundo:crearPersonaje({ nombre = "Alba" .. i, faccion = "albor", clase = "guerrero" })
@@ -1777,12 +1790,98 @@ mundo.tiempo = 100
     a.hp = 1
     local pocion = mundo:darItem(a, "pocion_vida", 5)
     fallar(errores, "primera poción", mundo:usarPocionId(a, "pocion_vida") == nil)
+    fallar(errores, "la pequeña cura entre 50 y 110", a.hp >= 51 and a.hp <= 111, tostring(a.hp))
     fallar(errores, "la segunda espera", mundo:usarPocionId(a, "pocion_vida") ~= nil)
     mundo.tiempo = mundo.tiempo + 2.9
     fallar(errores, "a los 2,9 s aún no", mundo:usarPocionId(a, "pocion_vida") ~= nil)
     mundo.tiempo = mundo.tiempo + 0.2
     fallar(errores, "a los 3 s sí", mundo:usarPocionId(a, "pocion_vida") == nil)
     fallar(errores, "la foto trae el enfriamiento", mundo:foto(a.id).tu.cdPocion == a.cdPocion)
+  end)
+  paso("autopoción: umbral configurable y curación", function()
+    local Autoridad = require("src.dominio.autoridad")
+    local mundo = Mundo.nuevo()
+    local a = mundo:crearPersonaje({ nombre = "Curandero", faccion = "albor", clase = "guerrero", nivel = 8 })
+    mundo.tiempo = 50
+    local tenia = mundo:contarItem(a, "pocion_vida")
+    a.ultimoGolpe = mundo.tiempo
+    a.hp = math.floor(a.hpMax * 0.3)
+    local hpBaja = a.hp
+    mundo:actualizarJugador(a, 0.05)
+    fallar(errores, "apagada no bebe", mundo:contarItem(a, "pocion_vida") == tenia and a.hp == hpBaja)
+    local ok, limpio = Autoridad.aceptar(mundo, a, "autopocion", { on = true, umbral = 0.74 })
+    fallar(errores, "el servidor redondea el umbral a un paso de 10", ok and limpio.on == true and limpio.umbral == 0.7)
+    fallar(errores, "rechaza un umbral fuera de 20-90", Autoridad.aceptar(mundo, a, "autopocion", { on = true, umbral = 5 }) == false)
+    mundo:accion(a.id, "autopocion", limpio)
+    mundo:actualizarJugador(a, 0.05)
+    fallar(errores, "bebe y cura por debajo del umbral", a.hp > hpBaja and mundo:contarItem(a, "pocion_vida") == tenia - 1)
+    a.hp = math.floor(a.hpMax * 0.2)
+    mundo:actualizarJugador(a, 0.05)
+    fallar(errores, "respeta el enfriamiento", a.hp == math.floor(a.hpMax * 0.2) and mundo:contarItem(a, "pocion_vida") == tenia - 1)
+    a.hp, a.cdPocion = a.hpMax, 0
+    mundo:actualizarJugador(a, 0.05)
+    fallar(errores, "con la vida alta no bebe", mundo:contarItem(a, "pocion_vida") == tenia - 1)
+    a.hp = math.floor(a.hpMax * 0.6)
+    mundo:accion(a.id, "autopocion", { on = true, umbral = 0.4 })
+    mundo:actualizarJugador(a, 0.05)
+    fallar(errores, "al 60% no bebe si el umbral es 40", mundo:contarItem(a, "pocion_vida") == tenia - 1)
+    local ex = mundo:exportar(a)
+    fallar(errores, "el guardado lleva el interruptor y el umbral", ex.autoPocion == true and math.abs(ex.autoPocionUmbral - 0.4) < 0.001)
+    local b = mundo:crearPersonaje({ nombre = "Otro", faccion = "albor", clase = "guerrero" })
+    mundo:aplicarGuardado(b, ex)
+    fallar(errores, "al cargar vuelve la configuración", b.autoPocion == true and math.abs((b.autoPocionUmbral or 0) - 0.4) < 0.001)
+    mundo:accion(a.id, "autopocion", { on = true, umbral = 0.7 })
+    local antes = a.hp
+    mundo:actualizarJugador(a, 0.05)
+    fallar(errores, "al 60% sí bebe si subes el umbral a 70", a.hp > antes and mundo:contarItem(a, "pocion_vida") == tenia - 2)
+    local manaAntes = mundo:contarItem(a, "pocion_mana")
+    a.mp = math.floor(a.mpMax * 0.3)
+    a.cdPocion = 0
+    a.ultimoGolpe = mundo.tiempo
+    local mpBaja = a.mp
+    mundo:actualizarJugador(a, 0.05)
+    fallar(errores, "el maná apagado no bebe", mundo:contarItem(a, "pocion_mana") == manaAntes and a.mp < mpBaja + 1)
+    local okM, limpioM = Autoridad.aceptar(mundo, a, "autopocion", { cual = "mana", on = true, umbral = 0.5 })
+    fallar(errores, "acepta configurar el maná", okM and limpioM.cual == "mana" and limpioM.umbral == 0.5)
+    mundo:accion(a.id, "autopocion", limpioM)
+    mundo:actualizarJugador(a, 0.05)
+    fallar(errores, "bebe maná por debajo de su umbral", a.mp > mpBaja + 5 and mundo:contarItem(a, "pocion_mana") == manaAntes - 1)
+    a.hp = math.floor(a.hpMax * 0.2)
+    a.mp = math.floor(a.mpMax * 0.2)
+    a.cdPocion = 0
+    local vidas = mundo:contarItem(a, "pocion_vida")
+    mundo:actualizarJugador(a, 0.05)
+    fallar(errores, "si faltan las dos, primero bebe vida", mundo:contarItem(a, "pocion_vida") == vidas - 1 and mundo:contarItem(a, "pocion_mana") == manaAntes - 1)
+    local ex2 = mundo:exportar(a)
+    fallar(errores, "el guardado lleva también el maná", ex2.autoMana == true and math.abs(ex2.autoManaUmbral - 0.5) < 0.001)
+    local foto = mundo:foto(a.id).tu
+    fallar(errores, "la foto lleva la configuración", foto.autoPocion == true and foto.autoPocionUmbral == a.autoPocionUmbral
+      and foto.autoMana == true and foto.autoManaUmbral == a.autoManaUmbral)
+    a.nivel = 8
+    a.cdPocion = 0
+    a.autoPocion = true
+    a.autoPocionUmbral = 0.9
+    a.ultimoGolpe = mundo.tiempo
+    a.hp = math.floor(a.hpMax * 0.2)
+    mundo:darItem(a, "pocion_vida_mediana", 1)
+    mundo:darItem(a, "pocion_vida_grande", 1)
+    local peq = mundo:contarItem(a, "pocion_vida")
+    local med = mundo:contarItem(a, "pocion_vida_mediana")
+    local gra = mundo:contarItem(a, "pocion_vida_grande")
+    mundo:actualizarJugador(a, 0.05)
+    fallar(errores, "con nivel bajo bebe la pequeña", peq > 0 and mundo:contarItem(a, "pocion_vida") == peq - 1
+      and mundo:contarItem(a, "pocion_vida_mediana") == med and mundo:contarItem(a, "pocion_vida_grande") == gra)
+    a.nivel = 1
+    a.cdPocion = 0
+    fallar(errores, "la mediana no se bebe antes del nivel 12", mundo:usarPocionId(a, "pocion_vida_mediana") ~= nil
+      and mundo:contarItem(a, "pocion_vida_mediana") == med)
+    a.nivel = 22
+    a.cdPocion = 0
+    a.hp = math.floor(a.hpMax * 0.2)
+    local antesP = mundo:contarItem(a, "pocion_vida")
+    mundo:actualizarJugador(a, 0.05)
+    fallar(errores, "al nivel 22 bebe la más fuerte", mundo:contarItem(a, "pocion_vida_grande") == gra - 1
+      and mundo:contarItem(a, "pocion_vida") == antesP and mundo:contarItem(a, "pocion_vida_mediana") == med)
   end)
   paso("campo de batalla: relieve, colisiones y cristales", function()
     local Mapa = require("compartido.dominio.mapa")
@@ -3469,6 +3568,16 @@ mundo.tiempo = 100
     end
     -- pociones: una cuesta menos que una criatura de nivel 10 da; vender paga menos de lo que cuesta comprar
     fallar(errores, "una poción cuesta poco comparada con el botín", Datos.item("pocion_vida").precio < ingreso(10) * 0.7 and Datos.item("pocion_vida").precio > 20)
+    local pvm, pvg = Datos.item("pocion_vida_mediana"), Datos.item("pocion_vida_grande")
+    local pmm, pmg = Datos.item("pocion_mana_mediana"), Datos.item("pocion_mana_grande")
+    fallar(errores, "las pociones suben de precio con el tamaño", Datos.item("pocion_vida").precio < pvm.precio and pvm.precio < pvg.precio
+      and Datos.item("pocion_mana").precio < pmm.precio and pmm.precio < pmg.precio)
+    fallar(errores, "mediana desde el 12 y grande desde el 22", pvm.nivel == 12 and pmm.nivel == 12 and pvg.nivel == 22 and pmg.nivel == 22)
+    local pv, pm = Datos.item("pocion_vida"), Datos.item("pocion_mana")
+    fallar(errores, "curan más cuanto más grandes", pv.cura < pvm.cura and pvm.cura < pvg.cura and pm.mana < pmm.mana and pmm.mana < pmg.mana)
+    fallar(errores, "pequeña 50-110, mediana 111-190, grande 191-300",
+      pv.cura == 50 and pv.curaMax == 110 and pvm.cura == 111 and pvm.curaMax == 190 and pvg.cura == 191 and pvg.curaMax == 300
+      and pm.mana == 50 and pm.manaMax == 110 and pmm.mana == 111 and pmm.manaMax == 190 and pmg.mana == 191 and pmg.manaMax == 300)
     fallar(errores, "vender paga menos que comprar", Datos.FACTOR_VENTA > 0 and Datos.FACTOR_VENTA < 0.5)
     local p = Mundo.nuevo():crearPersonaje({ nombre = "Vende", faccion = "albor", clase = "guerrero", nivel = 12 })
     local mundo = Mundo.nuevo()
@@ -3477,6 +3586,9 @@ mundo.tiempo = 100
     p.bolsa, p.oro = { { id = "guerrero_arma_4", cant = 1 } }, 0
     mundo:vender(p, 1)
     fallar(errores, "vender paga el 40% del precio", p.oro == math.floor(Datos.item("guerrero_arma_4").precio * 0.4), tostring(p.oro))
+    local oroVenta = p.oro
+    fallar(errores, "nivel 12 no compra la poción grande", mundo:comprar(p, "pocion_vida_grande") ~= nil and p.oro == oroVenta)
+    fallar(errores, "nivel 12 compra la mediana", mundo:comprar(p, "pocion_vida_mediana") == nil and mundo:contarItem(p, "pocion_vida_mediana") == 1)
     -- casas, gremio y muebles
     fallar(errores, "las casas cuestan más que antes", Datos.precioCasa.normal >= 700 and Datos.precioCasa.capital > Datos.precioCasa.normal)
     fallar(errores, "fundar un gremio cuesta unos miles de oro", Gremios.COSTE >= 2000 and Gremios.COSTE <= 5000)

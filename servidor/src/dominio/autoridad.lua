@@ -7,7 +7,7 @@ local A = {}
 
 local ACCIONES = {
   deseo = true, destino = true, objetivo = true, habilidad = true, chat = true,
-  equipar = true, desequipar = true, pocion = true, comprar = true, vender = true,
+  equipar = true, desequipar = true, pocion = true, autopocion = true, comprar = true, vender = true,
   interactuar = true, guerra = true, salir_guerra = true, viaje = true,
   casa_comprar = true, casa_entrar = true, casa_salir = true, mueble = true,
   cofre_guardar = true, cofre_sacar = true,
@@ -156,6 +156,17 @@ function A.aceptar(mundo, pj, nombre, datos)
       return true, { donde = "bolsa", ref = math.floor(i), pergamino = (type(datos.pergamino) == "string" and #datos.pergamino <= 24) and datos.pergamino or nil }
     end
     return false
+  end
+  if nombre == "autopocion" then
+    if datos.cual ~= nil and datos.cual ~= "vida" and datos.cual ~= "mana" then return false end
+    local umbral = tonumber(datos.umbral)
+    if umbral ~= nil then
+      if not finito(umbral) then return false end
+      local pasos = math.floor(umbral * 10 + 0.5)
+      if pasos < 2 or pasos > 9 then return false end
+      umbral = pasos / 10
+    end
+    return true, { cual = datos.cual == "mana" and "mana" or "vida", on = datos.on and true or false, umbral = umbral }
   end
   if nombre == "aprender" then
     if type(datos.id) ~= "string" or #datos.id > 24 then return false end

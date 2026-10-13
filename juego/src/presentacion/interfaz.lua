@@ -470,12 +470,12 @@ function I.hud(mundo, p, w, h)
       if sobre(x, y, 32, 32) then I.pista = (def and def.nombre or s.tipo) .. ": " .. t .. " s" end
     end
   end
-  local function pocion(id, slotIdx, etiqueta, cuenta)
+  local function pocion(tipo, slotIdx, etiqueta, cuenta)
     local x = bx0 + (slotIdx - 1) * (lado_c + sep)
     casilla(x, by0, lado_c)
+    local id = Datos.pocionAlUsar(p.bolsa, p.nivel, tipo)
     local it = Datos.item(id)
-    local n = 0
-    for _, s in ipairs(p.bolsa or {}) do if s.id == id then n = n + (s.cant or 1) end end
+    local n = Datos.contarPociones(p.bolsa, tipo)
     love.graphics.setColor(1, 1, 1, n > 0 and 1 or 0.35)
     if it then Atlas.dibujar(it.hoja, it.sprite, x + lado_c / 2, by0 + lado_c / 2 + 8, 1.2, 16, 16) end
     -- enfriamiento compartido de las pociones (3 s)
@@ -489,11 +489,22 @@ function I.hud(mundo, p, w, h)
     end
     texto(etiqueta, x + 4, by0 + 2, { 1, 0.9, 0.5 }, f)
     texto(tostring(n), x + lado_c - f:getWidth(tostring(n)) - 4, by0 + lado_c - 16, { 1, 1, 1 }, f)
+    local auto = (tipo == "vida" and p.autoPocion) or (tipo == "mana" and p.autoMana)
+    if auto then
+      local c = tipo == "vida" and { 0.45, 0.95, 0.55 } or { 0.45, 0.75, 1 }
+      love.graphics.setColor(c[1], c[2], c[3], 0.95)
+      love.graphics.rectangle("line", x + 2, by0 + 2, lado_c - 4, lado_c - 4, 3, 3)
+    end
     I.registrar(x, by0, lado_c, lado_c, cuenta)
-    if sobre(x, by0, lado_c, lado_c) and it then I.pista = it.nombre end
+    if sobre(x, by0, lado_c, lado_c) and it then
+      local umbral = tipo == "vida" and (p.autoPocionUmbral or 0.5) or (p.autoManaUmbral or 0.5)
+      local pct = math.floor(umbral * 100 + 0.5)
+      local estado = auto and ("activa bajo el " .. pct .. "%") or "apagada"
+      I.pista = it.nombre .. " (" .. n .. " en la bolsa). Autopoción " .. estado .. ". Se configura con R."
+    end
   end
-  pocion("pocion_vida", 7, "7", "poc_vida")
-  pocion("pocion_mana", 8, "8", "poc_mana")
+  pocion("vida", 7, "7", "poc_vida")
+  pocion("mana", 8, "8", "poc_mana")
   -- montar / desmontar: icono a la derecha de los poderes (tecla O)
   local libre = false
   for _, id in ipairs(p.monturas or {}) do
@@ -609,6 +620,7 @@ function I.hud(mundo, p, w, h)
   elseif I.panel == "casa" then I.panelCasa(p, vw, h)
   elseif I.panel == "menu" then I.jugadorMenu = p I.panelPausa(vw, h)
   elseif I.panel == "ajustes" then I.panelAjustes(vw, h)
+  elseif I.panel == "autopocion" then I.panelAutopocion(p, vw, h)
   end
   if I.menuJugador then I.dibujarMenuJugador(mundo, p, vw, h) end
   -- invitaciones (comercio, gremio, grupo): una alerta encima de todo con Aceptar y Rechazar
@@ -990,7 +1002,7 @@ function I.listaBatalla(mundo, p, x, y, w, h)
     if def then
       love.graphics.push()
       love.graphics.translate(x + 20, ry + fila - 2)
-      local esc = def.fila and 0.4 or 0.78
+      local esc = def.fila and ((def.celda or 64) > 64 and 0.28 or 0.4) or 0.78
       love.graphics.scale(esc, esc)
       Personajes.dibujar(def, 1, false, 0, 0, 0)
       love.graphics.pop()
@@ -1262,7 +1274,7 @@ local NOMBRES_OFICIO = { trader = "Comerciante", hunter = "Cazarrecompensas", th
 local DESC_OFICIO = {
   trader = "Compra mercancías donde sobran y véndelas donde faltan. Cuanto más lejos, más ganas. Con una montura llevas más y vas más rápido.",
   hunter = "Caza a los ladrones buscados (los que roban a los comerciantes): cobras una recompensa por cada uno.",
-  thief = "Roba la mercancía de los comerciantes (jugadores) fuera de las ciudades (tecla R) y véndelas a un contacto.",
+  thief = "Roba la mercancía de los comerciantes (jugadores) fuera de las ciudades (tecla B) y véndelas a un contacto.",
 }
 
 -- Marquesina de avisos globales del sistema (por ejemplo, alguien se anota a un evento): el texto
@@ -1692,22 +1704,37 @@ function I.panelMall(mundo, p, w, h)
     px + 14, py + ph - 38, pw - 28, "left")
 end
 
--- Bonos activos en pantalla (esquina superior izquierda, bajo el oficio).
+-- El objeto del mall que concede cada bono, para pintar su icono.
+local iconoPorBono
+local function idIconoBono(id)
+  if not iconoPorBono then
+    iconoPorBono = {}
+    local Mall = require("compartido.dominio.mall")
+    for _, o in ipairs(Mall.OBJETOS) do
+      if o.bono and not iconoPorBono[o.bono] then iconoPorBono[o.bono] = o.id end
+    end
+  end
+  return iconoPorBono[id]
+end
+
+-- Bonos activos junto a la vida, en fila: solo el icono. El tiempo sale al pasar el mouse.
 function I.estadoBonos(mundo, p, x, y)
   local m = p.mall
   if not m or not m.bonos then return end
   local Mall = require("compartido.dominio.mall")
-  local f = pequena()
-  love.graphics.setFont(f)
-  local cy = y
+  local lado = 32
+  local cx = x
   for _, id in ipairs(Mall.ORDEN_BONOS) do
     local resta = m.bonos[id]
     if resta and resta > 0 then
       local b = Mall.BONOS[id]
-      local t = b.etiqueta .. " " .. tiempoCorto(resta)
-      marco(x, cy, f:getWidth(t) + 14, 20, true)
-      texto(t, x + 7, cy + 3, b.color, f)
-      cy = cy + 22
+      local itemId = idIconoBono(id)
+      local it = itemId and Datos.item(itemId)
+      if it then Atlas.dibujar(it.hoja, it.sprite, cx + lado / 2, y + lado / 2, 1, 16, 16, it.tinte) end
+      if sobre(cx, y, lado, lado) then
+        I.pista = (b.nombre or b.etiqueta) .. ": " .. tiempoCorto(resta)
+      end
+      cx = cx + lado + 4
     end
   end
 end
@@ -2391,6 +2418,14 @@ function I.statsTexto(it, enc)
   end
   if it.spd and it.spd ~= 0 then partes[#partes + 1] = "Vel " .. (it.spd > 0 and "+" or "") .. string.format("%.2f", it.spd) end
   if it.slots then partes[#partes + 1] = it.slots .. " espacios" end
+  if it.cura then
+    local hasta = it.curaMax and it.curaMax ~= it.cura and ("-" .. math.floor(it.curaMax)) or ""
+    partes[#partes + 1] = "Vida +" .. math.floor(it.cura) .. hasta
+  end
+  if it.mana and not it.hueco then
+    local hasta = it.manaMax and it.manaMax ~= it.mana and ("-" .. math.floor(it.manaMax)) or ""
+    partes[#partes + 1] = "Maná +" .. math.floor(it.mana) .. hasta
+  end
   local pre = ""
   if it.armadura then pre = "Armadura " .. it.armadura .. ". " end
   return pre .. table.concat(partes, "  ")
@@ -2410,7 +2445,22 @@ local CATEGORIAS_MERCADO = {
 -- Lo que vende el mercado en una categoría, para tu clase y tu nivel.
 function I.listaItemsClase(p, cat)
   cat = cat or "pociones"
-  if cat == "pociones" then return { "pocion_vida", "pocion_mana" } end
+  if cat == "pociones" then
+    local lista = {}
+    for id, it in pairs(Datos.items) do
+      if (Datos.esTipoPocion(it, "vida") or Datos.esTipoPocion(it, "mana")) and (it.nivel or 1) <= (p.nivel or 1) + 4 then
+        lista[#lista + 1] = id
+      end
+    end
+    table.sort(lista, function(a, b)
+      local x, y = Datos.items[a], Datos.items[b]
+      if (x.nivel or 1) ~= (y.nivel or 1) then return (x.nivel or 1) < (y.nivel or 1) end
+      local vx, vy = x.cura and 0 or 1, y.cura and 0 or 1
+      if vx ~= vy then return vx < vy end
+      return a < b
+    end)
+    return lista
+  end
   local def
   for _, c in ipairs(CATEGORIAS_MERCADO) do if c.id == cat then def = c end end
   if not def or not def.huecos then return {} end
@@ -2499,8 +2549,10 @@ function I.panelMercado(p, w, h)
         love.graphics.setColor(1, 0.9, 0.4)
         love.graphics.printf(Ayudas.num(it.precio) .. " oro", x0 + ancho - 190, y + 12, 90, "right")
         local falta = (p.oro or 0) < (it.precio or 0)
-        I.boton(x0 + ancho - 90, y + 5, 80, 30, "Comprar", "compra_" .. fila.id, not falta,
-          "Te faltan " .. Ayudas.num((it.precio or 0) - (p.oro or 0)) .. " de oro.")
+        local bloqueaNivel = (it.cura or it.mana) and not nivelOk
+        local motivo = bloqueaNivel and ("Necesitas nivel " .. (it.nivel or 1) .. ".")
+          or ("Te faltan " .. Ayudas.num((it.precio or 0) - (p.oro or 0)) .. " de oro.")
+        I.boton(x0 + ancho - 90, y + 5, 80, 30, "Comprar", "compra_" .. fila.id, not falta and not bloqueaNivel, motivo)
       end
     end
   end
@@ -3060,7 +3112,7 @@ function I.panelAyuda(w, h)
     "Moverte: WASD o flechas (casilla a casilla, con diagonales) o clic en el suelo. Dos criaturas no pueden ocupar la misma casilla.",
     "Combate: clic en un enemigo (o en la Lista de batalla) lo elige y lo persigue. Tab pasa al siguiente enemigo. Esc suelta el objetivo.",
     "Shift + clic sobre una criatura: la miras y la consola te cuenta qué es. Clic en un aliado: lo eliges para curarlo.",
-    "Poderes 1-6 (se aprenden en el árbol, tecla K). 7 poción de vida, 8 poción de maná. La barra de abajo muestra el enfriamiento.",
+    "Poderes 1-6 (se aprenden en el árbol, tecla K). 7 poción de vida, 8 poción de maná. R abre la autopoción: vida y maná, cada una con su porcentaje. El ladrón roba con B.",
     "Pantalla: arriba a la izquierda tu vida, maná, experiencia y oro; arriba a la derecha el minimapa; abajo a la derecha la lista de batalla. C abre tu personaje (equipo y cifras), I la bolsa y K el árbol de poderes (cada nivel da un punto). En la bolsa, un clic elige, otro clic en la misma casilla equipa y otro clic en otra casilla intercambia.",
     "Clic derecho sobre otro jugador: menú para tratar con él, invitarlo a tu gremio o a tu grupo, o mirarlo. Esc abre el menú del juego (continuar, ajustes y salir); si hay un panel abierto, lo cierra.",
     "E interactúa (mercader, heraldo, mayordomo, casa, altar). M mapa, F1 ayuda, F3 medidor, F11 pantalla completa.",
@@ -3171,20 +3223,49 @@ function I.cuenta(form, w, h)
 end
 
 function I.panelPausa(w, h)
-  caja(w / 2 - 160, h / 2 - 125, 320, 340, "Menú")
-  I.boton(w / 2 - 120, h / 2 - 75, 240, 36, "Volver", "cerrar")
-  I.boton(w / 2 - 120, h / 2 - 25, 240, 36, "Ajustes", "ajustes")
+  caja(w / 2 - 160, h / 2 - 150, 320, 400, "Menú")
+  I.boton(w / 2 - 120, h / 2 - 100, 240, 36, "Volver", "cerrar")
+  I.boton(w / 2 - 120, h / 2 - 50, 240, 36, "Ajustes", "ajustes")
   local etiqueta, hay = "Oficio: aún no tienes", false
   local pj = I.jugadorMenu
   if pj and pj.oficioElegido then
     hay = true
     etiqueta = (pj.job and "Desactivar oficio" or "Activar oficio") .. " (" .. (NOMBRES_OFICIO[pj.oficioElegido] or "?") .. ")"
   end
-  I.boton(w / 2 - 120, h / 2 + 25, 240, 36, etiqueta, "menu_oficio", hay)
-  I.boton(w / 2 - 120, h / 2 + 75, 240, 36, "Item Mall (L)", "menu_mall")
-  I.boton(w / 2 - 120, h / 2 + 125, 240, 36, "Salir al menú", "salir_menu")
+  I.boton(w / 2 - 120, h / 2, 240, 36, etiqueta, "menu_oficio", hay)
+  I.boton(w / 2 - 120, h / 2 + 50, 240, 36, "Item Mall (L)", "menu_mall")
+  I.boton(w / 2 - 120, h / 2 + 100, 240, 36, "Autopoción (R)", "menu_autopocion")
+  I.boton(w / 2 - 120, h / 2 + 150, 240, 36, "Salir al menú", "salir_menu")
   love.graphics.setColor(0.75, 0.72, 0.64)
-  love.graphics.printf("Tu progreso se guarda solo. El oficio solo se activa dentro de una ciudad.", w / 2 - 140, h / 2 + 168, 280, "center")
+  love.graphics.printf("Tu progreso se guarda solo. El oficio solo se activa dentro de una ciudad.", w / 2 - 140, h / 2 + 196, 280, "center")
+end
+
+function I.panelAutopocion(p, w, h)
+  local ancho, alto = 460, 268
+  local x, y = math.floor(w / 2 - ancho / 2), math.floor(h / 2 - alto / 2)
+  caja(x, y, ancho, alto, "Autopoción")
+  love.graphics.setFont(I.fuente)
+  I.boton(x + ancho - 86, y + 8, 70, 26, "Cerrar", "cerrar")
+  love.graphics.setColor(0.78, 0.76, 0.68)
+  love.graphics.printf("Cada una tiene su porcentaje. Comparten 3 s de espera; si faltan las dos, primero bebe vida.", x + 16, y + 46, ancho - 32, "left")
+  local nv = Datos.contarPociones(p.bolsa, "vida")
+  local nm = Datos.contarPociones(p.bolsa, "mana")
+  local function fila(titulo, color, cual, on, umbral, cant, y0)
+    local pct = math.floor((umbral or 0.5) * 100 + 0.5)
+    love.graphics.setColor(color[1], color[2], color[3])
+    love.graphics.print(titulo, x + 20, y0 + 6)
+    love.graphics.setColor(0.7, 0.68, 0.6)
+    love.graphics.print(cant .. " en la bolsa", x + 20, y0 + 24)
+    I.boton(x + 168, y0 + 8, 44, 34, "-", "auto_" .. cual .. "_menos", pct > 20, "El mínimo es 20%.")
+    love.graphics.setColor(0.98, 0.86, 0.45)
+    love.graphics.printf(pct .. "%", x + 216, y0 + 16, 56, "center")
+    I.boton(x + 276, y0 + 8, 44, 34, "+", "auto_" .. cual .. "_mas", pct < 90, "El máximo es 90%.")
+    I.boton(x + 332, y0 + 8, 108, 34, on and "Activada" or "Activar", "auto_" .. cual .. "_on")
+  end
+  fila("Vida", { 1, 0.55, 0.45 }, "vida", p.autoPocion, p.autoPocionUmbral, nv, y + 96)
+  love.graphics.setColor(0.30, 0.42, 0.72, 0.7)
+  love.graphics.rectangle("fill", x + 16, y + 156, ancho - 32, 1)
+  fila("Maná", { 0.55, 0.75, 1 }, "mana", p.autoMana, p.autoManaUmbral, nm, y + 172)
 end
 
 function I.panelAjustes(w, h)

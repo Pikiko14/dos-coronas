@@ -675,12 +675,38 @@ local function generarMundo(rng)
         local mata = (b == "trigal" or b == "campos" or b == "colina") and azar(x, y, 7) < 0.012 and math.sin(x * 0.05) * math.sin(y * 0.05) > 0.3
         local pb = b == "ventisca" and 0.03 or 0.085
         local ps = b == "altiplano" and 0.012 or 0.045
-        if (bosque and azar(x, y, 1) < pb) or (seco and azar(x, y, 2) < ps) or mata then
-          local tipo = "arbol"
-          if seco then tipo = "arbol_seco"
-          elseif bosque then tipo = "arbol_pino" end
+        if (bosque and azar(x, y, 1) < pb) or mata then
+          local tipo = bosque and "arbol_pino" or "arbol"
           setBloque(mapa, x, y, true)
           mapa.props[#mapa.props + 1] = { x = x, y = y, tipo = tipo }
+        end
+        -- El árbol seco salía cortado: no se coloca. Los huevos y los restos sí frenan el paso.
+        if seco and not (mapa.bloque[x] and mapa.bloque[x][y]) then
+          local solido
+          if azar(x, y, 31) < 0.02 then solido = "huevo"
+          else
+            local listas = {
+              eclipse = { { "grieta", 0.04 }, { "restos", 0.007 }, { "piedra", 0.025 }, { "hierba_seca", 0.025 } },
+              cicatriz = { { "grieta", 0.045 }, { "restos", 0.008 }, { "piedra", 0.025 } },
+            }
+            local lista = listas[b]
+            if lista then
+              local r, acum = azar(x, y, 7), 0
+              for _, d in ipairs(lista) do
+                acum = acum + d[2]
+                if r < acum then
+                  if d[1] == "restos" then solido = "restos" end
+                  break
+                end
+              end
+            end
+          end
+          if solido then
+            setBloque(mapa, x, y, true)
+            mapa.adorno = mapa.adorno or {}
+            mapa.adorno[x] = mapa.adorno[x] or {}
+            mapa.adorno[x][y] = solido
+          end
         end
       end
     end
@@ -1116,7 +1142,7 @@ function M.batalla()
   local function decor(x, y, tipo)
     mapa.decorado[x] = mapa.decorado[x] or {}
     mapa.decorado[x][y] = tipo
-    setBloque(mapa, x, y, tipo ~= "restos")
+    setBloque(mapa, x, y, true)
   end
   -- 1) piedras al borde de los caminos (a ambos lados, con huecos para cruzar)
   for x = 24, w - 25 do
@@ -1184,8 +1210,7 @@ function M.batalla()
       end
     end
   end
-  -- 4) restos en el suelo, sin colisión
-  -- (manchas de quemado, brasas, guijarros, grietas finas y restos: no bloquean el paso)
+  -- 4) marcas del suelo. Los huesos también tienen colisión.
   for y = 3, h - 4 do
     for x = 24, w - 25 do
       if not (mapa.bloque[x] and mapa.bloque[x][y]) and not (mapa.decorado[x] and mapa.decorado[x][y]) then

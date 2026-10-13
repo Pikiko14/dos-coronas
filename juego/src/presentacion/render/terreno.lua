@@ -225,6 +225,11 @@ local function decorar(mapa, x, y, px, py, tipo, fam)
       love.graphics.rectangle("fill", px, py, TILE, TILE)
     end
   end
+  local adorno = mapa.adorno and mapa.adorno[x] and mapa.adorno[x][y]
+  if adorno then
+    Objetos.dibujar(adorno, 0, px + 16, py + 31, nil)
+    return
+  end
   if mapa.bloque[x] and mapa.bloque[x][y] then return end
   if tipo == "montana" or tipo == "adoquin" then return end
   local bioma = mapa.bioma[x] and mapa.bioma[x][y]
