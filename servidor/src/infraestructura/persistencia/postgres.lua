@@ -56,7 +56,7 @@ local function sentenciasDe(pid, ex, hp, mp)
   end
   local v = type(ex.vinculo) == "table" and ex.vinculo or {}
   local sets = {
-    "nivel=" .. entero(ex.nivel or 1), "xp=" .. entero(ex.xp), "oro=" .. entero(ex.oro), "monedas=" .. entero(ex.monedas),
+    "nivel=" .. entero(ex.nivel or 1), "xp=" .. entero(ex.xp), "oro=" .. entero(ex.oro), "monedas=" .. entero(ex.monedas), "regalo_mall=" .. Pg.literal(ex.regaloMall and true or false),
     "x=" .. real(ex.x), "y=" .. real(ex.y), "z=" .. entero(ex.z),
     "modo=" .. Pg.literal(ex.modo or "mundo"),
     "vinculo_modo=" .. (v.x and Pg.literal(v.modo or "mundo") or "NULL"),
@@ -221,6 +221,7 @@ function M.abrir()
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS modo TEXT NOT NULL DEFAULT 'mundo';
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS z INT NOT NULL DEFAULT 0;
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS monedas INT NOT NULL DEFAULT 0;
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS regalo_mall BOOLEAN NOT NULL DEFAULT FALSE;
     CREATE TABLE IF NOT EXISTS personaje_addon (
       personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
       addon TEXT NOT NULL,
@@ -506,7 +507,7 @@ end
 function M.cargar(personajeId)
   return con(function(conn)
     local filas, err = conn:consulta(
-      "SELECT id, nombre, faccion, clase, nivel, xp, oro, monedas, x, y, z, modo, hp, mp, guardado, " ..
+      "SELECT id, nombre, faccion, clase, nivel, xp, oro, monedas, regalo_mall, x, y, z, modo, hp, mp, guardado, " ..
       "vinculo_modo, vinculo_x, vinculo_y FROM personajes WHERE id = " .. tonumber(personajeId)
     )
     if not filas or not filas[1] then return nil, err or "No está ese personaje." end
@@ -514,7 +515,7 @@ function M.cargar(personajeId)
     local pid = tonumber(row.id)
     local datos = {
       nombre = row.nombre, faccion = row.faccion, clase = row.clase,
-      nivel = tonumber(row.nivel) or 1, xp = tonumber(row.xp) or 0, oro = tonumber(row.oro) or 0, monedas = tonumber(row.monedas) or 0,
+      nivel = tonumber(row.nivel) or 1, xp = tonumber(row.xp) or 0, oro = tonumber(row.oro) or 0, monedas = tonumber(row.monedas) or 0, regaloMall = row.regalo_mall == "t",
       x = tonumber(row.x), y = tonumber(row.y),
       hp = tonumber(row.hp), mp = tonumber(row.mp), dbId = pid,
     }

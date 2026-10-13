@@ -65,7 +65,7 @@ A.arboles = {
   },
   clerigo = {
     activa("curar", 1, 1, nil, true),
-    activa("bendicion", 2, 7, { "curar", 2 }),
+    activa("bendicion", 2, 5, { "curar", 1 }),
     activa("castigo", 3, 3, { "curar", 1 }),
     activa("consagrar", 4, 12, { "castigo", 2 }),
     activa("sanacion", 5, 15, { "curar", 3 }),

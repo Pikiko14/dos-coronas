@@ -344,7 +344,7 @@ function Entrada.siguienteObjetivo(app)
   app.actuar("objetivo", { id = lista[sigue].e.id, persigue = true })
 end
 
--- Lanza un poder. Los de Ã¡rea sobre un punto (meteoro) caen donde estÃ¡ el cursor si estÃ¡ sobre el
+-- Lanza un poder. Los de área sobre un punto (meteoro) caen donde está el cursor si está sobre el
 -- mundo; si no, sobre el objetivo elegido (el servidor limita el alcance).
 function Entrada.lanzarHabilidad(app, slot)
   local p, mundo = app.jugador, app.mundo
@@ -463,6 +463,9 @@ function Entrada.rueda(app, dy)
     local function dentro(r) return r and mx >= r.x and mx <= r.x + r.w and my >= r.y and my <= r.y + r.h end
     if dentro(Interfaz.comListaA) then Interfaz.comScrollA = math.max(0, (Interfaz.comScrollA or 0) - dy)
     elseif dentro(Interfaz.comListaB) then Interfaz.comScrollB = math.max(0, (Interfaz.comScrollB or 0) - dy) end
+  elseif Interfaz.panel == "mapa" and Interfaz.mapaGeom and Interfaz.mapaTab == "zonas" and Interfaz.zonasArea
+    and (love.mouse.getPosition() / (Interfaz.escala or 1)) >= Interfaz.zonasArea.x then
+    Interfaz.zonasScroll = math.max(0, math.min(Interfaz.zonasMax or 0, (Interfaz.zonasScroll or 0) - dy * 3))
   elseif Interfaz.panel == "mapa" and Interfaz.mapaGeom then
     local mx, my = love.mouse.getPosition()
     local esc = Interfaz.escala or 1

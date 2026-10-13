@@ -437,3 +437,41 @@ PODERES DE AREA
     punto y golpea a todo lo que hay en su area (2,6 casillas): se apunta con el cursor del raton
     (si esta sobre el mundo), o sobre el objetivo elegido, o delante de ti si no hay ninguno. El
     servidor limita el punto al alcance del poder.
+
+MUNDO MAS VARIADO (v. grande)
+  - Las 10 ciudades se reparten por todo el continente (norte, centro y sur de cada mitad), bien
+    separadas (datos.lua, tabla CENTROS).
+  - Cada ciudad tiene a su alrededor zonas para TODOS los niveles: las criaturas de nivel bajo salen
+    cerca de la ciudad y las de nivel alto en anillos cada vez mas lejanos (40 + 6,5 casillas por
+    nivel). Hay mas de 1000 criaturas (antes ~850) y campamentos mas grandes.
+  - Relieve: 22 lagos con orilla de arena, mas cordilleras y un sombreado suave de lomas y
+    hondonadas en el suelo. Los caminos entre ciudades siguen abiertos (hay pruebas).
+  - Mapa (M): las zonas son ahora "ciudad: cercanias / tierras medias / tierras salvajes" con su rango
+    de nivel; la lista se recorre con la rueda y los niveles se escriben al acercar el mapa.
+  - Rendimiento: las criaturas sin ningun jugador a menos de 70 casillas se actualizan 1 vez por
+    segundo, y buscan objetivos en una lista corta (pasamos de ~35 ms a ~5 ms por tick).
+
+CLERIGO Y ZONA CENTRAL
+  - Clerigo: el 2.o poder es ahora el Rayo bendito (antes Bendicion): se aprende al nivel 5 y HIERE
+    a un enemigo (daño magico, 6,4 casillas). Curacion (1.er poder): cura al aliado que elijas con un
+    clic; si no hay nadie elegido, o el elegido es un enemigo, se cura a ti.
+  - Mundo: las zonas entre ciudades y la Cicatriz tambien tienen criaturas (relleno por rejilla): su
+    nivel sube con la distancia a la ciudad mas cercana, asi el centro es la zona mas peligrosa.
+
+SKINS DE JINETES Y MONEDAS INICIALES
+  - Las skins de la hoja Riding (jinetes) usan casillas de 48 px, no de 32: ya se dibujan completas
+    (en el mall y en el juego). En personajes.lua, el campo celda = 48 de cada skin.
+  - Un personaje NUEVO nace con 5000 Monedas Corona (DOSCORONAS_MONEDAS_INICIALES en servidor/.env).
+    Los personajes ya creados no las reciben (usa /admin monedas).
+
+CRIATURAS CADA DOS NIVELES, CAMPAMENTOS Y MONEDAS
+  - 14 criaturas nuevas: ahora hay al menos una en cada tramo de dos niveles (1-2, 3-4 ... 29-30),
+    y varias son pasivas (gallina brava, flor carnivora, flor sangrienta). Son 44 en total.
+  - Mas campamentos (3 por criatura en la ciudad de su bioma, 1 en las demas, mas el relleno por
+    rejilla mas denso) y mas criaturas por campamento (7 / 5 / 4 segun el nivel). Alrededor de 3150
+    entidades. Dentro de un campamento el 40% de las criaturas NO son agresivas: solo pelean si las
+    atacan.
+  - Rendimiento: la comprobacion de casilla ocupada usa una rejilla por fotograma (de ~25 ms a ~2 ms
+    por tick) y las criaturas lejos de todo jugador (45 casillas) se actualizan 1 vez por segundo.
+  - Monedas del mall: cada personaje recibe 5000 UNA vez (los nuevos y los ya existentes la primera vez
+    que entran tras esta version). No poder comprar addons = 0 monedas.

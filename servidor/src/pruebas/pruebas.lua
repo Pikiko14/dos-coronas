@@ -38,7 +38,17 @@ function Pruebas.correr()
   paso("datos", function()
     local silvestres = 0
     for _, m in ipairs(Datos.monstruos) do if not m.noCampamento then silvestres = silvestres + 1 end end
-    fallar(errores, "30 monstruos", silvestres == 30, tostring(silvestres))
+    fallar(errores, "al menos 30 criaturas", silvestres >= 30, tostring(silvestres))
+    -- hay criaturas cada dos niveles hasta el máximo (1-2, 3-4, ... 29-30), y las del último tramo no son solo élites
+    local cubierto = true
+    for n = 1, Datos.NIVEL_MAX, 2 do
+      local hay = false
+      for _, m in ipairs(Datos.monstruos) do
+        if not m.noCampamento and not m.elite and (m.nivel == n or m.nivel == n + 1) then hay = true end
+      end
+      if not hay then cubierto = false end
+    end
+    fallar(errores, "hay criaturas cada dos niveles", cubierto)
     fallar(errores, "10 ciudades", #Datos.ciudades == 10)
     fallar(errores, "mapa extenso", Datos.MAPA_W >= 700 and Datos.MAPA_H >= 500)
     fallar(errores, "nivel maximo", Datos.NIVEL_MAX == 30)
@@ -47,14 +57,25 @@ function Pruebas.correr()
     local mundo = Mundo.nuevo()
     fallar(errores, "ciudades mapa", #mundo.mapas.mundo.ciudades == 10)
     fallar(errores, "campamentos", #mundo.mapas.mundo.campamentos >= 20, tostring(#mundo.mapas.mundo.campamentos))
-    local biomaOk = true
+    -- cada ciudad tiene a su alrededor zonas para todos los niveles, y hay muchas criaturas
+    local porCiudad = {}
     for _, camp in ipairs(mundo.mapas.mundo.campamentos) do
       local mon = Datos.monstruo(camp.monstruo)
-      local tx, ty = math.floor(camp.x), math.floor(camp.y)
-      local b = mundo.mapas.mundo.bioma[tx] and mundo.mapas.mundo.bioma[tx][ty]
-      if mon and mon.bioma and b ~= mon.bioma then biomaOk = false break end
+      if camp.ciudad and mon and not camp.z then
+        local t = porCiudad[camp.ciudad] or { min = 99, max = 0 }
+        t.min, t.max = math.min(t.min, mon.nivel), math.max(t.max, mon.nivel)
+        porCiudad[camp.ciudad] = t
+      end
     end
-    fallar(errores, "monstruo en su bioma", biomaOk)
+    local todas = true
+    for _, c in ipairs(mundo.mapas.mundo.ciudades) do
+      local t = porCiudad[c.id]
+      if not t or t.min > 3 or t.max < 25 then todas = false end
+    end
+    fallar(errores, "cada ciudad tiene zonas para todos los niveles", todas)
+    local mobs = 0
+    for _, e in pairs(mundo.entidades) do if e.kind == "monstruo" then mobs = mobs + 1 end end
+    fallar(errores, "hay muchas más criaturas", mobs >= 1000, tostring(mobs))
     local jugador = mundo:crearPersonaje({ nombre = "Prueba", faccion = "albor", clase = "clerigo" })
     local sx, sy = jugador.x, jugador.y
     fallar(errores, "escaleras", #(mundo.mapas.mundo.escaleras or {}) >= 2)
@@ -1430,6 +1451,7 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     -- se guardan con el personaje (y los ya terminados no vuelven)
     p.bonos = { exp = ahora + 600, atk = ahora - 10 }
     p.addons, p.addonActivo = { skin_marea = true }, "skin_marea"
+    p.regaloMall = true
     local ex = mundo:exportar(p)
     local otra = mundo:crearPersonaje({ nombre = "Comprador2", faccion = "albor", clase = "mago" })
     mundo:aplicarGuardado(otra, require("compartido.dominio.util").jsonDec(require("compartido.dominio.util").jsonEnc(ex)))
@@ -1511,13 +1533,13 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     local function veMonstruos(z)
       p.z = z
       local n = 0
-      for _, e in ipairs(mundo:foto(p.id).ents) do if e.kind == "monstruo" then n = n + 1 end end
+      for _, e in ipairs(mundo:foto(p.id).ents) do if e.kind == "monstruo" and (e.z or 0) == 1 then n = n + 1 end end
       return n
     end
     p.x, p.y = ms.x + 7.5, ms.y + 6.5
     local arribaVe = veMonstruos(1)
     local abajoVe = veMonstruos(0)
-    fallar(errores, "arriba se ven criaturas y abajo no esas", arribaVe > 0 and arribaVe > abajoVe, arribaVe .. " vs " .. abajoVe)
+    fallar(errores, "arriba se ven las criaturas de la plataforma y desde el suelo no", arribaVe > 0 and abajoVe == 0, arribaVe .. " vs " .. abajoVe)
     -- el nivel de las de arriba supera al de su zona
     local mon
     for _, m in pairs(mundo.entidades) do if m.kind == "monstruo" and (m.z or 0) == 1 then mon = m break end end
@@ -1885,7 +1907,7 @@ mundo.tiempo = 100
     mundo:fijarDestino(p, destino.spawn.x, destino.spawn.y)
     fallar(errores, "el viaje largo se parte en tramos", p.caminoCortado == true and p.camino and #p.camino > 0 and #p.camino <= 80)
     local lejos = math.sqrt((destino.spawn.x - ox) ^ 2 + (destino.spawn.y - oy) ^ 2)
-    for _ = 1, 20 * 120 do
+    for _ = 1, 20 * 330 do
       mundo:actualizar(0.05)
       if math.sqrt((p.x - destino.spawn.x) ^ 2 + (p.y - destino.spawn.y) ^ 2) < 3 then break end
     end
@@ -2083,7 +2105,189 @@ mundo.tiempo = 100
     fallar(errores, "pero no más allá de su alcance", ok2 and l2.x and math.sqrt((l2.x - mago.x) ^ 2 + (l2.y - mago.y) ^ 2) <= h.rango + 0.31)
     fallar(errores, "valores raros se descartan", (function() local o, l3 = Autoridad.aceptar(mundo, mago, "habilidad", { slot = 1, x = 0 / 0, y = "x" }) return o and l3.x == nil end)())
   end)
-  paso("comandos de administrador", function()
+  paso("cada clase tiene un poder de área que golpea a varios", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local pu = mundo.mapas.mundo.puestos[1]
+    local casos = {
+      { clase = "guerrero", poder = "tajo", punto = false, cerca = 1.3 },
+      { clase = "cazador", poder = "lluvia", punto = true, cerca = 5 },
+      { clase = "clerigo", poder = "consagrar", punto = false, cerca = 1.5 },
+      { clase = "mago", poder = "nova", punto = false, cerca = 1.5 },
+    }
+    for _, c in ipairs(casos) do
+      local p = mundo:crearPersonaje({ nombre = "AoE" .. c.clase, faccion = "albor", clase = c.clase, nivel = 25 })
+      p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+      p.habilidades[c.poder] = 1
+      p.mp, p.mpMax, p.cds, p.aturdido = 9999, 9999, {}, 0
+      local ms = {}
+      for i = 1, 3 do
+        local m = mundo:spawnMonstruo("troll", p.x + c.cerca + (i - 2) * 0.4, p.y, { x = p.x, y = p.y })
+        m.hp, m.hpMax, m.agresivo, m.cds = 99999, 99999, false, { auto = 1e9 }
+        ms[i] = m
+      end
+      local slot
+      for i, id in ipairs(Datos.barra[c.clase]) do if id == c.poder then slot = i end end
+      if c.punto then mundo:usarHabilidad(p, slot, p.x + c.cerca, p.y) else mundo:usarHabilidad(p, slot) end
+      local golpeados = 0
+      for _, m in ipairs(ms) do if m.hp < m.hpMax then golpeados = golpeados + 1 end end
+      fallar(errores, c.clase .. ": " .. c.poder .. " golpea a los tres a la vez", golpeados == 3, golpeados .. "/3")
+      for _, m in ipairs(ms) do m.borrar = true end
+      mundo:actualizar(0.05)
+    end
+  end)
+  paso("mundo más variado: ciudades dispersas, lagos y relieve", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.mundo
+    -- ciudades repartidas por todo el mapa
+    local minx, maxx, miny, maxy = 1e9, 0, 1e9, 0
+    for _, c in ipairs(mapa.ciudades) do
+      minx, maxx = math.min(minx, c.x), math.max(maxx, c.x + c.w)
+      miny, maxy = math.min(miny, c.y), math.max(maxy, c.y + c.h)
+    end
+    fallar(errores, "las ciudades ocupan casi todo el ancho y el alto", (maxx - minx) > mapa.w * 0.6 and (maxy - miny) > mapa.h * 0.6,
+      string.format("%.0f%% x %.0f%%", (maxx - minx) / mapa.w * 100, (maxy - miny) / mapa.h * 100))
+    local separadas = true
+    for i, a in ipairs(mapa.ciudades) do
+      for j, b in ipairs(mapa.ciudades) do
+        if j > i and math.abs((a.x + a.w / 2) - (b.x + b.w / 2)) < 100 and math.abs((a.y + a.h / 2) - (b.y + b.h / 2)) < 100 then separadas = false end
+      end
+    end
+    fallar(errores, "ninguna ciudad está pegada a otra", separadas)
+    -- lagos y montañas: relieve
+    local agua = 0
+    for x = 0, mapa.w - 1 do for y = 0, mapa.h - 1 do
+      if mapa.suelo[x] and mapa.suelo[x][y] == "agua" and Mapa.get(mapa, x, y) and mapa.bioma[x][y] ~= "agua" then agua = agua + 1 end
+    end end
+    fallar(errores, "hay lagos en el interior", #(mapa.lagos or {}) >= 10 and agua > 500, #(mapa.lagos or {}) .. " lagos, " .. agua .. " casillas")
+    local montes = 0
+    for _, p in ipairs(mapa.props) do if p.tipo:find("montana") then montes = montes + 1 end end
+    fallar(errores, "hay muchas montañas", montes > 150, tostring(montes))
+    -- las ciudades siguen unidas por camino, a pie, de una a otra
+    local function alcanzable(a, b)
+      local cam = Mapa.buscar(mapa, math.floor(a.spawn.x), math.floor(a.spawn.y), math.floor(b.spawn.x), math.floor(b.spawn.y))
+      return cam ~= nil
+    end
+    local todas = true
+    local capA, capU
+    for _, c in ipairs(mapa.ciudades) do if c.capital and c.faccion == "albor" then capA = c elseif c.capital then capU = c end end
+    for _, c in ipairs(mapa.ciudades) do
+      if not alcanzable(capA, c) then todas = false end
+    end
+    fallar(errores, "desde la capital de Albor se llega a pie a todas las ciudades", todas)
+    fallar(errores, "y a la capital de Umbra", alcanzable(capA, capU))
+    -- criaturas: más y por anillos de nivel
+    local n = 0
+    for _, e in pairs(mundo.entidades) do if e.kind == "monstruo" then n = n + 1 end end
+    fallar(errores, "hay mucha más vida salvaje", n >= 1000, tostring(n))
+  end)
+  paso("clérigo: curar a quien eliges (o a ti) y rayo bendito al nivel 5", function()
+    local Arbol = require("compartido.dominio.arbol")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local pu = mundo.mapas.mundo.puestos[1]
+    local function jug(nombre, nivel)
+      local e = mundo:crearPersonaje({ nombre = nombre, faccion = "albor", clase = "clerigo", nivel = nivel })
+      e.x, e.y, e.z, e.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+      return e
+    end
+    local cl, aliado = jug("Cura", 12), jug("Herido", 12)
+    aliado.x = cl.x + 2
+    -- 1º poder: cura al aliado elegido
+    aliado.hp = 10
+    cl.hp = cl.hpMax - 30
+    cl.objetivo = aliado.id
+    cl.cds, cl.mp = {}, cl.mpMax
+    mundo:usarHabilidad(cl, 1)
+    fallar(errores, "curar al aliado elegido", aliado.hp > 10 and cl.hp == cl.hpMax - 30, aliado.hp .. "/" .. cl.hp)
+    -- sin nadie elegido se cura a sí mismo
+    cl.objetivo, cl.cds = nil, {}
+    local antes = cl.hp
+    mundo:usarHabilidad(cl, 1)
+    fallar(errores, "sin objetivo se cura a sí mismo", cl.hp > antes)
+    -- con un enemigo elegido también se cura a sí mismo (no es aliado)
+    local gato = mundo:spawnMonstruo("gato", cl.x + 1, cl.y, { x = cl.x, y = cl.y })
+    gato.agresivo, gato.cds = false, { auto = 1e9 }
+    cl.objetivo, cl.cds, cl.hp = gato.id, {}, cl.hpMax - 40
+    local hp0 = cl.hp
+    mundo:usarHabilidad(cl, 1)
+    fallar(errores, "con un enemigo elegido se cura a sí mismo", cl.hp > hp0)
+    -- 2º poder: se aprende al nivel 5 y hiere
+    fallar(errores, "el segundo poder del clérigo es el rayo bendito", Datos.barra.clerigo[2] == "bendicion" and Datos.habilidades.bendicion.tipo == "enemigo")
+    local nuevo = jug("Novato", 4)
+    nuevo.habilidades = Arbol.iniciales("clerigo")
+    nuevo.puntos = nil
+    fallar(errores, "a nivel 4 aún no se aprende", Arbol.motivo(nuevo, "bendicion") ~= nil)
+    local cinco = jug("Cinco", 5)
+    cinco.habilidades = Arbol.iniciales("clerigo")
+    fallar(errores, "a nivel 5 sí se puede aprender", Arbol.motivo(cinco, "bendicion") == nil, tostring(Arbol.motivo(cinco, "bendicion")))
+    fallar(errores, "el nodo pide nivel 5", Arbol.nodo("clerigo", "bendicion").nivel == 5)
+    cinco.habilidades.bendicion = 1
+    cinco.x = cl.x + 8
+    local enemigo = mundo:spawnMonstruo("troll", cinco.x + 3, cinco.y, { x = cinco.x, y = cinco.y })
+    enemigo.hp, enemigo.hpMax, enemigo.agresivo, enemigo.cds = 99999, 99999, false, { auto = 1e9 }
+    cinco.objetivo, cinco.cds, cinco.mp = enemigo.id, {}, cinco.mpMax
+    mundo:usarHabilidad(cinco, 2)
+    for _ = 1, 40 do mundo:actualizar(0.05) end
+    fallar(errores, "el rayo bendito hiere al enemigo", enemigo.hp < enemigo.hpMax, tostring(enemigo.hp))
+  end)
+  paso("criaturas también entre las ciudades y en la Cicatriz", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.mundo
+    local cx = mapa.w / 2
+    local enCicatriz = 0
+    for _, k in ipairs(mapa.campamentos) do
+      if not k.z and math.abs(k.x - cx) < 20 then enCicatriz = enCicatriz + 1 end
+    end
+    fallar(errores, "hay campamentos en la Cicatriz y a su alrededor", enCicatriz >= 8, tostring(enCicatriz))
+    -- casi cualquier punto de tierra tiene criaturas a una distancia razonable
+    local total, vacios = 0, 0
+    for gy = 30, mapa.h - 30, 25 do
+      for gx = 30, mapa.w - 30, 25 do
+        if Mapa.transitable(mapa, gx, gy) and mapa.bioma[gx][gy] ~= "costa" then
+          total = total + 1
+          local cerca = false
+          for _, k in ipairs(mapa.campamentos) do
+            if not k.z and (k.x - gx) ^ 2 + (k.y - gy) ^ 2 < 55 ^ 2 then cerca = true break end
+          end
+          if not cerca then vacios = vacios + 1 end
+        end
+      end
+    end
+    fallar(errores, "pocas zonas vacías de criaturas", total > 100 and vacios <= total * 0.08, vacios .. " de " .. total)
+    -- el nivel sube hacia el centro (lejos de las ciudades)
+    local suma, n = 0, 0
+    for _, k in ipairs(mapa.campamentos) do
+      if not k.z and math.abs(k.x - cx) < 40 then suma, n = suma + Datos.monstruo(k.monstruo).nivel, n + 1 end
+    end
+    fallar(errores, "el centro es la zona más peligrosa", n > 0 and suma / n >= 14, string.format("%.1f", n > 0 and suma / n or 0))
+  end)
+  paso("monedas del mall: 5000 una sola vez por personaje", function()
+    local Mall = require("compartido.dominio.mall")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local nuevo = mundo:crearPersonaje({ nombre = "Recien", faccion = "albor", clase = "guerrero" })
+    mundo:aplicarGuardado(nuevo, { clase = "guerrero", nivel = 1, xp = 0, oro = 140, monedas = 0 })
+    fallar(errores, "un personaje nuevo recibe 5000 monedas", nuevo.monedas == 5000 and Mall.MONEDAS_INICIALES == 5000, tostring(nuevo.monedas))
+    -- uno que ya existÃ­a sin haberlas recibido las recibe al entrar (sumadas a las que tuviera)
+    local viejo = mundo:crearPersonaje({ nombre = "Viejo", faccion = "albor", clase = "guerrero" })
+    mundo:aplicarGuardado(viejo, { clase = "guerrero", nivel = 5, xp = 0, oro = 10, guardado = true, monedas = 42 })
+    fallar(errores, "un personaje anterior las recibe una vez", viejo.monedas == 5042, tostring(viejo.monedas))
+    -- al guardar y volver a entrar no se regalan otra vez
+    local ex = mundo:exportar(viejo)
+    fallar(errores, "al guardarse queda marcado", ex.regaloMall == true and ex.monedas == 5042)
+    local otra = mundo:crearPersonaje({ nombre = "Vuelve", faccion = "albor", clase = "guerrero" })
+    mundo:aplicarGuardado(otra, require("compartido.dominio.util").jsonDec(require("compartido.dominio.util").jsonEnc(ex)))
+    fallar(errores, "volver a entrar no repite el regalo", otra.monedas == 5042, tostring(otra.monedas))
+    -- si las gastÃ³, no se le vuelven a dar
+    otra.monedas = 7
+    local ex2 = mundo:exportar(otra)
+    local ultima = mundo:crearPersonaje({ nombre = "Gastada", faccion = "albor", clase = "guerrero" })
+    mundo:aplicarGuardado(ultima, require("compartido.dominio.util").jsonDec(require("compartido.dominio.util").jsonEnc(ex2)))
+    fallar(errores, "lo gastado no se repone", ultima.monedas == 7, tostring(ultima.monedas))
+  end)  paso("comandos de administrador", function()
     local mundo = Mundo.nuevo()
     mundo.entidades = {}
     local afuera = mundo.mapas.mundo.puestos[1]

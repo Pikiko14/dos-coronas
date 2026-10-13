@@ -60,14 +60,14 @@ P.skins = {
   skin_angel_fuego = { hoja = "Characters/Spiritual.png", idx = 5 },
   skin_angel_plata = { hoja = "Characters/Spiritual.png", idx = 6 },
   skin_sabio = { hoja = "Characters/Spiritual.png", idx = 7 },
-  skin_jinete_pardo = { hoja = "Characters/Riding.png", idx = 0 },
-  skin_jinete_blanco = { hoja = "Characters/Riding.png", idx = 1 },
-  skin_jinete_negro = { hoja = "Characters/Riding.png", idx = 2 },
-  skin_jinete_dorado = { hoja = "Characters/Riding.png", idx = 3 },
-  skin_abanderado = { hoja = "Characters/Riding.png", idx = 4 },
-  skin_rey_jinete = { hoja = "Characters/Riding.png", idx = 5 },
-  skin_dama_jinete = { hoja = "Characters/Riding.png", idx = 6 },
-  skin_jinete_capucha = { hoja = "Characters/Riding.png", idx = 7 },
+  skin_jinete_pardo = { hoja = "Characters/Riding.png", idx = 0, celda = 48 },
+  skin_jinete_blanco = { hoja = "Characters/Riding.png", idx = 1, celda = 48 },
+  skin_jinete_negro = { hoja = "Characters/Riding.png", idx = 2, celda = 48 },
+  skin_jinete_dorado = { hoja = "Characters/Riding.png", idx = 3, celda = 48 },
+  skin_abanderado = { hoja = "Characters/Riding.png", idx = 4, celda = 48 },
+  skin_rey_jinete = { hoja = "Characters/Riding.png", idx = 5, celda = 48 },
+  skin_dama_jinete = { hoja = "Characters/Riding.png", idx = 6, celda = 48 },
+  skin_jinete_capucha = { hoja = "Characters/Riding.png", idx = 7, celda = 48 },
   skin_cazador_verde = { hoja = "Characters/Evil.png", idx = 0 },
   skin_desierto = { hoja = "Characters/Evil.png", idx = 1 },
   skin_sombra_capucha = { hoja = "Characters/Evil.png", idx = 2 },
@@ -155,6 +155,20 @@ P.monstruos = {
   dragon = { hoja = "Characters/$BigMonster2.png", fila = 1 },
   liche = { hoja = "Characters/Evil.png", idx = 5 },
   behemot = { hoja = "Characters/$BigMonster2.png", fila = 2 },
+  gallina = { hoja = "Characters/Animal.png", idx = 2 },
+  planta_roja = { hoja = "Characters/Monster2.png", idx = 0 },
+  esqueleto = { hoja = "Characters/Monster1.png", idx = 1 },
+  arpia = { hoja = "Characters/Monster2.png", idx = 7 },
+  medusa = { hoja = "Characters/Monster3.png", idx = 3 },
+  flor_sangrienta = { hoja = "Characters/Monster2.png", idx = 4, tinte = { 1, 0.55, 0.6 } },
+  esqueleto_real = { hoja = "Characters/Monster1.png", idx = 1, tinte = { 1, 0.9, 0.5 } },
+  escorpion_carmesi = { hoja = "Characters/Monster3.png", idx = 6, tinte = { 1, 0.6, 0.5 } },
+  dragon_brasas = { hoja = "Characters/Monster2.png", idx = 5, tinte = { 1, 0.75, 0.45 } },
+  medusa_abisal = { hoja = "Characters/Monster3.png", idx = 3, tinte = { 0.55, 0.6, 0.95 } },
+  ojo_abismo = { hoja = "Characters/Monster3.png", idx = 1, tinte = { 0.7, 0.55, 1 } },
+  rey_espectral = { hoja = "Characters/Monster1.png", idx = 0, tinte = { 0.8, 0.65, 1 } },
+  demonio_rey = { hoja = "Characters/Monster1.png", idx = 7, tinte = { 0.8, 0.5, 0.5 } },
+  hidra_ceniza = { hoja = "Characters/$BigMonster1.png", fila = 3, tinte = { 0.65, 0.6, 0.6 } },
 }
 
 -- Definición de dibujo de una entidad, o nil si no es una criatura.
@@ -188,11 +202,13 @@ function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa)
     love.graphics.draw(img, q, sx, sy, 0, 1, 1, 32, 62)
     return 64
   end
-  local ox = (def.idx % 4) * 96
-  local oy = math.floor(def.idx / 4) * 128
+  -- hojas con casillas de 32 px (la mayoria) o de 48 px (jinetes, hoja Riding)
+  local c = def.celda or 32
+  local ox = (def.idx % 4) * c * 3
+  local oy = math.floor(def.idx / 4) * c * 4
   local fila = FILA_DIR[dir or 1] or 0
-  love.graphics.draw(img, Arte.quad(img, ox + col * 32, oy + fila * 32, 32, 32), sx, sy, 0, 1, 1, 16, 30)
-  return 32
+  love.graphics.draw(img, Arte.quad(img, ox + col * c, oy + fila * c, c, c), sx, sy, 0, 1, 1, c / 2, c - 2)
+  return c
 end
 
 -- Cuerpo de un personaje caído: la misma imagen, en escala de grises.

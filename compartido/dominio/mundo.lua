@@ -356,6 +356,8 @@ function Mundo:poblar()
       local y = camp.y + math.sin(ang) * 1.2
       local mon = self:spawnMonstruo(camp.monstruo, x, y, camp, camp.nivel)
       if mon and camp.z then mon.z = camp.z end
+      -- en los campamentos no todos son agresivos: una parte solo pelea si la atacan
+      if mon and mon.agresivo and not mon.elite and not camp.z and math.random() < 0.4 then mon.agresivo = false end
     end
   end
   self:crearObjetivos()
@@ -433,6 +435,26 @@ function Mundo:terrenoLibre(e, tx, ty)
 end
 
 function Mundo:casillaOcupada(e, tx, ty)
+  local celdas = self._celdas
+  if celdas then
+    -- rejilla de celdas de 8x8 casillas armada una vez por fotograma: solo se miran las cercanas
+    local cx, cy = math.floor(tx / 8), math.floor(ty / 8)
+    for dx = -1, 1 do
+      for dy = -1, 1 do
+        local lista = celdas[(cx + dx) * 4096 + (cy + dy)]
+        if lista then
+          for i = 1, #lista do
+            local o = lista[i]
+            if o ~= e and o.vivo ~= false and self:mismoLugar(e, o) then
+              local ox, oy = self:casilla(o)
+              if ox == tx and oy == ty then return true end
+            end
+          end
+        end
+      end
+    end
+    return false
+  end
   for _, o in pairs(self.entidades) do
     if o ~= e and o.vivo ~= false and ocupa(o.kind) and self:mismoLugar(e, o) then
       local ox, oy = self:casilla(o)
@@ -572,11 +594,23 @@ end
 local function rutaHacia(self, e, x, y)
   local dx, dy = x - e.x, y - e.y
   local d = math.sqrt(dx * dx + dy * dy)
-  local tx, ty = x, y
-  if d > 110 then tx, ty = e.x + dx / d * 100, e.y + dy / d * 100 end
-  local cam = Mapa.buscar(self:mapaDe(e), e.x, e.y, tx, ty)
-  if not cam then return nil, false end
-  return cortarCamino(cam), (#cam > 80) or d > 110
+  local mapa = self:mapaDe(e)
+  if d <= 110 then
+    local cam = Mapa.buscar(mapa, e.x, e.y, x, y)
+    if not cam then return nil, false end
+    return cortarCamino(cam), #cam > 80
+  end
+  -- lejos: se busca un punto intermedio hacia la meta; si cae en un lago o una montana se prueban otros
+  -- rumbos y distancias
+  local base = math.atan2(dy, dx)
+  for _, dist in ipairs({ 100, 60, 35 }) do
+    for _, desv in ipairs({ 0, 0.4, -0.4, 0.9, -0.9, 1.4, -1.4 }) do
+      local a = base + desv
+      local cam = Mapa.buscar(mapa, e.x, e.y, e.x + math.cos(a) * dist, e.y + math.sin(a) * dist)
+      if cam and #cam > 0 then return cortarCamino(cam), true end
+    end
+  end
+  return nil, false
 end
 
 function Mundo:fijarDestino(e, x, y)
@@ -1001,6 +1035,7 @@ end
 -- personaje reaparece en la ciudad de su corona.
 Mundo.CUERPO_SEG = 300
 Mundo.PUNTOS_CRISTAL = 300      -- lo que vale entregar el cristal del núcleo enemigo
+Mundo.DISTANCIA_DESPIERTA = 45    -- casillas: lejos de todo jugador, las criaturas se actualizan 1 vez por segundo
 Mundo.POCION_CD = 3          -- segundos entre una poción y la siguiente
 function Mundo:dejarCuerpo(e)
   local id = self:idNuevo()
@@ -1422,6 +1457,13 @@ function Mundo:nombreZona(x, y)
   return "Dos Coronas"
 end
 
+-- A quien pueden atacar las criaturas: jugadores, bots, guardias y caravanas. Se arma una lista por
+-- fotograma (en Mundo:actualizar) para no recorrer todas las entidades por cada criatura.
+local function objetivosPosibles(self)
+  if self._objMon then return ipairs(self._objMon) end
+  return pairs(self.entidades)
+end
+
 function Mundo:actualizarMonstruo(e, dt)
   if not e.vivo then
     if self.tiempo >= (e.respawn or 0) then self:revivir(e) end
@@ -1437,7 +1479,7 @@ function Mundo:actualizarMonstruo(e, dt)
     if amenaza and amenaza.vivo and not (amenaza.kind ~= "guardia" and self:enSantuario(amenaza)) and self:mismoLugar(e, amenaza) and Util.dist(e.x, e.y, amenaza.x, amenaza.y) < 12 then
       mejor = amenaza
     else
-      for _, o in pairs(self.entidades) do
+      for _, o in objetivosPosibles(self) do
         if o.vivo and o.id ~= e.id and self:mismoLugar(e, o) and (o.kind == "guardia" or not self:enSantuario(o))
           and (o.kind == "jugador" or o.kind == "bot" or o.kind == "guardia" or (e.bandido and o.kind == "caravana")) then
           if not (o.kind == "jugador" and o.nivel + 3 < e.nivel and not e.amenaza) then
@@ -2491,6 +2533,43 @@ function Mundo:actualizar(dt)
     ids[n] = id
   end
   for i = n + 1, #ids do ids[i] = nil end
+  -- criaturas dormidas: las que no tienen ningun jugador cerca se actualizan una vez por segundo
+  local vivos = self._pos
+  if not vivos then vivos = {} self._pos = vivos end
+  local nv = 0
+  for i = 1, n do
+    local o = self.entidades[ids[i]]
+    if o and (o.kind == "jugador" or o.kind == "bot") and not o.borrar then
+      nv = nv + 1
+      local t = vivos[nv]
+      if not t then t = {} vivos[nv] = t end
+      t.x, t.y, t.modo, t.z = o.x, o.y, o.modo, o.z or 0
+    end
+  end
+  for i = nv + 1, #vivos do vivos[i] = nil end
+  local celdas = {}
+  for i = 1, n do
+    local o = self.entidades[ids[i]]
+    if o and not o.borrar and o.vivo ~= false and ocupa(o.kind) and o.x then
+      local k = math.floor(o.x / 8) * 4096 + math.floor(o.y / 8)
+      local l = celdas[k]
+      if not l then l = {} celdas[k] = l end
+      l[#l + 1] = o
+    end
+  end
+  self._celdas = celdas
+  local objs = self._objMon
+  if not objs then objs = {} self._objMon = objs end
+  local no = 0
+  for i = 1, n do
+    local o = self.entidades[ids[i]]
+    if o and o.vivo and not o.borrar and (o.kind == "jugador" or o.kind == "bot" or o.kind == "guardia" or o.kind == "caravana") then
+      no = no + 1
+      objs[no] = o
+    end
+  end
+  for i = no + 1, #objs do objs[i] = nil end
+  local DISTANCIA_DESPIERTA2 = Mundo.DISTANCIA_DESPIERTA * Mundo.DISTANCIA_DESPIERTA
   for i = 1, n do
     local id = ids[i]
     local e = self.entidades[id]
@@ -2499,7 +2578,25 @@ function Mundo:actualizar(dt)
       elseif e.kind == "bot" then
         if e.ia then self:pensarBot(e, dt) end
         self:actualizarJugador(e, dt)
-      elseif e.kind == "monstruo" then self:actualizarMonstruo(e, dt)
+      elseif e.kind == "monstruo" then
+        local cerca = false
+        for k = 1, nv do
+          local t = vivos[k]
+          if t.modo == "mundo" then
+            local dx, dy = t.x - e.x, t.y - e.y
+            if dx * dx + dy * dy < DISTANCIA_DESPIERTA2 then cerca = true break end
+          end
+        end
+        if cerca or e.objetivo then
+          self:actualizarMonstruo(e, (e._dormido or 0) + dt)
+          e._dormido = nil
+        else
+          e._dormido = (e._dormido or 0) + dt
+          if e._dormido >= 1 then
+            self:actualizarMonstruo(e, e._dormido)
+            e._dormido = 0
+          end
+        end
       elseif e.kind == "guardia" then self:actualizarGuardia(e, dt)
       elseif e.kind == "proyectil" then self:actualizarProyectil(e, dt)
       elseif e.kind == "trampa" then self:actualizarTrampa(e, dt)
@@ -2591,7 +2688,7 @@ function Mundo:exportar(p)
     mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
     job = p.oficioElegido, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
     monturas = p.monturas, monturaPreferida = p.monturaPreferida,
-    monedas = p.monedas, addons = p.addons, addonActivo = p.addonActivo, bonos = p.bonos,
+    monedas = p.monedas, regaloMall = p.regaloMall, addons = p.addons, addonActivo = p.addonActivo, bonos = p.bonos,
     z = z,
   }
 end
@@ -2613,7 +2710,11 @@ function Mundo:aplicarGuardado(p, data)
   if p.oficioElegido and self:pesoCarga(p) > 0 then p.job = p.oficioElegido end
   p.monturas, p.monturaPreferida = data.monturas or {}, data.monturaPreferida
   -- item mall: monedas, addons y bonos (los ya terminados se descartan)
-  p.monedas, p.addons, p.addonActivo = data.monedas or 0, data.addons or {}, data.addonActivo
+  -- las monedas iniciales del mall se dan UNA vez a cada personaje (nuevo o ya existente)
+  p.monedas = data.monedas or 0
+  if not data.regaloMall then p.monedas = p.monedas + Mall.MONEDAS_INICIALES end
+  p.regaloMall = true
+  p.addons, p.addonActivo = data.addons or {}, data.addonActivo
   if p.addonActivo and not p.addons[p.addonActivo] then p.addonActivo = nil end
   p.bonos = {}
   for bono, fin in pairs(data.bonos or {}) do

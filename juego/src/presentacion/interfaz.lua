@@ -2593,13 +2593,16 @@ function I.panelMapa(mundo, p, w, h)
     else
       love.graphics.circle("fill", x0, y0, 5)
     end
-    local etiqueta = "nv " .. z.nivelMin .. "-" .. z.nivelMax
-    if I.mapaZoom >= 2.2 then etiqueta = z.nombre .. "  " .. etiqueta end
-    love.graphics.setColor(0, 0, 0, 0.75)
-    love.graphics.print(etiqueta, x0 + 9, y0 - 6)
-    love.graphics.setColor(1, 0.96, 0.8, 1)
-    love.graphics.print(etiqueta, x0 + 8, y0 - 7)
     local d = (mx - x0) ^ 2 + (my - y0) ^ 2
+    -- con muchas zonas, el nivel se escribe al acercar el mapa o al pasar el raton por encima
+    if I.mapaZoom >= 1.5 or d < 400 then
+      local etiqueta = "nv " .. z.nivelMin .. "-" .. z.nivelMax
+      if I.mapaZoom >= 2.6 then etiqueta = z.nombre .. "  " .. etiqueta end
+      love.graphics.setColor(0, 0, 0, 0.75)
+      love.graphics.print(etiqueta, x0 + 9, y0 - 6)
+      love.graphics.setColor(1, 0.96, 0.8, 1)
+      love.graphics.print(etiqueta, x0 + 8, y0 - 7)
+    end
     if d < 400 and (not cd or d < cd) then cerca, cd = z, d end
   end
   -- destino elegido con un clic: una cruz hasta que llegues
@@ -2641,7 +2644,13 @@ function I.panelMapa(mundo, p, w, h)
     love.graphics.setColor(0.7, 0.68, 0.58)
     love.graphics.print("Clic en una zona para verla. ▲ = zona elevada.", lx, ly)
     ly = ly + 22
-    for i, z in ipairs(zonas) do
+    -- la lista es larga: se recorre con la rueda del ratón
+    local visibles = math.max(5, math.floor((h - 80 - ly - 30) / 19))
+    I.zonasMax = math.max(0, #zonas - visibles)
+    I.zonasScroll = math.max(0, math.min(I.zonasMax, I.zonasScroll or 0))
+    I.zonasArea = { x = lx, y = ly, w = 320, h = visibles * 19 }
+    for i = 1 + I.zonasScroll, math.min(#zonas, I.zonasScroll + visibles) do
+      local z = zonas[i]
       local r, gg, b = colorNivel(z.nivelMax)
       love.graphics.setColor(r, gg, b, 1)
       love.graphics.print((z.elevada and "▲ " or "● ") .. "nv " .. z.nivelMin .. "-" .. z.nivelMax, lx, ly)
@@ -2649,6 +2658,10 @@ function I.panelMapa(mundo, p, w, h)
       love.graphics.print(z.nombre, lx + 78, ly)
       I.registrar(lx, ly - 2, 300, 18, "mapa_zona_" .. i)
       ly = ly + 19
+    end
+    if I.zonasMax > 0 then
+      love.graphics.setColor(0.65, 0.62, 0.55)
+      love.graphics.print("Rueda sobre la lista para ver más (" .. (I.zonasScroll + 1) .. "-" .. math.min(#zonas, I.zonasScroll + visibles) .. " de " .. #zonas .. ")", lx, ly + 4)
     end
   elseif I.mapaTab == "ciudades" then
     for _, c in ipairs(mundoMapa.ciudades) do

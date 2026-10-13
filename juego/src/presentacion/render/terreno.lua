@@ -209,6 +209,17 @@ local function decorar(mapa, x, y, px, py, tipo, fam)
     if d then require("src.presentacion.render.campo").decoracion(mapa, d, x, y, px, py) end
     return
   end
+  -- relieve suave del terreno abierto: lomas claras y hondonadas oscuras (ruido de baja frecuencia)
+  if not mapa.decorado and mapa.w > 300 then
+    local n = math.sin(x * 0.045 + y * 0.02) + math.sin(y * 0.06 - x * 0.03) + 0.8 * math.sin((x + y) * 0.021) + 0.6 * math.sin(x * 0.11 - y * 0.09)
+    if n < -0.5 then
+      love.graphics.setColor(0, 0, 0.05, math.min(0.16, (-n - 0.5) * 0.09))
+      love.graphics.rectangle("fill", px, py, TILE, TILE)
+    elseif n > 1.1 then
+      love.graphics.setColor(1, 0.95, 0.7, math.min(0.1, (n - 1.1) * 0.07))
+      love.graphics.rectangle("fill", px, py, TILE, TILE)
+    end
+  end
   if mapa.bloque[x] and mapa.bloque[x][y] then return end
   if tipo == "montana" or tipo == "adoquin" then return end
   local bioma = mapa.bioma[x] and mapa.bioma[x][y]

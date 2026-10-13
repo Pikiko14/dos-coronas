@@ -504,6 +504,41 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     Entrada.lanzarHabilidad(app, slotDe("meteoro"))
     fallar(errores, "el meteoro se envía con su slot (y el punto si el cursor está en el mundo)", llamadas[2] and llamadas[2][2].slot == slotDe("meteoro"))
   end)
+  paso("skins de jinetes con casillas de 48 px", function()
+    local P = require("src.presentacion.render.personajes")
+    local Arte = require("src.presentacion.render.arte")
+    local grandes = 0
+    for id, def in pairs(P.skins) do
+      if def.hoja == "Characters/Riding.png" then
+        grandes = grandes + 1
+        fallar(errores, id .. " usa casillas de 48", def.celda == 48)
+        local img = Arte.img(def.hoja)
+        local bloqueW, bloqueH = 48 * 3, 48 * 4
+        local dentro = (def.idx % 4 + 1) * bloqueW <= img:getWidth() and (math.floor(def.idx / 4) + 1) * bloqueH <= img:getHeight()
+        fallar(errores, id .. " está dentro de la hoja", dentro)
+        local ok, err = pcall(P.dibujar, def, 1, false, 0, 100, 100)
+        fallar(errores, id .. " se dibuja", ok, tostring(err))
+        fallar(errores, id .. " devuelve el alto del cuadro", select(2, pcall(P.dibujar, def, 3, true, 0.3, 100, 100)) == 48)
+      end
+    end
+    fallar(errores, "hay 8 skins de jinete", grandes == 8, tostring(grandes))
+  end)
+  paso("todas las criaturas tienen sprite", function()
+    local P = require("src.presentacion.render.personajes")
+    local Arte = require("src.presentacion.render.arte")
+    local faltan = {}
+    for _, m in ipairs(Datos.monstruos) do
+      if not m.noCampamento then
+        local d = P.monstruos[m.id]
+        if not d or not Arte.img(d.hoja) then faltan[#faltan + 1] = m.id
+        else
+          local ok = pcall(P.dibujar, d, 1, true, 0.2, 100, 100, d.tinte)
+          if not ok then faltan[#faltan + 1] = m.id .. "(dibujo)" end
+        end
+      end
+    end
+    fallar(errores, "cada criatura se dibuja", #faltan == 0, table.concat(faltan, ", "))
+  end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Clic", faccion = "albor", clase = "mago" })

@@ -504,6 +504,56 @@ function M.mundo(rng)
       end
     end
   end
+  -- Lagos: masas de agua (con orilla de arena) repartidas por el territorio, lejos de las ciudades y sin
+  -- cortar caminos ni la plaza central. Rompen la llanura y obligan a rodear.
+  mapa.lagos = {}
+  do
+    local function hayCamino(x0, y0, r)
+      for y = y0 - r, y0 + r do
+        for x = x0 - r, x0 + r do
+          local s = M.get(mapa, x, y)
+          if s == "camino" or s == "plaza" or s == "montana" then return true end
+          if cercaCiudad(x, y, 16) then return true end
+        end
+      end
+      return false
+    end
+    local intentos = 0
+    while #mapa.lagos < 22 and intentos < 600 do
+      intentos = intentos + 1
+      local x = rng:int(50, mapa.w - 50)
+      local y = rng:int(50, mapa.h - 50)
+      local d = math.sqrt(((x - cx) / rx) ^ 2 + ((y - cy) / ry) ^ 2)
+      local b = mapa.bioma[x] and mapa.bioma[x][y]
+      local r = rng:int(5, 13)
+      if d < 0.72 and math.abs(x - cx) > 30 * E and b ~= "agua" and b ~= "cicatriz" and b ~= "costa" and not hayCamino(x, y, r + 4) then
+        local ya = false
+        for _, l in ipairs(mapa.lagos) do
+          if (l.x - x) ^ 2 + (l.y - y) ^ 2 < (l.r + r + 14) ^ 2 then ya = true end
+        end
+        if not ya then
+          local ang0 = rng:int(0, 359)
+          for ty = y - r - 3, y + r + 3 do
+            for tx = x - r - 3, x + r + 3 do
+              local dx, dy = (tx - x) / (r * 1.25), (ty - y) / (r * 0.8)
+              local ruido2 = 0.22 * math.sin(math.atan2(ty - y, tx - x) * 3 + ang0) + 0.1 * math.sin((tx + ty) * 0.7)
+              local dd = math.sqrt(dx * dx + dy * dy) + ruido2
+              local s = M.get(mapa, tx, ty)
+              if s and s ~= "camino" and s ~= "plaza" and s ~= "montana" and (mapa.bioma[tx][ty] ~= "agua") then
+                if dd < 0.85 then
+                  setSuelo(mapa, tx, ty, "agua", mapa.bioma[tx][ty], nil)
+                  setBloque(mapa, tx, ty, true)
+                elseif dd < 1.1 and s ~= "agua" and s ~= "arena" then
+                  setSuelo(mapa, tx, ty, "arena", mapa.bioma[tx][ty], nil)
+                end
+              end
+            end
+          end
+          mapa.lagos[#mapa.lagos + 1] = { x = x, y = y, r = r }
+        end
+      end
+    end
+  end
   -- Cordilleras: picos de 2x2 casillas a lo largo de la frontera entre las zonas de
   -- dos ciudades vecinas, con huecos para pasar. Nunca pisan caminos, plazas, costa
   -- ni la cicatriz, así que las ciudades siguen conectadas por los caminos.
@@ -528,8 +578,8 @@ function M.mundo(rng)
         if not d1 or d < d1 then d1, d2 = d, d1
         elseif not d2 or d < d2 then d2 = d end
       end
-      local ancho = 1.5 + 3.5 * azar(math.floor(x / 6), math.floor(y / 6), 21)
-      if d2 and d2 - d1 < ancho and d1 > 14 and azar(math.floor(x / 20), math.floor(y / 20), 22) >= 0.28
+      local ancho = 2 + 5 * azar(math.floor(x / 6), math.floor(y / 6), 21)
+      if d2 and d2 - d1 < ancho and d1 > 14 and azar(math.floor(x / 20), math.floor(y / 20), 22) >= 0.12
         and azar(x, y, 23) < 0.8 and not cercaCiudad(x, y, 10)
         and libre(x, y) and libre(x + 1, y) and libre(x, y + 1) and libre(x + 1, y + 1) then
         for dy = 0, 1 do
@@ -674,19 +724,84 @@ function M.mundo(rng)
       if ok and not dentroCiudad(mapa.ciudades, x, y) then return x + 0.5, y + 0.5 end
     end
   end
-  for _, mon in ipairs(Datos.monstruos) do
-    if mon.noCampamento then goto siguiente end
-    local camps = mon.elite and 1 or (mon.nivel <= 8 and 11 or 7)
-    local cant = mon.elite and 1 or (mon.nivel >= 20 and 2 or 3)
-    for _ = 1, camps do
-      local x, y = punto(mon.bioma)
-      if x then
-        mapa.campamentos[#mapa.campamentos + 1] = {
-          x = x, y = y, monstruo = mon.id, cantidad = cant, radio = 4,
-        }
+  -- Campamentos de criaturas: alrededor de CADA ciudad hay zonas para todos los niveles. Las criaturas
+  -- de nivel bajo salen cerca de la ciudad y las de nivel alto cada vez mas lejos (anillos). En la
+  -- ciudad de su bioma cada criatura tiene el doble de campamentos.
+  local function puntoAnillo(c, dist)
+    local ccx, ccy = c.x + c.w / 2, c.y + c.h / 2
+    for _ = 1, 80 do
+      local ang = rng:int(0, 359) * math.pi / 180
+      local d = dist + rng:int(-9, 9)
+      local x, y = math.floor(ccx + math.cos(ang) * d), math.floor(ccy + math.sin(ang) * d)
+      if x > 2 and y > 2 and x < mapa.w - 3 and y < mapa.h - 3 then
+        local s = M.get(mapa, x, y)
+        local b = mapa.bioma[x] and mapa.bioma[x][y]
+        local ok = M.transitable(mapa, x, y) and b ~= "ciudad" and b ~= "cicatriz" and s ~= "camino" and s ~= "plaza"
+        if ok and cercaCiudad(x, y, 10) then ok = false end
+        if ok and cercaDePuesto(x, y, 12) then ok = false end
+        if ok then return x + 0.5, y + 0.5 end
       end
     end
-    ::siguiente::
+  end
+  M.DIST_BASE, M.DIST_POR_NIVEL = 40, 6.5
+  for _, mon in ipairs(Datos.monstruos) do
+    if not mon.noCampamento then
+      local cant = mon.elite and 2 or (mon.nivel <= 8 and 7 or (mon.nivel >= 20 and 4 or 5))
+      for _, c in ipairs(mapa.ciudades) do
+        local propia = mon.bioma == c.bioma
+        local camps = mon.elite and (propia and 1 or 0) or (propia and 3 or 1)
+        for _ = 1, camps do
+          local x, y = puntoAnillo(c, M.DIST_BASE + mon.nivel * M.DIST_POR_NIVEL)
+          if x then
+            mapa.campamentos[#mapa.campamentos + 1] = {
+              x = x, y = y, monstruo = mon.id, cantidad = cant, radio = 4, ciudad = c.id,
+            }
+          end
+        end
+      end
+    end
+  end
+  -- Relleno: las zonas entre ciudades y la Cicatriz tambien tienen criaturas. Sobre una rejilla se
+  -- anaden campamentos donde no hay ninguno cerca; su nivel depende de lo lejos que estan de la ciudad
+  -- mas proxima (mismo reparto por anillos), asi el centro del mapa es la zona mas peligrosa.
+  do
+    local CELDA, HUECO = 34, 28
+    local function campamentoCerca(x, y, r)
+      for _, k in ipairs(mapa.campamentos) do
+        if not k.z and (k.x - x) ^ 2 + (k.y - y) ^ 2 < r * r then return true end
+      end
+      return false
+    end
+    for gy = 12, mapa.h - 12, CELDA do
+      for gx = 12, mapa.w - 12, CELDA do
+        local x, y = gx + rng:int(-12, 12), gy + rng:int(-12, 12)
+        if x > 2 and y > 2 and x < mapa.w - 3 and y < mapa.h - 3 then
+          local s = M.get(mapa, x, y)
+          local b = mapa.bioma[x] and mapa.bioma[x][y]
+          local ok = M.transitable(mapa, x, y) and b ~= "ciudad" and s ~= "camino" and s ~= "plaza"
+          if ok and (cercaCiudad(x, y, 10) or cercaDePuesto(x, y, 12) or campamentoCerca(x, y, HUECO)) then ok = false end
+          if ok then
+            local cerca, md
+            for _, c in ipairs(mapa.ciudades) do
+              local d2 = (c.x + c.w / 2 - x) ^ 2 + (c.y + c.h / 2 - y) ^ 2
+              if not md or d2 < md then cerca, md = c, d2 end
+            end
+            local nivel = math.max(1, math.min(Datos.NIVEL_MAX, math.floor((math.sqrt(md) - M.DIST_BASE) / M.DIST_POR_NIVEL + 0.5)))
+            local posibles = {}
+            for _, mon in ipairs(Datos.monstruos) do
+              if not mon.noCampamento and not mon.elite and math.abs(mon.nivel - nivel) <= 2 then posibles[#posibles + 1] = mon end
+            end
+            if #posibles > 0 then
+              local mon = posibles[rng:int(1, #posibles)]
+              mapa.campamentos[#mapa.campamentos + 1] = {
+                x = x + 0.5, y = y + 0.5, monstruo = mon.id, radio = 4, ciudad = cerca.id,
+                cantidad = mon.nivel <= 8 and 7 or (mon.nivel >= 20 and 4 or 5),
+              }
+            end
+          end
+        end
+      end
+    end
   end
   mapa.escaleras = {}
   mapa.alto = {}
@@ -1012,15 +1127,22 @@ end
 -- donde están sus campamentos) y una por cada zona elevada. Se calcula una vez y se guarda.
 function M.zonas(mapa)
   if mapa._zonas then return mapa._zonas end
+  -- una zona por ciudad y franja de nivel: cercanias (1-10), tierras medias (11-20) y tierras salvajes (21-30)
+  local FRANJAS = { { 1, 10, "cercanias" }, { 11, 20, "tierras medias" }, { 21, 99, "tierras salvajes" } }
+  local nombres = {}
+  for _, c in ipairs(mapa.ciudades or {}) do nombres[c.id] = c.nombre end
   local por = {}
   for _, camp in ipairs(mapa.campamentos or {}) do
-    if not camp.z then
+    if not camp.z and camp.ciudad then
       local mon = Datos.monstruo(camp.monstruo)
-      if mon and mon.bioma then
-        local z = por[mon.bioma]
+      if mon then
+        local fi = 3
+        for i, f in ipairs(FRANJAS) do if mon.nivel >= f[1] and mon.nivel <= f[2] then fi = i break end end
+        local clave = camp.ciudad .. "|" .. fi
+        local z = por[clave]
         if not z then
-          z = { bioma = mon.bioma, sx = 0, sy = 0, n = 0, monstruos = {}, vistos = {} }
-          por[mon.bioma] = z
+          z = { ciudad = camp.ciudad, franja = fi, sx = 0, sy = 0, n = 0, monstruos = {}, vistos = {} }
+          por[clave] = z
         end
         z.sx, z.sy, z.n = z.sx + camp.x, z.sy + camp.y, z.n + 1
         if not z.vistos[mon.id] then
@@ -1031,15 +1153,14 @@ function M.zonas(mapa)
     end
   end
   local lista = {}
-  for bioma, z in pairs(por) do
+  for _, z in pairs(por) do
     table.sort(z.monstruos, function(a, b) return a.nivel < b.nivel end)
-    local def = Datos.biomas[bioma]
     lista[#lista + 1] = {
-      nombre = def and def.nombre or bioma, bioma = bioma, x = z.sx / z.n, y = z.sy / z.n,
-      nivelMin = z.monstruos[1].nivel, nivelMax = z.monstruos[#z.monstruos].nivel, monstruos = z.monstruos,
+      nombre = (nombres[z.ciudad] or z.ciudad) .. ": " .. FRANJAS[z.franja][3], ciudad = z.ciudad, franja = z.franja,
+      x = z.sx / z.n, y = z.sy / z.n, nivelMin = z.monstruos[1].nivel, nivelMax = z.monstruos[#z.monstruos].nivel,
+      monstruos = z.monstruos,
     }
-  end
-  for _, ms in ipairs(mapa.mesetas or {}) do
+  end  for _, ms in ipairs(mapa.mesetas or {}) do
     local vistos, ms_lista = {}, {}
     for _, camp in ipairs(mapa.campamentos) do
       if camp.z and camp.x >= ms.x and camp.x < ms.x + ms.w and camp.y >= ms.y and camp.y < ms.y + ms.h and not vistos[camp.monstruo] then

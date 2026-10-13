@@ -7,6 +7,7 @@
 local M = {}
 
 M.MONEDA = "Monedas Corona"
+M.MONEDAS_INICIALES = 5000   -- monedas con las que nace un personaje nuevo (para probar el mall)
 M.DURACION_SEG = 1800        -- pergaminos de combate
 M.DURACION_EXP_SEG = 3600    -- tarjeta de experiencia doble
 

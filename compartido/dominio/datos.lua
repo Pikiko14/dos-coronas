@@ -82,7 +82,7 @@ D.clases = {
 
 D.habilidades = {
   golpe = { nombre = "Golpe", clase = "guerrero", cd = 1.6, mana = 0, tipo = "enemigo", coef = 1.15, rango = 1.45, desc = "Un golpe firme con el arma." },
-  tajo = { nombre = "Tajo", clase = "guerrero", cd = 7, mana = 14, tipo = "alrededor", coef = 0.9, rango = 2.1, desc = "Golpea a todos los enemigos cercanos." },
+  tajo = { nombre = "Tajo", clase = "guerrero", cd = 7, mana = 14, tipo = "alrededor", coef = 1.5, rango = 2.1, desc = "Golpea a todos los enemigos cercanos." },
   grito = { nombre = "Grito de guerra", clase = "guerrero", cd = 16, mana = 18, tipo = "buff_alrededor", buff = "grito", dur = 8, rango = 4.5, desc = "Aumenta el ataque de los aliados cercanos." },
   desgarro = { nombre = "Desgarro", clase = "guerrero", cd = 9, mana = 20, tipo = "enemigo", coef = 1.6, rango = 1.45, desc = "Un tajo profundo que abre una herida." },
   furia = { nombre = "Furia", clase = "guerrero", cd = 32, mana = 28, tipo = "propio", buff = "furia", dur = 10, efecto = { atk = 0.3 }, desc = "Tu ataque crece mucho durante un rato." },
@@ -93,21 +93,21 @@ D.habilidades = {
   escudo = { nombre = "Escudo arcano", clase = "mago", cd = 14, mana = 20, tipo = "propio", buff = "escudo", dur = 8, desc = "Absorbe parte del daño." },
   sombra = { nombre = "Descarga de sombras", clase = "mago", cd = 6, mana = 26, tipo = "enemigo", coef = 1.2, rango = 7, proyectil = "sombra", dano = "magico", desc = "Una descarga oscura que drena vida." },
   meteoro = { nombre = "Meteoro", clase = "mago", cd = 22, mana = 45, tipo = "punto", coef = 2.3, rango = 8, aoe = 2.6, dano = "magico", desc = "Una roca en llamas cae sobre la zona." },
-  nova = { nombre = "Nova de hielo", clase = "mago", cd = 10, mana = 22, tipo = "alrededor", coef = 0.85, rango = 2.8, lentitud = 0.45, dano = "magico", desc = "Hiela y ralentiza alrededor." },
+  nova = { nombre = "Nova de hielo", clase = "mago", cd = 10, mana = 50, tipo = "alrededor", coef = 1.4, rango = 3.8, lentitud = 0.45, dano = "magico", desc = "Hiela y ralentiza alrededor." },
 
   disparo = { nombre = "Disparo", clase = "cazador", cd = 1.05, mana = 6, tipo = "enemigo", coef = 1.15, rango = 7.4, proyectil = "flecha", desc = "Una flecha rápida." },
-  lluvia = { nombre = "Lluvia de flechas", clase = "cazador", cd = 8, mana = 22, tipo = "punto", coef = 0.8, rango = 7.4, aoe = 2.2, desc = "Flechas sobre una zona." },
+  lluvia = { nombre = "Lluvia de flechas", clase = "cazador", cd = 8, mana = 22, tipo = "punto", coef = 1.3, rango = 7.4, aoe = 2.2, desc = "Flechas sobre una zona." },
   flecha_veneno = { nombre = "Flecha envenenada", clase = "cazador", cd = 7, mana = 16, tipo = "enemigo", coef = 1.0, rango = 7.4, proyectil = "flecha", desc = "Una flecha untada que envenena." },
   paso_agil = { nombre = "Paso ágil", clase = "cazador", cd = 18, mana = 14, tipo = "propio", buff = "agil", dur = 5, efecto = { vel = 0.5 }, desc = "Corres mucho más rápido un momento." },
   trampa = { nombre = "Trampa", clase = "cazador", cd = 14, mana = 16, tipo = "suelo", rango = 1.2, desc = "Inmoviliza al primer enemigo que la pisa." },
   preciso = { nombre = "Tiro preciso", clase = "cazador", cd = 8, mana = 18, tipo = "enemigo", coef = 2.05, rango = 8.2, proyectil = "flecha", desc = "Un disparo devastador." },
 
   curar = { nombre = "Curación", clase = "clerigo", cd = 2.1, mana = 16, tipo = "aliado", cura = 28, curaN = 5, rango = 6.5, desc = "Restaura vida a un aliado o a ti." },
-  bendicion = { nombre = "Bendición", clase = "clerigo", cd = 12, mana = 20, tipo = "aliado", buff = "bendicion", dur = 10, rango = 6.5, desc = "Sube la defensa y regenera." },
+  bendicion = { nombre = "Rayo bendito", clase = "clerigo", cd = 4, mana = 16, tipo = "enemigo", coef = 1.5, rango = 6.4, proyectil = "sagrado", dano = "magico", desc = "Un rayo bendito que hiere al enemigo. Se aprende al nivel 5." },
   castigo = { nombre = "Castigo", clase = "clerigo", cd = 1.35, mana = 10, tipo = "enemigo", coef = 1.12, rango = 6.4, proyectil = "sagrado", dano = "magico", desc = "Luz que hiere. El clérigo también ataca." },
   sanacion = { nombre = "Luz sanadora", clase = "clerigo", cd = 15, mana = 38, tipo = "aliados", cura = 22, curaN = 4, rango = 4.5, desc = "Cura a todos los aliados cercanos." },
   juicio = { nombre = "Juicio divino", clase = "clerigo", cd = 16, mana = 34, tipo = "enemigo", coef = 2.3, rango = 6.4, proyectil = "sagrado", dano = "magico", aturde = 1.2, desc = "Un haz de luz que hiere y aturde." },
-  consagrar = { nombre = "Consagración", clase = "clerigo", cd = 10, mana = 28, tipo = "mixto", coef = 0.9, cura = 18, curaN = 2, rango = 2.8, dano = "magico", desc = "Daña enemigos y cura aliados a tu alrededor." },
+  consagrar = { nombre = "Consagración", clase = "clerigo", cd = 10, mana = 28, tipo = "mixto", coef = 1.5, cura = 18, curaN = 2, rango = 2.8, dano = "magico", desc = "Daña enemigos y cura aliados a tu alrededor." },
 }
 
 -- Estado que cada poder puede aplicar al golpear y con qué probabilidad (sube con el rango).
@@ -150,17 +150,23 @@ D.ciudades = {
   { id = "eclipse", nombre = "Bastión del Eclipse", faccion = "umbra", x = 552, y = 312, acceso = "norte", bioma = "eclipse" },
 }
 
--- Aleja las ciudades: la posición de cada centro se amplía respecto al centro del mapa.
+-- Las ciudades se reparten por todo el continente: cada centro tiene su sitio (en casillas del mapa
+-- final). Albor al oeste y Umbra al este, cada capital en medio de su mitad y las demas al norte
+-- y al sur, bien separadas para dejar sitio a las zonas de criaturas entre ellas.
+local W, H = D.MAPA_W, D.MAPA_H
+local CENTROS = {
+  auroria = { 0.20, 0.50 }, puerto_sol = { 0.26, 0.20 }, henar = { 0.38, 0.15 },
+  liria = { 0.26, 0.80 }, alba = { 0.38, 0.85 },
+  nocturnia = { 0.80, 0.50 }, puerto_sombra = { 0.74, 0.20 }, velo = { 0.62, 0.15 },
+  nox = { 0.74, 0.80 }, eclipse = { 0.62, 0.85 },
+}
 for _, c in ipairs(D.ciudades) do
   local ancho = c.capital and 72 or 48
   local alto = c.capital and 56 or 36
-  local cx0, cy0 = c.x + ancho / 2, c.y + alto / 2
-  local ncx = D.MAPA_W / 2 + (cx0 - 360) * D.ESCALA
-  local ncy = D.MAPA_H / 2 + (cy0 - 260) * D.ESCALA
-  c.x = math.floor(ncx - ancho / 2)
-  c.y = math.floor(ncy - alto / 2)
+  local f = CENTROS[c.id]
+  c.x = math.floor(W * f[1] - ancho / 2)
+  c.y = math.floor(H * f[2] - alto / 2)
 end
-
 D.biomas = {
   trigal = { suelo = "hierba", nombre = "Trigal de Auroria" },
   muelle = { suelo = "arena", nombre = "Muelles del Sol" },
@@ -220,6 +226,21 @@ D.monstruos = {
   { id = "titan", nombre = "Titán de escoria", nivel = 25, bioma = "pinar", hoja = "creatures_04", base = 64, cuadros = 4, tam = 2, paso = 2, porDir = 2, agresivo = true, desc = "El suelo se queja cuando anda." },
   { id = "dragon", nombre = "Dragón joven", nivel = 24, bioma = "eclipse", hoja = "creatures_04", base = 0, cuadros = 4, tam = 2, paso = 2, porDir = 2, agresivo = true, desc = "Aún no es antiguo. Ya es bastante." },
   { id = "liche", nombre = "Liche de Eclipse", nivel = 27, bioma = "eclipse", hoja = "creatures_03", base = 800, cuadros = 12, agresivo = true, desc = "Corona de hueso y un libro que no se cierra." },
+  -- Criaturas nuevas: un poco de todo para que haya una cada dos niveles hasta el máximo.
+  { id = "gallina", nombre = "Gallina brava", nivel = 1, bioma = "trigal", hoja = "creatures_01", base = 1, cuadros = 12, agresivo = false, desc = "Picotea a quien se lleva sus huevos." },
+  { id = "planta_roja", nombre = "Flor carnívora", nivel = 4, bioma = "campos", hoja = "creatures_02", base = 1, cuadros = 12, agresivo = false, desc = "Se ve inofensiva hasta que te acercas." },
+  { id = "esqueleto", nombre = "Esqueleto guerrero", nivel = 15, bioma = "colina", hoja = "creatures_01", base = 56, cuadros = 8, agresivo = true, desc = "Un soldado que no sabe que ya perdió." },
+  { id = "arpia", nombre = "Arpía de ciénaga", nivel = 15, bioma = "cienaga", hoja = "creatures_03", base = 704, cuadros = 12, agresivo = true, vuela = true, desc = "Chilla desde las ramas secas." },
+  { id = "medusa", nombre = "Medusa errante", nivel = 20, bioma = "marea", hoja = "creatures_02", base = 192, cuadros = 12, agresivo = true, desc = "Flota con la marea y pica con la corriente." },
+  { id = "flor_sangrienta", nombre = "Flor sangrienta", nivel = 20, bioma = "senda", hoja = "creatures_02", base = 1, cuadros = 12, agresivo = false, desc = "Sus pétalos rojos no son de color." },
+  { id = "esqueleto_real", nombre = "Esqueleto real", nivel = 23, bioma = "velo", hoja = "creatures_01", base = 56, cuadros = 8, agresivo = true, desc = "Aún conserva la corona." },
+  { id = "escorpion_carmesi", nombre = "Escorpión carmesí", nivel = 23, bioma = "eclipse", hoja = "creatures_02", base = 96, cuadros = 4, agresivo = true, desc = "Su veneno quema como la brasa." },
+  { id = "dragon_brasas", nombre = "Dragón de brasas", nivel = 26, bioma = "pinar", hoja = "creatures_03", base = 736, cuadros = 12, agresivo = true, desc = "Humea incluso cuando duerme." },
+  { id = "medusa_abisal", nombre = "Medusa abisal", nivel = 26, bioma = "marea", hoja = "creatures_02", base = 192, cuadros = 12, agresivo = true, desc = "Viene de donde no llega la luz." },
+  { id = "ojo_abismo", nombre = "Ojo del abismo", nivel = 28, bioma = "eclipse", hoja = "creatures_02", base = 192, cuadros = 12, agresivo = true, vuela = true, desc = "Todo lo que mira se marchita." },
+  { id = "rey_espectral", nombre = "Rey espectral", nivel = 28, bioma = "velo", hoja = "creatures_01", base = 56, cuadros = 8, agresivo = true, desc = "Gobierna un reino de sombras." },
+  { id = "demonio_rey", nombre = "Demonio rey", nivel = 29, bioma = "pinar", hoja = "creatures_01", base = 28, cuadros = 4, porDir = 1, agresivo = true, desc = "Armadura de hierro y una orden: destruir." },
+  { id = "hidra_ceniza", nombre = "Hidra de cenizas", nivel = 29, bioma = "cienaga", hoja = "creatures_02", base = 320, cuadros = 8, tam = 2, paso = 2, porDir = 2, agresivo = true, desc = "Cada cabeza arde por su cuenta." },
   { id = "behemot", nombre = "Behemot de guerra", nivel = 30, bioma = "eclipse", hoja = "creatures_04", base = 128, cuadros = 4, tam = 2, paso = 2, porDir = 2, elite = true, agresivo = true, desc = "Uno solo. Cuando cae, la guerra lo nota." },
 }
 
@@ -256,6 +277,20 @@ local EFECTOS_MONSTRUO = {
   dragon = { golpe = { { tipo = "quemar", prob = 0.20 } }, poderes = { "aliento" } },
   liche = { poderes = { "succion", "drenaje" } },
   behemot = { golpe = { { tipo = "aturdir", prob = 0.20 }, { tipo = "sangrar", prob = 0.25 } }, poderes = { "pisoton" } },
+  gallina = { golpe = { { tipo = "sangrar", prob = 0.10 } } },
+  planta_roja = { golpe = { { tipo = "veneno", prob = 0.20 } } },
+  esqueleto = { golpe = { { tipo = "sangrar", prob = 0.25 } } },
+  arpia = { golpe = { { tipo = "veneno", prob = 0.25 } }, poderes = { "succion" } },
+  medusa = { golpe = { { tipo = "lentitud", prob = 0.35, dur = 4, pct = 0.45 } } },
+  flor_sangrienta = { golpe = { { tipo = "sangrar", prob = 0.30 } }, poderes = { "drenaje" } },
+  esqueleto_real = { golpe = { { tipo = "sangrar", prob = 0.30 }, { tipo = "aturdir", prob = 0.10 } } },
+  escorpion_carmesi = { golpe = { { tipo = "veneno", prob = 0.40 }, { tipo = "quemar", prob = 0.15 } } },
+  dragon_brasas = { golpe = { { tipo = "quemar", prob = 0.35 } }, poderes = { "aliento" } },
+  medusa_abisal = { golpe = { { tipo = "lentitud", prob = 0.40, dur = 5, pct = 0.55 } }, poderes = { "succion" } },
+  ojo_abismo = { poderes = { "drenaje", "maldicion" } },
+  rey_espectral = { poderes = { "succion", "drenaje", "maldicion" } },
+  demonio_rey = { golpe = { { tipo = "sangrar", prob = 0.30 }, { tipo = "aturdir", prob = 0.15 } }, poderes = { "pisoton" } },
+  hidra_ceniza = { golpe = { { tipo = "veneno", prob = 0.35 }, { tipo = "quemar", prob = 0.25 } } },
 }
 for _, m in ipairs(D.monstruos) do
   local x = EFECTOS_MONSTRUO[m.id]
