@@ -148,7 +148,28 @@ function Atlas.armaEnMano(item, clase, rec, x, y, zoom, espejo)
   love.graphics.draw(img, q, hx, hy, rot, sign * wz, wz, ox, oy)
 end
 
+-- El x2 del atlas es de 32 px y con el filtro del juego se lee como un bloque. Esta lámina es suave.
+local imgX2
+local function dibujarX2(x, y, zoom)
+  if imgX2 == nil then
+    local ok, img = pcall(love.graphics.newImage, "arte/hojas/x2.png")
+    if ok and img then
+      img:setFilter("linear", "linear")
+      imgX2 = img
+    else
+      imgX2 = false
+    end
+  end
+  if not imgX2 then return false end
+  local w, h = imgX2:getWidth(), imgX2:getHeight()
+  local e = (20 * (zoom or 1)) / w
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.draw(imgX2, x, y, 0, e, e, w / 2, h / 2)
+  return true
+end
+
 function Atlas.dibujar(hoja, indice, x, y, zoom, ox, oy, tinte)
+  if hoja == "bonos" and dibujarX2(x, y, zoom) then return end
   local img, q = Atlas.quad(hoja, indice)
   if not img then return end
   if tinte then love.graphics.setColor(tinte[1], tinte[2], tinte[3], 1) else love.graphics.setColor(1, 1, 1, 1) end

@@ -30,7 +30,7 @@ P.CUENTA = { REGISTRAR = "registrar", ENTRAR = "entrar", CREAR = "crear" }
 P.ACCIONES = {
   "deseo", "destino", "objetivo", "habilidad", "chat", "equipar", "desequipar",
   "pocion", "autopocion", "comprar", "vender", "interactuar", "guerra", "salir_guerra", "viaje",
-  "casa_comprar", "casa_entrar", "casa_salir", "mueble", "cofre_guardar",
+  "casa_comprar", "casa_entrar", "casa_salir", "mueble", "mueble_mover", "mueble_rotar", "cofre_guardar",
   "cofre_sacar", "mision_aceptar", "mision_entregar", "comercio_invitar",
   "comercio_oro", "comercio_item", "comercio_responder", "comercio_quitar", "comercio_ok", "comercio_no", "mover_bolsa",
   "mirar", "aprender", "olvidar", "encantar", "mascota_adoptar", "mascota_invocar",

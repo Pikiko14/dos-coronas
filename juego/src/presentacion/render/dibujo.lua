@@ -162,6 +162,8 @@ local function dibujarPiso(mapa, jugador, cam, w, h)
   end
 end
 
+local marcarCasaPropia
+
 function D.escena(mundo, jugador, cam, mx, my)
   local mapa = mundo:mapaDe(jugador)
   local z = cam.zoom
@@ -215,6 +217,15 @@ function D.escena(mundo, jugador, cam, mx, my)
     love.graphics.setColor(1, 1, 1, 0.18)
     love.graphics.rectangle("fill", tx * TILE - cam.x, ty * TILE - cam.y, TILE, TILE)
   end
+  if pz == 0 and jugador.modo == "mundo" then
+    marcarCasaPropia(mapa, jugador, cam, radio)
+  end
+  if mx and my and jugador.modo == "casa" and D.muebleElegido and love.window.hasMouseFocus() and D.dentroVista(mx, my) then
+    local wx, wy = D.pantallaAMundo(cam, mx, my)
+    local tx, ty = math.floor(wx), math.floor(wy)
+    love.graphics.setColor(1, 0.86, 0.28, 0.35)
+    love.graphics.rectangle("fill", tx * TILE - cam.x, ty * TILE - cam.y, TILE, TILE)
+  end
 
   -- cadáveres y puertas caídas: debajo de todo lo que se mueve
   for _, e in pairs(mundo.entidades) do
@@ -246,9 +257,13 @@ function D.escena(mundo, jugador, cam, mx, my)
   end
   if jugador.modo == "casa" then
     local casa = jugador.casas and jugador.casas[jugador.casaId]
-    for nombre, pos in pairs(mapa.muebles or {}) do
-      if casa and casa.muebles and casa.muebles[nombre] then
-        cola[#cola + 1] = { tipo = "mueble", x = pos.x, y = pos.y, nombre = nombre }
+    for nombre in pairs(casa and casa.muebles or {}) do
+      local x, y, rot = mundo:posMueble(casa, nombre)
+      if x then
+        cola[#cola + 1] = {
+          tipo = "mueble", x = x, y = y, nombre = nombre, rot = rot,
+          elegido = nombre == D.muebleElegido,
+        }
       end
     end
   end
@@ -280,7 +295,7 @@ function D.escena(mundo, jugador, cam, mx, my)
       if Objetos.personalizados and Objetos.personalizados[p.tipo] then Objetos.personalizados[p.tipo](p, px0, py0)
       else Objetos.dibujar(p.tipo, variante, px0, py0, tint, alfa) end
     elseif item.tipo == "mueble" then
-      D.mueble(item.nombre, sx, sy)
+      D.mueble(item.nombre, sx, sy, item.rot, item.elegido)
     else
       local e = item.e
       local alto = D.entidad(e, sx, sy, mundo, jugador)
@@ -364,16 +379,57 @@ function D.proyectil(e, sx, sy)
   end
 end
 
-function D.mueble(nombre, sx, sy)
-  if nombre == "cofre" then
-    Objetos.cofre(sx, sy + 14)
-    return
+-- La casa del jugador se tiñe de oro encima del terreno, sin hornear el color en la caché.
+function marcarCasaPropia(mapa, jugador, cam, radio)
+  local mias = nil
+  for _, c in ipairs(mapa.ciudades or {}) do
+    for _, par in ipairs(c.parcelas or {}) do
+      if par.dueno == jugador.id then
+        mias = mias or {}
+        mias[par.x .. "," .. par.y] = true
+      end
+    end
   end
-  local img = Arte.img("Tilesets/Inside_B.png")
-  local pos = { cama = { 1, 10, 2, 2 }, mesa = { 0, 12, 1, 1 }, estandarte = { 14, 0, 1, 2 } }
-  local p = pos[nombre] or pos.mesa
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.draw(img, Arte.quad(img, p[1] * 32, p[2] * 32, p[3] * 32, p[4] * 32), sx, sy + 14, 0, 1, 1, p[3] * 16, p[4] * 32)
+  if not mias then return end
+  for _, e in ipairs(mapa.edificios or {}) do
+    if mias[e.puertaX .. "," .. e.puertaY]
+      and math.abs(e.x + e.w / 2 - jugador.x) < radio + 4
+      and math.abs(e.y + e.h / 2 - jugador.y) < radio + 4 then
+      local rx, ry = e.x * TILE - cam.x, e.y * TILE - cam.y
+      local rw, rh = e.w * TILE, e.h * TILE
+      love.graphics.setColor(1, 0.78, 0.22, 0.38)
+      love.graphics.rectangle("fill", rx, ry, rw, rh)
+      love.graphics.setColor(1, 0.92, 0.38, 1)
+      love.graphics.setLineWidth(3)
+      love.graphics.rectangle("line", rx + 1.5, ry + 1.5, rw - 3, rh - 3)
+      love.graphics.setLineWidth(1)
+      love.graphics.setColor(0.12, 0.07, 0.02, 0.9)
+      love.graphics.print("Tu casa", rx + 8, ry - 16)
+      love.graphics.setColor(1, 0.95, 0.55, 1)
+      love.graphics.print("Tu casa", rx + 7, ry - 17)
+    end
+  end
+end
+
+function D.mueble(nombre, sx, sy, rot, elegido)
+  rot = ((rot or 0) % 4) * (math.pi / 2)
+  if nombre == "cofre" then
+    local img = Arte.img("Characters/!Chest.png")
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(img, Arte.quad(img, 0, 128, 32, 32), sx, sy + 14, rot, 1, 1, 16, 30)
+  else
+    local img = Arte.img("Tilesets/Inside_B.png")
+    local pos = { cama = { 1, 10, 2, 2 }, mesa = { 0, 12, 1, 1 }, estandarte = { 14, 0, 1, 2 } }
+    local p = pos[nombre] or pos.mesa
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(img, Arte.quad(img, p[1] * 32, p[2] * 32, p[3] * 32, p[4] * 32), sx, sy + 14, rot, 1, 1, p[3] * 16, p[4] * 32)
+  end
+  if elegido then
+    love.graphics.setColor(1, 0.9, 0.35, 0.95)
+    love.graphics.setLineWidth(2)
+    love.graphics.circle("line", sx, sy - 8, 20)
+    love.graphics.setLineWidth(1)
+  end
 end
 
 -- Punto de impacto de un poder de area: el del cursor, dentro del alcance. Devuelve x, y y si el

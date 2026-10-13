@@ -9,7 +9,7 @@ local ACCIONES = {
   deseo = true, destino = true, objetivo = true, habilidad = true, chat = true,
   equipar = true, desequipar = true, pocion = true, autopocion = true, comprar = true, vender = true,
   interactuar = true, guerra = true, salir_guerra = true, viaje = true,
-  casa_comprar = true, casa_entrar = true, casa_salir = true, mueble = true,
+  casa_comprar = true, casa_entrar = true, casa_salir = true, mueble = true, mueble_mover = true, mueble_rotar = true,
   cofre_guardar = true, cofre_sacar = true,
   mision_aceptar = true, mision_entregar = true,
   comercio_invitar = true, comercio_oro = true, comercio_item = true, comercio_responder = true, comercio_quitar = true,
@@ -210,6 +210,16 @@ function A.aceptar(mundo, pj, nombre, datos)
       return false
     end
     return true, { modo = datos.modo }
+  end
+  if nombre == "mueble_mover" then
+    if type(datos.tipo) ~= "string" or #datos.tipo > 24 or not datos.tipo:match("^[%w_]+$") then return false end
+    local x, y = tonumber(datos.x), tonumber(datos.y)
+    if not finito(x) or not finito(y) then return false end
+    return true, { tipo = datos.tipo, x = x, y = y }
+  end
+  if nombre == "mueble_rotar" then
+    if type(datos.tipo) ~= "string" or #datos.tipo > 24 or not datos.tipo:match("^[%w_]+$") then return false end
+    return true, { tipo = datos.tipo }
   end
   if nombre == "mover_bolsa" then
     local a, b = tonumber(datos.a), tonumber(datos.b)

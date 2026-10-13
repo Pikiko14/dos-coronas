@@ -370,6 +370,11 @@ end
 function I.hud(mundo, p, w, h)
   I.limpiar()
   I.pista = nil
+  if p.modo ~= "casa" then
+    I.muebleSel = nil
+    if I.panel == "casa" then I.panel = nil end
+  end
+  Dibujo.muebleElegido = p.modo == "casa" and I.muebleSel or nil
   local lado, consola = I.medidas()
   local vw, vh = w - lado, h - consola
   local fac = Datos.facciones[p.faccion]
@@ -566,6 +571,15 @@ function I.hud(mundo, p, w, h)
   I.estadoOficio(mundo, p, 8, 98)
   I.marquesina(mundo, p, vw, love.timer.getDelta())
   I.estadoBonos(mundo, p, 252, 8)
+  if p.modo == "casa" and I.muebleSel and Datos.muebles[I.muebleSel] then
+    local t = Datos.muebles[I.muebleSel].nombre .. " elegido. Clic en el suelo para moverlo. Clic derecho para rotarlo."
+    love.graphics.setFont(f)
+    local tw = f:getWidth(t)
+    love.graphics.setColor(0.08, 0.06, 0.03, 0.82)
+    love.graphics.rectangle("fill", 16, vh - 36, tw + 16, 24, 4, 4)
+    love.graphics.setColor(1, 0.92, 0.55, 1)
+    love.graphics.print(t, 24, vh - 32)
+  end
   -- marco del grupo y su invitación
   I.estadoGrupo(mundo, p, vw - 198, 176)
   if p.modo == "batalla" or p.modo == "estandarte" then
@@ -2282,13 +2296,18 @@ end
 function I.panelBolsa(mundo, p, w, h)
   local capacidad = Datos.capacidadBolsa(p.equipo)
   local mochila = p.equipo.mochila and Datos.item(p.equipo.mochila)
-  caja(w / 2 - 280, h / 2 - 220, 560, 420, "Bolsa â€” " .. (mochila and mochila.nombre or "Bolsillos") .. "  " .. #p.bolsa .. "/" .. capacidad)
-  I.boton(w / 2 + 200, h / 2 - 210, 60, 28, "Cerrar", "cerrar")
+  local px, py, pw, ph = w / 2 - 280, h / 2 - 230, 560, 460
+  caja(px, py, pw, ph, "Bolsa")
+  I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
+  local f = pequena()
+  love.graphics.setFont(f)
+  love.graphics.setColor(0.78, 0.84, 0.95)
+  love.graphics.print((mochila and mochila.nombre or "Bolsillos") .. "     " .. #p.bolsa .. " / " .. capacidad, px + 18, py + 40)
   for i = 1, Datos.BOLSA do
     local col = (i - 1) % 6
     local fila = math.floor((i - 1) / 6)
-    local x = w / 2 - 250 + col * 64
-    local y = h / 2 - 160 + fila * 64
+    local x = px + 28 + col * 64
+    local y = py + 68 + fila * 64
     casilla(x, y, 56)
     if i > Datos.capacidadBolsa(p.equipo) then
       love.graphics.setColor(0, 0, 0, 0.6)
@@ -2305,8 +2324,15 @@ function I.panelBolsa(mundo, p, w, h)
     if slot then
       local it = Datos.item(slot.id)
       if it then Atlas.dibujar(it.hoja, it.sprite, x + 28, y + 30, 1.2, 16, 16, it.tinte) end
-      love.graphics.setColor(1, 1, 1)
-      if slot.cant and slot.cant > 1 then love.graphics.print(slot.cant, x + 4, y + 36) end
+      if slot.cant and slot.cant > 1 then
+        local t = tostring(slot.cant)
+        love.graphics.setFont(f)
+        local tw = f:getWidth(t)
+        love.graphics.setColor(0.04, 0.05, 0.08, 0.88)
+        love.graphics.rectangle("fill", x + 52 - tw - 6, y + 38, tw + 8, 16, 3, 3)
+        love.graphics.setColor(1, 0.96, 0.82)
+        love.graphics.print(t, x + 52 - tw - 2, y + 39)
+      end
       local s = I.escala or 1
       local mx, my = love.mouse.getPosition()
       mx, my = mx / s, my / s
@@ -2317,8 +2343,9 @@ function I.panelBolsa(mundo, p, w, h)
     I.registrar(x, y, 56, 56, "bolsa_" .. i)
     ::siguiente::
   end
-  love.graphics.setColor(0.9, 0.85, 0.7)
-  love.graphics.print("Un clic elige. Otro clic en la misma casilla equipa. Clic en otra casilla intercambia.", w / 2 - 250, h / 2 + 170)
+  love.graphics.setFont(f)
+  love.graphics.setColor(0.86, 0.82, 0.7)
+  love.graphics.printf("Un clic elige. Otro clic en la misma casilla equipa.\nUn clic en otra casilla intercambia.", px + 24, py + ph - 48, pw - 48, "center")
 end
 
 -- Panel Personaje (tecla C): resumen del personaje, su equipo (con cifras de cada pieza) y estadísticas.
@@ -2810,13 +2837,25 @@ function I.panelVivienda(mundo, p, w, h)
   end
   love.graphics.setColor(0.95, 0.9, 0.75)
   love.graphics.print(ciudad.nombre, w / 2 - 250, 140)
+  local precio = 100000
+  if Datos.precioCasa then precio = ciudad.capital and Datos.precioCasa.capital or Datos.precioCasa.normal end
+  local fila, visibles = 48, 6
+  local maxScroll = math.max(0, #ciudad.parcelas - visibles)
+  I.casaScrollMax = maxScroll
+  I.casaScroll = math.max(0, math.min(maxScroll, I.casaScroll or 0))
   for i, par in ipairs(ciudad.parcelas) do
-    local y = 180 + (i - 1) * 80
-    local precio = ciudad.capital and Datos.precioCasa.capital or Datos.precioCasa.normal
-    local txt = par.dueno and (par.dueno == p.id and "Tu casa" or "Ocupada") or ("Libre  ·  " .. precio .. " oro")
-    love.graphics.print("Parcela " .. i .. "  " .. txt, w / 2 - 240, y)
-    if not par.dueno then I.boton(w / 2 + 40, y - 6, 140, 30, "Comprar", "casa_comprar_" .. par.id) end
-    if par.dueno == p.id then I.boton(w / 2 + 190, y - 6, 100, 30, "Entrar", "casa_entrar_" .. par.id) end
+    if i > I.casaScroll and i <= I.casaScroll + visibles then
+      local y = 176 + (i - 1 - I.casaScroll) * fila
+      local txt = par.dueno and (par.dueno == p.id and "Tu casa" or "Ocupada") or ("Libre  ·  " .. Ayudas.num(precio) .. " oro")
+      love.graphics.setColor(0.92, 0.88, 0.75)
+      love.graphics.print("Parcela " .. i .. "   " .. txt, w / 2 - 250, y)
+      if not par.dueno then I.boton(w / 2 + 40, y - 6, 140, 30, "Comprar", "casa_comprar_" .. par.id) end
+      if par.dueno == p.id then I.boton(w / 2 + 190, y - 6, 100, 30, "Entrar", "casa_entrar_" .. par.id) end
+    end
+  end
+  if maxScroll > 0 then
+    love.graphics.setColor(0.65, 0.7, 0.8)
+    love.graphics.print("Rueda del ratón para ver más casas", w / 2 - 250, 176 + visibles * fila)
   end
 end
 
@@ -3118,7 +3157,7 @@ function I.panelAyuda(w, h)
     "E interactúa (mercader, heraldo, mayordomo, casa, altar). M mapa, F1 ayuda, F3 medidor, F11 pantalla completa.",
     "Chat: Enter. Escribe /m para hablar al mundo y /f para hablar a tu facción. Las ciudades de tu facción son refugio.",
     "La guerra, una vez al día: batalla por cristales o captura del estandarte. Empieza con 3 jugadores por equipo.",
-    "Las casas se compran al mayordomo. Dentro puedes poner cama, cofre, mesa y estandarte.",
+    "Las casas se compran al mayordomo. La tuya se ve dorada en la calle. Dentro, la puerta del sur es la salida. Clic en un mueble y luego en el suelo para moverlo; clic derecho lo rota.",
     "El mundo son tres continentes separados por mar: Alba (oeste), Umbra (este) y la Isla de la Cicatriz (centro, la zona de guerra). Entre ellos se viaja en barco: habla con el barquero de Puerto del Sol, Puerto Sombra o del Embarcadero de la Cicatriz (E) y paga el pasaje. A pie no se cruza el mar.",
     "Mazmorras: tres puertas de piedra repartidas por el mapa (violeta en el mapa). Con E junto a la puerta entras si tienes el nivel; al fondo hay un jefe y, al caer, un cofre con premio para cada jugador: objetos o addons del mall, o equipo del escalón máximo.",
   }, "\n\n")
@@ -3127,15 +3166,21 @@ function I.panelAyuda(w, h)
 end
 
 function I.panelCasa(p, w, h)
-  caja(w - 340, 80, 300, 280, "Tu casa")
-  I.boton(w - 120, 88, 60, 28, "Salir", "casa_salir")
+  caja(w - 360, 80, 330, 340, "Tu casa")
+  I.boton(w - 140, 88, 60, 28, "Salir", "casa_salir")
+  love.graphics.setColor(0.82, 0.78, 0.68)
+  love.graphics.printf("La puerta del sur es la salida. Clic en un mueble y luego en el suelo para moverlo. Clic derecho lo rota.", w - 348, 124, 306, "left")
   local casa = p.casas[p.casaId]
-  local y = 130
+  local y = 176
   for _, tipo in ipairs({ "cama", "cofre", "estandarte", "mesa" }) do
     local m = Datos.muebles[tipo]
     local puesto = casa and casa.muebles[tipo]
-    I.boton(w - 320, y, 260, 32, (puesto and "Usar " or "Comprar ") .. m.nombre .. (puesto and "" or (" (" .. m.precio .. ")")), "mueble_" .. tipo)
+    I.boton(w - 344, y, 298, 32, (puesto and "Usar " or "Comprar ") .. m.nombre .. (puesto and "" or (" (" .. m.precio .. ")")), "mueble_" .. tipo)
     y = y + 40
+  end
+  if p.modo == "casa" and I.muebleSel and Datos.muebles[I.muebleSel] then
+    love.graphics.setColor(1, 0.92, 0.55)
+    love.graphics.print("Elegido: " .. Datos.muebles[I.muebleSel].nombre, w - 344, y + 4)
   end
 end
 

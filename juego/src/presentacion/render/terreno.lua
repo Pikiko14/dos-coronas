@@ -507,7 +507,7 @@ local function dibujarEdificio(e, ox, oy)
       Auto.muro(im.a3, k[1] * 64, k[2] * 64, m, px, py)
     end
   end
-  -- ventanas y puerta
+  -- ventanas; la entrada es el hueco de la fachada, sin el letrero de madera
   love.graphics.setColor(1, 1, 1, 1)
   local filaPared = e.y + filasTecho
   for _, fx in ipairs({ 1, e.w - 2 }) do
@@ -515,7 +515,6 @@ local function dibujarEdificio(e, ox, oy)
       love.graphics.draw(im.b, Arte.quad(im.b, 32, 4 * 32, 32, 32), (e.x + fx) * TILE - ox, filaPared * TILE - oy)
     end
   end
-  love.graphics.draw(im.b, Arte.quad(im.b, 64, 6 * 32, 32, 64), e.puertaX * TILE - ox, filaPared * TILE - oy)
   -- sombra bajo el alero
   love.graphics.setColor(0, 0, 0, 0.18)
   love.graphics.rectangle("fill", e.x * TILE - ox, (e.y + e.h) * TILE - oy, e.w * TILE, 4)

@@ -127,9 +127,19 @@ function Pruebas.correr()
       fallar(errores, "trade cierra", jugador.sesion == nil)
     end
     mundo.tiempo = 30
-    jugador.oro = 5000
+    jugador.oro = 150000
     local auroria
     for _, c in ipairs(mundo.mapas.mundo.ciudades) do if c.id == "auroria" then auroria = c end end
+    local enVenta = true
+    for _, c in ipairs(mundo.mapas.mundo.ciudades) do
+      local n = 0
+      for _, e in ipairs(mundo.mapas.mundo.edificios) do
+        if e.puertaX >= c.x and e.puertaX < c.x + c.w and e.puertaY >= c.y and e.puertaY < c.y + c.h then n = n + 1 end
+      end
+      if #c.parcelas ~= n or n < 1 then enVenta = false end
+      for _, par in ipairs(c.parcelas) do if par.dueno then enVenta = false end end
+    end
+    fallar(errores, "cada casa de cada ciudad está en venta", enVenta and #auroria.parcelas > 3, tostring(#auroria.parcelas))
     local par = auroria.parcelas[1]
     jugador.x, jugador.y = auroria.spawn.x, auroria.spawn.y
     mundo:accion(jugador.id, "casa_comprar", { id = par.id })
@@ -138,7 +148,15 @@ function Pruebas.correr()
     mundo:accion(jugador.id, "casa_entrar", { id = par.id })
     fallar(errores, "entrar casa", jugador.modo == "casa")
     mundo:accion(jugador.id, "mueble", { tipo = "cama" })
-    fallar(errores, "cama", jugador.casas[par.id].muebles.cama == true)
+    local cama = jugador.casas[par.id].muebles.cama
+    fallar(errores, "cama", type(cama) == "table" and cama.x and cama.y and cama.rot == 0)
+    mundo:accion(jugador.id, "mueble_mover", { tipo = "cama", x = 6.2, y = 5.2 })
+    cama = jugador.casas[par.id].muebles.cama
+    fallar(errores, "la cama se mueve", cama.x == 6.5 and cama.y == 5.5)
+    mundo:accion(jugador.id, "mueble_rotar", { tipo = "cama" })
+    fallar(errores, "la cama rota", jugador.casas[par.id].muebles.cama.rot == 1)
+    mundo:accion(jugador.id, "mueble_mover", { tipo = "cama", x = 0.2, y = 0.2 })
+    fallar(errores, "la cama no sale de la casa", jugador.casas[par.id].muebles.cama.x == 6.5)
     mundo:accion(jugador.id, "casa_salir")
     local mayo
     for _, e in pairs(mundo.entidades) do
@@ -150,6 +168,16 @@ function Pruebas.correr()
     local salida = mundo.mapas.casa.salida
     fallar(errores, "desde el mayordomo entra en la casa", jugador.modo == "casa" and jugador.casaId == par.id
       and math.abs(jugador.x - salida.x) < 0.01 and math.abs(jugador.y - salida.y) < 0.01)
+    local puerta = mundo.mapas.casa.puerta
+    fallar(errores, "la casa tiene puerta de salida", puerta ~= nil)
+    jugador.x, jugador.y = puerta.x, puerta.y - 1
+    local aviso = mundo:interactuar(jugador)
+    fallar(errores, "junto a la puerta se sale", jugador.modo == "mundo" and (not aviso or aviso.panel == nil))
+    jugador.x, jugador.y = par.x + 0.5, par.y + 1.2
+    mundo:entrarCasa(jugador, par.id)
+    jugador.x, jugador.y = puerta.x, puerta.y
+    mundo:actualizarJugador(jugador, 0.05)
+    fallar(errores, "pisar la puerta saca de la casa", jugador.modo == "mundo")
     mundo:salirCasa(jugador)
     jugador.x, jugador.y = par.x + 40, par.y + 40
     fallar(errores, "lejos no entra", mundo:entrarCasa(jugador, par.id) ~= nil and jugador.modo == "mundo")
@@ -2658,6 +2686,13 @@ mundo.tiempo = 100
     local guardia = { kind = "guardia", faccion = ciudad.faccion, vivo = true, x = a.x, y = a.y, modo = "mundo", z = 0 }
     fallar(errores, "los guardias persiguen al buscado en la ciudad", mundo:puedeDanar(guardia, rival))
     fallar(errores, "pero no a un inocente", not mundo:puedeDanar(guardia, a))
+    local casaA, casaR = jug("CasaA", ciudad.faccion, 12), jug("CasaR", rival.faccion, 12)
+    casaA.modo, casaR.modo, casaA.casaId, casaR.casaId = "casa", "casa", "h1", "h1"
+    fallar(errores, "la casa es zona segura", mundo:enSantuario(casaA) and not mundo:puedeDanar(casaA, casaR) and not mundo:puedeDanar(casaR, casaA))
+    mundo:marcarBuscado(casaR, 60)
+    local cazador = jug("CazCasa", ciudad.faccion, 12)
+    cazador.modo, cazador.job, cazador.casaId = "casa", "hunter", "h1"
+    fallar(errores, "en la casa no se ataca ni al buscado", not mundo:puedeDanar(cazador, casaR) and not mundo:puedeDanar(troll, casaA))
     -- pérdida de experiencia
     local v = jug("Vet", ciudad.faccion, 15)
     en(v, afuera.x + 8.5, afuera.y + 8.5)
@@ -3590,7 +3625,7 @@ mundo.tiempo = 100
     fallar(errores, "nivel 12 no compra la poción grande", mundo:comprar(p, "pocion_vida_grande") ~= nil and p.oro == oroVenta)
     fallar(errores, "nivel 12 compra la mediana", mundo:comprar(p, "pocion_vida_mediana") == nil and mundo:contarItem(p, "pocion_vida_mediana") == 1)
     -- casas, gremio y muebles
-    fallar(errores, "las casas cuestan más que antes", Datos.precioCasa.normal >= 700 and Datos.precioCasa.capital > Datos.precioCasa.normal)
+    fallar(errores, "las casas cuestan 100000 de oro", Datos.precioCasa.normal == 100000 and Datos.precioCasa.capital == 100000)
     fallar(errores, "fundar un gremio cuesta unos miles de oro", Gremios.COSTE >= 2000 and Gremios.COSTE <= 5000)
     -- encantar: el oro crece con la pieza y con el nivel de encanto
     local Encanto = require("compartido.dominio.encanto")

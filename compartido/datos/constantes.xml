@@ -46,7 +46,7 @@
     <!-- MONSTRUO_HP: Ajustes globales de las criaturas (ver servidor -calibrar): vida y ataque respecto a la fórmula base. -->
     <!-- FACTOR_VENTA: Lo que paga el mercader al comprarte un objeto: esta fraccion de su precio. -->
     <EVENTO_DURACION batalla="300" estandarte="300"/>
-    <precioCasa capital="1440" normal="760"/>
+    <precioCasa capital="100000" normal="100000"/>
   </datos>
   <encanto MATERIAL="polvo_arcano" MAX="10" PCT="0.08"/>
   <gremios BONO_POR_COMPANERO="0.05" COSTE="2500" DISTANCIA_BONO="14" INVITACION_SEG="60" MAX_MIEMBROS="25" NIVEL_MINIMO="8" TOPE_COMPANEROS="3">

@@ -159,7 +159,12 @@ local function sentenciasDe(pid, ex, hp, mp)
     local c = ex.casas[parcela]
     casas[#casas + 1] = "(" .. pid .. "," .. Pg.literal(parcela) .. ")"
     for _, mueble in ipairs(ordenadas(c.muebles)) do
-      muebles[#muebles + 1] = "(" .. pid .. "," .. Pg.literal(parcela) .. "," .. Pg.literal(mueble) .. ")"
+      local v = c.muebles[mueble]
+      local x, y, rot = "NULL", "NULL", 0
+      if type(v) == "table" then
+        x, y, rot = real(v.x), real(v.y), entero(v.rot) % 4
+      end
+      muebles[#muebles + 1] = "(" .. pid .. "," .. Pg.literal(parcela) .. "," .. Pg.literal(mueble) .. "," .. x .. "," .. y .. "," .. rot .. ")"
     end
     for i, s in ipairs(c.cofre or {}) do
       cofres[#cofres + 1] = "(" .. pid .. "," .. Pg.literal(parcela) .. "," .. i .. "," ..
@@ -170,7 +175,7 @@ local function sentenciasDe(pid, ex, hp, mp)
     q[#q + 1] = "INSERT INTO personaje_casa (personaje_id, parcela_id) VALUES " .. table.concat(casas, ",")
   end
   if #muebles > 0 then
-    q[#q + 1] = "INSERT INTO casa_mueble (personaje_id, parcela_id, mueble) VALUES " .. table.concat(muebles, ",")
+    q[#q + 1] = "INSERT INTO casa_mueble (personaje_id, parcela_id, mueble, x, y, rot) VALUES " .. table.concat(muebles, ",")
   end
   if #cofres > 0 then
     q[#q + 1] = "INSERT INTO casa_cofre (personaje_id, parcela_id, ranura, item_id, cant, enc) VALUES " .. table.concat(cofres, ",")
@@ -275,6 +280,9 @@ function M.abrir()
       personaje_id BIGINT NOT NULL,
       parcela_id TEXT NOT NULL,
       mueble TEXT NOT NULL,
+      x DOUBLE PRECISION,
+      y DOUBLE PRECISION,
+      rot INT NOT NULL DEFAULT 0,
       PRIMARY KEY (personaje_id, parcela_id, mueble),
       FOREIGN KEY (personaje_id, parcela_id) REFERENCES personaje_casa ON DELETE CASCADE
     );
@@ -384,6 +392,9 @@ function M.abrir()
     ALTER TABLE personaje_equipo ADD COLUMN IF NOT EXISTS enc INT NOT NULL DEFAULT 0;
     ALTER TABLE personaje_bolsa ADD COLUMN IF NOT EXISTS enc INT NOT NULL DEFAULT 0;
     ALTER TABLE casa_cofre ADD COLUMN IF NOT EXISTS enc INT NOT NULL DEFAULT 0;
+    ALTER TABLE casa_mueble ADD COLUMN IF NOT EXISTS x DOUBLE PRECISION;
+    ALTER TABLE casa_mueble ADD COLUMN IF NOT EXISTS y DOUBLE PRECISION;
+    ALTER TABLE casa_mueble ADD COLUMN IF NOT EXISTS rot INT NOT NULL DEFAULT 0;
   ]])
   if e then conn:cerrar() return nil, e end
   M.migrar(conn)
@@ -602,8 +613,13 @@ function M.cargar(personajeId)
       for _, r in ipairs(lista("SELECT parcela_id FROM personaje_casa WHERE personaje_id = " .. pid)) do
         datos.casas[r.parcela_id] = { muebles = {}, cofre = {} }
       end
-      for _, r in ipairs(lista("SELECT parcela_id, mueble FROM casa_mueble WHERE personaje_id = " .. pid)) do
-        if datos.casas[r.parcela_id] then datos.casas[r.parcela_id].muebles[r.mueble] = true end
+      for _, r in ipairs(lista("SELECT parcela_id, mueble, x, y, rot FROM casa_mueble WHERE personaje_id = " .. pid)) do
+        local casa = datos.casas[r.parcela_id]
+        if casa then
+          local x, y = tonumber(r.x), tonumber(r.y)
+          if x and y then casa.muebles[r.mueble] = { x = x, y = y, rot = (tonumber(r.rot) or 0) % 4 }
+          else casa.muebles[r.mueble] = true end
+        end
       end
       for _, r in ipairs(lista("SELECT parcela_id, item_id, cant, enc FROM casa_cofre WHERE personaje_id = " .. pid .. " ORDER BY parcela_id, ranura")) do
         local c = datos.casas[r.parcela_id]

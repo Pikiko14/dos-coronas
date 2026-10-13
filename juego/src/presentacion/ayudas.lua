@@ -46,8 +46,8 @@ function A.interaccion(mundo, p)
     return nil
   end
   if p.modo == "casa" then
-    local s = mundo.mapas.casa.salida
-    if dist(p.x, p.y, s.x, s.y) < 1.3 then return "[" .. k .. "] Salir de la casa" end
+    local puerta = mundo.mapas.casa.puerta or mundo.mapas.casa.salida
+    if dist(p.x, p.y, puerta.x, puerta.y) < 1.45 then return "[" .. k .. "] Salir por la puerta" end
     return nil
   end
   if p.modo == "batalla" then

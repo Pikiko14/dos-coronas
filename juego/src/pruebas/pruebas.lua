@@ -531,6 +531,23 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local mx, my = 300, 300
     local ok, err = pcall(Dibujo.escena, mundo, pj, cam, mx, my)
     fallar(errores, "la zona de apuntado se dibuja", ok, tostring(err))
+    local dueno = mundo:crearPersonaje({ nombre = "Dueno", faccion = "albor", clase = "guerrero", nivel = 10, oro = 150000 })
+    local auroria
+    for _, c in ipairs(mundo.mapas.mundo.ciudades) do if c.id == "auroria" then auroria = c end end
+    local par = auroria.parcelas[1]
+    dueno.x, dueno.y = auroria.spawn.x, auroria.spawn.y
+    mundo:accion(dueno.id, "casa_comprar", { id = par.id })
+    local camCasa = Dibujo.camara(dueno, 1, mundo:mapaDe(dueno))
+    ok, err = pcall(Dibujo.escena, mundo, dueno, camCasa, 200, 200)
+    fallar(errores, "la casa propia se tiñe en la calle", ok, tostring(err))
+    dueno.x, dueno.y = par.x + 0.5, par.y + 1.2
+    mundo:accion(dueno.id, "casa_entrar", { id = par.id })
+    mundo:accion(dueno.id, "mueble", { tipo = "mesa" })
+    Dibujo.muebleElegido = "mesa"
+    camCasa = Dibujo.camara(dueno, 1, mundo:mapaDe(dueno))
+    ok, err = pcall(Dibujo.escena, mundo, dueno, camCasa, 200, 200)
+    fallar(errores, "el interior dibuja la puerta y los muebles", ok and mundo.mapas.casa.puerta ~= nil, tostring(err))
+    Dibujo.muebleElegido = nil
     -- el punto de impacto nunca sale de la zona habilitada
     local ix, iy, fuera = Dibujo.puntoApuntado(app.apuntando, pj, cam, 5, 5)
     local d = math.sqrt((ix - pj.x) ^ 2 + (iy - pj.y) ^ 2)

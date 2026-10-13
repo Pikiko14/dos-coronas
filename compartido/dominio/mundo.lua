@@ -98,11 +98,13 @@ function Mundo:ciudadEn(x, y)
   end
 end
 
--- Las ciudades son zonas seguras para todos: dentro nadie puede ser herido (jugadores, bots,
--- mascotas ni caravanas), ni por criaturas ni por jugadores de ninguna corona. Solo se persigue a
--- los buscados por robo (guardias y cazadores).
+-- Las ciudades y el interior de las casas son zonas seguras: dentro nadie puede ser herido
+-- (jugadores, bots, mascotas ni caravanas), ni por criaturas ni por jugadores de ninguna corona.
+-- En la ciudad solo se persigue a los buscados por robo (guardias y cazadores). En una casa, a nadie.
 function Mundo:enSantuario(e)
-  if not e or e.modo ~= "mundo" or (e.z or 0) > 0 then return false end
+  if not e then return false end
+  if e.modo == "casa" then return true end
+  if e.modo ~= "mundo" or (e.z or 0) > 0 then return false end
   return self:ciudadEn(e.x, e.y) ~= nil
 end
 
@@ -740,6 +742,7 @@ function Mundo:puedeDanar(origen, objetivo)
   local kind = objetivo.kind
   if (kind == "jugador" or kind == "bot" or kind == "mascota" or kind == "caravana")
     and (self:enSantuario(objetivo) or (origen.kind ~= "monstruo" and self:enSantuario(origen))) then
+    if origen.modo == "casa" or objetivo.modo == "casa" then return false end
     -- zona segura: solo se persigue al buscado por robo
     return (kind == "jugador" or kind == "bot") and origen.kind ~= "monstruo" and self:esBuscado(objetivo)
       and (origen.kind == "guardia" or ((origen.kind == "jugador" or origen.kind == "bot") and origen.job == "hunter")) or false
@@ -1440,6 +1443,10 @@ function Mundo:actualizarJugador(e, dt)
     end
   end
   self:pisarEscalera(e)
+  if e.modo == "casa" and e.kind == "jugador" then
+    local puerta = self.mapas.casa and self.mapas.casa.puerta
+    if puerta and Util.dist(e.x, e.y, puerta.x, puerta.y) < 0.45 then self:salirCasa(e) end
+  end
   if e.modo == "estandarte" then self:tocarBandera(e) end
   if e.modo == "batalla" and (e.kind == "jugador" or e.kind == "bot") then self:cristalesCerca(e) end
 end
@@ -2426,7 +2433,55 @@ function Mundo:ponerMueble(p, tipo)
   end
   if p.oro < m.precio then return "Cuesta " .. m.precio .. " de oro." end
   p.oro = p.oro - m.precio
-  casa.muebles[tipo] = true
+  local def = self.mapas.casa.muebles[tipo]
+  casa.muebles[tipo] = { x = def.x, y = def.y, rot = 0 }
+  return nil
+end
+
+-- Posición del mueble colocado. `true` (casas antiguas) usa el sitio por defecto.
+function Mundo:posMueble(casa, tipo)
+  local base = self.mapas.casa.muebles[tipo]
+  local v = casa and casa.muebles and casa.muebles[tipo]
+  if not base or not v then return nil end
+  if type(v) == "table" then return v.x or base.x, v.y or base.y, (v.rot or 0) % 4 end
+  return base.x, base.y, 0
+end
+
+function Mundo:sitioMueble(x, y)
+  local mapa = self.mapas.casa
+  local tx, ty = math.floor(x), math.floor(y)
+  if tx < 1 or ty < 1 or tx > mapa.w - 2 or ty > mapa.h - 2 then return nil end
+  local puerta = mapa.puerta
+  if puerta and math.floor(puerta.x) == tx and math.floor(puerta.y) == ty then return nil end
+  return tx + 0.5, ty + 0.5
+end
+
+function Mundo:moverMueble(p, tipo, x, y)
+  self:marcarProgreso(p)
+  local casa = p.casaId and p.casas and p.casas[p.casaId]
+  if not casa or not casa.muebles[tipo] then return "Ese mueble no está colocado." end
+  if not Datos.muebles[tipo] then return end
+  local nx, ny = self:sitioMueble(x, y)
+  if not nx then return "Ahí no cabe." end
+  for otro in pairs(casa.muebles) do
+    if otro ~= tipo then
+      local ox, oy = self:posMueble(casa, otro)
+      if ox and math.abs(ox - nx) < 0.2 and math.abs(oy - ny) < 0.2 then return "Ahí ya hay un mueble." end
+    end
+  end
+  local _, _, rot = self:posMueble(casa, tipo)
+  casa.muebles[tipo] = { x = nx, y = ny, rot = rot or 0 }
+  return nil
+end
+
+function Mundo:rotarMueble(p, tipo)
+  self:marcarProgreso(p)
+  local casa = p.casaId and p.casas and p.casas[p.casaId]
+  if not casa or not casa.muebles[tipo] then return "Ese mueble no está colocado." end
+  if not Datos.muebles[tipo] then return end
+  local x, y, rot = self:posMueble(casa, tipo)
+  if not x then return end
+  casa.muebles[tipo] = { x = x, y = y, rot = ((rot or 0) + 1) % 4 }
   return nil
 end
 
@@ -2494,7 +2549,8 @@ end
 function Mundo:interactuar(p)
   if self:enMazmorra(p) then return self:interactuarMazmorra(p) end
   if p.modo == "casa" then
-    if Util.dist(p.x, p.y, self.mapas.casa.salida.x, self.mapas.casa.salida.y) < 1.3 then
+    local puerta = self.mapas.casa.puerta
+    if puerta and Util.dist(p.x, p.y, puerta.x, puerta.y) < 1.45 then
       self:salirCasa(p)
       return { panel = nil }
     end
@@ -3125,6 +3181,14 @@ function Mundo:accion(pid, nombre, datos)
     local err, extra = self:ponerMueble(p, datos.tipo)
     if err then self:mensaje("sistema", "", err, p) end
     if extra then self:mensaje("sistema", "", extra, p) end
+  end
+  if nombre == "mueble_mover" then
+    local err = self:moverMueble(p, datos.tipo, datos.x, datos.y)
+    if err then self:mensaje("sistema", "", err, p) end
+  end
+  if nombre == "mueble_rotar" then
+    local err = self:rotarMueble(p, datos.tipo)
+    if err then self:mensaje("sistema", "", err, p) end
   end
   if nombre == "cofre_guardar" then
     local err = self:guardarEnCofre(p, datos.i)

@@ -305,15 +305,7 @@ local function estamparCiudad(mapa, ciudad)
     local p = puertas[idx]
     ciudad.parcelas[n] = { id = ciudad.id .. "_" .. n, x = p.x, y = p.y, dueno = nil }
   end
-  if #puertas > 0 then
-    tomar(1)
-    tomar(math.ceil(#puertas / 2))
-    tomar(#puertas)
-    for i = 1, #puertas do
-      if #ciudad.parcelas >= 3 then break end
-      tomar(i)
-    end
-  end
+  for i = 1, #puertas do tomar(i) end
   local function npc(nx, ny, rol, nombre)
     ciudad.npcs[#ciudad.npcs + 1] = {
       x = x0 + nx + 0.5, y = y0 + ny + 0.5,
@@ -1311,6 +1303,8 @@ function M.casa()
     end
   end
   mapa.salida = { x = puerta + 0.5, y = h - 2.5 }
+  -- Hueco del muro sur: la puerta de salida. El jugador aparece más adentro, en salida.
+  mapa.puerta = { x = puerta + 0.5, y = h - 0.5 }
   mapa.muebles = {
     cama = { x = 4.5, y = 4.5 },
     cofre = { x = w - 4.5, y = 4.5 },

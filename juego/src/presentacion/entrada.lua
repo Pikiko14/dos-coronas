@@ -432,6 +432,41 @@ function Entrada.clicMundo(app, mx, my, boton)
   if not Dibujo.dentroVista(mx, my) then return end
   local cam = Dibujo.camara(jugador, app.zoom, mundo:mapaDe(jugador))
   local x, y = Dibujo.pantallaAMundo(cam, mx, my)
+  if jugador.modo == "casa" then
+    local mapa = mundo.mapas.casa
+    local puerta = mapa and mapa.puerta
+    if puerta and Util.dist(x, y, puerta.x, puerta.y) < 0.75 then
+      app.actuar("casa_salir")
+      Interfaz.panel = nil
+      Interfaz.muebleSel = nil
+      return
+    end
+    local casa = jugador.casas and jugador.casas[jugador.casaId]
+    local cercano, md
+    if casa then
+      for nombre in pairs(casa.muebles or {}) do
+        local fx, fy = mundo:posMueble(casa, nombre)
+        if fx then
+          local d = Util.dist(x, y, fx, fy)
+          if d < 0.9 and (not md or d < md) then cercano, md = nombre, d end
+        end
+      end
+    end
+    if boton == 2 then
+      local tipo = cercano or Interfaz.muebleSel
+      if tipo then
+        app.actuar("mueble_rotar", { tipo = tipo })
+        Interfaz.muebleSel = tipo
+        return
+      end
+    elseif cercano and cercano ~= Interfaz.muebleSel then
+      Interfaz.muebleSel = cercano
+      return
+    elseif Interfaz.muebleSel then
+      app.actuar("mueble_mover", { tipo = Interfaz.muebleSel, x = x, y = y })
+      return
+    end
+  end
   local ent = mundo:objetivoCercano(jugador, x, y, false)
   if ent and love.keyboard.isDown("lshift", "rshift") then
     app.actuar("mirar", { id = ent.id })
@@ -567,6 +602,8 @@ function Entrada.rueda(app, dy)
     local mx, my = love.mouse.getPosition()
     local esc = Interfaz.escala or 1
     Interfaz.mapaZoomar(dy > 0 and 1.25 or 1 / 1.25, mx / esc, my / esc)
+  elseif Interfaz.panel == "vivienda" then
+    Interfaz.casaScroll = math.max(0, math.min(Interfaz.casaScrollMax or 0, (Interfaz.casaScroll or 0) - dy))
   elseif Interfaz.panel == "mall" then
     Interfaz.mallScroll = math.max(0, math.min(Interfaz.mallScrollMax or 0, (Interfaz.mallScroll or 0) - dy * (Interfaz.mallTab == "addons" and 3 or 1)))
   elseif Interfaz.panel == "mercado" then
@@ -642,6 +679,7 @@ function Entrada.tecla(app, tecla)
     end
     if Interfaz.foco then Interfaz.foco = nil return end
     if Interfaz.panel then Interfaz.panel = nil return end
+    if Interfaz.muebleSel then Interfaz.muebleSel = nil return end
     if app.estado == "juego" and app.jugador and app.jugador.objetivo then
       app.actuar("objetivo", { id = nil, persigue = false })
       return
