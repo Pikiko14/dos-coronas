@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Las dos coronas. color = rojo, verde y azul de 0 a 1.
+-->
+<facciones>
+  <faccion id="albor" nombre="Albor" texto="Tierras de trigo, puertos dorados y muros claros. Albor guarda la corona del día." titulo="Corona del Amanecer">
+    <color lista="0.95,0.78,0.28"/>
+  </faccion>
+  <faccion id="umbra" nombre="Umbra" texto="Ciénagas, puertos negros y fe de sombras. Umbra reclama la corona de la noche." titulo="Corona del Ocaso">
+    <color lista="0.62,0.42,0.95"/>
+  </faccion>
+</facciones>

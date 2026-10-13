@@ -9,102 +9,11 @@ local Datos = require("compartido.dominio.datos")
 
 local A = {}
 
-A.MAX = 5
-
-local function activa(id, slot, nivel, requiere, gratis)
-  return { id = id, tipo = "activa", slot = slot, nivel = nivel, requiere = requiere, gratis = gratis }
-end
-
-local function pasiva(id, nombre, desc, icono, nivel, requiere, por)
-  return {
-    id = id, tipo = "pasiva", nombre = nombre, desc = desc, nivel = nivel,
-    requiere = requiere, por = por, icono = { hoja = "equipment", sprite = icono },
-  }
-end
-
--- Casillas de la hoja de objetos usadas como icono de las pasivas.
-local ESPADA, ESCUDO, BOTAS, ANILLO, POCION_VIDA, POCION_MANA, YELMO, PETO, BASTON, MAZA =
-  4, 384, 656, 736, 704, 711, 449, 512, 352, 178
-
-A.arboles = {
-  guerrero = {
-    activa("golpe", 1, 1, nil, true),
-    activa("tajo", 2, 3, { "golpe", 2 }),
-    activa("grito", 3, 12, { "tajo", 2 }),
-    activa("carga", 4, 7, { "golpe", 2 }),
-    activa("desgarro", 5, 15, { "golpe", 3 }),
-    activa("furia", 6, 20, { "grito", 2 }),
-    pasiva("vigor", "Vigor", "Más vida máxima.", POCION_VIDA, 1, nil, { hp = 0.06 }),
-    pasiva("fuerza", "Fuerza bruta", "Más ataque físico.", ESPADA, 2, { "golpe", 2 }, { atk = 0.08 }),
-    pasiva("piel", "Piel de acero", "Más defensa física y mágica.", ESCUDO, 3, { "vigor", 2 }, { def = 0.08, mdef = 0.05 }),
-    pasiva("impulso", "Impulso", "Caminas más rápido.", BOTAS, 4, { "carga", 1 }, { spd = 0.07 }),
-  },
-  mago = {
-    activa("misil", 1, 1, nil, true),
-    activa("fuego", 2, 7, { "misil", 2 }),
-    activa("escudo", 3, 3, { "misil", 2 }),
-    activa("nova", 4, 12, { "fuego", 2 }),
-    activa("sombra", 5, 15, { "misil", 3 }),
-    activa("meteoro", 6, 20, { "fuego", 3 }),
-    pasiva("mente", "Mente aguda", "Más ataque mágico.", BASTON, 1, nil, { matk = 0.08 }),
-    pasiva("reserva", "Reserva arcana", "Más maná máximo.", POCION_MANA, 2, { "mente", 1 }, { mp = 0.08 }),
-    pasiva("barrera", "Barrera mental", "Más defensa mágica.", ANILLO, 3, { "reserva", 2 }, { mdef = 0.08 }),
-    pasiva("prisa", "Prisa arcana", "Caminas más rápido.", BOTAS, 4, { "nova", 1 }, { spd = 0.07 }),
-  },
-  cazador = {
-    activa("disparo", 1, 1, nil, true),
-    activa("lluvia", 2, 7, { "disparo", 2 }),
-    activa("trampa", 3, 3, { "disparo", 2 }),
-    activa("preciso", 4, 12, { "disparo", 2 }),
-    activa("flecha_veneno", 5, 15, { "disparo", 3 }),
-    activa("paso_agil", 6, 20, { "trampa", 2 }),
-    pasiva("punteria", "Puntería", "Más ataque físico.", ANILLO, 1, nil, { atk = 0.08 }),
-    pasiva("agilidad", "Agilidad", "Caminas más rápido.", BOTAS, 2, { "punteria", 1 }, { spd = 0.09 }),
-    pasiva("cuero", "Cuero curtido", "Más defensa física.", PETO, 3, { "agilidad", 2 }, { def = 0.08 }),
-    pasiva("temple", "Temple", "Más vida máxima.", POCION_VIDA, 4, { "cuero", 1 }, { hp = 0.06 }),
-  },
-  clerigo = {
-    activa("curar", 1, 1, nil, true),
-    activa("bendicion", 2, 5, { "curar", 1 }),
-    activa("castigo", 3, 3, { "curar", 1 }),
-    activa("consagrar", 4, 12, { "castigo", 2 }),
-    activa("sanacion", 5, 15, { "curar", 3 }),
-    activa("juicio", 6, 20, { "castigo", 3 }),
-    pasiva("fe", "Fe", "Más ataque mágico.", MAZA, 1, nil, { matk = 0.08 }),
-    pasiva("devocion", "Devoción", "Más maná máximo.", POCION_MANA, 2, { "fe", 1 }, { mp = 0.08 }),
-    pasiva("gracia", "Gracia", "Más defensa mágica.", YELMO, 3, { "devocion", 2 }, { mdef = 0.08 }),
-    pasiva("temple", "Temple", "Más vida máxima.", POCION_VIDA, 4, { "gracia", 1 }, { hp = 0.06 }),
-  },
-}
-
--- Cuánto mejora cada poder por rango adicional. pot: potencia (daño, curación, escudo,
--- fuerza de los efectos); cd y mana: reducción; dur: segundos de efecto de más.
-local MEJORA = {
-  golpe = { pot = 0.10, cd = 0.03 },
-  tajo = { pot = 0.10, cd = 0.05, mana = 0.03 },
-  grito = { pot = 0.10, cd = 0.04, dur = 1 },
-  carga = { pot = 0.10, cd = 0.05, mana = 0.04 },
-  misil = { pot = 0.10, cd = 0.03 },
-  fuego = { pot = 0.12, cd = 0.04, mana = 0.03 },
-  escudo = { pot = 0.15, cd = 0.04, dur = 1 },
-  nova = { pot = 0.10, cd = 0.05, mana = 0.03 },
-  disparo = { pot = 0.10, cd = 0.03 },
-  lluvia = { pot = 0.10, cd = 0.05, mana = 0.03 },
-  trampa = { pot = 0, cd = 0.07, mana = 0.05 },
-  preciso = { pot = 0.12, cd = 0.05, mana = 0.03 },
-  curar = { pot = 0.12, cd = 0.03, mana = 0.03 },
-  bendicion = { pot = 0.12, cd = 0.04, dur = 1.5 },
-  castigo = { pot = 0.10, cd = 0.03 },
-  consagrar = { pot = 0.10, cd = 0.05, mana = 0.03 },
-  desgarro = { pot = 0.10, cd = 0.04, mana = 0.03 },
-  furia = { pot = 0.10, cd = 0.03, dur = 1.5 },
-  sombra = { pot = 0.10, cd = 0.04, mana = 0.03 },
-  meteoro = { pot = 0.12, cd = 0.04, mana = 0.03 },
-  flecha_veneno = { pot = 0.10, cd = 0.04, mana = 0.03 },
-  paso_agil = { pot = 0.10, cd = 0.05, dur = 0.7 },
-  sanacion = { pot = 0.12, cd = 0.04, mana = 0.03 },
-  juicio = { pot = 0.10, cd = 0.04, mana = 0.03 },
-}
+-- Los nodos de cada oficio y lo que mejora cada poder por rango están en compartido/datos/arbol.xml.
+local datosArbol = require("compartido.dominio.configuracion").tabla("arbol")
+A.MAX = datosArbol.max
+A.arboles = datosArbol.arboles
+local MEJORA = datosArbol.mejoras
 
 function A.nodos(clase)
   return A.arboles[clase] or {}

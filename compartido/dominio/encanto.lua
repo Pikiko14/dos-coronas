@@ -3,10 +3,8 @@
 -- arcano (que sueltan las criaturas). Los primeros niveles son seguros; después se puede
 -- fallar, y a partir de +7 un fallo hace perder un nivel.
 local E = {}
+require("compartido.dominio.configuracion").aplicar(E, "encanto")
 
-E.MAX = 10
-E.PCT = 0.08
-E.MATERIAL = "polvo_arcano"
 
 -- Probabilidad de subir de +n a +(n+1), con n = 0..9.
 local PROB = { 1.0, 1.0, 1.0, 0.8, 0.65, 0.5, 0.4, 0.3, 0.2, 0.12 }

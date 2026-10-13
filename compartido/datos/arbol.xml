@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Arbol de poderes de cada clase. activa: poder de la barra (slot = casilla); pasiva: bonus permanente que crece con el rango.
+  nivel: nivel minimo para aprenderlo; requiere: nodo y rango previos (lista id,rango); gratis: se sabe desde el principio.
+  mejoras: cuanto mejora cada poder por rango adicional (pot = potencia, cd/mana = reduccion, dur = segundos mas).
+-->
+<arbol max="5">
+  <arboles>
+    <cazador>
+      <i id="disparo" nivel="1" tipo="activa" gratis="true" slot="1"/>
+      <i id="lluvia" nivel="7" tipo="activa" slot="2">
+        <requiere lista="disparo,2"/>
+      </i>
+      <i id="trampa" nivel="3" tipo="activa" slot="3">
+        <requiere lista="disparo,2"/>
+      </i>
+      <i id="preciso" nivel="12" tipo="activa" slot="4">
+        <requiere lista="disparo,2"/>
+      </i>
+      <i id="flecha_veneno" nivel="15" tipo="activa" slot="5">
+        <requiere lista="disparo,3"/>
+      </i>
+      <i id="paso_agil" nivel="20" tipo="activa" slot="6">
+        <requiere lista="trampa,2"/>
+      </i>
+      <i id="punteria" nombre="Puntería" nivel="1" tipo="pasiva" desc="Más ataque físico.">
+        <icono hoja="equipment" sprite="736"/>
+        <por atk="0.08"/>
+      </i>
+      <i id="agilidad" nombre="Agilidad" nivel="2" tipo="pasiva" desc="Caminas más rápido.">
+        <icono hoja="equipment" sprite="656"/>
+        <por spd="0.09"/>
+        <requiere lista="punteria,1"/>
+      </i>
+      <i id="cuero" nombre="Cuero curtido" nivel="3" tipo="pasiva" desc="Más defensa física.">
+        <icono hoja="equipment" sprite="512"/>
+        <por def="0.08"/>
+        <requiere lista="agilidad,2"/>
+      </i>
+      <i id="temple" nombre="Temple" nivel="4" tipo="pasiva" desc="Más vida máxima.">
+        <icono hoja="equipment" sprite="704"/>
+        <por hp="0.06"/>
+        <requiere lista="cuero,1"/>
+      </i>
+    </cazador>
+    <clerigo>
+      <i id="curar" nivel="1" tipo="activa" gratis="true" slot="1"/>
+      <i id="bendicion" nivel="5" tipo="activa" slot="2">
+        <requiere lista="curar,1"/>
+      </i>
+      <i id="castigo" nivel="3" tipo="activa" slot="3">
+        <requiere lista="curar,1"/>
+      </i>
+      <i id="consagrar" nivel="12" tipo="activa" slot="4">
+        <requiere lista="castigo,2"/>
+      </i>
+      <i id="sanacion" nivel="15" tipo="activa" slot="5">
+        <requiere lista="curar,3"/>
+      </i>
+      <i id="juicio" nivel="20" tipo="activa" slot="6">
+        <requiere lista="castigo,3"/>
+      </i>
+      <i id="fe" nombre="Fe" nivel="1" tipo="pasiva" desc="Más ataque mágico.">
+        <icono hoja="equipment" sprite="178"/>
+        <por matk="0.08"/>
+      </i>
+      <i id="devocion" nombre="Devoción" nivel="2" tipo="pasiva" desc="Más maná máximo.">
+        <icono hoja="equipment" sprite="711"/>
+        <por mp="0.08"/>
+        <requiere lista="fe,1"/>
+      </i>
+      <i id="gracia" nombre="Gracia" nivel="3" tipo="pasiva" desc="Más defensa mágica.">
+        <icono hoja="equipment" sprite="449"/>
+        <por mdef="0.08"/>
+        <requiere lista="devocion,2"/>
+      </i>
+      <i id="temple" nombre="Temple" nivel="4" tipo="pasiva" desc="Más vida máxima.">
+        <icono hoja="equipment" sprite="704"/>
+        <por hp="0.06"/>
+        <requiere lista="gracia,1"/>
+      </i>
+    </clerigo>
+    <guerrero>
+      <i id="golpe" nivel="1" tipo="activa" gratis="true" slot="1"/>
+      <i id="tajo" nivel="3" tipo="activa" slot="2">
+        <requiere lista="golpe,2"/>
+      </i>
+      <i id="grito" nivel="12" tipo="activa" slot="3">
+        <requiere lista="tajo,2"/>
+      </i>
+      <i id="carga" nivel="7" tipo="activa" slot="4">
+        <requiere lista="golpe,2"/>
+      </i>
+      <i id="desgarro" nivel="15" tipo="activa" slot="5">
+        <requiere lista="golpe,3"/>
+      </i>
+      <i id="furia" nivel="20" tipo="activa" slot="6">
+        <requiere lista="grito,2"/>
+      </i>
+      <i id="vigor" nombre="Vigor" nivel="1" tipo="pasiva" desc="Más vida máxima.">
+        <icono hoja="equipment" sprite="704"/>
+        <por hp="0.06"/>
+      </i>
+      <i id="fuerza" nombre="Fuerza bruta" nivel="2" tipo="pasiva" desc="Más ataque físico.">
+        <icono hoja="equipment" sprite="4"/>
+        <por atk="0.08"/>
+        <requiere lista="golpe,2"/>
+      </i>
+      <i id="piel" nombre="Piel de acero" nivel="3" tipo="pasiva" desc="Más defensa física y mágica.">
+        <icono hoja="equipment" sprite="384"/>
+        <por def="0.08" mdef="0.05"/>
+        <requiere lista="vigor,2"/>
+      </i>
+      <i id="impulso" nombre="Impulso" nivel="4" tipo="pasiva" desc="Caminas más rápido.">
+        <icono hoja="equipment" sprite="656"/>
+        <por spd="0.07"/>
+        <requiere lista="carga,1"/>
+      </i>
+    </guerrero>
+    <mago>
+      <i id="misil" nivel="1" tipo="activa" gratis="true" slot="1"/>
+      <i id="fuego" nivel="7" tipo="activa" slot="2">
+        <requiere lista="misil,2"/>
+      </i>
+      <i id="escudo" nivel="3" tipo="activa" slot="3">
+        <requiere lista="misil,2"/>
+      </i>
+      <i id="nova" nivel="12" tipo="activa" slot="4">
+        <requiere lista="fuego,2"/>
+      </i>
+      <i id="sombra" nivel="15" tipo="activa" slot="5">
+        <requiere lista="misil,3"/>
+      </i>
+      <i id="meteoro" nivel="20" tipo="activa" slot="6">
+        <requiere lista="fuego,3"/>
+      </i>
+      <i id="mente" nombre="Mente aguda" nivel="1" tipo="pasiva" desc="Más ataque mágico.">
+        <icono hoja="equipment" sprite="352"/>
+        <por matk="0.08"/>
+      </i>
+      <i id="reserva" nombre="Reserva arcana" nivel="2" tipo="pasiva" desc="Más maná máximo.">
+        <icono hoja="equipment" sprite="711"/>
+        <por mp="0.08"/>
+        <requiere lista="mente,1"/>
+      </i>
+      <i id="barrera" nombre="Barrera mental" nivel="3" tipo="pasiva" desc="Más defensa mágica.">
+        <icono hoja="equipment" sprite="736"/>
+        <por mdef="0.08"/>
+        <requiere lista="reserva,2"/>
+      </i>
+      <i id="prisa" nombre="Prisa arcana" nivel="4" tipo="pasiva" desc="Caminas más rápido.">
+        <icono hoja="equipment" sprite="656"/>
+        <por spd="0.07"/>
+        <requiere lista="nova,1"/>
+      </i>
+    </mago>
+  </arboles>
+  <mejoras>
+    <bendicion cd="0.04" dur="1.5" pot="0.12"/>
+    <carga cd="0.05" mana="0.04" pot="0.1"/>
+    <castigo cd="0.03" pot="0.1"/>
+    <consagrar cd="0.05" mana="0.03" pot="0.1"/>
+    <curar cd="0.03" mana="0.03" pot="0.12"/>
+    <desgarro cd="0.04" mana="0.03" pot="0.1"/>
+    <disparo cd="0.03" pot="0.1"/>
+    <escudo cd="0.04" dur="1" pot="0.15"/>
+    <flecha_veneno cd="0.04" mana="0.03" pot="0.1"/>
+    <fuego cd="0.04" mana="0.03" pot="0.12"/>
+    <furia cd="0.03" dur="1.5" pot="0.1"/>
+    <golpe cd="0.03" pot="0.1"/>
+    <grito cd="0.04" dur="1" pot="0.1"/>
+    <juicio cd="0.04" mana="0.03" pot="0.1"/>
+    <lluvia cd="0.05" mana="0.03" pot="0.1"/>
+    <meteoro cd="0.04" mana="0.03" pot="0.12"/>
+    <misil cd="0.03" pot="0.1"/>
+    <nova cd="0.05" mana="0.03" pot="0.1"/>
+    <paso_agil cd="0.05" dur="0.7" pot="0.1"/>
+    <preciso cd="0.05" mana="0.03" pot="0.12"/>
+    <sanacion cd="0.04" mana="0.03" pot="0.12"/>
+    <sombra cd="0.04" mana="0.03" pot="0.1"/>
+    <tajo cd="0.05" mana="0.03" pot="0.1"/>
+    <trampa cd="0.07" mana="0.05" pot="0"/>
+  </mejoras>
+</arbol>

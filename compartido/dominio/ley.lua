@@ -8,12 +8,8 @@ local Util = require("compartido.dominio.util")
 local Oficios = require("compartido.dominio.oficios")
 
 local M = {}
+require("compartido.dominio.configuracion").aplicar(M, "ley")
 
-M.BUSCADO_SEG = 240        -- tras un robo con éxito
-M.BUSCADO_FALLO_SEG = 120  -- tras un robo fallido
-M.ALCANCE_ROBO = 2.2
-M.FRACCION_ROBO = 0.45
-M.COMBATE_SEG = 60
 
 function M.instalar(Mundo)
   function Mundo:esBuscado(p)

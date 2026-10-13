@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Encargos de cada ciudad: derrotar cantidad de una criatura a cambio de oro y experiencia.
+-->
+<misiones>
+  <mision id="q_auroria" cantidad="6" ciudad="auroria" dialogo="Esos gatos no dejan en paz el granero. Derrota seis." monstruo="gato" oro="90" siguiente="q_auroria_2" texto="Los gatos umbríos se han vuelto bravos. Derrota 6." titulo="Gatos en el granero" xp="80"/>
+  <mision id="q_auroria_2" cantidad="4" ciudad="auroria" dialogo="El granero sigue inquieto. Acaba con cuatro más." monstruo="gato" oro="70" requiere="q_auroria" texto="Quedan las crías entre la paja. Derrota 4." titulo="El nido del granero" xp="60"/>
+  <mision id="q_puerto_sol" cantidad="8" ciudad="puerto_sol" monstruo="rata" oro="100" texto="Las ratas gigantes muerden las redes. Derrota 8." titulo="Ratones de muelle" xp="90"/>
+  <mision id="q_liria" cantidad="6" ciudad="liria" monstruo="jabali" oro="120" texto="Derrota 6 jabalíes al sur de Liria." titulo="Jabalíes en la senda" xp="110"/>
+  <mision id="q_henar" cantidad="8" ciudad="henar" monstruo="escarabajo" oro="110" texto="Derrota 8 escarabajos." titulo="Escarabajos del trigo" xp="100"/>
+  <mision id="q_alba" cantidad="8" ciudad="alba" monstruo="cuervo" oro="130" texto="Derrota 8 murciélagos." titulo="Murciélagos del bastión" xp="120"/>
+  <mision id="q_nocturnia" cantidad="6" ciudad="nocturnia" monstruo="alma_verde" oro="160" texto="Derrota 6 almas verdes." titulo="Almas del velo" xp="150"/>
+  <mision id="q_puerto_sombra" cantidad="5" ciudad="puerto_sombra" monstruo="demonio_marea" oro="180" texto="Derrota 5 demonios de marea." titulo="Demonios de marea" xp="170"/>
+  <mision id="q_nox" cantidad="6" ciudad="nox" monstruo="aguila" oro="140" texto="Derrota 6 avispones." titulo="Avispones de Nox" xp="130"/>
+  <mision id="q_velo" cantidad="6" ciudad="velo" monstruo="espectro" oro="170" texto="Derrota 6 espectros." titulo="Espectros de la ciénaga" xp="160"/>
+  <mision id="q_eclipse" cantidad="5" ciudad="eclipse" monstruo="gargola" oro="200" texto="Derrota 5 gárgolas." titulo="Gárgolas del eclipse" xp="180"/>
+</misiones>

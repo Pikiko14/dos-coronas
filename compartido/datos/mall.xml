@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Item Mall: se paga con Monedas Corona. El orden del archivo es el orden en la tienda.
+-->
+<mall>
+  <!-- ---- bonos temporales: mult/pct = lo que suman; largo = dura 1 hora (los demas 30 min) ---- -->
+  <bono id="exp" nombre="Experiencia doble" etiqueta="x2 EXP" largo="true" mult="2">
+    <color lista="1,0.85,0.3"/>
+  </bono>
+  <bono id="str" nombre="Fuerza" atk="0.05" etiqueta="STR" pct="0.2">
+    <color lista="0.9,0.65,0.3"/>
+  </bono>
+  <bono id="atk" nombre="Ataque" etiqueta="ATK" pct="0.15">
+    <color lista="0.95,0.4,0.3"/>
+  </bono>
+  <bono id="def" nombre="Defensa" etiqueta="DEF" pct="0.15">
+    <color lista="0.45,0.6,0.95"/>
+  </bono>
+  <bono id="int" nombre="Inteligencia" etiqueta="INT" matk="0.08" pct="0.2">
+    <color lista="0.7,0.45,0.95"/>
+  </bono>
+  <bono id="mdef" nombre="Defensa mágica" etiqueta="MDEF" pct="0.15">
+    <color lista="0.35,0.8,0.85"/>
+  </bono>
+  <bono id="matk" nombre="Ataque mágico" etiqueta="MATK" pct="0.15">
+    <color lista="0.95,0.5,0.85"/>
+  </bono>
+  <bono id="mvel" nombre="Velocidad mágica" etiqueta="MSPD" pct="0.2">
+    <color lista="0.5,0.9,0.5"/>
+  </bono>
+  <!-- ---- objetos (pestanas Objetos y Forja): precio en Monedas Corona; bono = el bono que dan; forja = hasta que +n sube ---- -->
+  <objeto id="pergamino_forja" nombre="Pergamino de forja" forja="6" precio="60" sprite="697" texto="Forja una pieza +1 sin fallar ni gastar oro ni polvo (hasta +6). Se usa en el Maestro de encantos.">
+    <color lista="1,0.62,0.2"/>
+  </objeto>
+  <objeto id="pergamino_forja_sagrado" nombre="Pergamino de forja sagrado" forja="10" precio="160" sprite="697" texto="Forja una pieza +1 sin fallar ni gastar oro ni polvo (hasta +10). Se usa en el Maestro de encantos.">
+    <color lista="1,0.9,0.35"/>
+  </objeto>
+  <objeto id="tarjeta_exp" nombre="Tarjeta de experiencia doble" bono="exp" precio="50" sprite="699" texto="Durante 1 hora ganas el doble de experiencia."/>
+  <objeto id="pergamino_str" nombre="Pergamino de fuerza" bono="str" precio="25" sprite="697" texto="+20% de vida y +5% de ataque durante 30 minutos."/>
+  <objeto id="pergamino_atk" nombre="Pergamino de ataque" bono="atk" precio="20" sprite="697" texto="+15% de ataque durante 30 minutos."/>
+  <objeto id="pergamino_def" nombre="Pergamino de defensa" bono="def" precio="20" sprite="697" texto="+15% de defensa durante 30 minutos."/>
+  <objeto id="pergamino_int" nombre="Pergamino de inteligencia" bono="int" precio="25" sprite="697" texto="+20% de maná y +8% de ataque mágico (30 min)."/>
+  <objeto id="pergamino_mdef" nombre="Pergamino de defensa mágica" bono="mdef" precio="20" sprite="697" texto="+15% de defensa mágica durante 30 minutos."/>
+  <objeto id="pergamino_matk" nombre="Pergamino de ataque mágico" bono="matk" precio="20" sprite="697" texto="+15% de ataque mágico durante 30 minutos."/>
+  <objeto id="pergamino_mvel" nombre="Pergamino de velocidad mágica" bono="mvel" precio="30" sprite="697" texto="Poderes un 20% más rápidos (30 min)."/>
+  <!-- ---- addons (skins de personaje), en el orden en que salen en la tienda ---- -->
+  <addon id="skin_hada_cristal" nombre="Hada de cristal" desc="Exclusiva: alas de hielo, melena celeste y tiara de cristal." precio="700"/>
+  <addon id="skin_caballero_solar" nombre="Caballero solar" desc="Exclusiva: armadura dorada, penacho rojo y emblema de sol." precio="700"/>
+  <addon id="skin_rey" nombre="Rey" desc="Corona, capa y porte de monarca." precio="300"/>
+  <addon id="skin_princesa" nombre="Princesa" desc="Cabello dorado y vestido real." precio="300"/>
+  <addon id="skin_explorador" nombre="Explorador" desc="Pelo verde y ropa de viaje." precio="200"/>
+  <addon id="skin_fuego" nombre="Pelirrojo" desc="Melena de fuego y mirada decidida." precio="200"/>
+  <addon id="skin_marea" nombre="Hija de la marea" desc="Pelo turquesa como el mar." precio="250"/>
+  <addon id="skin_sombra" nombre="Sombra del bosque" desc="Capucha oscura de cazador nocturno." precio="250"/>
+  <addon id="skin_marino" nombre="Marino azul" desc="Pelo azul y casaca de navegante." precio="250"/>
+  <addon id="skin_plata" nombre="Cabello de plata" desc="Un viajero de pelo plateado." precio="250"/>
+  <addon id="skin_chico" nombre="Joven aventurero" desc="Pelo castaño y ropa de camino." precio="200"/>
+  <addon id="skin_coletas" nombre="Chica de coletas" desc="Coletas y vestido rojo." precio="200"/>
+  <addon id="skin_noel" nombre="Papá Noel" desc="Gorro rojo y larga barba blanca." precio="400"/>
+  <addon id="skin_noel_saco" nombre="Papá Noel con saco" desc="Con el saco de los regalos." precio="400"/>
+  <addon id="skin_reno" nombre="Reno" desc="Un reno de las nieves." precio="400"/>
+  <addon id="skin_ayudante" nombre="Ayudante navideña" desc="Gorro de duende y melena rubia." precio="350"/>
+  <addon id="skin_esp_fuego" nombre="Espíritu de fuego" desc="Una dama de llamas y cabello naranja." precio="350"/>
+  <addon id="skin_esp_agua" nombre="Espíritu del agua" desc="Cabello azul como las corrientes." precio="350"/>
+  <addon id="skin_esp_bruma" nombre="Espíritu de la bruma" desc="Plateada y esquiva como la niebla." precio="350"/>
+  <addon id="skin_esp_bosque" nombre="Espíritu del bosque" desc="Coronada de hojas verdes." precio="350"/>
+  <addon id="skin_hada" nombre="Hada dorada" desc="Pequeña, rubia y luminosa." precio="300"/>
+  <addon id="skin_angel_fuego" nombre="Ángel ardiente" desc="Alas blancas y melena de fuego." precio="450"/>
+  <addon id="skin_angel_plata" nombre="Ángel de cintas azules" desc="Rubia, con cintas y túnica clara." precio="450"/>
+  <addon id="skin_sabio" nombre="Anciano sabio" desc="Larga barba y mirada serena." precio="300"/>
+  <addon id="skin_jinete_pardo" nombre="Caballero de corcel pardo" desc="Armadura de plata sobre un caballo pardo." precio="500"/>
+  <addon id="skin_jinete_blanco" nombre="Caballero de corcel blanco" desc="Armadura de plata sobre un caballo blanco." precio="500"/>
+  <addon id="skin_jinete_negro" nombre="Caballero de corcel negro" desc="Armadura de plata sobre un caballo oscuro." precio="500"/>
+  <addon id="skin_jinete_dorado" nombre="Caballero de corcel dorado" desc="Armadura de plata sobre un caballo dorado." precio="500"/>
+  <addon id="skin_abanderado" nombre="Abanderado" desc="Soldado con el estandarte rojo." precio="300"/>
+  <addon id="skin_rey_jinete" nombre="Rey a caballo" desc="Corona y capa sobre su montura." precio="550"/>
+  <addon id="skin_dama_jinete" nombre="Dama a caballo" desc="Rubia amazona de porte noble." precio="550"/>
+  <addon id="skin_jinete_capucha" nombre="Jinete encapuchado" desc="Capucha parda y montura gris." precio="450"/>
+  <addon id="skin_cazador_verde" nombre="Cazador de cabello verde" desc="Rápido y de mirada afilada." precio="300"/>
+  <addon id="skin_desierto" nombre="Mercader del desierto" desc="Turbante blanco y barba cuidada." precio="300"/>
+  <addon id="skin_sombra_capucha" nombre="Sombra encapuchada" desc="Una capa oscura que oculta el rostro." precio="350"/>
+  <addon id="skin_gran_capucha" nombre="Gran capucha" desc="Capucha parda de hilo dorado." precio="350"/>
+  <addon id="skin_hechicera" nombre="Hechicera de plata" desc="Cabello blanco y túnica morada." precio="350"/>
+  <addon id="skin_enmascarado" nombre="Enmascarado" desc="Máscara azul y capa violeta." precio="350"/>
+  <addon id="skin_centinela" nombre="Centinela verde" desc="Yelmo verde y mirada fija." precio="350"/>
+  <addon id="skin_caballero_oscuro" nombre="Caballero oscuro" desc="Armadura negra con cuernos." precio="500"/>
+  <!-- ---- monturas exclusivas ---- -->
+  <montura id="dragon" nombre="Dragón" desc="Exclusiva: dorado en el Alba y violeta en el Ocaso. La más rápida y resistente; sin oficio y se pelea montado." precio="1500"/>
+</mall>

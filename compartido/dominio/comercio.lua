@@ -10,12 +10,8 @@ local Util = require("compartido.dominio.util")
 local Datos = require("compartido.dominio.datos")
 
 local M = {}
+require("compartido.dominio.configuracion").aplicar(M, "comercio")
 
-M.INVITACION_SEG = 30
-M.DISTANCIA_INVITAR = 3.2
-M.DISTANCIA_MAX = 10          -- si se alejan más que esto, el trato se cancela
-M.MAX_OBJETOS = 16            -- objetos distintos en una oferta
-M.MAX_ORO = 1000000000
 
 local function copiaBolsa(p)
   local c = {}

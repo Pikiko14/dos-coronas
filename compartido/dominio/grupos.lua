@@ -9,11 +9,8 @@ local Util = require("compartido.dominio.util")
 local Balance = require("compartido.dominio.balance")
 
 local M = {}
+require("compartido.dominio.configuracion").aplicar(M, "grupos")
 
-M.MAX = 5
-M.BONO_XP = 0.10          -- extra sobre el total de la experiencia, antes de repartirla
-M.DISTANCIA = 30          -- hasta dónde cuenta un compañero para repartir
-M.INVITACION_SEG = 60
 
 function M.instalar(Mundo)
   function Mundo:iniciarGrupos()

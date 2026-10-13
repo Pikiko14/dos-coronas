@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Objetos que no son equipo: pociones, materiales y mochilas (el equipo se calcula con equipo.xml).
+  hoja/sprite: icono en la lamina de objetos; apila: cuantos caben en una casilla; precio en oro; quest: no se vende;
+  cura/mana: fraccion que restauran; hueco=mochila: slots = espacios que da la bolsa.
+-->
+<items>
+  <item id="pocion_vida" nombre="Poción de vida" apila="20" cura="0.42" hoja="equipment" precio="28" sprite="705"/>
+  <item id="pocion_mana" nombre="Poción de maná" apila="20" hoja="equipment" mana="0.42" precio="24" sprite="704"/>
+  <item id="cristal" nombre="Cristal enemigo" apila="20" hoja="equipment" precio="1" quest="true" sprite="359"/>
+  <item id="polvo_arcano" nombre="Polvo arcano" apila="99" hoja="equipment" precio="12" sprite="699" texto="Material para encantar el equipo."/>
+  <item id="mochila_1" nombre="Morral de tela" nivel="1" hoja="equipment" hueco="mochila" precio="72" slots="12" sprite="672" texto="Bolsa de 12 espacios." tier="1"/>
+  <item id="mochila_2" nombre="Mochila de cuero" nivel="5" hoja="equipment" hueco="mochila" precio="290" slots="16" sprite="674" texto="Bolsa de 16 espacios." tier="2"/>
+  <item id="mochila_3" nombre="Mochila de viajero" nivel="10" hoja="equipment" hueco="mochila" precio="830" slots="20" sprite="675" texto="Bolsa de 20 espacios." tier="3"/>
+  <item id="mochila_4" nombre="Mochila de corona" nivel="15" hoja="equipment" hueco="mochila" precio="2080" slots="24" sprite="676" texto="Bolsa de 24 espacios." tier="4"/>
+</items>

@@ -531,3 +531,17 @@ CRIATURAS CADA DOS NIVELES, CAMPAMENTOS Y MONEDAS
 - La cuadra tiene dos pestanas: "Transporte (oficio)" (buey, caballo, carreta) y "Monturas normales" (corcel real, lobo, bisonte, corcel de fuego).
 - Coordenadas de tu casilla (X, Y) en un recuadro a la izquierda del minimapa.
 - Solo las monturas de oficio (buey, caballo, carreta) tienen vida: se ve una barra bajo su icono (O) solo con el oficio activo. Las monturas normales (corcel, lobo, bisonte, dragon...) no tienen vida y los golpes van al jinete.
+- Item Mall: las filas son mas altas (5 por pagina, rueda del raton para el resto) y ningun texto se sale de su recuadro (hay un test que mide cada nombre y descripcion). Los botones de zoom del mapa (+, -, Centrar) estan en la esquina superior derecha del propio mapa.
+
+== Sprites de hechizos ==
+- Los 24 poderes de las cuatro clases (guerrero, mago, cazador, clerigo) tienen su propia hoja de animacion: juego/arte/hojas/new-sprites/Animations/Hechizo_<poder>.png (15 cuadros de 192x192, como las del pack), y los proyectiles en vuelo (misil, fuego, flecha, sagrado, sombra) tienen Proyectil_<tipo>.png (4 cuadros de 64x64). El juego las carga como cualquier otra hoja (render/efectos.lua y render/dibujo.lua); las miniaturas de la barra de poderes salen de ellas.
+- Se generaron con la herramienta herramientas/generar_hechizos (love herramientas\generar_hechizos): reescribe los PNG y deja una vista previa en %TEMP%/hechizos_previa.png. Para retocar un hechizo se edita su funcion en esa herramienta y se vuelve a ejecutar.
+- Los estados alterados y los poderes de criaturas siguen usando las hojas del pack.
+
+== Configuracion en XML ==
+- Todos los datos del juego estan en compartido/datos/*.xml, no en el codigo: items.xml (pociones y mochilas), equipo.xml (armas, armaduras, escalones, iconos), muebles.xml, habilidades.xml (poderes y barra), arbol.xml (arbol de poderes y mejoras), estados.xml (estados y poderes de criaturas), monstruos.xml, monturas.xml, mascotas.xml, mall.xml (bonos, objetos, addons, monturas), oficios.xml, mazmorras.xml (datos y planos), misiones.xml, ciudades.xml, biomas.xml, facciones.xml, clases.xml y constantes.xml (precios, tiempos, experiencia, danos y limites de cada sistema).
+- Para cambiar el equilibrio o anadir un objeto/poder/mascota basta con editar el XML y reiniciar (no hay que tocar Lua). Los comentarios de cada archivo explican los campos.
+- Reglas del formato: un registro por etiqueta (<item id="..." nombre="..."/>); numeros y true/false se reconocen solos; un texto que parece numero se escribe con prefijo "s:" (s:12); las listas se escriben lista="a,b,c"; las tablas anidadas son elementos hijos; las listas de registros usan <i>.
+- Un error de formato (etiqueta mal cerrada, id repetido, campo que falta o de tipo equivocado) para el arranque con un mensaje "archivo:linea: ...".
+- El servidor y el juego leen los mismos archivos (el paquete .love los lleva dentro de compartido/datos). El codigo que los carga esta en compartido/dominio/xml.lua y configuracion.lua; el servidor puede seguir sobrescribiendo algunos valores desde su .env.
+- herramientas/volcar_configuracion vuelca todas las tablas del juego a un texto ordenado: sirve para comprobar que un cambio de formato no altera ningun dato (comparar antes y despues).

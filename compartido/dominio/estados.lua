@@ -8,29 +8,13 @@ local Balance = require("compartido.dominio.balance")
 
 local E = {}
 
--- tipo: con qué ataque se calcula el daño ("fisico", "magico" o el básico de quien lo aplica).
--- dur y pct son los valores por defecto: pct es la fracción del ataque que pega cada
--- segundo (en drenar_mana, la fracción del maná máximo del objetivo; en lentitud, lo que
--- se frena). ignora: el daño no baja con la defensa.
-E.def = {
-  quemar = { nombre = "Quemado", tipo = "magico", color = { 1, 0.55, 0.2 }, dur = 4, pct = 0.22, dano = true },
-  sangrar = { nombre = "Sangrando", tipo = "fisico", color = { 0.9, 0.2, 0.28 }, dur = 5, pct = 0.2, dano = true },
-  veneno = { nombre = "Envenenado", color = { 0.45, 0.9, 0.3 }, dur = 6, pct = 0.12, dano = true, ignora = true },
-  drenar_vida = { nombre = "Vida drenada", color = { 0.75, 0.35, 0.9 }, dur = 3, pct = 0.35, dano = true, roba = true },
-  drenar_mana = { nombre = "Maná drenado", color = { 0.4, 0.6, 1 }, dur = 3, pct = 0.06, mana = true },
-  lentitud = { nombre = "Ralentizado", color = { 0.75, 0.8, 0.9 }, dur = 3, pct = 0.4 },
-  aturdir = { nombre = "Aturdido", color = { 1, 0.9, 0.4 }, dur = 0.9, pct = 0 },
-}
-
--- Poderes de criaturas: se lanzan solos cuando el objetivo está a tiro.
---   estado: lo que aplica (prob por defecto 1); area: radio si pega a varios con coef.
-E.poderes = {
-  succion = { nombre = "Succión vital", cd = 11, rango = 4.5, estado = { tipo = "drenar_vida" }, anim = "drenar_vida", sonido = "magia" },
-  drenaje = { nombre = "Drenar maná", cd = 10, rango = 5.5, estado = { tipo = "drenar_mana" }, anim = "drenar_mana", sonido = "magia" },
-  maldicion = { nombre = "Maldición", cd = 9, rango = 5.5, estado = { tipo = "lentitud", dur = 4, pct = 0.45 }, anim = "maldicion", sonido = "hielo" },
-  aliento = { nombre = "Aliento ígneo", cd = 10, rango = 4.5, area = 2.2, coef = 1.1, estado = { tipo = "quemar", prob = 0.7 }, anim = "aliento", sonido = "fuego" },
-  pisoton = { nombre = "Pisotón", cd = 12, rango = 2.6, area = 2.4, coef = 0.8, estado = { tipo = "aturdir", dur = 1.1 }, anim = "pisoton", sonido = "corte" },
-}
+-- Los estados y los poderes de criaturas están en compartido/datos/estados.xml (los comentarios de cada campo,
+-- también): tipo = con qué ataque se calcula el daño; dur y pct = valores por defecto (pct es la fracción del
+-- ataque que pega cada segundo); ignora = el daño no baja con la defensa; en los poderes, estado = lo que aplica
+-- y area = radio si pega a varios con coef.
+local Config = require("compartido.dominio.configuracion")
+E.def = Config.mapaOrden("estados", "estado", false)
+E.poderes = Config.mapaOrden("estados", "poder", false)
 
 function E.instalar(Mundo)
   -- Daño de un golpe de estado: parte del ataque de la fuente y se reduce con la defensa.

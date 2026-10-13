@@ -6,12 +6,8 @@ local Oficios = require("compartido.dominio.oficios")
 local Datos = require("compartido.dominio.datos")
 
 local M = {}
+require("compartido.dominio.configuracion").aplicar(M, "caravanas")
 
-M.MAX = 0            -- caravanas automáticas del servidor: ninguna (las caravanas son los comerciantes jugadores)
-M.INTERVALO = 70        -- segundos entre salidas
-M.VELOCIDAD = 2.4
-M.RADIO_ESCOLTA = 22    -- hasta dónde cuenta la escolta al llegar
-M.DISTANCIA_MAX = 620   -- no se mandan caravanas más lejos que esto
 
 function M.instalar(Mundo)
   -- ------------------------------------------------------------------ rutas

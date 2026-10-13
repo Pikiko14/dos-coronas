@@ -756,6 +756,21 @@ function I.iconoNpc(rol, x, y, r)
   figura("fill", 1)
 end
 
+-- Icono de una puerta de mazmorra: arco de cueva violeta con el interior oscuro (r = tamaño).
+function I.iconoMazmorra(x, y, r)
+  local function arco(modo, k)
+    local w, h = r * 1.1 * k, r * 1.3 * k
+    love.graphics.rectangle(modo, x - w, y - h * 0.15, w * 2, h * 1.15)
+    love.graphics.circle(modo, x, y - h * 0.15, w, 16)
+  end
+  love.graphics.setColor(0, 0, 0, 0.9)
+  arco("fill", 1.4)
+  love.graphics.setColor(0.75, 0.45, 1, 1)
+  arco("fill", 1)
+  love.graphics.setColor(0.12, 0.05, 0.2, 1)
+  arco("fill", 0.55)
+end
+
 local function minimapaLocal(mundo, p, x, y, lado)
   marco(x - 3, y - 3, lado + 6, lado + 6, true)
   if p.modo ~= "mundo" then
@@ -783,6 +798,11 @@ local function minimapaLocal(mundo, p, x, y, lado)
   for _, n in ipairs(mundo.mapas.mundo.npcsMapa or {}) do
     local ex, ey = x + (n.x - x0) * k, y + (n.y - y0) * k
     if ex > x + 2 and ex < x + lado - 2 and ey > y + 2 and ey < y + lado - 2 then I.iconoNpc(n.rol, ex, ey, 2.4) end
+  end
+  -- puertas de mazmorra
+  for _, z in ipairs(mundo.mapas.mundo.mazmorras or {}) do
+    local ex, ey = x + (z.x - x0) * k, y + (z.y - y0) * k
+    if ex > x + 4 and ex < x + lado - 4 and ey > y + 4 and ey < y + lado - 4 then I.iconoMazmorra(ex, ey, 3) end
   end
   -- compañeros de grupo (se ven aunque estén lejos)
   for _, m in ipairs(p.grupo and p.grupo.miembros or {}) do
@@ -1556,7 +1576,7 @@ function I.panelMall(mundo, p, w, h)
       if (o.forja ~= nil) == (I.mallTab == "forja") then objetos[#objetos + 1] = o end
     end
     -- caben 7 filas; el resto se recorre con la rueda del ratón
-    local visibles = 7
+    local visibles = 5
     I.mallScrollMax = math.max(0, #objetos - visibles)
     I.mallScroll = math.max(0, math.min(I.mallScrollMax, I.mallScroll or 0))
     if I.mallScrollMax > 0 then
@@ -1565,22 +1585,22 @@ function I.panelMall(mundo, p, w, h)
     end
     for i, o in ipairs(objetos) do
      if i > I.mallScroll and i <= I.mallScroll + visibles then
-      local y = y0 + (i - 1 - I.mallScroll) * 58
+      local y = y0 + (i - 1 - I.mallScroll) * 78
       love.graphics.setColor(0.10, 0.13, 0.25)
-      love.graphics.rectangle("fill", px + 14, y, pw - 28, 52, 6, 6)
+      love.graphics.rectangle("fill", px + 14, y, pw - 28, 72, 6, 6)
       local def = Datos.item(o.id)
       if def then
         local t = def.tinte or { 1, 1, 1 }
         love.graphics.setColor(t[1], t[2], t[3], 1)
-        Atlas.dibujar(def.hoja, def.sprite, px + 44, y + 26, 1.2, 16, 16, t)
+        Atlas.dibujar(def.hoja, def.sprite, px + 44, y + 36, 1.2, 16, 16, t)
       end
       love.graphics.setColor(0.95, 0.9, 0.75)
       love.graphics.print(o.nombre, px + 76, y + 6)
       love.graphics.setColor(0.72, 0.78, 0.68)
-      love.graphics.printf(o.texto, px + 76, y + 26, 330, "left")
+      love.graphics.printf(o.texto, px + 76, y + 28, 330, "left")
       love.graphics.setColor(1, 0.85, 0.3)
-      love.graphics.printf(Ayudas.num(o.precio) .. " mon.", px + 410, y + 18, 80, "right")
-      I.boton(px + 504, y + 10, 130, 32, "Comprar", "mall_buy_" .. o.id, (m.monedas or 0) >= o.precio,
+      love.graphics.printf(Ayudas.num(o.precio) .. " mon.", px + 410, y + 28, 80, "right")
+      I.boton(px + 504, y + 20, 130, 32, "Comprar", "mall_buy_" .. o.id, (m.monedas or 0) >= o.precio,
         "Te faltan " .. Ayudas.num(o.precio - (m.monedas or 0)) .. " Monedas Corona.")
      end
     end
@@ -1589,26 +1609,26 @@ function I.panelMall(mundo, p, w, h)
     for _, id in ipairs(p.monturas or {}) do tengoM[id] = true end
     for i, id in ipairs(Mall.ORDEN_MONTURAS) do
       local d = Mall.MONTURAS[id]
-      local y = y0 + (i - 1) * 96
+      local y = y0 + (i - 1) * 118
       love.graphics.setColor(0.10, 0.13, 0.25)
-      love.graphics.rectangle("fill", px + 14, y, pw - 28, 90, 8, 8)
+      love.graphics.rectangle("fill", px + 14, y, pw - 28, 110, 8, 8)
       local def = Personajes.monturaDe(id, p.faccion)
-      if def then Personajes.dibujar(def, 1, true, love.timer.getTime(), px + 70, y + 80) end
+      if def then Personajes.dibujar(def, 1, true, love.timer.getTime(), px + 70, y + 90) end
       love.graphics.setColor(0.98, 0.9, 0.7)
       love.graphics.print(d.nombre .. (p.montado == id and "   (montado)" or ""), px + 130, y + 8)
       love.graphics.setColor(0.72, 0.78, 0.68)
-      love.graphics.printf(d.desc, px + 130, y + 30, 340, "left")
+      love.graphics.printf(d.desc, px + 130, y + 30, 360, "left")
       local M2 = Monturas.especies[id]
       if M2 then
         love.graphics.setColor(0.6, 0.85, 1)
-        love.graphics.print("Velocidad +" .. math.floor(M2.vel * 100) .. "%    Vida " .. M2.vida, px + 130, y + 70)
+        love.graphics.print("Velocidad +" .. math.floor(M2.vel * 100) .. "%    Sin oficio", px + 130, y + 86)
       end
       if tengoM[id] then
-        I.boton(px + 504, y + 28, 130, 32, "La tienes", "mall_mt_ya", false, "Ya es tuya: pulsa O para montar.")
+        I.boton(px + 504, y + 38, 130, 32, "La tienes", "mall_mt_ya", false, "Ya es tuya: pulsa O para montar.")
       else
         love.graphics.setColor(1, 0.85, 0.3)
-        love.graphics.printf(Ayudas.num(d.precio) .. " mon.", px + 410, y + 36, 80, "right")
-        I.boton(px + 504, y + 28, 130, 32, "Comprar", "mall_mt_buy_" .. id, (m.monedas or 0) >= d.precio,
+        love.graphics.printf(Ayudas.num(d.precio) .. " mon.", px + 410, y + 46, 80, "right")
+        I.boton(px + 504, y + 38, 130, 32, "Comprar", "mall_mt_buy_" .. id, (m.monedas or 0) >= d.precio,
           "Te faltan " .. Ayudas.num(d.precio - (m.monedas or 0)) .. " Monedas Corona.")
       end
     end
@@ -1616,7 +1636,7 @@ function I.panelMall(mundo, p, w, h)
     local tengo = {}
     for _, id in ipairs(m.addons or {}) do tengo[id] = true end
     -- caben 7 filas; el resto se recorre con la rueda del ratón
-    local visibles = 7
+    local visibles = 5
     I.mallScrollMax = math.max(0, #Mall.ORDEN_ADDONS - visibles)
     I.mallScroll = math.max(0, math.min(I.mallScrollMax, I.mallScroll or 0))
     if I.mallScrollMax > 0 then
@@ -1626,22 +1646,22 @@ function I.panelMall(mundo, p, w, h)
     for i, id in ipairs(Mall.ORDEN_ADDONS) do
      if i > I.mallScroll and i <= I.mallScroll + visibles then
       local a = Mall.ADDONS[id]
-      local y = y0 + (i - 1 - I.mallScroll) * 58
+      local y = y0 + (i - 1 - I.mallScroll) * 78
       love.graphics.setColor(0.10, 0.13, 0.25)
-      love.graphics.rectangle("fill", px + 14, y, pw - 28, 52, 6, 6)
+      love.graphics.rectangle("fill", px + 14, y, pw - 28, 72, 6, 6)
       -- vista previa del sprite
       local skin = Personajes.skins[id]
-      if skin then Personajes.dibujar(skin, 1, false, 0, px + 44, y + 46) end
+      if skin then Personajes.dibujar(skin, 1, false, 0, px + 44, y + 64) end
       love.graphics.setColor(0.95, 0.9, 0.75)
       love.graphics.print(a.nombre .. (m.addonActivo == id and "   (puesto)" or ""), px + 90, y + 6)
       love.graphics.setColor(0.72, 0.78, 0.68)
       love.graphics.printf(a.desc, px + 90, y + 28, 320, "left")
       if tengo[id] then
-        I.boton(px + 504, y + 10, 130, 32, m.addonActivo == id and "Quitar" or "Poner", "mall_ad_" .. id)
+        I.boton(px + 504, y + 20, 130, 32, m.addonActivo == id and "Quitar" or "Poner", "mall_ad_" .. id)
       else
         love.graphics.setColor(1, 0.85, 0.3)
-        love.graphics.printf(Ayudas.num(a.precio) .. " mon.", px + 410, y + 18, 80, "right")
-        I.boton(px + 504, y + 10, 130, 32, "Comprar", "mall_ad_buy_" .. id, (m.monedas or 0) >= a.precio,
+        love.graphics.printf(Ayudas.num(a.precio) .. " mon.", px + 410, y + 28, 80, "right")
+        I.boton(px + 504, y + 20, 130, 32, "Comprar", "mall_ad_buy_" .. id, (m.monedas or 0) >= a.precio,
           "Te faltan " .. Ayudas.num(a.precio - (m.monedas or 0)) .. " Monedas Corona.")
       end
      end
@@ -2831,12 +2851,6 @@ function I.panelMapa(mundo, p, w, h)
   local mundoMapa = mundo.mapas.mundo
   local zonas = Mapa.zonas(mundoMapa)
 
-  -- controles de zoom
-  I.boton(ax, 48, 34, 28, "+", "mapa_mas")
-  I.boton(ax + 40, 48, 34, 28, "-", "mapa_menos")
-  I.boton(ax + 80, 48, 90, 28, "Centrar", "mapa_centrar")
-  love.graphics.setColor(0.78, 0.74, 0.62)
-  love.graphics.print("Zoom x" .. string.format("%.1f", I.mapaZoom) .. "   rueda: zoom, arrastra: mover", ax + 180, 54)
 
   -- el mapa, recortado a su marco
   local esc = I.escala or 1
@@ -2915,14 +2929,11 @@ function I.panelMapa(mundo, p, w, h)
       end
     end
   end
-  -- puertas de mazmorra: rombo violeta con su nombre y nivel mínimo
+  -- puertas de mazmorra: arco violeta con su nombre y nivel mínimo
   for _, z in ipairs(mundoMapa.mazmorras or {}) do
     local x0, y0 = aP(z.x, z.y)
     local def = Datos.mazmorra(z.id)
-    love.graphics.setColor(0, 0, 0, 0.8)
-    love.graphics.polygon("fill", x0, y0 - 8, x0 - 7, y0, x0, y0 + 8, x0 + 7, y0)
-    love.graphics.setColor(0.75, 0.45, 1, 1)
-    love.graphics.polygon("fill", x0, y0 - 6, x0 - 5, y0, x0, y0 + 6, x0 + 5, y0)
+    I.iconoMazmorra(x0, y0, 5)
     local etiqueta = z.nombre .. (def and ("  nv " .. def.nivelMin .. "+") or "")
     love.graphics.setColor(0, 0, 0, 0.75)
     love.graphics.print(etiqueta, x0 + 11, y0 - 6)
@@ -2956,6 +2967,21 @@ function I.panelMapa(mundo, p, w, h)
   love.graphics.setColor(0.85, 0.72, 0.35, 0.8)
   love.graphics.rectangle("line", ax, ay, aw, ah)
   I.registrar(ax, ay, aw, ah, "mapa_area")
+  -- controles de zoom en la esquina superior derecha del mapa (se registran despues del area para
+  -- que reciban los clics)
+  do
+    local bx = ax + aw - 8
+    bx = bx - 90
+    I.boton(bx, ay + 8, 90, 28, "Centrar", "mapa_centrar")
+    bx = bx - 6 - 34
+    I.boton(bx, ay + 8, 34, 28, "-", "mapa_menos")
+    bx = bx - 6 - 34
+    I.boton(bx, ay + 8, 34, 28, "+", "mapa_mas")
+    love.graphics.setColor(0.04, 0.05, 0.08, 0.7)
+    love.graphics.rectangle("fill", ax + 6, ay + 6, 188, 22, 5, 5)
+    love.graphics.setColor(0.85, 0.82, 0.7)
+    love.graphics.print("Zoom x" .. string.format("%.1f", I.mapaZoom) .. "  rueda y arrastrar", ax + 12, ay + 8)
+  end
 
   -- columna derecha: zonas, ciudades o iconos
   local lx = ax + aw + 24
@@ -3003,6 +3029,9 @@ function I.panelMapa(mundo, p, w, h)
       love.graphics.print(ICONO_NPC[rol][3], lx + 22, ly)
       ly = ly + 22
     end
+    I.iconoMazmorra(lx + 6, ly + 8, 4)
+    love.graphics.setColor(0.88, 0.84, 0.72)
+    love.graphics.print("Puerta de mazmorra", lx + 22, ly)
   end
 
   -- detalle de la zona bajo el ratón

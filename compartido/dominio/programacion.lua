@@ -8,15 +8,9 @@
 local Datos = require("compartido.dominio.datos")
 
 local M = {}
+require("compartido.dominio.configuracion").aplicar(M, "programacion")
 
-M.POR_DEFECTO = {
-  estandarteCadaHoras = 4,
-  batallaHora = 21,
-  batallaMinuto = 0,
-  avisoMinutos = 5,
-}
 
-M.MODOS = { "estandarte", "batalla" }
 
 function M.instalar(Mundo)
   function Mundo:reloj()

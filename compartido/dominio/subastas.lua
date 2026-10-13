@@ -11,24 +11,9 @@
 local Datos = require("compartido.dominio.datos")
 
 local M = {}
+require("compartido.dominio.configuracion").aplicar(M, "subastas")
 
-M.MAX_POR_JUGADOR = 8
-M.COMISION = 0.05        -- por publicar (no se devuelve)
-M.IMPUESTO = 0.08        -- sobre lo que cobra el vendedor al vender
-M.DURACIONES = { 1, 6, 12, 24 } -- horas
-M.SUBIDA_MINIMA = 0.05   -- cada puja supera a la anterior al menos en un 5 %
-M.TIEMPO_EXTRA = 120     -- si pujan con menos de esto por terminar, se alarga hasta esto
-M.POR_PAGINA = 8
 
--- Categorías para filtrar: cada una dice qué objetos incluye.
-M.CATEGORIAS = {
-  todo = { nombre = "Todo" },
-  arma = { nombre = "Armas" },
-  armadura = { nombre = "Armadura" },
-  accesorio = { nombre = "Accesorios" },
-  otros = { nombre = "Otros" },
-}
-M.ORDEN_CATEGORIAS = { "todo", "arma", "armadura", "accesorio", "otros" }
 
 local function categoriaDe(it)
   if not it then return "otros" end

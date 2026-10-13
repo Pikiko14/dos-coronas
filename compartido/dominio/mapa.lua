@@ -1304,36 +1304,68 @@ function M.zonas(mapa)
   local nombres = {}
   for _, c in ipairs(mapa.ciudades or {}) do nombres[c.id] = c.nombre end
   nombres.cicatriz = "Isla de la Cicatriz"
-  local por = {}
+  -- Un marcador por grupo de campamentos: de la misma ciudad, cercanos entre sí y con como mucho
+  -- NIVEL_GRUPO niveles de diferencia entre sus criaturas. El marcador va sobre un campamento real del grupo
+  -- (el más cercano al centro), nunca en medio del mar.
+  local NIVEL_GRUPO, DIST_GRUPO = 3, 45
+  local camps = {}
   for _, camp in ipairs(mapa.campamentos or {}) do
     if not camp.z and camp.ciudad then
       local mon = Datos.monstruo(camp.monstruo)
-      if mon then
-        local fi = 3
-        for i, f in ipairs(FRANJAS) do if mon.nivel >= f[1] and mon.nivel <= f[2] then fi = i break end end
-        local clave = camp.ciudad .. "|" .. fi
-        local z = por[clave]
-        if not z then
-          z = { ciudad = camp.ciudad, franja = fi, sx = 0, sy = 0, n = 0, monstruos = {}, vistos = {} }
-          por[clave] = z
-        end
-        z.sx, z.sy, z.n = z.sx + camp.x, z.sy + camp.y, z.n + 1
-        if not z.vistos[mon.id] then
-          z.vistos[mon.id] = true
-          z.monstruos[#z.monstruos + 1] = { id = mon.id, nombre = mon.nombre, nivel = mon.nivel }
-        end
-      end
+      if mon then camps[#camps + 1] = { camp = camp, mon = mon } end
     end
   end
+  table.sort(camps, function(a, b)
+    if a.mon.nivel ~= b.mon.nivel then return a.mon.nivel < b.mon.nivel end
+    if a.camp.x ~= b.camp.x then return a.camp.x < b.camp.x end
+    return a.camp.y < b.camp.y
+  end)
+  local grupos = {}
+  for _, c in ipairs(camps) do
+    local nivel, elegido = c.mon.nivel, nil
+    for _, g in ipairs(grupos) do
+      if g.ciudad == c.camp.ciudad and nivel - g.min <= NIVEL_GRUPO
+        and Util.dist(g.ax, g.ay, c.camp.x, c.camp.y) <= DIST_GRUPO then
+        elegido = g
+        break
+      end
+    end
+    if not elegido then
+      elegido = { ciudad = c.camp.ciudad, min = nivel, max = nivel, ax = c.camp.x, ay = c.camp.y, items = {} }
+      grupos[#grupos + 1] = elegido
+    end
+    elegido.max = math.max(elegido.max, nivel)
+    elegido.items[#elegido.items + 1] = c
+  end
   local lista = {}
-  for _, z in pairs(por) do
-    table.sort(z.monstruos, function(a, b) return a.nivel < b.nivel end)
+  for _, g in ipairs(grupos) do
+    local sx, sy = 0, 0
+    for _, c in ipairs(g.items) do sx, sy = sx + c.camp.x, sy + c.camp.y end
+    local cx, cy = sx / #g.items, sy / #g.items
+    local mejor, md
+    for _, c in ipairs(g.items) do
+      local d2 = (c.camp.x - cx) ^ 2 + (c.camp.y - cy) ^ 2
+      if not md or d2 < md then mejor, md = c.camp, d2 end
+    end
+    local monstruos, vistos = {}, {}
+    for _, c in ipairs(g.items) do
+      if not vistos[c.mon.id] then
+        vistos[c.mon.id] = true
+        monstruos[#monstruos + 1] = { id = c.mon.id, nombre = c.mon.nombre, nivel = c.mon.nivel }
+      end
+    end
+    table.sort(monstruos, function(a, b)
+      if a.nivel ~= b.nivel then return a.nivel < b.nivel end
+      return a.id < b.id
+    end)
+    local fi = 3
+    for i, f in ipairs(FRANJAS) do if g.min >= f[1] and g.min <= f[2] then fi = i break end end
     lista[#lista + 1] = {
-      nombre = (nombres[z.ciudad] or z.ciudad) .. ": " .. FRANJAS[z.franja][3], ciudad = z.ciudad, franja = z.franja,
-      x = z.sx / z.n, y = z.sy / z.n, nivelMin = z.monstruos[1].nivel, nivelMax = z.monstruos[#z.monstruos].nivel,
-      monstruos = z.monstruos,
+      nombre = (nombres[g.ciudad] or g.ciudad) .. ": " .. FRANJAS[fi][3], ciudad = g.ciudad, franja = fi,
+      x = mejor.x, y = mejor.y, nivelMin = g.min, nivelMax = g.max, monstruos = monstruos,
     }
-  end  for _, ms in ipairs(mapa.mesetas or {}) do
+  end
+  for _, ms in ipairs(mapa.mesetas or {}) do
     local vistos, ms_lista = {}, {}
     for _, camp in ipairs(mapa.campamentos) do
       if camp.z and camp.x >= ms.x and camp.x < ms.x + ms.w and camp.y >= ms.y and camp.y < ms.y + ms.h and not vistos[camp.monstruo] then

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Monturas. vel = velocidad extra; carga = unidades de mercancia; vida; requiereOficio = solo con el oficio activo
+  (son las de transporte); mall = solo en el Item Mall. El orden es el de la cuadra.
+-->
+<monturas>
+  <montura id="buey" nombre="Buey de carga" nivel="5" carga="22" desc="Lento pero fuerte: carga mucho más. Solo con el oficio activo." precio="900" requiereOficio="true" vel="0.1" vida="500"/>
+  <montura id="caballo" nombre="Caballo" nivel="10" carga="6" desc="El más rápido para cruzar el mapa. Solo con el oficio activo." precio="1000" requiereOficio="true" vel="0.4" vida="350"/>
+  <montura id="carreta" nombre="Carreta cubierta" nivel="14" carga="90" desc="Una carreta de mercader: carga enorme. Solo para comerciantes con el oficio activo." oficio="trader" precio="4500" requiereOficio="true" vel="0.06" vida="1100"/>
+  <montura id="corcel_real" nombre="Corcel real" nivel="12" carga="0" desc="El caballo de tu reino: blanco del Alba o negro del Ocaso. Rápido y noble." precio="2500" vel="0.38" vida="420"/>
+  <montura id="lobo_guerra" nombre="Lobo de guerra" nivel="16" carga="0" desc="Pelaje de escarcha o de sombra. El más veloz entre árboles y caminos." precio="3600" vel="0.45" vida="380"/>
+  <montura id="bisonte_guerra" nombre="Bisonte acorazado" nivel="20" carga="0" desc="Lento pero casi imposible de derribar: su vida es la más alta." precio="4800" vel="0.28" vida="1000"/>
+  <montura id="corcel_fuego" nombre="Corcel de fuego" nivel="25" carga="0" desc="Dorado como el sol del Alba o rojo como el ascua del Ocaso. El más rápido." precio="7000" vel="0.5" vida="520"/>
+  <montura id="dragon" nombre="Dragón" nivel="1" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.55" vida="1200"/>
+</monturas>

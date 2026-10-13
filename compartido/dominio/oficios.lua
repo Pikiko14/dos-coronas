@@ -6,38 +6,14 @@
 local Util = require("compartido.dominio.util")
 
 local M = {}
+require("compartido.dominio.configuracion").aplicar(M, "oficios")
 
-M.NIVEL_MAX = 10
-M.COSTE_CAMBIO = 500
 
-M.OFICIOS = {
-  trader = {
-    nombre = "Comerciante", icono = "C",
-    desc = "Compra mercancías donde sobran y véndelas donde faltan. Cuanto más lejos, más ganas. Cuidado con los ladrones.",
-  },
-  hunter = {
-    nombre = "Cazarrecompensas", icono = "H",
-    desc = "Escolta caravanas y caza a los ladrones que se buscan: cobras recompensa por cada uno.",
-  },
-  thief = {
-    nombre = "Ladrón", icono = "L",
-    desc = "Roba mercancías de comerciantes y caravanas (fuera de las ciudades) y véndelas a un contacto. Te buscarán.",
-  },
-}
-M.ORDEN = { "trader", "hunter", "thief" }
-
--- Mercancías: precio base y peso (1 unidad de carga cada una).
-M.BIENES = {
-  trigo = { nombre = "Trigo", base = 30, sprite = 699 },
-  pescado = { nombre = "Pescado", base = 38, sprite = 699 },
-  madera = { nombre = "Madera", base = 45, sprite = 699 },
-  tela = { nombre = "Telas", base = 70, sprite = 699 },
-  vino = { nombre = "Vino", base = 95, sprite = 699 },
-  hierro = { nombre = "Hierro", base = 120, sprite = 699 },
-  especias = { nombre = "Especias", base = 140, sprite = 699 },
-  gemas = { nombre = "Gemas", base = 260, sprite = 699 },
-}
-M.ORDEN_BIENES = { "trigo", "pescado", "madera", "tela", "vino", "hierro", "especias", "gemas" }
+-- Los oficios y las mercancías están en compartido/datos/oficios.xml (el orden del archivo es el de los menús).
+-- Mercancías: base = precio base; cada unidad pesa 1 de carga.
+local Config = require("compartido.dominio.configuracion")
+M.OFICIOS, M.ORDEN = Config.mapaOrden("oficios", "oficio", false)
+M.BIENES, M.ORDEN_BIENES = Config.mapaOrden("oficios", "bien", false)
 
 -- Cuánto cuesta cada nivel de oficio (experiencia para pasar al siguiente).
 function M.xpPara(nivel)

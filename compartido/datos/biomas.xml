@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Biomas del mundo: el suelo con que se pinta y su nombre.
+-->
+<biomas>
+  <bioma id="trigal" nombre="Trigal de Auroria" suelo="hierba"/>
+  <bioma id="muelle" nombre="Muelles del Sol" suelo="arena"/>
+  <bioma id="campos" nombre="Campos de Henar" suelo="tierra"/>
+  <bioma id="senda" nombre="Senda de Liria" suelo="bosque"/>
+  <bioma id="colina" nombre="Colinas del Alba" suelo="hierba"/>
+  <bioma id="velo" nombre="Velo de Nocturnia" suelo="hierba_osc"/>
+  <bioma id="marea" nombre="Marea de Sombra" suelo="arena"/>
+  <bioma id="cienaga" nombre="Ciénaga del Velo" suelo="pantano"/>
+  <bioma id="pinar" nombre="Pinar de Nox" suelo="bosque"/>
+  <bioma id="eclipse" nombre="Ruinas del Eclipse" suelo="cicatriz"/>
+  <bioma id="altiplano" nombre="Altiplano" suelo="roca"/>
+  <bioma id="ventisca" nombre="Ventisca" suelo="nieve"/>
+  <bioma id="islote" nombre="Islote desierto" suelo="hierba"/>
+</biomas>

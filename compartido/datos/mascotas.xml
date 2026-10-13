@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Mascotas. rol: ataque, vampiro, guardian, sanador, mana o veneno; atk = multiplicador de ataque. Orden = el de la tienda.
+-->
+<mascotas>
+  <especie id="gatito" nombre="Gatito" nivel="1" atk="1.25" desc="Rápido y mordedor: el que más pega." precio="240" rol="ataque"/>
+  <especie id="murcielago" nombre="Murciélago" nivel="5" atk="0.85" desc="Te devuelve parte de lo que muerde." precio="800" rol="vampiro"/>
+  <especie id="limo" nombre="Limo guardián" nivel="8" atk="0.45" desc="Amortigua los golpes que recibes." precio="1450" rol="guardian"/>
+  <especie id="flor" nombre="Flor curativa" nivel="12" atk="0.35" desc="Te cura un poco cada pocos segundos." precio="2550" rol="sanador"/>
+  <especie id="hada" nombre="Hada" nivel="16" atk="0.4" desc="Te devuelve maná mientras luchas." precio="4150" rol="mana"/>
+  <especie id="avispa" nombre="Avispa" nivel="20" atk="0.9" desc="Su aguijón envenena a tu objetivo." precio="6700" rol="veneno"/>
+</mascotas>

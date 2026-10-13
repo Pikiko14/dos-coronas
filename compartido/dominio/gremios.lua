@@ -7,19 +7,10 @@
 local Util = require("compartido.dominio.util")
 
 local M = {}
+require("compartido.dominio.configuracion").aplicar(M, "gremios")
 
-M.NIVEL_MINIMO = 8
-M.COSTE = 2500
-M.MAX_MIEMBROS = 25
-M.INVITACION_SEG = 60
 
-M.RANGOS = { lider = 3, oficial = 2, miembro = 1 }
-M.NOMBRE_RANGO = { lider = "Líder", oficial = "Oficial", miembro = "Miembro" }
 
--- Ventaja de experiencia por cada compañero de gremio cerca (hasta TOPE_COMPANEROS).
-M.BONO_POR_COMPANERO = 0.05
-M.TOPE_COMPANEROS = 3
-M.DISTANCIA_BONO = 14
 
 local function recortar(t)
   return (t:gsub("^%s+", ""):gsub("%s+$", ""))

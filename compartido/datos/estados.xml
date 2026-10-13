@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Estados alterados (dur = segundos, pct = fuerza por segundo) y poderes de criaturas (cd, rango, area, coef, estado).
+-->
+<estados>
+  <!-- ---- estados alterados ---- -->
+  <estado id="quemar" nombre="Quemado" tipo="magico" dano="true" dur="4" pct="0.22">
+    <color lista="1,0.55,0.2"/>
+  </estado>
+  <estado id="sangrar" nombre="Sangrando" tipo="fisico" dano="true" dur="5" pct="0.2">
+    <color lista="0.9,0.2,0.28"/>
+  </estado>
+  <estado id="veneno" nombre="Envenenado" dano="true" dur="6" ignora="true" pct="0.12">
+    <color lista="0.45,0.9,0.3"/>
+  </estado>
+  <estado id="drenar_vida" nombre="Vida drenada" dano="true" dur="3" pct="0.35" roba="true">
+    <color lista="0.75,0.35,0.9"/>
+  </estado>
+  <estado id="drenar_mana" nombre="Maná drenado" dur="3" mana="true" pct="0.06">
+    <color lista="0.4,0.6,1"/>
+  </estado>
+  <estado id="lentitud" nombre="Ralentizado" dur="3" pct="0.4">
+    <color lista="0.75,0.8,0.9"/>
+  </estado>
+  <estado id="aturdir" nombre="Aturdido" dur="0.9" pct="0">
+    <color lista="1,0.9,0.4"/>
+  </estado>
+  <!-- ---- poderes de criaturas ---- -->
+  <poder id="succion" nombre="Succión vital" anim="drenar_vida" cd="11" rango="4.5" sonido="magia">
+    <estado tipo="drenar_vida"/>
+  </poder>
+  <poder id="drenaje" nombre="Drenar maná" anim="drenar_mana" cd="10" rango="5.5" sonido="magia">
+    <estado tipo="drenar_mana"/>
+  </poder>
+  <poder id="maldicion" nombre="Maldición" anim="maldicion" cd="9" rango="5.5" sonido="hielo">
+    <estado tipo="lentitud" dur="4" pct="0.45"/>
+  </poder>
+  <poder id="aliento" nombre="Aliento ígneo" anim="aliento" area="2.2" cd="10" coef="1.1" rango="4.5" sonido="fuego">
+    <estado tipo="quemar" prob="0.7"/>
+  </poder>
+  <poder id="pisoton" nombre="Pisotón" anim="pisoton" area="2.4" cd="12" coef="0.8" rango="2.6" sonido="corte">
+    <estado tipo="aturdir" dur="1.1"/>
+  </poder>
+</estados>

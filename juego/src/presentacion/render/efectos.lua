@@ -8,28 +8,43 @@ local CELDA = 192
 local COLUMNAS = 5
 
 -- tipo de efecto -> hoja, escala, desplazamiento vertical (px sobre el suelo) y mezcla.
+-- Los poderes de las cuatro clases usan las hojas "Hechizo_<poder>" (generadas con
+-- herramientas/generar_hechizos, 15 cuadros de 192x192 como las del pack).
 E.def = {
-  golpe = { "Attack10", 0.5, 22 },
+  -- guerrero
+  golpe = { "Hechizo_golpe", 0.55, 20, "add" },
+  tajo = { "Hechizo_tajo", 0.95, 14, "add" },
+  grito = { "Hechizo_grito", 0.9, 10, "add" },
+  desgarro = { "Hechizo_desgarro", 0.7, 18 },
+  furia = { "Hechizo_furia", 0.62, 8, "add" },
+  carga = { "Hechizo_carga", 0.7, 20, "add" },
+  -- mago
+  misil = { "Hechizo_misil", 0.55, 20, "add" },
+  fuego = { "Hechizo_fuego", 0.8, 14, "add" },
+  escudo = { "Hechizo_escudo", 0.7, 20, "add" },
+  nova = { "Hechizo_nova", 1.25, 6, "add" },
+  sombra = { "Hechizo_sombra", 0.8, 14 },
+  meteoro = { "Hechizo_meteoro", 0.95, 8 },
+  -- cazador
+  disparo = { "Hechizo_disparo", 0.5, 20, "add" },
+  lluvia = { "Hechizo_lluvia", 1.05, 6 },
+  trampa = { "Hechizo_trampa", 0.62, 4 },
+  preciso = { "Hechizo_preciso", 0.62, 20, "add" },
+  flecha_veneno = { "Hechizo_flecha_veneno", 0.62, 14, "add" },
+  paso_agil = { "Hechizo_paso_agil", 0.65, 10, "add" },
+  -- clerigo
+  curar = { "Hechizo_curar", 0.72, 10, "add" },
+  bendicion = { "Hechizo_bendicion", 0.72, 12, "add" },
+  castigo = { "Hechizo_castigo", 0.72, 14, "add" },
+  consagrar = { "Hechizo_consagrar", 1.15, 6, "add" },
+  sanacion = { "Hechizo_sanacion", 1.15, 8, "add" },
+  juicio = { "Hechizo_juicio", 0.8, 12, "add" },
+  -- impactos de proyectiles y varios
+  sagrado = { "Hechizo_castigo", 0.5, 20, "add" },
+  flecha = { "Hechizo_disparo", 0.45, 20, "add" },
+  impacto = { "Hechizo_golpe", 0.42, 20, "add" },
   corte = { "Attack7", 0.5, 22 },
-  carga = { "Attack8", 0.6, 22 },
-  tajo = { "Attack11", 0.8, 18 },
-  grito = { "Special6", 0.8, 12, "add" },
-  escudo = { "Special11", 0.6, 22 },
-  curar = { "Heal1", 0.65, 12 },
-  bendicion = { "Heal3", 0.65, 12 },
-  consagrar = { "Light3", 0.8, 16, "add" },
-  castigo = { "Light4", 0.7, 4 },
-  sagrado = { "Attack1", 0.55, 20 },
-  misil = { "Attack3", 0.5, 20 },
-  fuego = { "Fire1", 0.7, 20 },
-  nova = { "Ice5", 0.85, 6 },
   hielo = { "Ice2", 0.65, 20 },
-  disparo = { "Sword1", 0.45, 20 },
-  preciso = { "Spear2", 0.6, 20 },
-  flecha = { "Spear1", 0.45, 20 },
-  lluvia = { "Light5", 0.75, 4 },
-  trampa = { "Earth2", 0.6, 4 },
-  impacto = { "Attack1", 0.4, 20 },
   nivel = { "Light2", 0.8, 4 },
   -- estados alterados (también se dibujan en bucle sobre quien los sufre)
   quemar = { "Fire2", 0.4, 14 },
@@ -44,14 +59,6 @@ E.def = {
   aliento = { "Fire3", 0.6, 10, "add" },
   pisoton = { "Earth3", 0.35, 4 },
   -- poderes nuevos de cada oficio
-  desgarro = { "Attack12", 0.7, 18 },
-  furia = { "Special10", 0.6, 6 },
-  sombra = { "Darkness1", 0.45, 16 },
-  meteoro = { "Meteor", 0.55, 8 },
-  flecha_veneno = { "State1", 0.5, 12 },
-  paso_agil = { "Heal5", 0.6, 10 },
-  sanacion = { "Heal2", 0.9, 8 },
-  juicio = { "Light7", 0.7, 12, "add" },
 }
 
 local hojas = {}

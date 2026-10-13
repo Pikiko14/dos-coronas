@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Ajustes numericos del juego, una seccion por sistema. Se cargan al arrancar y sobrescriben los valores por
+  defecto del codigo; el servidor puede cambiar algunos desde .env. Aqui se afina el equilibrio: precios, tiempos,
+  experiencia, danos, limites...
+-->
+<constantes>
+  <balance CRITICO_MUL="1.5" CRITICO_PROB="0.08" DANO_MAX="0.9" DANO_MIN="0.45" MUERTE_NIVEL_MIN="10" MUERTE_XP_PERDIDA="0.1" NIVEL_MOD_MAX="1.8" NIVEL_MOD_MIN="0.3" NIVEL_PASO="0.04" POLVO_NIVEL_MIN="10" POLVO_PROB="0.05" XP_BASE="40" XP_CORTE="7" XP_DIFICULTAD="1.8" XP_MULTIPLICADOR="1" XP_POR_NIVEL="32">
+    <!-- XP_DIFICULTAD: Cuánta experiencia pide cada nivel respecto a la curva base (subir de nivel cuesta el doble, casi). -->
+    <!-- XP_MULTIPLICADOR: Multiplicador de la experiencia ganada (el servidor lo toma del .env: 2 = experiencia doble). -->
+    <!-- MUERTE_NIVEL_MIN: Muerte: por encima de este nivel se pierde esa fraccion de la experiencia que pide el nivel actual. -->
+    <!-- POLVO_NIVEL_MIN: Polvo arcano (para encantar): solo lo sueltan criaturas por encima de este nivel y rara vez. -->
+    <!-- DANO_MIN: Daño de un golpe - Cada golpe se tira entre un mínimo y un máximo que salen del ataque de quien golpea (su nivel, su equipo y sus mejoras ya cuentan en el ataque):   mínimo = ataque x DANO_MIN x poder del golpe   máximo = ataque x DANO_MAX x poder del golpe La tirada es la media de dos dados, así que lo normal queda hacia el centro y los extremos salen menos. Un golpe crítico (CRITICO_PROB) hace CRITICO_MUL veces el máximo. Después la defensa del objetivo lo reduce: defensa / (defensa + 40). -->
+    <!-- NIVEL_PASO: Diferencia de nivel: quien pega a alguien de más nivel hace menos daño y quien pega a alguien de menos nivel hace más (hasta un tope). Así un personaje de nivel 8 no puede con una criatura de nivel 21 aunque le saque ventaja el equipo, y esa criatura lo destroza. -->
+    <BOTIN>
+      <cuervo>
+        <i id="pocion_mana" p="0.25"/>
+      </cuervo>
+      <gato>
+        <i id="pocion_vida" p="0.4"/>
+      </gato>
+      <jabali>
+        <i id="pocion_vida" p="0.3"/>
+        <i id="pocion_mana" p="0.15"/>
+      </jabali>
+      <rata>
+        <i id="pocion_vida" p="0.35"/>
+      </rata>
+    </BOTIN>
+    <NIVEL_SLOT lista="1,1,4,8,15,20"/>
+  </balance>
+  <caravanas DISTANCIA_MAX="620" INTERVALO="70" MAX="0" RADIO_ESCOLTA="22" VELOCIDAD="2.4">
+    <!-- MAX: caravanas automáticas del servidor: ninguna (las caravanas son los comerciantes jugadores) -->
+    <!-- INTERVALO: segundos entre salidas -->
+    <!-- RADIO_ESCOLTA: hasta dónde cuenta la escolta al llegar -->
+    <!-- DISTANCIA_MAX: no se mandan caravanas más lejos que esto -->
+  </caravanas>
+  <comercio DISTANCIA_INVITAR="3.2" DISTANCIA_MAX="10" INVITACION_SEG="30" MAX_OBJETOS="16" MAX_ORO="1000000000">
+    <!-- DISTANCIA_MAX: si se alejan más que esto, el trato se cancela -->
+    <!-- MAX_OBJETOS: objetos distintos en una oferta -->
+  </comercio>
+  <datos BOLSA="24" BOLSA_BASE="8" ESCALA="1.6" FACTOR_VENTA="0.4" JUGADORES_EVENTO="3" MONSTRUO_ATK="1.05" MONSTRUO_HP="3" NIVEL_MAX="30" RESPAWN_ELITE="90" RESPAWN_MONSTRUO="22" SEMILLA="20261011" TILE="32" ZOOM="2">
+    <!-- ESCALA: El continente se dibuja sobre un lienzo de 720x520 que se amplía por ESCALA: las ciudades se separan (conservan su tamaño) y entre ellas queda mucho más camino que recorrer. -->
+    <!-- BOLSA_BASE: Espacios de la bolsa: sin mochila hay BOLSA_BASE; cada mochila trae su propio total. BOLSA es el máximo posible (la mejor mochila). -->
+    <!-- RESPAWN_MONSTRUO: Tiempos que el servidor puede cambiar desde .env (ver servidor/src/aplicacion/ajustes.lua). -->
+    <!-- MONSTRUO_HP: Ajustes globales de las criaturas (ver servidor -calibrar): vida y ataque respecto a la fórmula base. -->
+    <!-- FACTOR_VENTA: Lo que paga el mercader al comprarte un objeto: esta fraccion de su precio. -->
+    <EVENTO_DURACION batalla="300" estandarte="300"/>
+    <precioCasa capital="1440" normal="760"/>
+  </datos>
+  <encanto MATERIAL="polvo_arcano" MAX="10" PCT="0.08"/>
+  <gremios BONO_POR_COMPANERO="0.05" COSTE="2500" DISTANCIA_BONO="14" INVITACION_SEG="60" MAX_MIEMBROS="25" NIVEL_MINIMO="8" TOPE_COMPANEROS="3">
+    <!-- BONO_POR_COMPANERO: Ventaja de experiencia por cada compañero de gremio cerca (hasta TOPE_COMPANEROS). -->
+    <NOMBRE_RANGO lider="Líder" miembro="Miembro" oficial="Oficial"/>
+    <RANGOS lider="3" miembro="1" oficial="2"/>
+  </gremios>
+  <grupos BONO_XP="0.1" DISTANCIA="30" INVITACION_SEG="60" MAX="5">
+    <!-- BONO_XP: extra sobre el total de la experiencia, antes de repartirla -->
+    <!-- DISTANCIA: hasta dónde cuenta un compañero para repartir -->
+  </grupos>
+  <items FACTOR_PRECIO="1.7">
+    <!-- FACTOR_PRECIO: Precio: crece más rápido que la potencia para que lo bueno cueste. FACTOR_PRECIO sube o baja los precios de todo el equipo de una vez. -->
+  </items>
+  <ley ALCANCE_ROBO="2.2" BUSCADO_FALLO_SEG="120" BUSCADO_SEG="240" COMBATE_SEG="60" FRACCION_ROBO="0.45">
+    <!-- BUSCADO_SEG: tras un robo con éxito -->
+    <!-- BUSCADO_FALLO_SEG: tras un robo fallido -->
+  </ley>
+  <mall DURACION_EXP_SEG="3600" DURACION_SEG="1800" MONEDA="Monedas Corona" MONEDAS_INICIALES="5000">
+    <!-- MONEDAS_INICIALES: monedas con las que nace un personaje nuevo (para probar el mall) -->
+    <!-- DURACION_SEG: pergaminos de combate -->
+    <!-- DURACION_EXP_SEG: tarjeta de experiencia doble -->
+  </mall>
+  <mascotas DESCANSO_SEG="30" MAX_MASCOTAS="6" NIVEL_MAX="30"/>
+  <mazmorras DURA_COFRE="150" ORO_COFRE="600" PROB_ADDON="0.14" PROB_MALL="0.3" RESPAWN_JEFE="300">
+    <!-- RESPAWN_JEFE: segundos hasta que el jefe vuelve -->
+    <!-- DURA_COFRE: segundos que el cofre queda abierto a todos -->
+    <!-- PROB_MALL: el resto del premio es equipo del escalón más alto -->
+  </mazmorras>
+  <monturas MAX="8" RECUPERA_SEG="300" REGEN_ESPERA="15" REGEN_FRAC="0.02" VIDA_MULT="1">
+    <!-- VIDA_MULT: Vida de las monturas: si vas montado, los golpes bajan primero la vida de la montura. Al llegar a cero cae (la carga queda en el suelo), te bajas y no puedes usarla un rato. -->
+    <!-- RECUPERA_SEG: cuánto tarda en poder usarse de nuevo una montura caída -->
+    <!-- REGEN_FRAC: fracción de su vida que recupera por segundo si no la golpean -->
+    <!-- REGEN_ESPERA: segundos sin golpes antes de empezar a recuperar -->
+  </monturas>
+  <oficios COSTE_CAMBIO="500" NIVEL_MAX="10"/>
+  <programacion>
+    <MODOS lista="estandarte,batalla"/>
+    <POR_DEFECTO avisoMinutos="5" batallaHora="21" batallaMinuto="0" estandarteCadaHoras="4"/>
+  </programacion>
+  <subastas COMISION="0.05" IMPUESTO="0.08" MAX_POR_JUGADOR="8" POR_PAGINA="8" SUBIDA_MINIMA="0.05" TIEMPO_EXTRA="120">
+    <!-- COMISION: por publicar (no se devuelve) -->
+    <!-- IMPUESTO: sobre lo que cobra el vendedor al vender -->
+    <!-- DURACIONES: horas -->
+    <!-- SUBIDA_MINIMA: cada puja supera a la anterior al menos en un 5 % -->
+    <!-- TIEMPO_EXTRA: si pujan con menos de esto por terminar, se alarga hasta esto -->
+    <!-- CATEGORIAS: Categorías para filtrar: cada una dice qué objetos incluye. -->
+    <CATEGORIAS>
+      <accesorio nombre="Accesorios"/>
+      <arma nombre="Armas"/>
+      <armadura nombre="Armadura"/>
+      <otros nombre="Otros"/>
+      <todo nombre="Todo"/>
+    </CATEGORIAS>
+    <DURACIONES lista="1,6,12,24"/>
+    <ORDEN_CATEGORIAS lista="todo,arma,armadura,accesorio,otros"/>
+  </subastas>
+</constantes>

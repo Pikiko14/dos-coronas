@@ -1652,6 +1652,21 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     end
     fallar(errores, "zonas de suelo y elevadas", bajas >= 8 and elevadas >= 4, bajas .. "/" .. elevadas)
     fallar(errores, "niveles coherentes y ordenados", orden)
+    -- un marcador por grupo de campamentos: sobre un campamento real (en tierra) y con 3 niveles de diferencia como mucho
+    local mapaMundo = mundo.mapas.mundo
+    local bien, tierra = true, true
+    for _, z in ipairs(zonas) do
+      if not z.elevada then
+        if z.nivelMax - z.nivelMin > 3 then bien = false end
+        local hay = false
+        for _, k in ipairs(mapaMundo.campamentos) do
+          if not k.z and k.x == z.x and k.y == z.y then hay = true end
+        end
+        if not hay or not Mapa.transitable(mapaMundo, math.floor(z.x), math.floor(z.y)) then tierra = false end
+      end
+    end
+    fallar(errores, "zonas: maximo 3 niveles de diferencia", bien)
+    fallar(errores, "zonas: el punto esta sobre un campamento en tierra", tierra)
     -- el nivel de una zona elevada supera al de su zona de suelo
     local sobre = true
     for _, z in ipairs(zonas) do
@@ -3545,6 +3560,38 @@ mundo.tiempo = 100
       Log.info(string.format("tamano foto %s: %d bytes", l[1], bytes))
     end
     fallar(errores, "el mundo cabe en un tick de 50 ms", ms < 30, string.format("%.1f ms con %d entes", ms, n))
+  end)
+  paso("configuración en XML: lectura, errores con línea y datos cargados", function()
+    local X = require("compartido.dominio.xml")
+    local Cfg = require("compartido.dominio.configuracion")
+    -- tipos: números, booleanos, textos con "s:", listas y elementos hijos
+    local el = X.leer('<a n="3" f="0.5" b="true" t="hola" s="s:12" lista="x,y,2"><h k="1"/><i id="u"/><i id="v"/></a>', "prueba.xml")
+    local t = X.aTabla(el, "prueba.xml")
+    fallar(errores, "xml numero", t.n == 3 and t.f == 0.5)
+    fallar(errores, "xml booleano", t.b == true)
+    fallar(errores, "xml texto con s:", t.s == "12" and t.t == "hola")
+    fallar(errores, "xml hijo y lista", t.h and t.h.k == 1 and #t == 2 and t[2].id == "v")
+    -- ida y vuelta: escribir y volver a leer da lo mismo
+    local salida = {}
+    X.escribir("a", { n = 3, texto = "a < b & \"c\"", lista = { 1, 2, 3 }, h = { k = 1 } }, 0, salida)
+    local t2 = X.aTabla(X.leer(table.concat(salida, "\n"), "ida.xml"), "ida.xml")
+    fallar(errores, "xml ida y vuelta", t2.n == 3 and t2.texto == 'a < b & "c"' and #t2.lista == 3 and t2.h.k == 1)
+    -- un error dice archivo y línea
+    local ok, msg = pcall(X.leer, "<a>\n<b>\n</a>", "roto.xml")
+    fallar(errores, "xml error con archivo y linea", not ok and tostring(msg):find("roto.xml:", 1, true) ~= nil, tostring(msg))
+    -- validar avisa del registro y el campo
+    local ok2, msg2 = pcall(Cfg.validar, "x.xml", "item", "espada", { precio = "x" }, { precio = "numero" })
+    fallar(errores, "validar tipo", not ok2 and tostring(msg2):find("espada", 1, true) and tostring(msg2):find("precio", 1, true))
+    local ok3, msg3 = pcall(Cfg.validar, "x.xml", "item", "espada", {}, { precio = "numero" })
+    fallar(errores, "validar falta campo", not ok3 and tostring(msg3):find("falta el campo precio", 1, true))
+    -- los archivos del juego se cargan con los datos esperados
+    fallar(errores, "xml equipo: 8 escalones", #Cfg.tabla("equipo").escalones == 8)
+    fallar(errores, "xml constantes en balance", require("compartido.dominio.balance").XP_BASE == 40)
+    fallar(errores, "xml mall con addons y dragon", require("compartido.dominio.mall").MONTURAS.dragon ~= nil
+      and #require("compartido.dominio.mall").ORDEN_ADDONS >= 40)
+    fallar(errores, "xml mazmorras", #Datos.mazmorras == 3 and Datos.mazmorras[1].jefe.monstruo == "caballero")
+    fallar(errores, "xml monturas: el dragon no sale en la cuadra", require("compartido.dominio.monturas").especies.dragon
+      and #require("compartido.dominio.monturas").orden == 7)
   end)
   paso("red y paneles", function()
     local Servidor = require("src.aplicacion.servicio_servidor")

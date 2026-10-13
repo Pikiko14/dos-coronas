@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Las diez ciudades. fx, fy = posicion del centro como fraccion del mapa (0 a 1).
+  capital = true: ciudad grande; puerto = true: tiene barquero; acceso = lado de la puerta.
+-->
+<ciudades>
+  <ciudad id="auroria" nombre="Auroria" bioma="trigal" capital="true" faccion="albor" fx="0.17" fy="0.5"/>
+  <ciudad id="puerto_sol" nombre="Puerto del Sol" acceso="sur" bioma="muelle" faccion="albor" fx="0.265" fy="0.34" puerto="true"/>
+  <ciudad id="henar" nombre="Campos de Henar" acceso="sur" bioma="campos" faccion="albor" fx="0.15" fy="0.25"/>
+  <ciudad id="liria" nombre="Liria" acceso="norte" bioma="senda" faccion="albor" fx="0.15" fy="0.74"/>
+  <ciudad id="alba" nombre="Bastión del Alba" acceso="norte" bioma="colina" faccion="albor" fx="0.255" fy="0.7"/>
+  <ciudad id="nocturnia" nombre="Nocturnia" bioma="velo" capital="true" faccion="umbra" fx="0.83" fy="0.5"/>
+  <ciudad id="puerto_sombra" nombre="Puerto Sombra" acceso="sur" bioma="marea" faccion="umbra" fx="0.735" fy="0.34" puerto="true"/>
+  <ciudad id="velo" nombre="Ciénaga del Velo" acceso="sur" bioma="cienaga" faccion="umbra" fx="0.845" fy="0.23"/>
+  <ciudad id="nox" nombre="Nox" acceso="norte" bioma="pinar" faccion="umbra" fx="0.855" fy="0.77"/>
+  <ciudad id="eclipse" nombre="Bastión del Eclipse" acceso="norte" bioma="eclipse" faccion="umbra" fx="0.735" fy="0.68"/>
+</ciudades>

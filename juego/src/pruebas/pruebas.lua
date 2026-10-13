@@ -905,6 +905,80 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "una montura normal se dibuja sin vida", ok, tostring(err))
   end)
+  paso("interfaz: ningun texto del Item Mall se sale de su fila y el zoom del mapa va a la esquina derecha", function()
+    local Mall = require("compartido.dominio.mall")
+    local f = Interfaz.fuente
+    local alto = f:getHeight()
+    local function lineas(texto, ancho) local _, l = f:getWrap(texto, ancho) return #l end
+    for _, o in ipairs(Mall.OBJETOS) do
+      fallar(errores, "el texto de " .. o.id .. " cabe en dos lineas", lineas(o.texto, 330) <= 2, tostring(lineas(o.texto, 330)))
+      fallar(errores, "el nombre de " .. o.id .. " cabe", f:getWidth(o.nombre) < 320)
+    end
+    for id, a in pairs(Mall.ADDONS) do
+      fallar(errores, "la descripcion de " .. id .. " cabe en dos lineas", lineas(a.desc, 320) <= 2, tostring(lineas(a.desc, 320)))
+      fallar(errores, "el nombre de " .. id .. " cabe", f:getWidth(a.nombre .. "   (puesto)") < 400)
+    end
+    for id, d in pairs(Mall.MONTURAS) do
+      fallar(errores, "la descripcion de la montura " .. id .. " cabe en dos lineas", lineas(d.desc, 360) <= 2, tostring(lineas(d.desc, 360)))
+    end
+    fallar(errores, "dos lineas caben en el recuadro de una fila", 28 + 2 * alto <= 72, tostring(28 + 2 * alto))
+    -- mapa: los botones de zoom estan en la esquina superior derecha del mapa y responden
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Zoom", faccion = "albor", clase = "guerrero", nivel = 10 })
+    Interfaz.escala, Interfaz.panel = 1, "mapa"
+    Interfaz.hud(mundo, pj, 1280, 720)
+    local g = Interfaz.mapaGeom
+    local hallados = {}
+    for y = g.ay + 4, g.ay + 40, 4 do for x = g.ax, g.ax + g.aw, 4 do
+      local id = Interfaz.consumir(x, y)
+      if id and id:sub(1, 5) == "mapa_" and id ~= "mapa_area" then hallados[id] = x end
+    end end
+    fallar(errores, "los tres botones del zoom responden", hallados.mapa_mas and hallados.mapa_menos and hallados.mapa_centrar)
+    fallar(errores, "estan en la mitad derecha del mapa", hallados.mapa_mas and hallados.mapa_mas > g.ax + g.aw / 2, tostring(hallados.mapa_mas))
+    fallar(errores, "y Centrar es el de mas a la derecha", hallados.mapa_centrar and hallados.mapa_centrar > hallados.mapa_menos and hallados.mapa_menos > hallados.mapa_mas)
+    Interfaz.panel = nil
+  end)
+  paso("sprites de hechizos: cada poder de cada clase tiene su hoja generada", function()
+    local Efectos = require("src.presentacion.render.efectos")
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local Arte = require("src.presentacion.render.arte")
+    local cv = love.graphics.newCanvas(300, 300)
+    local n = 0
+    for _, clase in ipairs({ "guerrero", "mago", "cazador", "clerigo" }) do
+      for _, id in ipairs(Datos.barra[clase]) do
+        local d = Efectos.def[id]
+        fallar(errores, id .. " (" .. clase .. ") usa una hoja de hechizo propia", d and d[1] == "Hechizo_" .. id, d and d[1] or "sin efecto")
+        local img = Arte.img("Animations/Hechizo_" .. id .. ".png", true)
+        fallar(errores, "la hoja de " .. id .. " mide 5x3 cuadros de 192", img:getWidth() == 960 and img:getHeight() == 576)
+        for _, tt in ipairs({ 0, 0.2, 0.5, 0.8, 1 }) do
+          love.graphics.push("all")
+          love.graphics.setCanvas(cv)
+          local ok, err = pcall(Efectos.cuadro, id, tt, 1, 150, 150)
+          love.graphics.pop()
+          fallar(errores, "se dibuja " .. id .. " en t=" .. tt, ok, tostring(err))
+          n = n + 1
+        end
+        -- la miniatura de la barra de poderes
+        love.graphics.push("all")
+        love.graphics.setCanvas(cv)
+        local ok2, err2 = pcall(Efectos.icono, id, 10, 10, 40)
+        love.graphics.pop()
+        fallar(errores, "miniatura de " .. id, ok2, tostring(err2))
+      end
+    end
+    -- impactos de proyectil y proyectiles en vuelo
+    for _, tipo in ipairs({ "misil", "fuego", "flecha", "sagrado", "sombra" }) do
+      local img = Arte.img("Animations/Proyectil_" .. tipo .. ".png", true)
+      fallar(errores, "proyectil " .. tipo .. " de 4 cuadros", img:getWidth() == 256 and img:getHeight() == 64)
+      fallar(errores, "impacto de " .. tipo, Efectos.def[tipo] ~= nil)
+      love.graphics.push("all")
+      love.graphics.setCanvas(cv)
+      local ok, err = pcall(Dibujo.proyectil, { tipo = tipo, x = 0, y = 0, tx = 5, ty = 2 }, 150, 150)
+      love.graphics.pop()
+      fallar(errores, "se dibuja el proyectil " .. tipo, ok, tostring(err))
+    end
+    fallar(errores, "se probaron los 24 poderes", n == 24 * 5, tostring(n))
+  end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Clic", faccion = "albor", clase = "mago" })

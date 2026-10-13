@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Criaturas. hoja/base/cuadros: sprite; tam/paso/porDir: criaturas de 2x2 casillas; elite, magico, vuela.
+  golpe: estados que puede aplicar al pegar; poderes: poderes propios (ver estados.xml).
+  categoria party/gigante: criaturas de grupo (hpMul, atkMul, xpMul).
+-->
+<monstruos>
+  <monstruo id="gato" nombre="Gato umbrío" nivel="1" agresivo="false" base="1" bioma="trigal" cuadros="12" desc="Pequeño, rápido y más bravo de lo que parece." hoja="creatures_01">
+    <golpe>
+      <i tipo="sangrar" prob="0.15"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="cuervo" nombre="Murciélago gris" nivel="2" agresivo="false" base="16" bioma="trigal" cuadros="12" desc="Cuelga de los graneros y baja al anochecer." hoja="creatures_02">
+    <poderes lista="succion"/>
+  </monstruo>
+  <monstruo id="jabali" nombre="Jabalí bronco" nivel="3" agresivo="true" base="67" bioma="trigal" cuadros="8" desc="Carga si te acercas al matorral." hoja="creatures_01">
+    <golpe>
+      <i tipo="aturdir" dur="0.8" prob="0.1"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="rata" nombre="Rata de muelle" nivel="3" agresivo="true" base="48" bioma="muelle" cuadros="8" desc="Sale de los muelles en manada." hoja="creatures_01">
+    <golpe>
+      <i tipo="veneno" prob="0.25"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="escarabajo" nombre="Escarabajo de seto" nivel="5" agresivo="true" base="1" bioma="muelle" cuadros="12" desc="Caparazón duro y mandíbulas pacientes." hoja="creatures_02">
+    <golpe>
+      <i tipo="lentitud" prob="0.25"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="jabali_fuego" nombre="Jabalí de brasas" nivel="7" agresivo="true" base="75" bioma="muelle" cuadros="4" desc="El pelaje le humea. Duele más de cerca." hoja="creatures_01">
+    <golpe>
+      <i tipo="quemar" prob="0.25"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="aguila" nombre="Avispón de Henar" nivel="6" agresivo="true" base="32" bioma="campos" cuadros="12" desc="Cae en picado sobre los sembrados con su aguijón." hoja="creatures_01" vuela="true">
+    <golpe>
+      <i tipo="veneno" prob="0.3"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="oso" nombre="Oso de colina" nivel="9" agresivo="true" base="112" bioma="campos" cuadros="8" desc="Ocupa el camino entero." hoja="creatures_01" paso="2" porDir="2" tam="2">
+    <golpe>
+      <i tipo="sangrar" prob="0.2"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="elefante" nombre="Bestia de asedio" nivel="12" agresivo="true" base="176" bioma="campos" cuadros="8" desc="Una bestia de asedio suelta." hoja="creatures_01" paso="2" porDir="2" tam="2">
+    <poderes lista="pisoton"/>
+  </monstruo>
+  <monstruo id="espectro" nombre="Espectro pálido" nivel="8" agresivo="true" base="56" bioma="senda" cuadros="8" desc="Un muerto que no recuerda su nombre." hoja="creatures_01" magico="true">
+    <poderes lista="drenaje"/>
+  </monstruo>
+  <monstruo id="gargola" nombre="Gárgola" nivel="10" agresivo="true" base="16" bioma="senda" cuadros="12" desc="Piedra viva que despega de los muros." hoja="creatures_01">
+    <golpe>
+      <i tipo="aturdir" dur="0.9" prob="0.1"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="automata" nombre="Autómata" nivel="12" agresivo="true" base="28" bioma="senda" cuadros="4" desc="Engranajes y un hacha oxidada." hoja="creatures_01" porDir="1">
+    <golpe>
+      <i tipo="sangrar" prob="0.25"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="alma" nombre="Alma pálida" nivel="11" agresivo="true" base="752" bioma="colina" cuadros="12" desc="Luz fría sin cuerpo." hoja="creatures_03" magico="true">
+    <golpe>
+      <i tipo="drenar_mana" prob="0.3"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="troll" nombre="Troll de puente" nivel="14" agresivo="true" base="224" bioma="colina" cuadros="12" desc="Cobra peaje en huesos." hoja="creatures_02">
+    <golpe>
+      <i tipo="aturdir" prob="0.15"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="caballero" nombre="Caballero caído" nivel="16" agresivo="true" base="816" bioma="colina" cuadros="12" desc="Sigue una orden que ya nadie dio." hoja="creatures_01">
+    <golpe>
+      <i tipo="sangrar" prob="0.25"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="alma_verde" nombre="Alma del velo" nivel="10" agresivo="true" base="768" bioma="velo" cuadros="12" desc="Flota sobre la ciudad oscura." hoja="creatures_03" magico="true">
+    <golpe>
+      <i tipo="veneno" prob="0.3"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="cultista" nombre="Cultista de Umbra" nivel="13" agresivo="true" base="48" bioma="velo" cuadros="8" desc="Reza en voz baja y golpea con el báculo." hoja="creatures_02" magico="true">
+    <poderes lista="succion"/>
+  </monstruo>
+  <monstruo id="alma_hielo" nombre="Alma glacial" nivel="16" agresivo="true" base="784" bioma="velo" cuadros="12" desc="Quien la toca se queda lento." hoja="creatures_03" magico="true">
+    <golpe>
+      <i tipo="lentitud" dur="4" pct="0.5" prob="0.4"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="demonio_musgo" nombre="Demonio de musgo" nivel="13" agresivo="true" base="704" bioma="cienaga" cuadros="12" desc="Alas verdes y garras de raíz." hoja="creatures_03" magico="true">
+    <golpe>
+      <i tipo="veneno" prob="0.3"/>
+    </golpe>
+    <poderes lista="maldicion"/>
+  </monstruo>
+  <monstruo id="saurio" nombre="Escorpión de ciénaga" nivel="16" agresivo="true" base="96" bioma="cienaga" cuadros="4" desc="Pinzas antiguas, hambre nueva." hoja="creatures_02">
+    <golpe>
+      <i tipo="veneno" prob="0.4"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="bruja" nombre="Bruja de la ciénaga" nivel="18" agresivo="true" base="832" bioma="cienaga" cuadros="12" desc="Conoce el nombre de quien pisa su círculo." hoja="creatures_02" magico="true">
+    <golpe>
+      <i tipo="drenar_mana" prob="0.2"/>
+    </golpe>
+    <poderes lista="maldicion"/>
+  </monstruo>
+  <monstruo id="demonio_marea" nombre="Demonio de marea" nivel="17" agresivo="true" base="720" bioma="marea" cuadros="12" desc="Sale del agua con la marea alta." hoja="creatures_03" magico="true">
+    <poderes lista="drenaje"/>
+  </monstruo>
+  <monstruo id="quimera" nombre="Quimera menor" nivel="19" agresivo="true" base="192" bioma="marea" cuadros="12" desc="Varias fauces, un solo hambre." hoja="creatures_02" magico="true">
+    <golpe>
+      <i tipo="quemar" prob="0.25"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="hidra" nombre="Hidra sombría" nivel="21" agresivo="true" base="320" bioma="marea" cuadros="8" desc="Cada cuello muerde por su cuenta." hoja="creatures_02" paso="2" porDir="2" tam="2">
+    <golpe>
+      <i tipo="veneno" prob="0.35"/>
+      <i tipo="sangrar" prob="0.2"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="golem" nombre="Gólem de escoria" nivel="18" agresivo="true" base="256" bioma="pinar" cuadros="12" desc="Piedra fundida que aún camina." hoja="creatures_01">
+    <poderes lista="pisoton"/>
+  </monstruo>
+  <monstruo id="demonio_foso" nombre="Demonio de foso" nivel="22" agresivo="true" base="736" bioma="pinar" cuadros="12" desc="El pinar lo escupe de noche." hoja="creatures_03" magico="true">
+    <golpe>
+      <i tipo="quemar" prob="0.3"/>
+    </golpe>
+    <poderes lista="succion"/>
+  </monstruo>
+  <monstruo id="titan" nombre="Titán de escoria" nivel="25" agresivo="true" base="64" bioma="pinar" cuadros="4" desc="El suelo se queja cuando anda." hoja="creatures_04" paso="2" porDir="2" tam="2">
+    <golpe>
+      <i tipo="lentitud" prob="0.25"/>
+    </golpe>
+    <poderes lista="pisoton"/>
+  </monstruo>
+  <monstruo id="dragon" nombre="Dragón joven" nivel="24" agresivo="true" base="0" bioma="eclipse" cuadros="4" desc="Aún no es antiguo. Ya es bastante." hoja="creatures_04" magico="true" paso="2" porDir="2" tam="2">
+    <golpe>
+      <i tipo="quemar" prob="0.2"/>
+    </golpe>
+    <poderes lista="aliento"/>
+  </monstruo>
+  <monstruo id="liche" nombre="Liche de Eclipse" nivel="27" agresivo="true" base="800" bioma="eclipse" cuadros="12" desc="Corona de hueso y un libro que no se cierra." hoja="creatures_03" magico="true">
+    <poderes lista="succion,drenaje"/>
+  </monstruo>
+  <monstruo id="gallina" nombre="Gallina brava" nivel="1" agresivo="false" base="1" bioma="trigal" cuadros="12" desc="Picotea a quien se lleva sus huevos." hoja="creatures_01">
+    <golpe>
+      <i tipo="sangrar" prob="0.1"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="planta_roja" nombre="Flor carnívora" nivel="4" agresivo="false" base="1" bioma="campos" cuadros="12" desc="Se ve inofensiva hasta que te acercas." hoja="creatures_02">
+    <golpe>
+      <i tipo="veneno" prob="0.2"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="esqueleto" nombre="Esqueleto guerrero" nivel="15" agresivo="true" base="56" bioma="colina" cuadros="8" desc="Un soldado que no sabe que ya perdió." hoja="creatures_01">
+    <golpe>
+      <i tipo="sangrar" prob="0.25"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="arpia" nombre="Arpía de ciénaga" nivel="15" agresivo="true" base="704" bioma="cienaga" cuadros="12" desc="Chilla desde las ramas secas." hoja="creatures_03" vuela="true">
+    <golpe>
+      <i tipo="veneno" prob="0.25"/>
+    </golpe>
+    <poderes lista="succion"/>
+  </monstruo>
+  <monstruo id="medusa" nombre="Medusa errante" nivel="20" agresivo="true" base="192" bioma="marea" cuadros="12" desc="Flota con la marea y pica con la corriente." hoja="creatures_02">
+    <golpe>
+      <i tipo="lentitud" dur="4" pct="0.45" prob="0.35"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="flor_sangrienta" nombre="Flor sangrienta" nivel="20" agresivo="false" base="1" bioma="senda" cuadros="12" desc="Sus pétalos rojos no son de color." hoja="creatures_02">
+    <golpe>
+      <i tipo="sangrar" prob="0.3"/>
+    </golpe>
+    <poderes lista="drenaje"/>
+  </monstruo>
+  <monstruo id="esqueleto_real" nombre="Esqueleto real" nivel="23" agresivo="true" base="56" bioma="velo" cuadros="8" desc="Aún conserva la corona." hoja="creatures_01">
+    <golpe>
+      <i tipo="sangrar" prob="0.3"/>
+      <i tipo="aturdir" prob="0.1"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="escorpion_carmesi" nombre="Escorpión carmesí" nivel="23" agresivo="true" base="96" bioma="eclipse" cuadros="4" desc="Su veneno quema como la brasa." hoja="creatures_02">
+    <golpe>
+      <i tipo="veneno" prob="0.4"/>
+      <i tipo="quemar" prob="0.15"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="dragon_brasas" nombre="Dragón de brasas" nivel="26" agresivo="true" base="736" bioma="pinar" cuadros="12" desc="Humea incluso cuando duerme." hoja="creatures_03">
+    <golpe>
+      <i tipo="quemar" prob="0.35"/>
+    </golpe>
+    <poderes lista="aliento"/>
+  </monstruo>
+  <monstruo id="medusa_abisal" nombre="Medusa abisal" nivel="26" agresivo="true" base="192" bioma="marea" cuadros="12" desc="Viene de donde no llega la luz." hoja="creatures_02">
+    <golpe>
+      <i tipo="lentitud" dur="5" pct="0.55" prob="0.4"/>
+    </golpe>
+    <poderes lista="succion"/>
+  </monstruo>
+  <monstruo id="ojo_abismo" nombre="Ojo del abismo" nivel="28" agresivo="true" base="192" bioma="eclipse" cuadros="12" desc="Todo lo que mira se marchita." hoja="creatures_02" vuela="true">
+    <poderes lista="drenaje,maldicion"/>
+  </monstruo>
+  <monstruo id="rey_espectral" nombre="Rey espectral" nivel="28" agresivo="true" base="56" bioma="velo" cuadros="8" desc="Gobierna un reino de sombras." hoja="creatures_01">
+    <poderes lista="succion,drenaje,maldicion"/>
+  </monstruo>
+  <monstruo id="demonio_rey" nombre="Demonio rey" nivel="29" agresivo="true" base="28" bioma="pinar" cuadros="4" desc="Armadura de hierro y una orden: destruir." hoja="creatures_01" porDir="1">
+    <golpe>
+      <i tipo="sangrar" prob="0.3"/>
+      <i tipo="aturdir" prob="0.15"/>
+    </golpe>
+    <poderes lista="pisoton"/>
+  </monstruo>
+  <monstruo id="hidra_ceniza" nombre="Hidra de cenizas" nivel="29" agresivo="true" base="320" bioma="cienaga" cuadros="8" desc="Cada cabeza arde por su cuenta." hoja="creatures_02" paso="2" porDir="2" tam="2">
+    <golpe>
+      <i tipo="veneno" prob="0.35"/>
+      <i tipo="quemar" prob="0.25"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="behemot" nombre="Behemot de guerra" nivel="30" agresivo="true" base="128" bioma="eclipse" cuadros="4" desc="Uno solo. Cuando cae, la guerra lo nota." elite="true" hoja="creatures_04" paso="2" porDir="2" tam="2">
+    <golpe>
+      <i tipo="aturdir" prob="0.2"/>
+      <i tipo="sangrar" prob="0.25"/>
+    </golpe>
+    <poderes lista="pisoton"/>
+  </monstruo>
+  <monstruo id="bandido" nombre="Bandido del camino" nivel="8" agresivo="true" bandido="true" base="0" cuadros="4" desc="Asalta caravanas con un cuchillo oxidado." hoja="creatures_01" noCampamento="true">
+    <golpe>
+      <i tipo="sangrar" prob="0.2"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="asaltante" nombre="Asaltante" nivel="16" agresivo="true" bandido="true" base="0" cuadros="4" desc="Curtido en cien emboscadas." hoja="creatures_01" noCampamento="true">
+    <golpe>
+      <i tipo="sangrar" prob="0.25"/>
+      <i tipo="aturdir" prob="0.1"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="saqueador" nombre="Saqueador de rutas" nivel="24" agresivo="true" bandido="true" base="0" cuadros="4" desc="Lidera bandas que arrasan los convoyes." hoja="creatures_01" noCampamento="true">
+    <golpe>
+      <i tipo="sangrar" prob="0.3"/>
+      <i tipo="aturdir" prob="0.15"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="jefe_manada" nombre="Jefe de la manada" nivel="10" agresivo="true" atkMul="1.5" base="0" categoria="party" cuadros="4" desc="Guía a la manada y no caza solo." hoja="creatures_01" hpMul="3.5" noCampamento="true" xpMul="4">
+    <golpe>
+      <i tipo="sangrar" prob="0.3"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="sectario_mayor" nombre="Sectario mayor" nivel="10" agresivo="true" atkMul="1.6" base="0" categoria="party" cuadros="4" desc="Su culto pide sacrificios en grupo." hoja="creatures_01" hpMul="3.2" magico="true" noCampamento="true" xpMul="4">
+    <poderes lista="drenaje,maldicion"/>
+  </monstruo>
+  <monstruo id="reina_avispa" nombre="Reina de las avispas" nivel="10" agresivo="true" atkMul="1.5" base="0" categoria="party" cuadros="4" desc="Su enjambre cubre el cielo." hoja="creatures_01" hpMul="3.3" noCampamento="true" vuela="true" xpMul="4">
+    <golpe>
+      <i tipo="veneno" prob="0.4"/>
+    </golpe>
+    <poderes lista="maldicion"/>
+  </monstruo>
+  <monstruo id="oso_gigante" nombre="Oso gigante" nivel="10" agresivo="true" atkMul="1.9" base="0" categoria="gigante" cuadros="4" desc="Del tamaño de una casa." hoja="creatures_01" hpMul="4.5" noCampamento="true" paso="2" porDir="2" tam="2" velocidad="2.4" xpMul="10">
+    <golpe>
+      <i tipo="sangrar" prob="0.3"/>
+      <i tipo="aturdir" prob="0.15"/>
+    </golpe>
+    <poderes lista="pisoton"/>
+  </monstruo>
+  <monstruo id="coloso" nombre="Coloso de piedra" nivel="10" agresivo="true" atkMul="1.8" base="0" categoria="gigante" cuadros="4" desc="El suelo tiembla a su paso." hoja="creatures_01" hpMul="5" noCampamento="true" paso="2" porDir="2" tam="2" velocidad="2.2" xpMul="10">
+    <golpe>
+      <i tipo="lentitud" prob="0.3"/>
+    </golpe>
+    <poderes lista="pisoton"/>
+  </monstruo>
+  <monstruo id="gigante_guerra" nombre="Gigante de guerra" nivel="10" agresivo="true" atkMul="2" base="0" categoria="gigante" cuadros="4" desc="Bajó de las montañas buscando pelea." hoja="creatures_01" hpMul="4.5" noCampamento="true" paso="2" porDir="2" tam="2" velocidad="2.5" xpMul="10">
+    <golpe>
+      <i tipo="aturdir" prob="0.2"/>
+      <i tipo="sangrar" prob="0.25"/>
+    </golpe>
+    <poderes lista="pisoton"/>
+  </monstruo>
+</monstruos>

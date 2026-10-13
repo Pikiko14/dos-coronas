@@ -1,20 +1,7 @@
 local B = {}
+require("compartido.dominio.configuracion").aplicar(B, "balance")
 
-B.XP_BASE = 40
-B.XP_POR_NIVEL = 32
-B.NIVEL_SLOT = { 1, 1, 4, 8, 15, 20 }
 
-B.XP_CORTE = 7
--- Cuánta experiencia pide cada nivel respecto a la curva base (subir de nivel cuesta el doble, casi).
-B.XP_DIFICULTAD = 1.8
--- Multiplicador de la experiencia ganada (el servidor lo toma del .env: 2 = experiencia doble).
-B.XP_MULTIPLICADOR = 1
--- Muerte: por encima de este nivel se pierde esa fraccion de la experiencia que pide el nivel actual.
-B.MUERTE_NIVEL_MIN = 10
-B.MUERTE_XP_PERDIDA = 0.10
--- Polvo arcano (para encantar): solo lo sueltan criaturas por encima de este nivel y rara vez.
-B.POLVO_NIVEL_MIN = 10
-B.POLVO_PROB = 0.05
 
 function B.xpPara(nivel)
   nivel = math.max(1, math.floor(tonumber(nivel) or 1))
@@ -32,24 +19,7 @@ function B.xpMonstruo(nivelJugador, nivelMonstruo, elite)
   return math.max(1, math.floor(base * mul))
 end
 
--- Daño de un golpe -----------------------------------------------------
--- Cada golpe se tira entre un mínimo y un máximo que salen del ataque de quien
--- golpea (su nivel, su equipo y sus mejoras ya cuentan en el ataque):
---   mínimo = ataque x DANO_MIN x poder del golpe
---   máximo = ataque x DANO_MAX x poder del golpe
--- La tirada es la media de dos dados, así que lo normal queda hacia el centro y
--- los extremos salen menos. Un golpe crítico (CRITICO_PROB) hace CRITICO_MUL veces
--- el máximo. Después la defensa del objetivo lo reduce: defensa / (defensa + 40).
-B.DANO_MIN = 0.45
-B.DANO_MAX = 0.9
-B.CRITICO_PROB = 0.08
-B.CRITICO_MUL = 1.5
 
--- Diferencia de nivel: quien pega a alguien de más nivel hace menos daño y quien pega a alguien de
--- menos nivel hace más (hasta un tope). Así un personaje de nivel 8 no puede con una criatura de
--- nivel 21 aunque le saque ventaja el equipo, y esa criatura lo destroza.
-B.NIVEL_PASO = 0.04
-B.NIVEL_MOD_MIN, B.NIVEL_MOD_MAX = 0.3, 1.8
 function B.modNivel(nivelAtacante, nivelObjetivo)
   local d = (tonumber(nivelAtacante) or 1) - (tonumber(nivelObjetivo) or 1)
   return math.max(B.NIVEL_MOD_MIN, math.min(B.NIVEL_MOD_MAX, 1 + B.NIVEL_PASO * d))
@@ -87,12 +57,6 @@ function B.slotDisponible(nivel, slot)
   return (tonumber(nivel) or 1) >= need
 end
 
-B.BOTIN = {
-  gato = { { id = "pocion_vida", p = 0.4 } },
-  rata = { { id = "pocion_vida", p = 0.35 } },
-  jabali = { { id = "pocion_vida", p = 0.3 }, { id = "pocion_mana", p = 0.15 } },
-  cuervo = { { id = "pocion_mana", p = 0.25 } },
-}
 
 function B.tirar(mon)
   local tabla = (mon and mon.botin) or (mon and B.BOTIN[mon.id]) or {

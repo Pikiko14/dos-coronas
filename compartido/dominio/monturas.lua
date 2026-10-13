@@ -4,54 +4,17 @@
 --   carga: unidades de mercancía extra que se pueden llevar.
 -- Se bajan solas dentro de casas y campos de batalla.
 local M = {}
+require("compartido.dominio.configuracion").aplicar(M, "monturas")
 
-M.MAX = 8
--- Vida de las monturas: si vas montado, los golpes bajan primero la vida de la montura. Al
--- llegar a cero cae (la carga queda en el suelo), te bajas y no puedes usarla un rato.
-M.VIDA_MULT = 1
-M.RECUPERA_SEG = 300       -- cuánto tarda en poder usarse de nuevo una montura caída
-M.REGEN_FRAC = 0.02        -- fracción de su vida que recupera por segundo si no la golpean
-M.REGEN_ESPERA = 15        -- segundos sin golpes antes de empezar a recuperar
 
-M.especies = {
-  buey = {
-    nombre = "Buey de carga", nivel = 5, precio = 900, vel = 0.10, carga = 22, requiereOficio = true, vida = 500,
-    desc = "Lento pero fuerte: carga mucho más. Solo con el oficio activo.",
-  },
-  caballo = {
-    nombre = "Caballo", nivel = 10, precio = 1000, vel = 0.40, carga = 6, vida = 350, requiereOficio = true,
-    desc = "El más rápido para cruzar el mapa. Solo con el oficio activo.",
-  },
-  carreta = {
-    nombre = "Carreta cubierta", nivel = 14, precio = 4500, vel = 0.06, carga = 90, oficio = "trader", requiereOficio = true, vida = 1100,
-    desc = "Una carreta de mercader: carga enorme. Solo para comerciantes con el oficio activo.",
-  },
-}
--- Monturas de viaje: no llevan mercancía ni exigen oficio activo. Su aspecto sigue la facción del
--- jinete (Alba: blanco y oro; Ocaso: negro y violeta). Ir montado no permite atacar.
-M.especies.corcel_real = {
-  nombre = "Corcel real", nivel = 12, precio = 2500, vel = 0.38, carga = 0, vida = 420,
-  desc = "El caballo de tu reino: blanco del Alba o negro del Ocaso. Rápido y noble.",
-}
-M.especies.lobo_guerra = {
-  nombre = "Lobo de guerra", nivel = 16, precio = 3600, vel = 0.45, carga = 0, vida = 380,
-  desc = "Pelaje de escarcha o de sombra. El más veloz entre árboles y caminos.",
-}
-M.especies.bisonte_guerra = {
-  nombre = "Bisonte acorazado", nivel = 20, precio = 4800, vel = 0.28, carga = 0, vida = 1000,
-  desc = "Lento pero casi imposible de derribar: su vida es la más alta.",
-}
-M.especies.corcel_fuego = {
-  nombre = "Corcel de fuego", nivel = 25, precio = 7000, vel = 0.50, carga = 0, vida = 520,
-  desc = "Dorado como el sol del Alba o rojo como el ascua del Ocaso. El más rápido.",
-}
--- Montura del Item Mall (no se vende en la cuadra): se compra con Monedas Corona. Es la más rápida y
--- la que más aguanta; no pide oficio.
-M.especies.dragon = {
-  nombre = "Dragón", nivel = 1, precio = 0, vel = 0.55, carga = 0, vida = 1200, mall = true,
-  desc = "Montura exclusiva del Item Mall.",
-}
-M.orden = { "buey", "caballo", "carreta", "corcel_real", "lobo_guerra", "bisonte_guerra", "corcel_fuego" }
+-- Las especies están en compartido/datos/monturas.xml; el orden del archivo es el de la cuadra. Las del Item Mall
+-- (mall = true) no se venden en la cuadra.
+local especies, orden = require("compartido.dominio.configuracion").mapaOrden("monturas", "montura", false)
+M.especies = especies
+M.orden = {}
+for _, id in ipairs(orden) do
+  if not especies[id].mall then M.orden[#M.orden + 1] = id end
+end
 
 function M.instalar(Mundo)
   function M.vidaMax(especie)

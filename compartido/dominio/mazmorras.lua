@@ -10,38 +10,12 @@ local Items = require("compartido.dominio.items")
 local Mall = require("compartido.dominio.mall")
 
 local M = {}
+require("compartido.dominio.configuracion").aplicar(M, "mazmorras")
 
-M.RESPAWN_JEFE = 300     -- segundos hasta que el jefe vuelve
-M.DURA_COFRE = 150       -- segundos que el cofre queda abierto a todos
-M.PROB_ADDON = 0.14
-M.PROB_MALL = 0.30       -- el resto del premio es equipo del escalón más alto
-M.ORO_COFRE = 600
 
--- Rectángulos { x, y, ancho, alto } de cada mazmorra. La entrada está en la sala "entrada": el
--- jugador aparece ahí y la puerta de salida está en su muro de abajo.
-local DISENOS = {
-  mz1 = {
-    w = 56, h = 72,
-    entrada = { 20, 60, 16, 8 },
-    salas = { { 10, 38, 36, 14 }, { 12, 16, 32, 14 } },
-    pasillos = { { 26, 52, 4, 8 }, { 26, 30, 4, 8 }, { 26, 10, 4, 6 } },
-    jefe = { 14, 2, 28, 9 },
-  },
-  mz2 = {
-    w = 76, h = 56,
-    entrada = { 3, 40, 14, 11 },
-    salas = { { 28, 34, 16, 16 }, { 56, 26, 16, 18 } },
-    pasillos = { { 17, 43, 11, 4 }, { 44, 40, 12, 4 }, { 62, 16, 4, 10 } },
-    jefe = { 44, 2, 28, 14 },
-  },
-  mz3 = {
-    w = 66, h = 66,
-    entrada = { 27, 54, 12, 9 },
-    salas = { { 21, 30, 24, 14 }, { 2, 26, 11, 18 }, { 53, 26, 11, 18 } },
-    pasillos = { { 31, 44, 4, 10 }, { 13, 34, 8, 4 }, { 45, 34, 8, 4 }, { 31, 22, 4, 8 } },
-    jefe = { 20, 3, 26, 19 },
-  },
-}
+-- Planos de cada mazmorra (compartido/datos/mazmorras.xml): rectángulos { x, y, ancho, alto } en casillas. La
+-- entrada está en la sala "entrada": el jugador aparece ahí y la puerta de salida está en su muro de abajo.
+local DISENOS = require("compartido.dominio.configuracion").mapaOrden("mazmorras", "plano", false)
 
 local function tallar(mapa, r)
   for x = r[1], r[1] + r[3] - 1 do

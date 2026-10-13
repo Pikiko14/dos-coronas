@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Equipo del juego: armas, armaduras, escudos, anillos y amuletos en ocho escalones. Cada pieza vale
+  (valor base de su casilla) x (potencia del escalon) x (factor del tipo de armadura), asi que todo el equipo se
+  calibra tocando este archivo.
+  escalones: nivel minimo y potencia (mul) de cada escalon. adjetivos: nombre del escalon segun genero (m, f) y numero (p).
+  casillas: valor base por pieza. tipos_armadura: factores de pesada (guerrero), ligera (cazador) y tela (mago, clerigo).
+  iconos: casillas de la lamina de objetos, una por escalon.
+-->
+<equipo>
+  <adjetivos>
+    <f lista="tosca,de soldado,de veterano,de capitán,de campeón,de élite,legendaria,de corona"/>
+    <fp lista="toscas,de soldado,de veterano,de capitán,de campeón,de élite,legendarias,de corona"/>
+    <m lista="tosco,de soldado,de veterano,de capitán,de campeón,de élite,legendario,de corona"/>
+    <mp lista="toscos,de soldado,de veterano,de capitán,de campeón,de élite,legendarios,de corona"/>
+  </adjetivos>
+  <amuletos>
+    <iconos lista="720,721,722,723,724,725,726,727"/>
+  </amuletos>
+  <anillos>
+    <iconos lista="736,738,739,740,741,742,743,744"/>
+  </anillos>
+  <armadura_por_clase cazador="ligera" clerigo="tela" guerrero="pesada" mago="tela"/>
+  <armas>
+    <cazador>
+      <i id="arma" nombre="Arco" arma="arco" atk="5.8" g="m" spd="0.01">
+        <iconos lista="288,290,296,300,301,303,302,319"/>
+      </i>
+      <i id="ballesta" nombre="Ballesta" arma="arco" atk="7" g="f" spd="-0.012">
+        <iconos lista="304,305,306,307,308,319,321,322"/>
+      </i>
+    </cazador>
+    <clerigo>
+      <i id="arma" nombre="Maza" arma="maza" atk="1" g="f" hp="4" matk="4.6">
+        <iconos lista="176,178,183,190,196,199,204,201"/>
+      </i>
+      <i id="cetro" nombre="Cetro" arma="maza" atk="0.6" g="m" matk="5.4" mp="3">
+        <iconos lista="197,198,200,202,203,205,184,186"/>
+      </i>
+    </clerigo>
+    <guerrero>
+      <i id="arma" nombre="Espada" arma="espada" atk="5.5" def="0.4" g="f">
+        <iconos lista="49,52,101,116,148,86,62,165"/>
+      </i>
+      <i id="hacha" nombre="Hacha" arma="espada" atk="6.9" g="f" hp="-1.5">
+        <iconos lista="224,225,241,247,251,259,262,260"/>
+      </i>
+    </guerrero>
+    <mago>
+      <i id="arma" nombre="Bastón" arma="baston" atk="0.8" g="m" matk="6" mp="4">
+        <iconos lista="352,359,367,342,364,365,368,366"/>
+      </i>
+      <i id="vara" nombre="Vara" arma="baston" atk="0.8" g="f" matk="6.9">
+        <iconos lista="343,344,345,346,347,363,362,361"/>
+      </i>
+    </mago>
+  </armas>
+  <botin_huecos>
+    <lista lista="arma,arma,cabeza,pecho,piernas,pies,escudo,anillo,amuleto"/>
+  </botin_huecos>
+  <casillas>
+    <cabeza def="1.6" hp="4"/>
+    <pecho def="2.6" hp="8"/>
+    <piernas def="2" hp="5"/>
+    <pies def="1" hp="0"/>
+  </casillas>
+  <escalones>
+    <i nivel="1" mul="1"/>
+    <i nivel="4" mul="1.7"/>
+    <i nivel="8" mul="2.6"/>
+    <i nivel="12" mul="3.6"/>
+    <i nivel="16" mul="4.8"/>
+    <i nivel="20" mul="6.2"/>
+    <i nivel="25" mul="7.8"/>
+    <i nivel="30" mul="10"/>
+  </escalones>
+  <escudos>
+    <iconos lista="386,400,392,395,398,408,415,422"/>
+  </escudos>
+  <iconos_armadura>
+    <ligera>
+      <cabeza lista="453,432,455,439,445,451,457,460"/>
+      <pecho lista="512,515,541,569,543,559,573,577"/>
+      <piernas lista="626,624,640,642,643,631,627,630"/>
+      <pies lista="657,666,656,659,669,658,660,664"/>
+    </ligera>
+    <pesada>
+      <cabeza lista="459,458,465,473,470,486,444,449"/>
+      <pecho lista="513,517,524,529,545,553,561,581"/>
+      <piernas lista="628,632,634,636,637,639,635,633"/>
+      <pies lista="663,667,668,662,665,664,661,660"/>
+    </pesada>
+    <tela>
+      <cabeza lista="481,492,504,445,438,436,468,495"/>
+      <pecho lista="519,527,540,522,539,567,566,568"/>
+      <piernas lista="625,641,629,638,631,627,626,630"/>
+      <pies lista="658,661,656,660,659,665,664,662"/>
+    </tela>
+  </iconos_armadura>
+  <nombres_armadura>
+    <ligera>
+      <cabeza nombre="Capucha" g="f"/>
+      <pecho nombre="Jubón" g="m"/>
+      <piernas nombre="Pantalón" g="m"/>
+      <pies nombre="Botas" g="fp"/>
+    </ligera>
+    <pesada>
+      <cabeza nombre="Yelmo" g="m"/>
+      <pecho nombre="Coraza" g="f"/>
+      <piernas nombre="Grebas" g="fp"/>
+      <pies nombre="Botas" g="fp"/>
+    </pesada>
+    <tela>
+      <cabeza nombre="Sombrero" g="m"/>
+      <pecho nombre="Túnica" g="f"/>
+      <piernas nombre="Calzas" g="fp"/>
+      <pies nombre="Sandalias" g="fp"/>
+    </tela>
+  </nombres_armadura>
+  <tipos_armadura>
+    <ligera atk="0.35" botas="0.1" def="0.6" hp="0.8" mdef="0.45" spd="0.03"/>
+    <pesada botas="0" def="1" hp="1" mdef="0.35" spd="-0.02"/>
+    <tela botas="0.06" def="0.3" hp="0.6" matk="0.35" mdef="1" mp="2.5" spd="0"/>
+  </tipos_armadura>
+</equipo>

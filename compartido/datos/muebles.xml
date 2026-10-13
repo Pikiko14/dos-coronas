@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Muebles de las casas: precio en oro y el sprite que se dibuja.
+-->
+<muebles>
+  <mueble id="cama" nombre="Cama" precio="120" texto="Al dormir aquí fijas tu retorno.">
+    <sprite hoja="town" indice="18"/>
+  </mueble>
+  <mueble id="cofre" nombre="Cofre" precio="105" texto="Guarda objetos aparte de la bolsa.">
+    <sprite hoja="town" indice="65"/>
+  </mueble>
+  <mueble id="estandarte" nombre="Estandarte" precio="75" texto="Tu facción, en la pared.">
+    <sprite hoja="equipment" indice="455"/>
+  </mueble>
+  <mueble id="mesa" nombre="Mesa" precio="60" texto="Un lugar para dejar el mapa.">
+    <sprite hoja="town" indice="7"/>
+  </mueble>
+</muebles>

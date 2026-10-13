@@ -321,9 +321,22 @@ function D.escena(mundo, jugador, cam, mx, my)
   love.graphics.setScissor()
 end
 
+-- tipo de proyectil -> mezcla con que se dibuja
+local PROYECTILES = { misil = "add", fuego = "add", sagrado = "add", flecha = "alpha", sombra = "alpha" }
+
 function D.proyectil(e, sx, sy)
   sy = sy - 8
   local ang = math.atan2((e.ty or e.y) - e.y, (e.tx or e.x) - e.x)
+  -- sprites generados (Animations/Proyectil_<tipo>.png: 4 cuadros de 64x64, miran a la derecha)
+  if PROYECTILES[e.tipo] then
+    local img = Arte.img("Animations/Proyectil_" .. e.tipo .. ".png", true)
+    local cuadro = math.floor(love.timer.getTime() * 12) % 4
+    love.graphics.setColor(1, 1, 1, 1)
+    if PROYECTILES[e.tipo] == "add" then love.graphics.setBlendMode("add") end
+    love.graphics.draw(img, Arte.quad(img, cuadro * 64, 0, 64, 64), sx, sy, ang, 0.9, 0.9, 40, 32)
+    love.graphics.setBlendMode("alpha")
+    return
+  end
   local col = { 1, 0.9, 0.45 }
   if e.tipo == "sagrado" then col = { 1, 0.95, 0.55 }
   elseif e.tipo == "misil" then col = { 0.55, 0.8, 1 } end
