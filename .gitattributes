@@ -1,0 +1,4 @@
+# Los scripts y servicios del VPS Linux deben quedar siempre con saltos de linea LF
+*.sh text eol=lf
+*.service text eol=lf
+despliegue/ubuntu/env.beta.example text eol=lf
