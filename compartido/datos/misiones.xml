@@ -1,17 +1,98 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Encargos de cada ciudad: derrotar cantidad de una criatura a cambio de oro y experiencia.
+  Misiones curadas: los encargos de cada ciudad y las CADENAS con premios. Además el juego genera solo (compartido/dominio/misiones.lua)
+  una misión de cazar por cada criatura (normales, élites y jefes), otra de repetición, trofeos que recolectar y entregas entre las
+  ciudades y los puestos del mapa.
+
+  tipo: cazar (por defecto) | recolectar | entregar.
+  npc: quién la da (c_<ciudad> es el tablón de encargos de una ciudad; ver ciudades.xml). ciudad="x" equivale a npc="c_x".
+  destino: a quién se entrega (por defecto, el mismo que la da). Las entregas llevan paquete="nombre del objeto".
+  monstruo / de: criatura a cazar o que suelta el trofeo. cantidad, nivel (el de la misión: sube con él la recompensa).
+  dif: normal | dificil | epica (cuánto pesa en la recompensa y qué margen de nivel se admite). factor: multiplicador extra (finales de cadena).
+  oro / xp: si se escriben, mandan; si no, salen de la fórmula de misiones.lua (cantidad x criatura x dificultad).
+  requiere: misión que hay que haber entregado antes. siguiente: misión que se acepta sola al entregar esta (si la da el mismo PNJ).
+  Premios especiales (los difíciles; no todo se regala): premios="objeto:cantidad,objeto:cantidad", addon="skin_...", montura="id", monedas="n".
 -->
 <misiones>
-  <mision id="q_auroria" cantidad="6" ciudad="auroria" dialogo="Esos gatos no dejan en paz el granero. Derrota seis." monstruo="gato" oro="90" siguiente="q_auroria_2" texto="Los gatos umbríos se han vuelto bravos. Derrota 6." titulo="Gatos en el granero" xp="80"/>
-  <mision id="q_auroria_2" cantidad="4" ciudad="auroria" dialogo="El granero sigue inquieto. Acaba con cuatro más." monstruo="gato" oro="70" requiere="q_auroria" texto="Quedan las crías entre la paja. Derrota 4." titulo="El nido del granero" xp="60"/>
-  <mision id="q_puerto_sol" cantidad="8" ciudad="puerto_sol" monstruo="rata" oro="100" texto="Las ratas gigantes muerden las redes. Derrota 8." titulo="Ratones de muelle" xp="90"/>
-  <mision id="q_liria" cantidad="6" ciudad="liria" monstruo="jabali" oro="120" texto="Derrota 6 jabalíes al sur de Liria." titulo="Jabalíes en la senda" xp="110"/>
-  <mision id="q_henar" cantidad="8" ciudad="henar" monstruo="escarabajo" oro="110" texto="Derrota 8 escarabajos." titulo="Escarabajos del trigo" xp="100"/>
-  <mision id="q_alba" cantidad="8" ciudad="alba" monstruo="cuervo" oro="130" texto="Derrota 8 murciélagos." titulo="Murciélagos del bastión" xp="120"/>
-  <mision id="q_nocturnia" cantidad="6" ciudad="nocturnia" monstruo="alma_verde" oro="160" texto="Derrota 6 almas verdes." titulo="Almas del velo" xp="150"/>
-  <mision id="q_puerto_sombra" cantidad="5" ciudad="puerto_sombra" monstruo="demonio_marea" oro="180" texto="Derrota 5 demonios de marea." titulo="Demonios de marea" xp="170"/>
-  <mision id="q_nox" cantidad="6" ciudad="nox" monstruo="aguila" oro="140" texto="Derrota 6 avispones." titulo="Avispones de Nox" xp="130"/>
-  <mision id="q_velo" cantidad="6" ciudad="velo" monstruo="espectro" oro="170" texto="Derrota 6 espectros." titulo="Espectros de la ciénaga" xp="160"/>
-  <mision id="q_eclipse" cantidad="5" ciudad="eclipse" monstruo="gargola" oro="200" texto="Derrota 5 gárgolas." titulo="Gárgolas del eclipse" xp="180"/>
+  <!-- ======================= Encargos de cada ciudad (los de siempre) ======================= -->
+  <mision id="q_auroria" ciudad="auroria" monstruo="gato" cantidad="6" nivel="1" dialogo="Esos gatos no dejan en paz el granero. Derrota seis." texto="Los gatos umbríos se han vuelto bravos. Derrota 6." titulo="Gatos en el granero" siguiente="q_auroria_2"/>
+  <mision id="q_auroria_2" ciudad="auroria" monstruo="gato" cantidad="4" nivel="1" requiere="q_auroria" dialogo="El granero sigue inquieto. Acaba con cuatro más." texto="Quedan las crías entre la paja. Derrota 4." titulo="El nido del granero"/>
+  <mision id="q_puerto_sol" ciudad="puerto_sol" monstruo="rata" cantidad="8" nivel="3" texto="Las ratas gigantes muerden las redes. Derrota 8." titulo="Ratones de muelle"/>
+  <mision id="q_liria" ciudad="liria" monstruo="jabali" cantidad="6" nivel="3" texto="Derrota 6 jabalíes al sur de Liria." titulo="Jabalíes en la senda"/>
+  <mision id="q_henar" ciudad="henar" monstruo="escarabajo" cantidad="8" nivel="5" texto="Derrota 8 escarabajos." titulo="Escarabajos del trigo"/>
+  <mision id="q_alba" ciudad="alba" monstruo="cuervo" cantidad="8" nivel="2" texto="Derrota 8 murciélagos." titulo="Murciélagos del bastión"/>
+  <mision id="q_nocturnia" ciudad="nocturnia" monstruo="alma_verde" cantidad="6" nivel="10" texto="Derrota 6 almas verdes." titulo="Almas del velo"/>
+  <mision id="q_puerto_sombra" ciudad="puerto_sombra" monstruo="demonio_marea" cantidad="5" nivel="17" texto="Derrota 5 demonios de marea." titulo="Demonios de marea"/>
+  <mision id="q_nox" ciudad="nox" monstruo="aguila" cantidad="6" nivel="6" texto="Derrota 6 avispones." titulo="Avispones de Nox"/>
+  <mision id="q_velo" ciudad="velo" monstruo="espectro" cantidad="6" nivel="8" texto="Derrota 6 espectros." titulo="Espectros de la ciénaga"/>
+  <mision id="q_eclipse" ciudad="eclipse" monstruo="gargola" cantidad="5" nivel="10" texto="Derrota 5 gárgolas." titulo="Gárgolas del eclipse"/>
+
+  <!-- ======================= Cadena A (Albor): El camino del explorador. Premio: addon Explorador ======================= -->
+  <mision id="ca_1" npc="c_liria" tipo="recolectar" de="jabali" cantidad="6" nivel="3" titulo="Colmillos para el curtidor"
+    dialogo="Un explorador me encargó un mapa nuevo, y el curtidor pide colmillos de jabalí para la tinta. Tráeme seis." texto="Reúne 6 trofeos de jabalí bronco." final="Con esto el curtidor tendrá para semanas."/>
+  <mision id="ca_2" npc="c_liria" tipo="entregar" paquete="Mapa del explorador" destino="c_henar" nivel="5" requiere="ca_1" titulo="El mapa del explorador"
+    dialogo="El mapa está listo. Llévaselo al explorador en Henar, él sabrá qué hacer." texto="Lleva el mapa a Henar." final="¡El mapa! Por fin sabré por dónde seguir."/>
+  <mision id="ca_3" npc="c_henar" monstruo="escarabajo" cantidad="12" nivel="5" requiere="ca_2" titulo="Despejar los trigales" siguiente="ca_4"
+    dialogo="El mapa marca los trigales. Antes de seguir hay que quitar de en medio a los escarabajos." texto="Derrota 12 escarabajos de seto."/>
+  <mision id="ca_4" npc="c_henar" monstruo="oso" cantidad="10" nivel="9" dif="dificil" requiere="ca_3" titulo="Osos de las colinas" siguiente="ca_5"
+    dialogo="Más allá hay osos. Son duros: ve con cuidado." texto="Derrota 10 osos de colina."/>
+  <mision id="ca_5" npc="c_henar" monstruo="elefante" cantidad="8" nivel="12" dif="dificil" factor="1.8" requiere="ca_4" titulo="El camino del explorador"
+    premios="polvo_arcano:20,pocion_vida_mediana:10" addon="skin_explorador"
+    dialogo="Solo queda la bestia que guarda el paso. Derrótala y el camino será tuyo, y mi ropa de viaje también." texto="Derrota 8 bestias de asedio." final="Eres un explorador de los buenos. Quédate con mi atuendo."/>
+
+  <!-- ======================= Cadena B (Albor): La corona del Alba. Premio: addon Rey ======================= -->
+  <mision id="cb_1" npc="c_alba" monstruo="caballero" cantidad="15" nivel="16" dif="dificil" titulo="Caballeros sin señor" siguiente="cb_2"
+    dialogo="Caballeros caídos vagan sin señor. La corona del Alba te necesita: empieza por ellos." texto="Derrota 15 caballeros caídos."/>
+  <mision id="cb_2" npc="c_alba" tipo="recolectar" de="esqueleto" cantidad="10" nivel="15" dif="dificil" requiere="cb_1" titulo="Huesos del linaje"
+    dialogo="Necesito huesos de los esqueletos guerreros para el ritual del linaje." texto="Reúne 10 trofeos de esqueleto guerrero." final="Con estos huesos podré cerrar la herida."/>
+  <mision id="cb_3" npc="c_alba" tipo="entregar" paquete="Sello real" destino="c_auroria" nivel="15" requiere="cb_2" titulo="El sello real"
+    dialogo="Lleva este sello al tablón de Auroria. Allí sabrán quién eres." texto="Lleva el sello real a Auroria." final="El sello es auténtico. Ahora hablemos de lo que viene."/>
+  <mision id="cb_4" npc="c_auroria" monstruo="quimera" cantidad="12" nivel="19" dif="dificil" requiere="cb_3" titulo="Quimeras del reino" siguiente="cb_5"
+    dialogo="Las quimeras asolan las fronteras. Un heredero debe saber defender su reino." texto="Derrota 12 quimeras menores."/>
+  <mision id="cb_5" npc="c_auroria" monstruo="hidra" cantidad="6" nivel="21" dif="dificil" requiere="cb_4" titulo="Hidras sombrías" siguiente="cb_6"
+    dialogo="Las hidras de las ciénagas. Sin ellas, el reino respira." texto="Derrota 6 hidras sombrías."/>
+  <mision id="cb_6" npc="c_auroria" monstruo="dragon" cantidad="4" nivel="24" dif="epica" factor="2" requiere="cb_5" titulo="La corona del Alba"
+    premios="polvo_arcano:60,pocion_vida_grande:15" monedas="80" addon="skin_rey"
+    dialogo="Los dragones jóvenes son la última prueba. Si caen cuatro, la corona es tuya." texto="Derrota 4 dragones jóvenes." final="Viva el nuevo rey. Que la corona del Alba te sirva."/>
+
+  <!-- ======================= Cadena C (Umbra): El señor del Ocaso. Premio: addon Caballero oscuro ======================= -->
+  <mision id="cc_1" npc="c_eclipse" monstruo="cultista" cantidad="12" nivel="13" dif="dificil" titulo="Cultistas del Ocaso" siguiente="cc_2"
+    dialogo="Los cultistas hablan de un señor que nunca vino. El Ocaso necesita a alguien que acabe con ellos." texto="Derrota 12 cultistas de Umbra."/>
+  <mision id="cc_2" npc="c_eclipse" tipo="recolectar" de="alma_hielo" cantidad="10" nivel="16" dif="dificil" requiere="cc_1" titulo="Escarcha del velo"
+    dialogo="El ritual pide escarcha de almas glaciales. Reúne diez." texto="Reúne 10 trofeos de alma glacial." final="Frío como el vacío. Perfecto."/>
+  <mision id="cc_3" npc="c_eclipse" tipo="entregar" paquete="Sello oscuro" destino="c_velo" nivel="16" requiere="cc_2" titulo="El sello oscuro"
+    dialogo="Entrega el sello oscuro a la ciénaga del Velo. Ellos custodian la armadura." texto="Lleva el sello oscuro a la ciénaga del Velo." final="Sí, es el sello. La armadura espera."/>
+  <mision id="cc_4" npc="c_velo" monstruo="bruja" cantidad="10" nivel="18" dif="dificil" requiere="cc_3" titulo="Brujas de la ciénaga" siguiente="cc_5"
+    dialogo="Las brujas de la ciénaga guardan el último fragmento. Hay que arrancárselo." texto="Derrota 10 brujas de la ciénaga."/>
+  <mision id="cc_5" npc="c_velo" monstruo="demonio_foso" cantidad="8" nivel="22" dif="dificil" requiere="cc_4" titulo="Demonios del foso" siguiente="cc_6"
+    dialogo="Del foso salen demonios cada noche. Quien los detenga merece la armadura." texto="Derrota 8 demonios de foso."/>
+  <mision id="cc_6" npc="c_velo" monstruo="liche" cantidad="4" nivel="27" dif="epica" factor="2" requiere="cc_5" titulo="El señor del Ocaso"
+    premios="polvo_arcano:60,pocion_vida_grande:15" monedas="80" addon="skin_caballero_oscuro"
+    dialogo="El liche de Eclipse es el último obstáculo. Acaba con él cuatro veces y la armadura negra será tuya." texto="Derrota 4 liches de Eclipse." final="La noche reconoce a su señor."/>
+
+  <!-- ======================= Cadena D (Umbra): Jinete de la tormenta. Premio: montura Toro del trueno ======================= -->
+  <mision id="cd_1" npc="c_nox" monstruo="saurio" cantidad="12" nivel="16" dif="dificil" titulo="Escorpiones de la ciénaga" siguiente="cd_2"
+    dialogo="El toro del trueno no se deja domar por cualquiera. Demuéstralo: empieza por los escorpiones." texto="Derrota 12 escorpiones de ciénaga."/>
+  <mision id="cd_2" npc="c_nox" tipo="recolectar" de="medusa" cantidad="10" nivel="20" dif="dificil" requiere="cd_1" titulo="Descargas de medusa"
+    dialogo="Necesito la energía de las medusas errantes para calmar al animal. Diez trofeos." texto="Reúne 10 trofeos de medusa errante." final="Estos trofeos aún chispean."/>
+  <mision id="cd_3" npc="c_nox" monstruo="hidra" cantidad="6" nivel="21" dif="dificil" requiere="cd_2" titulo="La prueba de las hidras" siguiente="cd_4"
+    dialogo="Quien monta al toro debe ser capaz de enfrentarse a una hidra." texto="Derrota 6 hidras sombrías."/>
+  <mision id="cd_4" npc="c_nox" monstruo="titan" cantidad="5" nivel="25" dif="epica" requiere="cd_3" titulo="Titanes de escoria" siguiente="cd_5"
+    dialogo="Los titanes de escoria son la última criba antes de la tormenta." texto="Derrota 5 titanes de escoria."/>
+  <mision id="cd_5" npc="c_nox" monstruo="dragon_brasas" cantidad="3" nivel="26" dif="epica" factor="2" requiere="cd_4" titulo="Jinete de la tormenta"
+    premios="polvo_arcano:40,pocion_mana_grande:15" monedas="40" montura="toro_trueno"
+    dialogo="Tres dragones de brasas. Si sobrevives, el toro del trueno te aceptará como jinete." texto="Derrota 3 dragones de brasas." final="El toro te reconoce. Es tuyo."/>
+
+  <!-- ======================= Cadena E (Albor): El corcel dorado. Premio: montura Corcel de fuego ======================= -->
+  <mision id="ce_1" npc="c_puerto_sol" monstruo="demonio_marea" cantidad="12" nivel="17" dif="dificil" titulo="Demonios de la costa" siguiente="ce_2"
+    dialogo="Un corcel dorado pasta en las colinas del Alba, pero la costa está llena de demonios. Limpia primero la orilla." texto="Derrota 12 demonios de marea."/>
+  <mision id="ce_2" npc="c_puerto_sol" tipo="recolectar" de="quimera" cantidad="10" nivel="19" dif="dificil" requiere="ce_1" titulo="Pieles de quimera"
+    dialogo="Para ganarte la confianza del corcel necesitas ropa que huela a victoria. Diez trofeos de quimera." texto="Reúne 10 trofeos de quimera menor." final="Servirán para el arnés."/>
+  <mision id="ce_3" npc="c_puerto_sol" monstruo="golem" cantidad="10" nivel="18" dif="dificil" requiere="ce_2" titulo="Gólems de escoria" siguiente="ce_4"
+    dialogo="Los gólems rompen los pastos. Deshazte de ellos." texto="Derrota 10 gólems de escoria."/>
+  <mision id="ce_4" npc="c_puerto_sol" monstruo="medusa_abisal" cantidad="4" nivel="26" dif="epica" requiere="ce_3" titulo="Medusas del abismo" siguiente="ce_5"
+    dialogo="Las medusas abisales guardan el último pasto. Sin ellas, el corcel baja." texto="Derrota 4 medusas abisales."/>
+  <mision id="ce_5" npc="c_puerto_sol" monstruo="demonio_rey" cantidad="2" nivel="29" dif="epica" factor="2" requiere="ce_4" titulo="El corcel dorado"
+    premios="polvo_arcano:40,pocion_vida_grande:15" monedas="40" montura="corcel_fuego"
+    dialogo="El demonio rey es el amo de esa tierra. Derrótalo dos veces y el corcel dorado será tuyo." texto="Derrota 2 demonios rey." final="El corcel baja a tu encuentro. Cuídalo bien."/>
 </misiones>

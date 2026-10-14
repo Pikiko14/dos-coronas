@@ -303,7 +303,7 @@ end
 -- el asta, así parece que la lleva en la mano y no que flota a un lado.
 local function puñoArma(fila)
   if fila == 0 then return 8 end
-  if fila == 3 then return 28 end    -- de espaldas el arma va delante del personaje: detrás en pantalla, asomando al costado
+  if fila == 3 then return 27 end    -- de espaldas el arma va delante del personaje: detrás en pantalla, asomando al costado
   if fila == 1 then return 10 end
   return 21
 end
@@ -353,6 +353,354 @@ local function delanteDe(f) return function(fila, col) if fila ~= 3 then f(fila,
 local function detrasDe(f) return function(fila, col) if fila == 3 then f(fila, col) end end end
 local lanzaLateral, lanzaAtras = delanteDe(lanzaLateral0), detrasDe(lanzaLateral0)
 local bastonCalavera, bastonAtras = delanteDe(bastonCalavera0), detrasDe(bastonCalavera0)
+
+-- ---------------------------------------------------------------------------------------------------------------------------
+-- Armas de los addons. Cada una se dibuja vertical con el puño en x (el mismo de la lanza y el báculo: ver puñoArma) y
+-- sigue las mismas reglas: de frente y de lado va en la mano, sobre el cuerpo; de espaldas va detrás del cuerpo (lo lleva
+-- delante) asomando por el costado, sin mano. "fuera" es hacia dónde mira la parte ancha (filo, cabeza, arco).
+-- ---------------------------------------------------------------------------------------------------------------------------
+local function fuera(fila) return (fila == 2) and 1 or -1 end
+
+-- Construye el par (delante, detrás) de una arma: dibujo(x, cx, col, f) y la altura del puño.
+local function armaDe(dibujo, yMano)
+  local function pieza(fila, col)
+    local x = puñoArma(fila)
+    dibujo(x, x + 0.8, col, fuera(fila))
+  end
+  local function delante(fila, col)
+    if fila == 3 then return end
+    pieza(fila, col)
+    manoSobre(puñoArma(fila), yMano or 19)
+  end
+  local function detras(fila, col)
+    if fila == 3 then pieza(fila, col) end
+  end
+  return delante, detras
+end
+
+local function asta(x, y0, y1, r, g, b)
+  love.graphics.setColor(0.1, 0.07, 0.05, 0.92)
+  love.graphics.rectangle("fill", x - 1, y0 - 0.5, 3.6, y1 - y0 + 1)
+  love.graphics.setColor(r, g, b, 1)
+  love.graphics.rectangle("fill", x, y0, 1.6, y1 - y0)
+  love.graphics.setColor(1, 1, 1, 0.18)
+  love.graphics.rectangle("fill", x, y0, 0.6, y1 - y0)
+end
+
+-- Espada: hoja de acero con brillo, guarda dorada y empuñadura. solar = hoja dorada con resplandor.
+local function dibujaEspada(x, cx, col, f, tipo)
+  local oscura = tipo == "oscura"
+  local solar = tipo == true
+  if solar then
+    love.graphics.setColor(1, 0.85, 0.3, 0.22 + 0.06 * (col % 2))
+    love.graphics.ellipse("fill", cx, 9, 4.5, 11, 14)
+  end
+  love.graphics.setColor(0.1, 0.1, 0.14, 0.95)
+  love.graphics.rectangle("fill", cx - 2, 1.5, 4, 17)
+  poli({ cx - 2, 1.8, cx + 2, 1.8, cx, -0.8 }, 0.1, 0.1, 0.14, 0.95)
+  local hr, hg, hb = 0.83, 0.87, 0.93
+  if solar then hr, hg, hb = 1, 0.9, 0.5 end
+  if oscura then hr, hg, hb = 0.3, 0.26, 0.36 end
+  love.graphics.setColor(hr, hg, hb, 1)
+  love.graphics.rectangle("fill", cx - 1.2, 2.2, 2.4, 15.5)
+  poli({ cx - 1.2, 2.4, cx + 1.2, 2.4, cx, 0.2 }, hr, hg, hb)
+  if oscura then love.graphics.setColor(0.95, 0.25, 0.35, 0.9) else love.graphics.setColor(1, 1, 1, 0.85) end
+  love.graphics.rectangle("fill", cx - 0.2, 2.4, 0.8, 14)
+  -- guarda, empuñadura y pomo
+  love.graphics.setColor(0.1, 0.07, 0.03, 1)
+  love.graphics.rectangle("fill", cx - 4, 17, 8, 3)
+  if oscura then love.graphics.setColor(0.55, 0.55, 0.65, 1) else love.graphics.setColor(0.95, 0.74, 0.2, 1) end
+  love.graphics.rectangle("fill", cx - 3.4, 17.5, 6.8, 1.8)
+  love.graphics.setColor(0.42, 0.25, 0.1, 1)
+  love.graphics.rectangle("fill", cx - 0.8, 19.3, 1.6, 4)
+  love.graphics.setColor(0.95, 0.74, 0.2, 1)
+  love.graphics.circle("fill", cx, 24.3, 1.4)
+  if solar then
+    destello(cx + 2.5, 3 + (col % 2) * 3, 1, 0.95, 0.6)
+    destello(cx - 2.5, 11 - (col % 2) * 2, 1, 0.9, 0.5)
+  end
+end
+
+-- Hacha de guerra: mango largo y cabeza con filo hacia fuera y una púa atrás.
+local function dibujaHacha(x, cx, col, f)
+  asta(x, 5, 31, 0.5, 0.33, 0.18)
+  love.graphics.setColor(0.35, 0.22, 0.1, 1)
+  love.graphics.rectangle("fill", x, 15, 1.6, 1)
+  love.graphics.rectangle("fill", x, 25, 1.6, 1)
+  local cab = { cx, 3.5, cx + f * 6, 1.2, cx + f * 8.6, 8, cx + f * 6.2, 14, cx, 11.5 }
+  poli({ cx, 2.8, cx + f * 6.4, 0.4, cx + f * 9.4, 8, cx + f * 6.6, 14.8, cx, 12.3 }, 0.08, 0.08, 0.1, 0.95)
+  poli(cab, 0.62, 0.68, 0.76)
+  poli({ cx + f * 4, 2.2, cx + f * 6.4, 1.6, cx + f * 8.6, 8, cx + f * 6.2, 13.2, cx + f * 5, 8 }, 0.88, 0.92, 0.98)
+  love.graphics.setColor(1, 1, 1, 0.8)
+  love.graphics.line(cx + f * 8.2, 3, cx + f * 8.2, 11)
+  poli({ cx, 5, cx - f * 3, 7.5, cx, 9 }, 0.5, 0.55, 0.62)
+end
+
+-- Báculo con orbe (mago), llama (hechicero) o cristal (dama lich): asta de madera con engarce dorado.
+local function dibujaBaculo(x, cx, col, f, tipo)
+  asta(x, 8, 31, 0.46, 0.31, 0.2)
+  love.graphics.setColor(0.95, 0.74, 0.2, 1)
+  love.graphics.rectangle("fill", cx - 1.6, 12, 3.2, 1.2)
+  love.graphics.rectangle("fill", cx - 1.6, 19, 3.2, 1)
+  -- garras doradas bajo la gema
+  poli({ cx - 3.6, 5.2, cx - 1.2, 9, cx - 2.4, 9.4, cx - 4.4, 7 }, 0.95, 0.74, 0.2)
+  poli({ cx + 3.6, 5.2, cx + 1.2, 9, cx + 2.4, 9.4, cx + 4.4, 7 }, 0.95, 0.74, 0.2)
+  if tipo == "fuego" then
+    local k = col % 2
+    love.graphics.setColor(1, 0.4, 0.1, 0.28)
+    love.graphics.circle("fill", cx, 4, 6)
+    poli({ cx, -1.5 - k, cx + 3.4, 3, cx + 2.4, 7.4, cx, 9, cx - 2.4, 7.4, cx - 3.4, 3 }, 0.08, 0.04, 0.03, 0.9)
+    poli({ cx, -0.5 - k, cx + 2.8, 3.2, cx + 1.9, 7, cx, 8.4, cx - 1.9, 7, cx - 2.8, 3.2 }, 1, 0.45, 0.1)
+    poli({ cx, 2 - k, cx + 1.5, 4.6, cx + 0.9, 7, cx, 7.8, cx - 0.9, 7, cx - 1.5, 4.6 }, 1, 0.9, 0.35)
+    destello(cx + 3, -1 + k * 2, 1, 0.7, 0.2)
+  elseif tipo == "cristal" then
+    love.graphics.setColor(0.3, 1, 0.8, 0.25)
+    love.graphics.circle("fill", cx, 4, 6)
+    poli({ cx, -2.2, cx + 3.3, 3.6, cx, 9, cx - 3.3, 3.6 }, 0.05, 0.1, 0.12, 0.9)
+    poli({ cx, -1.2, cx + 2.5, 3.6, cx, 8, cx - 2.5, 3.6 }, 0.35, 0.95, 0.8)
+    poli({ cx, -1.2, cx - 2.5, 3.6, cx - 0.4, 3.6 }, 0.85, 1, 0.95)
+    destello(cx + 3.5, 0 + (col % 2) * 2, 0.6, 1, 0.9)
+  else
+    -- orbe de cualquier color (tipo puede ser { r, g, b }; por defecto azul arcano)
+    local o = type(tipo) == "table" and tipo or { 0.4, 0.58, 1 }
+    love.graphics.setColor(o[1], o[2], o[3], 0.28)
+    love.graphics.circle("fill", cx, 4, 6)
+    love.graphics.setColor(o[1] * 0.15, o[2] * 0.15, o[3] * 0.2, 0.95)
+    love.graphics.circle("fill", cx, 4, 4.2)
+    love.graphics.setColor(o[1], o[2], o[3], 1)
+    love.graphics.circle("fill", cx, 4, 3.3)
+    love.graphics.setColor(math.min(1, o[1] + 0.35), math.min(1, o[2] + 0.35), math.min(1, o[3] + 0.35), 1)
+    love.graphics.circle("fill", cx - 0.9, 3, 1.3)
+    love.graphics.setColor(1, 1, 1, 0.95)
+    love.graphics.points(cx - 1.2, 2.6)
+    destello(cx + 4, 1 + (col % 2) * 2, math.min(1, o[1] + 0.3), math.min(1, o[2] + 0.3), math.min(1, o[3] + 0.3))
+  end
+end
+
+-- Cetro de la sacerdotisa: asta clara y un aro dorado con una cruz de luz.
+local function dibujaCetro(x, cx, col)
+  asta(x, 9, 31, 0.92, 0.82, 0.55)
+  love.graphics.setColor(1, 0.95, 0.6, 0.3)
+  love.graphics.circle("fill", cx, 4.5, 6.5)
+  love.graphics.setColor(0.1, 0.07, 0.03, 0.95)
+  love.graphics.circle("line", cx, 4.5, 4.4)
+  love.graphics.setColor(0.98, 0.8, 0.25, 1)
+  love.graphics.setLineWidth(1.4)
+  love.graphics.circle("line", cx, 4.5, 3.6)
+  love.graphics.setLineWidth(1)
+  love.graphics.setColor(1, 1, 0.9, 1)
+  love.graphics.rectangle("fill", cx - 0.5, 1.2, 1, 6.6)
+  love.graphics.rectangle("fill", cx - 2.6, 3.9, 5.2, 1)
+  love.graphics.setColor(0.98, 0.8, 0.25, 1)
+  love.graphics.rectangle("fill", cx - 1.6, 12, 3.2, 1.2)
+  destello(cx + 4.5, 1 + (col % 2) * 2, 1, 0.95, 0.6)
+end
+
+-- Arco: madera (o plata élfica) curvada hacia fuera, con la cuerda tensa y el puño en el centro.
+local function dibujaArco(x, cx, col, f, elfico)
+  local pts = {}
+  for i = 0, 12 do
+    local t = i / 12
+    pts[#pts + 1] = cx + 1.5 + f * (-0.8 + 5.2 * math.sin(math.pi * t) ^ 0.8)
+    pts[#pts + 1] = 2.5 + 28 * t
+  end
+  love.graphics.setLineWidth(3.6)
+  love.graphics.setColor(0.1, 0.07, 0.05, 0.92)
+  love.graphics.line(pts)
+  love.graphics.setLineWidth(1.8)
+  if elfico then love.graphics.setColor(0.86, 0.93, 0.82, 1) else love.graphics.setColor(0.55, 0.36, 0.18, 1) end
+  love.graphics.line(pts)
+  love.graphics.setLineWidth(1)
+  if elfico then
+    love.graphics.setColor(0.35, 0.95, 0.55, 1)
+    love.graphics.circle("fill", pts[13], pts[14], 1.2)
+    poli({ pts[1], pts[2], pts[1] + f * 2.5, pts[2] - 2, pts[1] + 0.5, pts[2] + 1.2 }, 0.4, 0.9, 0.55)
+    poli({ pts[25], pts[26], pts[25] + f * 2.5, pts[26] + 2, pts[25] + 0.5, pts[26] - 1.2 }, 0.4, 0.9, 0.55)
+  end
+  -- cuerda
+  love.graphics.setColor(0.95, 0.93, 0.85, 0.9)
+  love.graphics.line(pts[1], pts[2], pts[25], pts[26])
+end
+
+-- Varita de hada: palito corto y una estrella de cristal que centellea.
+local function dibujaVarita(x, cx, col)
+  asta(x, 12, 30, 0.85, 0.75, 0.9)
+  love.graphics.setColor(0.7, 0.95, 1, 0.3)
+  love.graphics.circle("fill", cx, 7.5, 6)
+  local pts = {}
+  for i = 0, 9 do
+    local a = -math.pi / 2 + i * math.pi / 5
+    local r = (i % 2 == 0) and 4.8 or 2
+    pts[#pts + 1] = cx + math.cos(a) * r
+    pts[#pts + 1] = 7.5 + math.sin(a) * r
+  end
+  poli(pts, 0.1, 0.1, 0.25, 0.95)
+  local pi2 = {}
+  for i = 0, 9 do
+    local a = -math.pi / 2 + i * math.pi / 5
+    local r = (i % 2 == 0) and 3.7 or 1.5
+    pi2[#pi2 + 1] = cx + math.cos(a) * r
+    pi2[#pi2 + 1] = 7.5 + math.sin(a) * r
+  end
+  poli(pi2, 0.85, 0.97, 1)
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.points(cx, 7.5)
+  destello(cx + 5, 3 + (col % 2) * 2, 0.8, 1, 1)
+  destello(cx - 5, 11 - (col % 2) * 2, 1, 0.85, 1)
+end
+
+-- Guadaña de la dama lich: asta oscura y una hoja en media luna color hueso con brillo verde.
+local function dibujaGuadania(x, cx, col, f)
+  asta(x, 6, 31, 0.28, 0.22, 0.34)
+  love.graphics.setColor(0.5, 1, 0.75, 0.2)
+  love.graphics.circle("fill", cx + f * 4, 3, 7)
+  poli({ cx, 8, cx + f * 1, 2.4, cx + f * 5.5, -0.4, cx + f * 11, 0.8, cx + f * 8, 3, cx + f * 4.2, 5.2, cx + f * 2.4, 9 }, 0.08, 0.1, 0.12, 0.95)
+  poli({ cx, 7.4, cx + f * 1.4, 3, cx + f * 5.6, 0.6, cx + f * 9.6, 1.2, cx + f * 7, 2.8, cx + f * 3.8, 4.6, cx + f * 1.8, 8 }, 0.82, 0.93, 0.88)
+  love.graphics.setColor(0.5, 1, 0.75, 1)
+  love.graphics.line(cx + f * 2, 3.6, cx + f * 6, 1.2, cx + f * 9, 1.5)
+  love.graphics.setColor(0.95, 0.74, 0.2, 1)
+  love.graphics.rectangle("fill", cx - 1.6, 8, 3.2, 1.2)
+  destello(cx + f * 10, -0.5 + (col % 2) * 2, 0.6, 1, 0.85)
+end
+
+local gladioD, gladioA = armaDe(function(x, cx, col, f) dibujaEspada(x, cx, col, f, false) end, 19.5)
+local espadaSolarD, espadaSolarA = armaDe(function(x, cx, col, f) dibujaEspada(x, cx, col, f, true) end, 19.5)
+local hachaD, hachaA = armaDe(dibujaHacha, 20)
+local baculoMagoD, baculoMagoA = armaDe(function(x, cx, col, f) dibujaBaculo(x, cx, col, f, "orbe") end, 20)
+local baculoFuegoD, baculoFuegoA = armaDe(function(x, cx, col, f) dibujaBaculo(x, cx, col, f, "fuego") end, 20)
+local cetroD, cetroA = armaDe(dibujaCetro, 20)
+local arcoD, arcoA = armaDe(function(x, cx, col, f) dibujaArco(x, cx, col, f, false) end, 15)
+local arcoElficoD, arcoElficoA = armaDe(function(x, cx, col, f) dibujaArco(x, cx, col, f, true) end, 15)
+local varitaD, varitaA = armaDe(dibujaVarita, 21)
+local guadaniaD, guadaniaA = armaDe(dibujaGuadania, 20)
+
+
+-- Tridente: asta clara y tres puntas de acero con un destello de agua.
+local function dibujaTridente(x, cx, col)
+  asta(x, 8, 31, 0.5, 0.58, 0.62)
+  love.graphics.setColor(0.08, 0.1, 0.12, 0.95)
+  love.graphics.rectangle("fill", cx - 4.4, 6, 8.8, 2.6)
+  poli({ cx - 1.6, 6, cx + 1.6, 6, cx, -1.6 }, 0.08, 0.1, 0.12, 0.95)
+  poli({ cx - 5, 6.4, cx - 2.6, 6.4, cx - 3.8, 0.6 }, 0.08, 0.1, 0.12, 0.95)
+  poli({ cx + 5, 6.4, cx + 2.6, 6.4, cx + 3.8, 0.6 }, 0.08, 0.1, 0.12, 0.95)
+  love.graphics.setColor(0.78, 0.92, 0.98, 1)
+  love.graphics.rectangle("fill", cx - 3.8, 6.6, 7.6, 1.2)
+  poli({ cx - 0.9, 6.4, cx + 0.9, 6.4, cx, -0.6 }, 0.85, 0.95, 1)
+  poli({ cx - 4.5, 6.6, cx - 3.1, 6.6, cx - 3.8, 1.6 }, 0.85, 0.95, 1)
+  poli({ cx + 4.5, 6.6, cx + 3.1, 6.6, cx + 3.8, 1.6 }, 0.85, 0.95, 1)
+  destello(cx + 5, 3 + (col % 2) * 2, 0.6, 0.95, 1)
+end
+
+-- Cimitarra: hoja curva hacia fuera con guarda y empuñadura.
+local function dibujaCimitarra(x, cx, col, f)
+  local pts = {}
+  for i = 0, 8 do
+    local t = i / 8
+    pts[#pts + 1] = cx + f * 5.5 * t * t
+    pts[#pts + 1] = 17.5 - 15.5 * t
+  end
+  love.graphics.setLineWidth(4.4)
+  love.graphics.setColor(0.1, 0.1, 0.14, 0.95)
+  love.graphics.line(pts)
+  love.graphics.setLineWidth(2.4)
+  love.graphics.setColor(0.85, 0.88, 0.94, 1)
+  love.graphics.line(pts)
+  love.graphics.setLineWidth(0.9)
+  love.graphics.setColor(1, 1, 1, 0.9)
+  love.graphics.line(pts)
+  love.graphics.setLineWidth(1)
+  love.graphics.setColor(0.1, 0.07, 0.03, 1)
+  love.graphics.rectangle("fill", cx - 3.4, 17, 6.8, 3)
+  love.graphics.setColor(0.95, 0.74, 0.2, 1)
+  love.graphics.rectangle("fill", cx - 2.8, 17.5, 5.6, 1.8)
+  love.graphics.setColor(0.42, 0.25, 0.1, 1)
+  love.graphics.rectangle("fill", cx - 0.8, 19.3, 1.6, 4)
+end
+
+-- Bastón de caramelo: asta a rayas rojas y blancas con el gancho arriba.
+local function dibujaCaramelo(x, cx, col, f)
+  asta(x, 9, 31, 0.97, 0.97, 0.97)
+  love.graphics.setColor(0.85, 0.12, 0.15, 1)
+  for yy = 10, 29, 4 do love.graphics.rectangle("fill", x, yy, 1.6, 2) end
+  local g = { cx, 9.5, cx, 4, cx + f * 1.2, 1.4, cx + f * 3.6, 0.8, cx + f * 5.2, 2.8 }
+  love.graphics.setLineWidth(3.6)
+  love.graphics.setColor(0.1, 0.07, 0.05, 0.92)
+  love.graphics.line(g)
+  love.graphics.setLineWidth(1.8)
+  love.graphics.setColor(0.97, 0.97, 0.97, 1)
+  love.graphics.line(g)
+  love.graphics.setLineWidth(1)
+  love.graphics.setColor(0.85, 0.12, 0.15, 1)
+  love.graphics.rectangle("fill", cx - 0.5, 5.5, 1.4, 1.4)
+  love.graphics.rectangle("fill", cx + f * 3, 0.4, 1.2, 1.2)
+  destello(cx + f * 6, 0 + (col % 2) * 2, 1, 0.9, 0.9)
+end
+
+-- Estandarte: asta con punta de lanza y una bandera roja que ondea.
+local function dibujaEstandarte(x, cx, col, f)
+  asta(x, 3, 31, 0.5, 0.33, 0.18)
+  poli({ cx - 1.2, 3.4, cx + 1.2, 3.4, cx, -0.8 }, 0.85, 0.9, 1)
+  local o = (col % 2) * 1.2
+  poli({ cx, 3, cx + f * 11, 4 + o, cx + f * 9.5, 8 - o, cx + f * 11, 12 + o, cx, 11.5 }, 0.1, 0.03, 0.03, 0.95)
+  poli({ cx, 3.6, cx + f * 10, 4.8 + o, cx + f * 8.6, 8 - o, cx + f * 10, 11 + o, cx, 10.8 }, 0.82, 0.12, 0.12)
+  love.graphics.setColor(0.98, 0.8, 0.25, 1)
+  love.graphics.rectangle("fill", cx + f * 2.4 - 0.5, 6.4, 1, 1)
+  love.graphics.rectangle("fill", cx + f * 5.4 - 0.5, 7.4 - o * 0.5, 1, 1)
+end
+
+local espadaOscuraD, espadaOscuraA = armaDe(function(x, cx, col, f) dibujaEspada(x, cx, col, f, "oscura") end, 19.5)
+local tridenteD, tridenteA = armaDe(dibujaTridente, 20)
+local cimitarraD, cimitarraA = armaDe(dibujaCimitarra, 19.5)
+local carameloD, carameloA = armaDe(dibujaCaramelo, 20)
+local estandarteD, estandarteA = armaDe(dibujaEstandarte, 20)
+local function orbeD(c) return armaDe(function(x, cx, col, f) dibujaBaculo(x, cx, col, f, c) end, 20) end
+local orbeAguaD, orbeAguaA = orbeD({ 0.3, 0.8, 1 })
+local orbeBosqueD, orbeBosqueA = orbeD({ 0.4, 0.95, 0.45 })
+local orbeVioletaD, orbeVioletaA = orbeD({ 0.7, 0.45, 1 })
+local orbeDoradoD, orbeDoradoA = orbeD({ 1, 0.85, 0.35 })
+
+-- Qué arma lleva cada addon del mall que viene de las láminas del pack (los de clase ya la llevan en su diseño).
+-- { delante, detrás }. Los jinetes (cuadros de 48 px) la llevan algo más abajo y a la derecha: ver registrarArma.
+local ARMAS = {
+  skin_rey = { espadaSolarD, espadaSolarA },
+  skin_princesa = { varitaD, varitaA },
+  skin_explorador = { gladioD, gladioA },
+  skin_fuego = { gladioD, gladioA },
+  skin_marea = { tridenteD, tridenteA },
+  skin_sombra = { arcoD, arcoA },
+  skin_marino = { cimitarraD, cimitarraA },
+  skin_plata = { gladioD, gladioA },
+  skin_chico = { gladioD, gladioA },
+  skin_coletas = { varitaD, varitaA },
+  skin_noel = { carameloD, carameloA },
+  skin_noel_saco = { carameloD, carameloA },
+  skin_ayudante = { varitaD, varitaA },
+  skin_esp_fuego = { baculoFuegoD, baculoFuegoA },
+  skin_esp_agua = { orbeAguaD, orbeAguaA },
+  skin_esp_bruma = { varitaD, varitaA },
+  skin_esp_bosque = { orbeBosqueD, orbeBosqueA },
+  skin_hada = { varitaD, varitaA },
+  skin_angel_fuego = { espadaSolarD, espadaSolarA },
+  skin_angel_plata = { cetroD, cetroA },
+  skin_sabio = { orbeVioletaD, orbeVioletaA },
+  skin_jinete_pardo = { lanzaLateral, lanzaAtras },
+  skin_jinete_blanco = { lanzaLateral, lanzaAtras },
+  skin_jinete_negro = { lanzaLateral, lanzaAtras },
+  skin_jinete_dorado = { lanzaLateral, lanzaAtras },
+  skin_abanderado = { estandarteD, estandarteA },
+  skin_rey_jinete = { espadaSolarD, espadaSolarA },
+  skin_dama_jinete = { gladioD, gladioA },
+  skin_jinete_capucha = { arcoD, arcoA },
+  skin_cazador_verde = { arcoD, arcoA },
+  skin_desierto = { cimitarraD, cimitarraA },
+  skin_sombra_capucha = { gladioD, gladioA },
+  skin_gran_capucha = { orbeDoradoD, orbeDoradoA },
+  skin_hechicera = { orbeVioletaD, orbeVioletaA },
+  skin_enmascarado = { gladioD, gladioA },
+  skin_centinela = { lanzaLateral, lanzaAtras },
+  skin_caballero_oscuro = { espadaOscuraD, espadaOscuraA },
+}
+-- (skin_reno no lleva arma: es un reno.)
 
 local function coronaLich(fila, col)
   if fila == 3 then
@@ -467,20 +815,20 @@ local function cuernoUnicornio(fila, col)
 end
 
 local DISENOS = {
-  hada_cristal = { hoja = "Characters/Spiritual.png", idx = 1, modo = 0, detras = { alasHada }, delante = { tiaraHada, brillosHada } },
-  caballero_solar = { hoja = "Characters/People4.png", idx = 6, modo = 1, detras = { auraSol }, delante = { emblemaSol, penacho, brillosSol } },
+  hada_cristal = { hoja = "Characters/Spiritual.png", idx = 1, modo = 0, detras = { alasHada, varitaA }, delante = { tiaraHada, brillosHada, varitaD } },
+  caballero_solar = { hoja = "Characters/People4.png", idx = 6, modo = 1, detras = { auraSol, espadaSolarA }, delante = { emblemaSol, penacho, brillosSol, espadaSolarD } },
 
   -- addons de clase del Item Mall: un sprite del pack recoloreado + un complemento dibujado por código
-  gladiador = clase("g", "Characters/Actor3.png", 6, { neutro = { 1.25, 0.82, 0.48 }, plus = 0.03, delante = { penacho } }),
-  barbaro = clase("b", "Characters/Actor3.png", 0, { neutro = { 0.85, 0.95, 1.18 }, delante = { cuernos } }),
-  archimago = clase("a", "Characters/Actor2.png", 4, { ra = { 0.55, 0.75, 0.05, 1.3 }, va = 0.95, neutro = { 0.9, 0.85, 1.25 }, delante = { sombreroMago, brillosHueso } }),
-  hechicero_fuego = clase("h", "Characters/Actor5.png", 6, { ra = { 0.0, 0.1, 0.03, 1.4 }, va = 1.1, rb = { 0.9, 1.0, 0.0, 1.4 }, vb = 1.1, delante = { llamasFuego } }),
-  montaraz = clase("m", "Characters/Actor4.png", 6, { ra = { 0.4, 0.62, -0.08, 1.25 }, va = 0.9, neutro = { 0.95, 1.05, 0.9 }, delante = { sombreroPluma } }),
-  arquero_elfico = clase("e", "Characters/Actor3.png", 5, { neutro = { 0.95, 1.1, 1.05 }, delante = { diademaElfico } }),
-  sacerdotisa_alba = clase("s", "Characters/People2.png", 5, { neutro = { 1.1, 1.08, 0.96 }, plus = 0.05, delante = { aureola } }),
+  gladiador = clase("g", "Characters/Actor3.png", 6, { neutro = { 1.25, 0.82, 0.48 }, plus = 0.03, detras = { gladioA }, delante = { penacho, gladioD } }),
+  barbaro = clase("b", "Characters/Actor3.png", 0, { neutro = { 0.85, 0.95, 1.18 }, detras = { hachaA }, delante = { cuernos, hachaD } }),
+  archimago = clase("a", "Characters/Actor2.png", 4, { ra = { 0.55, 0.75, 0.05, 1.3 }, va = 0.95, neutro = { 0.9, 0.85, 1.25 }, detras = { baculoMagoA }, delante = { sombreroMago, brillosHueso, baculoMagoD } }),
+  hechicero_fuego = clase("h", "Characters/Actor5.png", 6, { ra = { 0.0, 0.1, 0.03, 1.4 }, va = 1.1, rb = { 0.9, 1.0, 0.0, 1.4 }, vb = 1.1, detras = { baculoFuegoA }, delante = { llamasFuego, baculoFuegoD } }),
+  montaraz = clase("m", "Characters/Actor4.png", 6, { ra = { 0.4, 0.62, -0.08, 1.25 }, va = 0.9, neutro = { 0.95, 1.05, 0.9 }, detras = { arcoA }, delante = { sombreroPluma, arcoD } }),
+  arquero_elfico = clase("e", "Characters/Actor3.png", 5, { neutro = { 0.95, 1.1, 1.05 }, detras = { arcoElficoA }, delante = { diademaElfico, arcoElficoD } }),
+  sacerdotisa_alba = clase("s", "Characters/People2.png", 5, { neutro = { 1.1, 1.08, 0.96 }, plus = 0.05, detras = { cetroA }, delante = { aureola, cetroD } }),
   hoplita = clase("o", "Characters/People4.png", 6, { neutro = { 1.25, 0.86, 0.5 }, plus = 0.04, detras = { lanzaAtras }, delante = { penacho, lanzaLateral } }),
   senor_huesos = clase("z", "Characters/Actor1.png", 7, { ra = { 0.05, 0.2, 0.7, 0.7 }, va = 0.7, neutro = { 0.75, 0.7, 0.9 }, detras = { bastonAtras }, delante = { bastonCalavera } }),
-  dama_lich = clase("l", "Characters/Actor4.png", 7, { ra = { 0.9, 1.0, 0.65, 1.1 }, va = 0.9, rb = { 0.0, 0.1, 0.5, 1.1 }, vb = 0.85, neutro = { 0.75, 1.1, 0.95 }, delante = { coronaLich, brillosHueso } }),
+  dama_lich = clase("l", "Characters/Actor4.png", 7, { ra = { 0.9, 1.0, 0.65, 1.1 }, va = 0.9, rb = { 0.0, 0.1, 0.5, 1.1 }, vb = 0.85, neutro = { 0.75, 1.1, 0.95 }, detras = { guadaniaA }, delante = { coronaLich, brillosHueso, guadaniaD } }),
 
   clase_guerrero_albor = clase("g", "Characters/Actor3.png", 6, { neutro = { 0.92, 1.0, 1.2 }, delante = { escudoPecho("guerrero", "albor") } }),
   clase_guerrero_umbra = clase("g", "Characters/Evil.png", 7, { neutro = { 1.12, 0.85, 1.2 }, delante = { escudoPecho("guerrero", "umbra") } }),
@@ -527,13 +875,61 @@ nueva("dragon_hielo", 5, { hoja = "Characters/Monster2.png", ra = { 0.9, 0.16, 0
 nueva("dragon_sombra", 1, { hoja = "Characters/Monster2.png", ra = { 0.18, 0.5, 0.55, 0.85 }, va = 0.55, rb = { 0.5, 0.75, 0.0, 1.0 }, vb = 0.8, neutro = { 0.5, 0.45, 0.7 } })
 nueva("gargola_oro", 3, { hoja = "Characters/Monster1.png", ra = { 0.4, 0.62, -0.33, 1.3 }, va = 1.25, rb = { 0.7, 0.99, 0.0, 1.0 }, vb = 1.0, neutro = { 1.3, 1.1, 0.6 }, plus = 0.03 })
 
+-- Limpia la fila de espalda de una hoja generada: quita los brillos y resplandores translúcidos (de espaldas se ven como
+-- manchas sueltas) y todo resto aislado que no forme parte del cuerpo o del arma (puntos sueltos). Trabaja sobre los píxeles
+-- ya compuestos, cuadro a cuadro.
+local function limpiarEspalda(datos, c)
+  local ancho = datos:getWidth()
+  local y0 = 3 * c
+  for col = 0, 2 do
+    local x0 = col * c
+    local alfa = {}
+    for y = 0, c - 1 do
+      for x = 0, c - 1 do
+        local _, _, _, a = datos:getPixel(x0 + x, y0 + y)
+        if a < 0.6 and a > 0 then datos:setPixel(x0 + x, y0 + y, 0, 0, 0, 0) a = 0 end
+        alfa[y * c + x] = a > 0
+      end
+    end
+    -- componentes conexos (8 vecinos): los de menos de 12 píxeles son restos
+    local visto = {}
+    for y = 0, c - 1 do
+      for x = 0, c - 1 do
+        local i = y * c + x
+        if alfa[i] and not visto[i] then
+          local pila, comp = { i }, {}
+          visto[i] = true
+          while #pila > 0 do
+            local k = table.remove(pila)
+            comp[#comp + 1] = k
+            local kx, ky = k % c, math.floor(k / c)
+            for dy = -1, 1 do
+              for dx = -1, 1 do
+                local nx, ny = kx + dx, ky + dy
+                if nx >= 0 and nx < c and ny >= 0 and ny < c then
+                  local j = ny * c + nx
+                  if alfa[j] and not visto[j] then visto[j] = true pila[#pila + 1] = j end
+                end
+              end
+            end
+          end
+          if #comp < 12 then
+            for _, k in ipairs(comp) do datos:setPixel(x0 + k % c, y0 + math.floor(k / c), 0, 0, 0, 0) end
+          end
+        end
+      end
+    end
+  end
+end
+
 -- Hoja de 96 x 128 del personaje (imagen lista para dibujar con quads de 32 x 32).
 function P.hoja(id)
   if cache[id] then return cache[id] end
   local d = DISENOS[id]
   if not d then return nil end
   local base = Arte.img(d.hoja)
-  local cv = love.graphics.newCanvas(96, 128)
+  local c = d.celda or 32     -- 32 px (casi todos) o 48 px (los jinetes)
+  local cv = love.graphics.newCanvas(c * 3, c * 4)
   local anterior = love.graphics.getCanvas()
   love.graphics.push("all")
   -- sin el recorte de pantalla de quien nos llama (si no, la hoja se genera recortada y queda vacía)
@@ -542,25 +938,64 @@ function P.hoja(id)
   love.graphics.clear(0, 0, 0, 0)
   love.graphics.origin()
   love.graphics.setBlendMode("alpha")
-  local ox, oy = (d.idx % 4) * 96, math.floor(d.idx / 4) * 128
+  local ox, oy = (d.idx % 4) * c * 3, math.floor(d.idx / 4) * c * 4
   for fila = 0, 3 do
     for col = 0, 2 do
       love.graphics.push()
-      love.graphics.translate(col * 32, fila * 32)
+      love.graphics.translate(col * c, fila * c)
+      -- cada cuadro se recorta a su casilla: lo que se sale (cabezas de arma, brillos) no se cuela en el cuadro vecino
+      love.graphics.setScissor(col * c, fila * c, c, c)
       for _, f in ipairs(d.detras or {}) do f(fila, col) end
       love.graphics.setColor(1, 1, 1, 1)
       usarSombreador(d.modo, d)
-      love.graphics.draw(base, Arte.quad(base, ox + col * 32, oy + fila * 32, 32, 32), 0, 0)
+      love.graphics.draw(base, Arte.quad(base, ox + col * c, oy + fila * c, c, c), 0, 0)
       love.graphics.setShader()
       for _, f in ipairs(d.delante or {}) do f(fila, col) end
+      love.graphics.setScissor()
       love.graphics.pop()
     end
   end
   love.graphics.pop()
   love.graphics.setCanvas(anterior)
+  -- la fila de espalda se limpia (sin brillos sueltos ni restos); el resultado es una imagen normal
+  local ok, limpio = pcall(function()
+    local datos = cv:newImageData()
+    limpiarEspalda(datos, c)
+    local imagen = love.graphics.newImage(datos)
+    imagen:setFilter("nearest", "nearest")
+    -- se devuelve a un lienzo (como el resto de las hojas): el juego y las pruebas lo tratan igual
+    local cv2 = love.graphics.newCanvas(c * 3, c * 4)
+    love.graphics.push("all")
+    love.graphics.setScissor()
+    love.graphics.setCanvas(cv2)
+    love.graphics.origin()
+    love.graphics.setBlendMode("replace", "premultiplied")
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(imagen, 0, 0)
+    love.graphics.pop()
+    love.graphics.setCanvas(anterior)
+    return cv2
+  end)
+  if ok and limpio then cv = limpio end
   cv:setFilter("nearest", "nearest")
   cache[id] = cv
   return cv
+end
+
+-- Addon de las láminas del pack al que se le dibuja un arma por código: crea su diseño "arma_<id>" (la hoja tal cual, sin
+-- recolor, con el arma encima o detrás según hacia dónde mire). Devuelve el nombre del diseño, o nil si no lleva arma.
+function P.registrarArma(id, def)
+  local par = ARMAS[id]
+  if not par or not def or not def.hoja then return nil end
+  local delante, detras = par[1], par[2]
+  if def.celda and def.celda > 32 then
+    -- los jinetes tienen el cuadro de 48 px: el arma se corre para quedar a la altura de la mano sobre la montura
+    local dx, dy = (def.celda - 32) / 2 + 2, (def.celda - 32) / 2 + 2
+    local function corrida(f) return function(fila, col) love.graphics.push() love.graphics.translate(dx, dy) f(fila, col) love.graphics.pop() end end
+    delante, detras = corrida(delante), corrida(detras)
+  end
+  DISENOS["arma_" .. id] = { hoja = def.hoja, idx = def.idx, celda = def.celda, modo = 0, delante = { delante }, detras = { detras } }
+  return "arma_" .. id
 end
 
 function P.olvidar() cache = {} end

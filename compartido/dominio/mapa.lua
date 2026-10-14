@@ -1084,6 +1084,12 @@ local function generarMundo(rng)
       local o = sitios[i] or { 0, 3 }
       pu.npcs[#pu.npcs + 1] = { x = px + o[1] + 0.5, y = py + o[2] + 0.5, rol = r[1], nombre = r[2], faccion = lado }
     end
+    -- el PNJ de misiones del puesto (compartido/dominio/misiones.lua): da encargos de cazar, recolectar y entregar por la zona
+    local nombreMisiones = ({ comercio = "Guardacaminos", cazadores = "Rastreador", ladrones = "Informante", torre = "Aprendiz de la torre", ermita = "Ermitaño" })[tipo]
+    if nombreMisiones then
+      local o = sitios[#roles + 1] or { 0, 3 }
+      pu.npcs[#pu.npcs + 1] = { x = px + o[1] + 0.5, y = py + o[2] + 0.5, rol = "misiones", nombre = nombreMisiones, faccion = lado }
+    end
     mapa.props[#mapa.props + 1] = { x = px, y = py, tipo = "fogata" }
     mapa.props[#mapa.props + 1] = { x = px - 3, y = py - 2, tipo = "cartel" }
     mapa.props[#mapa.props + 1] = { x = px + 3, y = py + 1, tipo = "barril" }

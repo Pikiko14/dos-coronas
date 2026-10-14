@@ -262,7 +262,7 @@ function Servicio.tratar(servidor, mundo, idCon, msg)
     if not ok then return end
     local r = mundo:accion(pid, msg.a, limpio)
     if r and (msg.a == "interactuar" or r.panel ~= nil) then
-      servidor:enviar(idCon, { t = "panel", panel = r.panel, ciudad = r.ciudad, datos = r.datos, tienda = r.tienda })
+      servidor:enviar(idCon, { t = "panel", panel = r.panel, ciudad = r.ciudad, npc = r.npc, datos = r.datos, tienda = r.tienda })
     end
   end
 end

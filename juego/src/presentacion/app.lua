@@ -68,6 +68,7 @@ function App.actuar(nombre, datos)
   if r and r.panel ~= nil then
     Interfaz.panel = r.panel
     Interfaz.ciudad = r.ciudad
+    Interfaz.npcMision = r.npc
     if r.tienda then Interfaz.tienda = r.tienda end
   elseif r and r.panel == nil and nombre == "interactuar" then
     Interfaz.panel = nil

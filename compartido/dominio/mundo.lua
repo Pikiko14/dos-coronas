@@ -21,6 +21,7 @@ local Encuentros = require("compartido.dominio.encuentros")
 local Admin = require("compartido.dominio.admin")
 local Comercio = require("compartido.dominio.comercio")
 local Mall = require("compartido.dominio.mall")
+local Misiones = require("compartido.dominio.misiones")
 local Mazmorras = require("compartido.dominio.mazmorras")
 local Viaje = require("compartido.dominio.viaje")
 
@@ -70,6 +71,7 @@ function Mundo.nuevo()
     casaMediana = Mapa.casa(18, 13),
   }
   self:crearMapasMazmorras()
+  Misiones.preparar(self.mapas.mundo)
   self:poblar()
   self:poblarMazmorras()
   -- el mundo se genera con semilla fija; después el azar del juego vuelve a ser libre
@@ -361,7 +363,7 @@ function Mundo:poblar()
     for _, n in ipairs(c.npcs) do
       local e = {
         id = self:idNuevo(), kind = n.rol == "guardia" and "guardia" or "npc",
-        nombre = n.nombre, rol = n.rol, faccion = n.faccion,
+        nombre = n.nombre, rol = n.rol, faccion = n.faccion, qid = n.rol == "encargos" and ("c_" .. c.id) or nil,
         x = n.x, y = n.y, modo = "mundo", dir = 1, vivo = true,
         clase = ({ mercado = "clerigo", armero = "guerrero", heraldo = "clerigo", mayordomo = "guerrero", encargos = "cazador", guardia = "guerrero", encantador = "mago", criador = "cazador", gremio = "guerrero", oficios = "guerrero", comercio = "guerrero", establo = "cazador", subastas = "mago" })[n.rol] or "guerrero",
         nivel = 12, hp = 400, hpMax = 400, atk = 28, def = 14, matk = 8, mdef = 7, spd = 3.2, rango = 1.4,
@@ -378,7 +380,7 @@ function Mundo:poblar()
   for _, pu in ipairs(self.mapas.mundo.puestos or {}) do
     for _, n in ipairs(pu.npcs) do
       local e = {
-        id = self:idNuevo(), kind = "npc", nombre = n.nombre, rol = n.rol, faccion = n.faccion,
+        id = self:idNuevo(), kind = "npc", nombre = n.nombre, rol = n.rol, faccion = n.faccion, qid = n.rol == "misiones" and ("p" .. pu.id) or nil,
         x = n.x, y = n.y, modo = "mundo", dir = 1, vivo = true, clase = "guerrero",
         nivel = 12, hp = 400, hpMax = 400, atk = 28, def = 14, matk = 8, mdef = 7, spd = 3.2, rango = 1.4,
         cds = {}, equipo = {},
@@ -1087,12 +1089,33 @@ function Mundo:morir(e, origen)
   end
 end
 
+-- Una criatura cae: avanzan las misiones de cazar que la piden y, en las de recolectar, puede soltar su trofeo.
 function Mundo:avanzarMisiones(p, monId)
-  for _, q in pairs(p.misiones) do
-    if q.aceptada and not q.entregada and q.monstruo == monId then
-      q.progreso = math.min(q.cantidad, (q.progreso or 0) + 1)
-      if q.progreso >= q.cantidad then
-        self:mensaje("sistema", "", "Encargo cumplido: " .. q.titulo .. ". Vuelve al tablón.", p)
+  for id, st in pairs(p.misiones or {}) do
+    local q = Misiones.por_id[id]
+    if q and st.aceptada and not st.entregada then
+      if q.tipo == "cazar" and q.monstruo == monId then
+        local antes = Misiones.completa(p, q, st)
+        st.progreso = math.min(q.cantidad, (st.progreso or 0) + 1)
+        if st.progreso >= q.cantidad and not antes then
+          self:mensaje("sistema", "", "Misión cumplida: " .. q.titulo .. ". Vuelve con " .. Misiones.nombreNpc(q.destino) .. ".", p)
+        else
+          self:mensaje("sistema", "", q.titulo .. ": " .. st.progreso .. "/" .. q.cantidad, p)
+        end
+        self:marcarProgreso(p)
+      elseif q.tipo == "recolectar" and q.de == monId and not Misiones.completa(p, q, st) and math.random() < Misiones.PROB_TROFEO then
+        if self:darItem(p, q.item, 1) then
+          local n = Misiones.progreso(p, q, st)
+          local def = Datos.item(q.item)
+          if n >= q.cantidad then
+            self:mensaje("sistema", "", "Misión cumplida: " .. q.titulo .. ". Vuelve con " .. Misiones.nombreNpc(q.destino) .. ".", p)
+          else
+            self:mensaje("sistema", "", (def and def.nombre or "Trofeo") .. ": " .. n .. "/" .. q.cantidad, p)
+          end
+          self:marcarProgreso(p)
+        else
+          self:mensaje("sistema", "", "Tu bolsa está llena: no puedes recoger el trofeo.", p)
+        end
       end
     end
   end
@@ -2171,7 +2194,6 @@ function Mundo:equipar(p, index)
   if not slot then return "No hay objeto." end
   local it = Datos.item(slot.id)
   if not it or not it.hueco then
-    if it and it.forja then return "Usa este pergamino en el Maestro de encantos: elige la pieza y pulsa Forjar." end
     if it and it.bono then return self:usarBono(p, index) end
     if it and (it.cura or it.mana) then return self:usarPocionId(p, slot.id) end
     return "No se puede equipar."
@@ -2236,8 +2258,7 @@ end
 
 -- Intenta subir un nivel de encantamiento a una pieza, equipada (donde = "equipo", ref = hueco)
 -- o en la bolsa (donde = "bolsa", ref = posición). Devuelve un texto de error o nil.
--- pergamino: id de un pergamino de forja del mall (sube +1 seguro, sin coste, hasta su tope).
-function Mundo:encantar(p, donde, ref, pergamino)
+function Mundo:encantar(p, donde, ref)
   local id, enc
   if donde == "equipo" then
     id, enc = p.equipo[ref], p.encantos and p.encantos[ref]
@@ -2249,25 +2270,6 @@ function Mundo:encantar(p, donde, ref, pergamino)
   if not Encanto.encantable(it) then return "Eso no se puede encantar." end
   enc = enc or 0
   if enc >= Encanto.MAX then return "Ya está al máximo (+" .. Encanto.MAX .. ")." end
-  if pergamino then
-    local sc = Datos.item(pergamino)
-    if not sc or not sc.forja then return "Ese no es un pergamino de forja." end
-    if self:contarItem(p, pergamino) < 1 then return "No tienes ese pergamino." end
-    if enc >= sc.forja then return "Este pergamino solo forja hasta +" .. sc.forja .. "." end
-    self:gastarItem(p, pergamino, 1)
-    local nuevo = enc + 1
-    self:mensaje("sistema", "", it.nombre .. " se forja a +" .. nuevo .. ".", p)
-    self:numero(p, "+" .. nuevo, { 1, 0.85, 0.4 })
-    if donde == "equipo" then
-      p.encantos = p.encantos or {}
-      p.encantos[ref] = nuevo
-      self:recalcular(p)
-    else
-      p.bolsa[tonumber(ref)].enc = nuevo
-    end
-    self:marcarProgreso(p)
-    return nil
-  end
   local coste = Encanto.coste(it, enc)
   if (p.oro or 0) < coste.oro then return "Necesitas " .. coste.oro .. " de oro." end
   if self:contarItem(p, Encanto.MATERIAL) < coste.polvo then
@@ -2663,35 +2665,110 @@ function Mundo:sacarDelCofre(p, index)
   table.remove(casa.cofre, index)
 end
 
-function Mundo:aceptarMision(p, id)
-  self:marcarProgreso(p)
-  for _, q in ipairs(Datos.misiones) do
-    if q.id == id then
-      p.misiones[id] = {
-        titulo = q.titulo, monstruo = q.monstruo, cantidad = q.cantidad,
-        progreso = 0, aceptada = true, entregada = false, oro = q.oro, xp = q.xp, ciudad = q.ciudad,
-      }
-      self:mensaje("sistema", "", "Aceptas: " .. q.titulo, p)
-      return
-    end
+-- ¿Está el jugador junto al PNJ de misiones con ese id (c_<ciudad> o p<puesto>)?
+function Mundo:npcQuestCerca(p, qid)
+  if not qid then return false end
+  for _, e in pairs(self.entidades) do
+    if e.kind == "npc" and e.qid == qid and self:mismoLugar(p, e) and Util.dist(p.x, p.y, e.x, e.y) <= Misiones.DISTANCIA_PNJ then return true end
   end
+  return false
 end
 
+-- Acepta una misión (junto a quien la da). Devuelve el motivo si no puede.
+function Mundo:aceptarMision(p, id)
+  self:marcarProgreso(p)
+  if type(id) ~= "string" then return "Esa misión no existe." end
+  local q = Misiones.por_id[id]
+  if not q then return "Esa misión no existe." end
+  local st = p.misiones[id]
+  if st and (st.aceptada or st.entregada) then return "Ya la tienes." end
+  if not self:npcQuestCerca(p, q.npc) then return "Acércate a " .. Misiones.nombreNpc(q.npc) .. "." end
+  local motivo = Misiones.puedeAceptar(p, q)
+  if motivo then return motivo end
+  local activas = 0
+  for mid, s in pairs(p.misiones) do if s.aceptada and not s.entregada and Misiones.por_id[mid] then activas = activas + 1 end end
+  if activas >= Misiones.MAX_ACTIVAS then return "Ya llevas " .. Misiones.MAX_ACTIVAS .. " misiones: entrega o abandona alguna." end
+  if q.tipo == "entregar" then
+    if not self:darItem(p, q.item, 1) then return "Libera un espacio en la bolsa para llevar el encargo." end
+  end
+  p.misiones[id] = { aceptada = true, entregada = false, progreso = 0 }
+  self:mensaje("sistema", "", "Aceptas: " .. q.titulo, p)
+  self:marcarProgreso(p)
+  return nil
+end
+
+-- Entrega una misión cumplida (junto a quien la recibe): recompensas de oro, experiencia, objetos, addon, montura y monedas.
 function Mundo:entregarMision(p, id)
   self:marcarProgreso(p)
-  local q = p.misiones[id]
-  if not q or not q.aceptada or q.entregada then return "Nada que entregar." end
-  if (q.progreso or 0) < q.cantidad then return "Aún no está completo." end
-  q.entregada = true
-  p.oro = p.oro + q.oro
-  self:ganarXp(p, q.xp)
-  self:mensaje("sistema", "", "Encargo entregado. +" .. q.oro .. " de oro.", p)
-  for _, def in ipairs(Datos.misiones) do
-    if def.id == id and def.siguiente then
-      local ya = p.misiones[def.siguiente]
-      if not ya or not ya.aceptada then self:aceptarMision(p, def.siguiente) end
+  if type(id) ~= "string" then return "Nada que entregar." end
+  local q = Misiones.por_id[id]
+  local st = p.misiones[id]
+  if not q or not st or not st.aceptada or st.entregada then return "Nada que entregar." end
+  if not self:npcQuestCerca(p, q.destino) then return "Acércate a " .. Misiones.nombreNpc(q.destino) .. "." end
+  if not Misiones.completa(p, q, st) then return "Aún no está completo." end
+  local premios = q.premios or {}
+  local necesita = 0
+  for _, pr in ipairs(premios) do necesita = necesita + 1 end
+  local libres = Datos.capacidadBolsa(p.equipo) - #p.bolsa
+  -- las entregas y los trofeos que se gastan dejan sitio
+  if q.tipo ~= "cazar" then libres = libres + 1 end
+  if necesita > libres then return "Libera " .. (necesita - libres) .. " espacio(s) en la bolsa para recibir el premio." end
+  if q.tipo == "recolectar" or q.tipo == "entregar" then self:gastarItem(p, q.item, q.cantidad) end
+  st.entregada = true
+  st.aceptada = false
+  local xp = Misiones.xpFinal(p, q)
+  p.oro = (p.oro or 0) + (q.oro or 0)
+  self:ganarXp(p, xp)
+  local texto = "Misión entregada: " .. q.titulo .. ". +" .. (q.oro or 0) .. " de oro, +" .. xp .. " de experiencia."
+  for _, pr in ipairs(premios) do
+    if self:darItem(p, pr.id, pr.cant) then
+      local def = Datos.item(pr.id)
+      texto = texto .. " " .. pr.cant .. " " .. (def and def.nombre or pr.id) .. "."
     end
   end
+  if q.monedas and q.monedas > 0 then
+    p.monedas = (p.monedas or 0) + q.monedas
+    texto = texto .. " " .. q.monedas .. " " .. Mall.MONEDA .. "."
+  end
+  self:mensaje("sistema", "", texto, p)
+  if q.addon and Mall.ADDONS[q.addon] then
+    p.addons = p.addons or {}
+    if not p.addons[q.addon] then
+      p.addons[q.addon] = true
+      self:mensaje("sistema", "", "¡Recibes el addon " .. Mall.ADDONS[q.addon].nombre .. "!", p)
+    end
+  end
+  if q.montura and Monturas.especies[q.montura] then
+    p.monturas = p.monturas or {}
+    local tiene = false
+    for _, m in ipairs(p.monturas) do if m == q.montura then tiene = true end end
+    if not tiene then
+      p.monturas[#p.monturas + 1] = q.montura
+      self:mensaje("sistema", "", "¡Recibes la montura " .. (Monturas.especies[q.montura].nombre or q.montura) .. "!", p)
+    end
+  end
+  -- siguiente paso de la cadena, si lo da el mismo PNJ que tienes delante
+  local sig = q.siguiente and Misiones.por_id[q.siguiente]
+  if sig and self:npcQuestCerca(p, sig.npc) and not (p.misiones[sig.id] and (p.misiones[sig.id].aceptada or p.misiones[sig.id].entregada)) then
+    local err = self:aceptarMision(p, sig.id)
+    if err then self:mensaje("sistema", "", "Siguiente paso de la cadena: " .. err, p) end
+  end
+  self:sonar("magia")
+  return nil
+end
+
+-- Abandona una misión en curso (se pierde el avance y los objetos del encargo).
+function Mundo:abandonarMision(p, id)
+  if type(id) ~= "string" then return "Nada que abandonar." end
+  local q = Misiones.por_id[id]
+  local st = p.misiones[id]
+  if not st or not st.aceptada or st.entregada then return "Nada que abandonar." end
+  if q and (q.tipo == "recolectar" or q.tipo == "entregar") and q.item then
+    self:gastarItem(p, q.item, Misiones.contar(p, q.item))
+  end
+  p.misiones[id] = nil
+  self:mensaje("sistema", "", "Abandonas: " .. (q and q.titulo or id), p)
+  self:marcarProgreso(p)
   return nil
 end
 
@@ -2760,18 +2837,18 @@ function Mundo:interactuar(p)
     if mejor.rol == "criador" then return { panel = "mascotas" } end
     if mejor.rol == "gremio" then return { panel = "gremio" } end
     if mejor.rol == "mayordomo" then return { panel = "vivienda", ciudad = self:ciudadEn(p.x, p.y) and self:ciudadEn(p.x, p.y).id } end
-    if mejor.rol == "encargos" then
+    if mejor.rol == "encargos" or mejor.rol == "misiones" then
       local cid = self:ciudadEn(p.x, p.y)
       cid = cid and cid.id
-      for _, q in ipairs(Datos.misiones) do
-        if q.ciudad == cid then
-          local st = p.misiones[q.id]
-          if st and st.aceptada and not st.entregada then
-            self:mensaje("local", mejor.nombre, q.dialogo or q.texto, mejor)
+      if mejor.qid then
+        for _, q in ipairs(Misiones.porNpc[mejor.qid] or {}) do
+          local est = Misiones.estado(p, q)
+          if est == "activa" and q.dialogo then
+            self:mensaje("local", mejor.nombre, q.dialogo, mejor)
           end
         end
       end
-      return { panel = "misiones", ciudad = cid }
+      return { panel = "misiones", ciudad = cid, npc = mejor.qid }
     end
     if mejor.rol == "aldeano" then
       local frases = {
@@ -3062,6 +3139,23 @@ function Mundo:aplicarGuardado(p, data)
     if tonumber(fin) and tonumber(fin) > self:reloj() then p.bonos[bono] = tonumber(fin) end
   end
   self:recalcularCarga(p)
+  -- objetos retirados del juego (ya no existen en los datos) se quitan de la bolsa; los pergaminos de forja, que se
+  -- vendían en el Item Mall, se devuelven en Monedas Corona al precio que tenían
+  do
+    local REEMBOLSO = { pergamino_forja = 60, pergamino_forja_sagrado = 160 }
+    local devuelto = 0
+    for i = #p.bolsa, 1, -1 do
+      local s = p.bolsa[i]
+      if not s or not Datos.item(s.id) then
+        if s then devuelto = devuelto + (REEMBOLSO[s.id] or 0) * (s.cant or 1) end
+        table.remove(p.bolsa, i)
+      end
+    end
+    if devuelto > 0 then
+      p.monedas = (p.monedas or 0) + devuelto
+      self:mensaje("sistema", "", "Los pergaminos de forja se retiraron del juego: se te devolvieron " .. devuelto .. " " .. Mall.MONEDA .. ".", p)
+    end
+  end
   self:vincularGremio(p)
   -- Un guardado antiguo con más objetos de los que caben sin mochila recibe la
   -- más pequeña que los aguante.
@@ -3122,7 +3216,7 @@ function Mundo:compactar(e)
     nivel = e.nivel, hoja = e.hoja, base = e.base, cuadros = e.cuadros,
     tam = e.tam, paso = e.paso, porDir = e.porDir, elite = e.elite,
     estructura = e.estructura, llevaBandera = e.llevaBandera, llevaCristales = e.llevaCristales, equipo = e.equipo,
-    rol = e.rol, staff = e.staff, casaId = e.casaId, casaTamano = e.casaTamano, anim = e.anim, portador = e.portador,
+    rol = e.rol, qid = e.qid, staff = e.staff, casaId = e.casaId, casaTamano = e.casaTamano, anim = e.anim, portador = e.portador,
     mov = e.mov and true or nil, objetivo = (e.kind == "monstruo") and e.objetivo or nil,
     respawn = (e.kind == "monstruo" or e.kind == "puerta") and e.respawn or nil,
     flash = (e.flashHasta or 0) > self.tiempo and 0.1 or nil,
@@ -3348,7 +3442,7 @@ function Mundo:accion(pid, nombre, datos)
   end
   if nombre == "encantar" then
     local err
-    if self:npcCerca(p, "encantador") then err = self:encantar(p, datos.donde, datos.ref, datos.pergamino)
+    if self:npcCerca(p, "encantador") then err = self:encantar(p, datos.donde, datos.ref)
     else err = "Acércate al maestro de encantos." end
     if err then self:mensaje("sistema", "", err, p) end
   end
@@ -3420,9 +3514,16 @@ function Mundo:accion(pid, nombre, datos)
       end
     end
   end
-  if nombre == "mision_aceptar" then self:aceptarMision(p, datos.id) end
+  if nombre == "mision_aceptar" then
+    local err = self:aceptarMision(p, datos.id)
+    if err then self:mensaje("sistema", "", err, p) end
+  end
   if nombre == "mision_entregar" then
     local err = self:entregarMision(p, datos.id)
+    if err then self:mensaje("sistema", "", err, p) end
+  end
+  if nombre == "mision_abandonar" then
+    local err = self:abandonarMision(p, datos.id)
     if err then self:mensaje("sistema", "", err, p) end
   end
   if nombre == "viaje" and p then return self:accionViaje(p, datos or {}) end

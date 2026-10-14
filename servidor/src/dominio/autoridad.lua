@@ -11,7 +11,7 @@ local ACCIONES = {
   interactuar = true, guerra = true, salir_guerra = true, viaje = true,
   casa_comprar = true, casa_entrar = true, casa_salir = true, mueble = true, mueble_mover = true, mueble_rotar = true,
   cofre_guardar = true, cofre_sacar = true,
-  mision_aceptar = true, mision_entregar = true,
+  mision_aceptar = true, mision_entregar = true, mision_abandonar = true,
   comercio_invitar = true, comercio_oro = true, comercio_item = true, comercio_responder = true, comercio_quitar = true,
   comercio_ok = true, comercio_no = true, mover_bolsa = true, mirar = true,
   aprender = true, olvidar = true, encantar = true, mascota_adoptar = true, mascota_invocar = true,
@@ -149,11 +149,11 @@ function A.aceptar(mundo, pj, nombre, datos)
   if nombre == "encantar" then
     if datos.donde == "equipo" then
       if type(datos.ref) ~= "string" or #datos.ref > 12 then return false end
-      return true, { donde = "equipo", ref = datos.ref, pergamino = (type(datos.pergamino) == "string" and #datos.pergamino <= 24) and datos.pergamino or nil }
+      return true, { donde = "equipo", ref = datos.ref }
     elseif datos.donde == "bolsa" then
       local i = tonumber(datos.ref)
       if not i or i < 1 or i > Datos.BOLSA then return false end
-      return true, { donde = "bolsa", ref = math.floor(i), pergamino = (type(datos.pergamino) == "string" and #datos.pergamino <= 24) and datos.pergamino or nil }
+      return true, { donde = "bolsa", ref = math.floor(i) }
     end
     return false
   end

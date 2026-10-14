@@ -25,6 +25,6 @@
     <items><i id="tarjeta_exp" cant="1"/></items>
   </dia>
   <dia n="7" oro="600" oroN="40" xp="0.15" monedas="40">
-    <items><i id="pergamino_forja" cant="1"/><i id="pocion_vida" cant="15"/></items>
+    <items><i id="polvo_arcano" cant="20"/><i id="pocion_vida" cant="15"/></items>
   </dia>
 </diaria>

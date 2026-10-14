@@ -91,6 +91,18 @@ P.skins = {
   skin_caballero_oscuro = { hoja = "Characters/Evil.png", idx = 7 },
 }
 
+-- Los addons que vienen de las láminas del pack llevan además un arma dibujada por código (render/propias.lua): su sprite
+-- pasa a ser el diseño generado "arma_<id>", que es la misma hoja con el arma en la mano.
+do
+  local Propias = require("src.presentacion.render.propias")
+  for id, def in pairs(P.skins) do
+    if not def.generada then
+      local diseno = Propias.registrarArma(id, def)
+      if diseno then P.skins[id] = { generada = diseno, idx = 0, celda = def.celda } end
+    end
+  end
+end
+
 P.npc = {
   mercado = {
     albor = { generada = "clase_clerigo_albor", hoja = "Characters/Actor5.png", idx = 0 },
@@ -106,6 +118,11 @@ P.npc = {
     { hoja = "Characters/People3.png", idx = 2 }, { hoja = "Characters/People3.png", idx = 4 },
   } },
   mayordomo = { hoja = "Characters/People4.png", idx = 5 },
+  -- PNJ de misiones de los puestos del mapa: viajeros y exploradores de aspecto variado
+  misiones = { variantes = {
+    { hoja = "Characters/People3.png", idx = 1 }, { hoja = "Characters/People3.png", idx = 4 },
+    { hoja = "Characters/People1.png", idx = 4 }, { hoja = "Characters/People2.png", idx = 3 },
+  } },
   encargos = { hoja = "Characters/People1.png", idx = 4 },
   encantador = { hoja = "Characters/Actor2.png", idx = 7 },
   criador = { hoja = "Characters/People1.png", idx = 2 },

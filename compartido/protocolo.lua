@@ -31,7 +31,7 @@ P.ACCIONES = {
   "deseo", "destino", "objetivo", "habilidad", "chat", "equipar", "desequipar",
   "pocion", "autopocion", "comprar", "vender", "interactuar", "guerra", "salir_guerra", "viaje",
   "casa_comprar", "casa_entrar", "casa_salir", "mueble", "mueble_mover", "mueble_rotar", "cofre_guardar",
-  "cofre_sacar", "mision_aceptar", "mision_entregar", "comercio_invitar",
+  "cofre_sacar", "mision_aceptar", "mision_entregar", "mision_abandonar", "comercio_invitar",
   "comercio_oro", "comercio_item", "comercio_responder", "comercio_quitar", "comercio_ok", "comercio_no", "mover_bolsa",
   "mirar", "aprender", "olvidar", "encantar", "mascota_adoptar", "mascota_invocar",
   "gremio_info", "gremio_crear", "gremio_invitar", "gremio_responder", "gremio_salir", "gremio_expulsar",

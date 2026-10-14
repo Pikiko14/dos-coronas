@@ -303,7 +303,7 @@ function D.escena(mundo, jugador, cam, mx, my)
       end
       local px0, py0 = (p.x + ancho / 2) * TILE - cam.x, (p.y + alto) * TILE - cam.y
       if Objetos.personalizados and Objetos.personalizados[p.tipo] then Objetos.personalizados[p.tipo](p, px0, py0)
-      else Objetos.dibujar(p.tipo, variante, px0, py0, tint, alfa, hash(p.x, p.y) * 6.283) end
+      else Objetos.dibujar(p.tipo, variante, px0, py0, tint, alfa, p.x * 0.35 + p.y * 0.2 + hash(p.x, p.y) * 0.9) end
     elseif item.tipo == "mueble" then
       D.mueble(item.nombre, sx, sy, item.rot, item.elegido)
     else
@@ -328,6 +328,8 @@ function D.escena(mundo, jugador, cam, mx, my)
   end
   if pz == 0 and jugador.modo == "mundo" then
     marcarTiendas(mapa, jugador, cam, radio)
+    -- flecha dorada hacia el destino de la misión que sigues
+    if D.flechaMision then D.flechaMision(jugador, jugador.x * TILE - cam.x, jugador.y * TILE - cam.y) end
   end
   love.graphics.pop()
   love.graphics.setScissor()
@@ -664,6 +666,18 @@ local function efectoAtaque(e, st, u, sx, pies, k, def)
   love.graphics.setLineWidth(1)
 end
 
+-- Marca de un PNJ de misiones para este jugador ("!" nuevo, "?" para entregar); se calcula dos veces por segundo.
+local marcasNpc = {}
+function D.marcaNpc(jugador, qid)
+  local ahora = love.timer.getTime()
+  local c = marcasNpc[qid]
+  if not c or ahora - c.t > 0.5 or c.jugador ~= jugador.id then
+    c = { t = ahora, jugador = jugador.id, marca = require("compartido.dominio.misiones").marcaNpc(jugador, qid) or false }
+    marcasNpc[qid] = c
+  end
+  return c.marca or nil
+end
+
 -- Dibuja una criatura u objeto vivo. Devuelve su altura en píxeles (para la placa).
 function D.entidad(e, sx, sy, mundo, jugador)
   local pies = sy + 12
@@ -821,6 +835,19 @@ function D.entidad(e, sx, sy, mundo, jugador)
   if atq then
     love.graphics.pop()
     efectoAtaque(e, atq, atqU, sx + atqPose.dx * 0.6, pies, atqK, def)
+  end
+  -- PNJ de misiones: "!" si tiene algo nuevo para ti y "?" si puedes entregarle algo
+  if e.kind == "npc" and e.qid and jugador then
+    local m = D.marcaNpc(jugador, e.qid)
+    if m then
+      local t = love.timer.getTime()
+      local ym = pies - alto - 16 - 2 * math.abs(math.sin(t * 4))
+      love.graphics.setColor(0, 0, 0, 0.55)
+      love.graphics.circle("fill", sx, ym + 5, 9)
+      love.graphics.setColor(m == "?" and 0.55 or 1, m == "?" and 0.95 or 0.85, m == "?" and 0.55 or 0.2, 1)
+      local f = love.graphics.getFont()
+      love.graphics.print(m, sx - f:getWidth(m) / 2, ym - f:getHeight() / 2 + 5)
+    end
   end
   if e.est then
     -- estados alterados: su animación se repite sobre la criatura

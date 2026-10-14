@@ -1,4 +1,5 @@
 local Datos = require("compartido.dominio.datos")
+local Misiones = require("compartido.dominio.misiones")
 local Atlas = require("src.presentacion.render.atlas")
 local Balance = require("compartido.dominio.balance")
 local Arbol = require("compartido.dominio.arbol")
@@ -988,6 +989,7 @@ function I.hud(mundo, p, w, h)
   elseif I.panel == "guerra" then I.panelGuerra(mundo, p, vw, h)
   elseif I.panel == "vivienda" then I.panelVivienda(mundo, p, vw, h)
   elseif I.panel == "misiones" then I.panelMisiones(mundo, p, vw, h)
+  elseif I.panel == "diario" then I.panelDiario(mundo, p, vw, h)
   elseif I.panel == "mapa" then I.panelMapa(mundo, p, w, h)
   elseif I.panel == "ayuda" then I.panelAyuda(vw, h)
   elseif I.panel == "casa" then I.panelCasa(p, vw, h)
@@ -1170,9 +1172,10 @@ local ICONO_NPC = {
   capitan = { "rombo", { 0.2, 0.85, 0.5 }, "Capitán de cazadores" },
   contacto = { "triangulo", { 0.85, 0.12, 0.2 }, "Contacto de ladrones" },
   subastas = { "estrella", { 1, 0.75, 0.15 }, "Casa de subastas" },
+  misiones = { "rombo", { 1, 0.85, 0.2 }, "Misiones (cazar, recolectar y entregar)" },
 }
 I.ICONO_NPC = ICONO_NPC
-I.ORDEN_ICONOS = { "mercado", "armero", "establo", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "criador", "gremio", "oficios", "barquero", "capitan", "contacto", "subastas" }
+I.ORDEN_ICONOS = { "mercado", "armero", "establo", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "criador", "gremio", "oficios", "barquero", "capitan", "contacto", "subastas", "misiones" }
 
 function I.iconoNpc(rol, x, y, r)
   local d = ICONO_NPC[rol]
@@ -1279,6 +1282,7 @@ local function minimapaLocal(mundo, p, x, y, lado)
       love.graphics.circle("fill", ex, ey, 3)
     end
   end
+  I.marcasMinimapa(p, x, y, lado, x0, y0, k)
   for _, e in pairs(mundo.entidades) do
     if e.vivo ~= false and e.modo == "mundo" and e.id ~= p.id and mundo:mismoLugar(p, e) then
       local ex, ey = x + (e.x - x0) * k, y + (e.y - y0) * k
@@ -1307,6 +1311,7 @@ local AYUDA_BOTONES = {
   hud_comercio = "Tratar con otro jugador (T): selecciona a un aventurero cercano y pulsa aquí.",
   hud_ayuda = "Ayuda: controles, combate, oficios, casas y mazmorras.",
   hud_diaria = "Recompensa diaria (F2): un premio por día, más grande con días seguidos.",
+  hud_misiones = "Diario de misiones (Q): lo que llevas, dónde ir y qué te darán.",
   hud_menu = "Menú del juego (Esc): continuar, ajustes y salir.",
 }
 
@@ -1336,6 +1341,7 @@ function I.flotantes(mundo, p, vw, vh)
   local clase = Datos.clases[p.clase] and Datos.clases[p.clase].nombre or ""
   texto(clase, bx + bw - 10 - f:getWidth(clase), by + 60, fac or { 0.9, 0.9, 0.9 })
   if sobre(bx, by, bw, 82) then I.pista = "Pulsa C para ver tu personaje y su equipo, e I para abrir la bolsa." end
+  I.rastreoMision(mundo, p, 8, 96)
 
   -- minimapa y botones
   local lado = 128
@@ -1356,7 +1362,7 @@ function I.flotantes(mundo, p, vw, vh)
   -- botones del minimapa, como iconos del juego: mapa (pergamino), ayuda (signo de interrogación), menú (engranaje) y la
   -- recompensa diaria (regalo, que brilla mientras haya premio sin reclamar). El nombre sale al pasar el ratón.
   local botones = {
-    { "hud_mapa", "hud", 0 }, { "hud_ayuda", "hud", 1 }, { "hud_menu", "hud", 2 }, { "hud_diaria", "hud", 3 },
+    { "hud_mapa", "hud", 0 }, { "hud_misiones", "hud", 0 }, { "hud_ayuda", "hud", 1 }, { "hud_menu", "hud", 2 }, { "hud_diaria", "hud", 3 },
   }
   local bww, bhh = (lado - (#botones - 1) * 4) / #botones, 30
   local cy = 10 + lado + 6
@@ -1375,7 +1381,17 @@ function I.flotantes(mundo, p, vw, vh)
     if libre then love.graphics.setColor(1, 0.82, 0.3) else love.graphics.setColor(0.45, 0.6, 0.95) end
     love.graphics.rectangle("line", x + 0.5, cy + 0.5, bww - 1, bhh - 1, 6, 6)
     love.graphics.setColor(1, 1, 1, 1)
-    Atlas.dibujar(b[2], b[3], x + bww / 2, cy + bhh / 2, 0.85, 16, 16)
+    if b[1] == "hud_misiones" then
+      -- sin icono en la lámina: un "!" dorado (pulsa si hay algo que entregar)
+      local f2 = love.graphics.getFont()
+      local lista = false
+      for _, q in ipairs(Misiones.lista) do if Misiones.estado(p, q) == "lista" then lista = true break end end
+      love.graphics.setColor(1, lista and (0.7 + 0.3 * math.sin(love.timer.getTime() * 5)) or 0.85, lista and 0.3 or 0.3, 1)
+      love.graphics.print("!", x + bww / 2 - f2:getWidth("!") / 2, cy + bhh / 2 - f2:getHeight() / 2)
+      love.graphics.setColor(1, 1, 1, 1)
+    else
+      Atlas.dibujar(b[2], b[3], x + bww / 2, cy + bhh / 2, 0.85, 16, 16)
+    end
     if b[1] == "hud_diaria" and p.diaria and p.diaria.reclamada then
       love.graphics.setColor(0.4, 1, 0.5, 1)
       love.graphics.setFont(f)
@@ -2896,20 +2912,6 @@ function I.panelEncantar(mundo, p, w, h)
         love.graphics.printf(Encanto.bajaAlFallar(enc) and "Si falla, la pieza baja un nivel." or "Si falla, no pierdes el nivel (sí los materiales).", dx, py + 272, pw - 380, "left")
       end
       I.boton(dx, py + 320, 200, 36, "Encantar", "enc_go", ok)
-      -- pergaminos de forja del Item Mall: suben +1 seguro y sin coste
-      local yy = py + 366
-      for _, o in ipairs(require("compartido.dominio.mall").OBJETOS) do
-        if o.forja then
-          local tengo = mundo:contarItem(p, o.id)
-          if tengo > 0 then
-            love.graphics.setColor(1, 0.85, 0.4)
-            love.graphics.print(o.nombre .. " x" .. tengo .. "  (hasta +" .. o.forja .. ")", dx, yy)
-            I.boton(dx, yy + 18, 200, 30, "Forjar +" .. (enc + 1) .. " seguro", "enc_forja_" .. o.id, enc < o.forja,
-              "Este pergamino solo forja hasta +" .. o.forja .. ".")
-            yy = yy + 56
-          end
-        end
-      end
     end
   else
     love.graphics.setColor(0.7, 0.68, 0.6)
@@ -3500,30 +3502,6 @@ function I.panelVivienda(mundo, p, w, h)
   end
 end
 
-function I.panelMisiones(mundo, p, w, h)
-  caja(w / 2 - 300, 80, 600, 500, "Encargos")
-  I.boton(w / 2 + 230, 88, 60, 28, "Cerrar", "cerrar")
-  local y = 130
-  for _, q in ipairs(Datos.misiones) do
-    local st = p.misiones[q.id]
-    local ciudadOk = (not I.ciudad) or q.ciudad == I.ciudad or (st and st.aceptada)
-    if q.requiere then
-      local prev = p.misiones[q.requiere]
-      if not (prev and prev.entregada) then ciudadOk = false end
-    end
-    if ciudadOk and y < 540 then
-      love.graphics.setColor(0.95, 0.9, 0.75)
-      local prog = st and (st.progreso or 0) or 0
-      love.graphics.print(q.titulo .. "  (" .. prog .. "/" .. q.cantidad .. ")", w / 2 - 270, y)
-      if not st then I.boton(w / 2 + 120, y - 4, 100, 26, "Aceptar", "mision_ok_" .. q.id)
-      elseif st.aceptada and not st.entregada and prog >= q.cantidad then
-        I.boton(w / 2 + 120, y - 4, 100, 26, "Entregar", "mision_fin_" .. q.id)
-      end
-      y = y + 36
-    end
-  end
-end
-
 -- Mapa del mundo: zoom con la rueda (hacia el cursor), arrastrar para moverse, y las zonas de
 -- criaturas con sus niveles (también las zonas elevadas).
 local function colorNivel(n)
@@ -3686,6 +3664,7 @@ function I.panelMapa(mundo, p, w, h)
       love.graphics.setLineWidth(1)
     end
   end
+  if p.modo == "mundo" then I.marcasMapa(p, aP) end
   if p.modo == "mundo" then
     local x0, y0 = aP(p.x, p.y)
     love.graphics.setColor(1, 1, 1)
@@ -3932,5 +3911,7 @@ function I.panelAjustes(w, h)
   love.graphics.print("F11 cambia la pantalla. F3 muestra el medidor.", w / 2 - 180, h / 2 + 124)
 end
 
+
+require("src.presentacion.misiones_ui").instalar(I, { caja = caja, texto = texto })
 
 return I

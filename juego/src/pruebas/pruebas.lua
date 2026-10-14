@@ -661,13 +661,15 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local Arte = require("src.presentacion.render.arte")
     local grandes = 0
     for id, def in pairs(P.skins) do
-      if def.hoja == "Characters/Riding.png" then
+      if def.celda == 48 then
         grandes = grandes + 1
-        fallar(errores, id .. " usa casillas de 48", def.celda == 48)
-        local img = Arte.img(def.hoja)
-        local bloqueW, bloqueH = 48 * 3, 48 * 4
-        local dentro = (def.idx % 4 + 1) * bloqueW <= img:getWidth() and (math.floor(def.idx / 4) + 1) * bloqueH <= img:getHeight()
-        fallar(errores, id .. " está dentro de la hoja", dentro)
+        -- (con arma dibujada por código la hoja es la generada: 3 x 4 cuadros de 48 px)
+        if def.hoja then
+          local img = Arte.img(def.hoja)
+          local bloqueW, bloqueH = 48 * 3, 48 * 4
+          local dentro = (def.idx % 4 + 1) * bloqueW <= img:getWidth() and (math.floor(def.idx / 4) + 1) * bloqueH <= img:getHeight()
+          fallar(errores, id .. " está dentro de la hoja", dentro)
+        end
         local ok, err = pcall(P.dibujar, def, 1, false, 0, 100, 100)
         fallar(errores, id .. " se dibuja", ok, tostring(err))
         fallar(errores, id .. " devuelve el alto del cuadro", select(2, pcall(P.dibujar, def, 3, true, 0.3, 100, 100)) == 48)
@@ -762,7 +764,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local primeras = Mall.ORDEN_ADDONS[1] == "skin_hada_cristal" and Mall.ORDEN_ADDONS[2] == "skin_caballero_solar"
     fallar(errores, "salen las primeras de la lista", primeras)
   end)
-  paso("interfaz: pestaña de forja y botón de forjar", function()
+  paso("interfaz: pestaña de forja con polvos de encantamiento", function()
     local Entrada = require("src.presentacion.entrada")
     local Mall = require("compartido.dominio.mall")
     local mundo = Mundo.nuevo()
@@ -782,27 +784,75 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local x2 = nil
     for y = 100, 600, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "mall_buy_pergamino_atk" then x2 = x end end end
     fallar(errores, "los pergaminos de atributos no están en la forja", x2 == nil)
-    local xf = nil
-    for y = 100, 600, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "mall_buy_pergamino_forja" then xf = x end end end
-    fallar(errores, "la forja solo vende polvos", xf == nil)
     Entrada.manejar(app, "mall_tab_obj")
     pcall(Interfaz.hud, mundo, pj, 1280, 720)
-    local x3 = nil
-    for y = 100, 600, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "mall_buy_pergamino_forja" then x3 = x end end end
-    fallar(errores, "los pergaminos de forja se compran en Objetos", x3 ~= nil)
-    -- Maestro de encantos: aparece el botón con el pergamino en la bolsa
-    pj.bolsa = { { id = "pergamino_forja", cant = 2 } }
+    -- los pergaminos de forja se retiraron del juego: no se venden y el panel de encantos se dibuja sin ellos
+    local xf = nil
+    for y = 100, 600, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "mall_buy_pergamino_forja" then xf = x end end end
+    fallar(errores, "ya no se venden pergaminos de forja", xf == nil)
     Interfaz.panel, Interfaz.encSel = "encantar", "equipo_arma"
     ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
-    fallar(errores, "el panel de encantos se dibuja con pergaminos", ok, tostring(err))
-    local hallado
-    for y = 300, 650, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "enc_forja_pergamino_forja" then hallado = true end end end
-    fallar(errores, "hay botón de forjar", hallado == true)
-    llamadas = {}
-    Entrada.manejar(app, "enc_forja_pergamino_forja")
-    local l = llamadas[1]
-    fallar(errores, "forjar manda la pieza y el pergamino", l and l[1] == "encantar" and l[2].donde == "equipo" and l[2].ref == "arma" and l[2].pergamino == "pergamino_forja")
+    fallar(errores, "el panel de encantos se dibuja", ok, tostring(err))
     Interfaz.panel, Interfaz.mallTab = nil, "objetos"
+  end)
+  paso("misiones: tablón, diario, rastreador y marcas en el mapa", function()
+    local Misiones = require("compartido.dominio.misiones")
+    local Entrada = require("src.presentacion.entrada")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Diario", faccion = "albor", clase = "guerrero", nivel = 12 })
+    local llamadas = {}
+    local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
+    Interfaz.escala = 1
+    -- tablón de Auroria
+    Interfaz.panel, Interfaz.npcMision, Interfaz.misSel = "misiones", "c_auroria", nil
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el tablón se dibuja", ok, tostring(err))
+    Entrada.manejar(app, "mision_sel_q_auroria")
+    pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    local hallado
+    for y = 100, 650, 6 do for x = 300, 1000, 6 do local id = Interfaz.consumir(x, y) if id == "mision_ok_q_auroria" then hallado = id end end end
+    local vistos = {}
+    for y = 60, 700, 6 do for x = 200, 1100, 6 do local id = Interfaz.consumir(x, y) if id and not vistos[id] then vistos[id] = true end end end
+    local lista = {}
+    for id in pairs(vistos) do lista[#lista + 1] = id end
+    table.sort(lista)
+    fallar(errores, "hay botón de aceptar la primera misión", hallado == "mision_ok_q_auroria", table.concat(lista, " "):sub(1, 400))
+    Entrada.manejar(app, "mision_ok_q_auroria")
+    fallar(errores, "aceptar manda la acción y sigue la misión", llamadas[1] and llamadas[1][1] == "mision_aceptar" and Misiones.seguida == "q_auroria")
+    -- con la misión en curso: diario y rastreador
+    pj.misiones.q_auroria = { aceptada = true, entregada = false, progreso = 2 }
+    Interfaz.panel = "diario"
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el diario se dibuja", ok, tostring(err))
+    Entrada.manejar(app, "mision_sel_q_auroria")
+    Entrada.manejar(app, "mision_aband_q_auroria")
+    fallar(errores, "abandonar pide confirmar", Interfaz.misAband == "q_auroria" and #llamadas == 1)
+    Entrada.manejar(app, "mision_aband_q_auroria")
+    fallar(errores, "y al confirmar la abandona", llamadas[2] and llamadas[2][1] == "mision_abandonar" and Misiones.seguida == nil)
+    Misiones.seguida = "q_auroria"
+    Interfaz.panel = nil
+    pj.x, pj.y, pj.modo, pj.z = 200, 300, "mundo", 0
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el rastreador y el minimapa con marca se dibujan", ok, tostring(err))
+    Interfaz.panel = "mapa"
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el mapa del mundo con las marcas se dibuja", ok, tostring(err))
+    Entrada.manejar(app, "mision_mapa_q_auroria")
+    fallar(errores, "ver en el mapa abre el mapa", Interfaz.panel == "mapa")
+    -- la flecha y la marca "!" sobre los PNJ
+    Interfaz.panel = nil
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local okF, errF = pcall(function()
+      love.graphics.push()
+      Dibujo.flechaMision(pj, 100, 100)
+      love.graphics.pop()
+    end)
+    fallar(errores, "la flecha de misión se dibuja", okF, tostring(errF))
+    fallar(errores, "el PNJ de Auroria marca para el jugador", Dibujo.marcaNpc(pj, "c_auroria") ~= nil)
+    Misiones.seguida = nil
+    -- los PNJ de los puestos tienen aspecto y icono propios
+    local P = require("src.presentacion.render.personajes")
+    fallar(errores, "los PNJ de misiones tienen sprite", P.de({ kind = "npc", rol = "misiones", id = "x1" }) ~= nil and Interfaz.ICONO_NPC.misiones ~= nil)
   end)
   paso("sprites de clases y monturas por código", function()
     local Propias = require("src.presentacion.render.propias")
@@ -1801,6 +1851,30 @@ local function avanzarFoto(app)
     Interfaz.panel = "mapa"
     Interfaz.datosGremio = nil
   elseif foto.paso == "mapa" then
+    foto.paso = "tablon"
+    local Misiones = require("compartido.dominio.misiones")
+    -- el jugador a unos pasos del tablón de Auroria, con una misión de cada tipo en curso
+    local tablon
+    for _, e in pairs(app.mundo.entidades) do if e.kind == "npc" and e.qid == "c_auroria" then tablon = e end end
+    if tablon then app.jugador.x, app.jugador.y = tablon.x + 1, tablon.y end
+    app.jugador.nivel = 12
+    app.jugador.invGremio, app.jugador.gremioRango = nil, nil
+    app.jugador.misiones = {
+      q_auroria = { aceptada = true, entregada = false, progreso = 3 },
+      ca_1 = { aceptada = true, entregada = false, progreso = 0 },
+      ce_1 = { aceptada = true, entregada = false, progreso = 5 },
+    }
+    Misiones.seguida = "q_auroria"
+    Interfaz.panel, Interfaz.npcMision, Interfaz.misSel = "misiones", "c_auroria", "q_auroria"
+  elseif foto.paso == "tablon" then
+    foto.paso = "diario"
+    Interfaz.panel, Interfaz.misSelDiario = "diario", "ce_1"
+    require("compartido.dominio.misiones").seguida = "ce_1"
+  elseif foto.paso == "diario" then
+    foto.paso = "mapamision"
+    Interfaz.panel = "mapa"
+  elseif foto.paso == "mapamision" then
+    require("compartido.dominio.misiones").seguida = nil
     foto.paso = "oficios"
     Interfaz.panel = "oficios"
     local j = app.jugador
@@ -1941,7 +2015,7 @@ function Pruebas.tickFoto(app, dt)
   if foto.espera > 0.35 and not app.capturando and foto.paso ~= "fin" then
     app.capturando = true
     local nombre = foto.paso
-    if nombre ~= "equipo" and nombre ~= "arbol" and nombre ~= "mercado" and nombre ~= "encantar" and nombre ~= "mascotas" and nombre ~= "gremio" and nombre ~= "mapa" and nombre ~= "oficios" and nombre ~= "mercancias" and nombre ~= "establo" and nombre ~= "subastas" and nombre ~= "grupo" then Interfaz.panel = nil end
+    if nombre ~= "equipo" and nombre ~= "arbol" and nombre ~= "mercado" and nombre ~= "encantar" and nombre ~= "mascotas" and nombre ~= "gremio" and nombre ~= "mapa" and nombre ~= "tablon" and nombre ~= "diario" and nombre ~= "mapamision" and nombre ~= "oficios" and nombre ~= "mercancias" and nombre ~= "establo" and nombre ~= "subastas" and nombre ~= "grupo" then Interfaz.panel = nil end
     Log.info(string.format("foto %s fps=%d panel=%s", nombre, love.timer.getFPS(), tostring(Interfaz.panel)))
     love.graphics.captureScreenshot(function(img)
       local fd = img:encode("png")

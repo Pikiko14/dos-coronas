@@ -1541,14 +1541,14 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     adm.admin, adm.x, adm.y, adm.modo, adm.z = true, p.x, p.y, "mundo", 0
     fallar(errores, "sin monedas no se compra", mundo:comprarMall(p, "tarjeta_exp") ~= nil)
     p.bolsa, p.equipo.mochila = {}, "mochila_4"
-    mundo:decir(adm, "/admin monedas 500 Comprador")
-    fallar(errores, "el admin da monedas", p.monedas == 500)
+    mundo:decir(adm, "/admin monedas 3000 Comprador")
+    fallar(errores, "el admin da monedas", p.monedas == 3000)
     for _, o in ipairs(Mall.OBJETOS) do
       fallar(errores, "compra " .. o.id, mundo:comprarMall(p, o.id) == nil and Datos.item(o.id) ~= nil and Datos.item(o.id).mall == true)
     end
     local gastado = 0
     for _, o in ipairs(Mall.OBJETOS) do gastado = gastado + o.precio end
-    fallar(errores, "se descuentan las monedas", p.monedas == 500 - gastado, tostring(p.monedas))
+    fallar(errores, "se descuentan las monedas", p.monedas == 3000 - gastado, tostring(p.monedas))
     fallar(errores, "no se venden en el mercado", mundo:comprar(p, "tarjeta_exp") ~= nil)
     -- experiencia doble
     p.xp, p.nivel = 0, 12
@@ -2583,64 +2583,27 @@ mundo.tiempo = 100
     mundo:accion(q.id, "mall_addon", { id = "skin_rey" })
     fallar(errores, "sin comprarlo no se puede poner", q.addonActivo == nil)
   end)
-  paso("pergaminos de forja del mall: suben +1 seguro sin coste", function()
-    local Autoridad = require("src.dominio.autoridad")
+  paso("paquetes de polvo del mall; los pergaminos de forja ya no existen y se devuelven", function()
     local Mall = require("compartido.dominio.mall")
     local mundo = Mundo.nuevo()
     local p = mundo:crearPersonaje({ nombre = "Herrero", faccion = "albor", clase = "guerrero", nivel = 20 })
-    local npc
-    for _, e in pairs(mundo.entidades) do if e.kind == "npc" and e.rol == "encantador" then npc = e break end end
-    fallar(errores, "hay un maestro de encantos", npc ~= nil)
-    p.x, p.y, p.z, p.modo = npc.x + 1, npc.y, 0, "mundo"
     p.bolsa, p.equipo.mochila = {}, "mochila_4"
     p.oro, p.monedas = 0, 1000
-    fallar(errores, "los pergaminos de forja están en el mall", Mall.objeto("pergamino_forja") and Mall.objeto("pergamino_forja_sagrado")
-      and Datos.item("pergamino_forja").forja == 6 and Datos.item("pergamino_forja_sagrado").forja == 10)
     local polvoAntes = mundo:contarItem(p, "polvo_arcano")
-    p.monedas = 1000
     fallar(errores, "el paquete de polvos entrega polvo arcano", mundo:comprarMall(p, "polvos_10") == nil
       and mundo:contarItem(p, "polvo_arcano") == polvoAntes + 10 and p.monedas == 1000 - Mall.objeto("polvos_10").precio)
-
-    fallar(errores, "se compran con monedas", mundo:comprarMall(p, "pergamino_forja") == nil and mundo:comprarMall(p, "pergamino_forja_sagrado") == nil
-      and mundo:contarItem(p, "pergamino_forja") == 1)
-    local arma = p.equipo.arma
-    fallar(errores, "tiene un arma puesta", arma ~= nil)
-    -- sin oro ni polvo, el pergamino sube la pieza sin fallar
-    for i = 1, 6 do
-      mundo:darItem(p, "pergamino_forja", 1)
-      local ok, l = Autoridad.aceptar(mundo, p, "encantar", { donde = "equipo", ref = "arma", pergamino = "pergamino_forja" })
-      mundo:accion(p.id, "encantar", l)
-    end
-    fallar(errores, "seis forjas seguidas llegan a +6 sin gastar oro ni polvo", (p.encantos.arma or 0) == 6 and p.oro == 0, tostring(p.encantos.arma))
-    -- el pergamino básico no pasa de +6
-    mundo:darItem(p, "pergamino_forja", 1)
-    mundo:accion(p.id, "encantar", { donde = "equipo", ref = "arma", pergamino = "pergamino_forja" })
-    fallar(errores, "el básico no pasa de +6 y no se gasta", p.encantos.arma == 6 and mundo:contarItem(p, "pergamino_forja") >= 1)
-    -- el sagrado sigue hasta +10
-    local n = mundo:contarItem(p, "pergamino_forja_sagrado")
-    for _ = 1, 4 do
-      mundo:darItem(p, "pergamino_forja_sagrado", 1)
-      mundo:accion(p.id, "encantar", { donde = "equipo", ref = "arma", pergamino = "pergamino_forja_sagrado" })
-    end
-    fallar(errores, "el sagrado llega a +10", p.encantos.arma == 10, tostring(p.encantos.arma))
-    mundo:darItem(p, "pergamino_forja_sagrado", 1)
-    mundo:accion(p.id, "encantar", { donde = "equipo", ref = "arma", pergamino = "pergamino_forja_sagrado" })
-    fallar(errores, "no pasa del máximo", p.encantos.arma == 10)
-    -- sin pergamino no se puede, y los ids raros se descartan
-    p.encantos.arma = 1
-    local antes = p.encantos.arma
-    mundo:accion(p.id, "encantar", { donde = "equipo", ref = "arma", pergamino = "polvo_arcano" })
-    fallar(errores, "un objeto que no es pergamino de forja no sirve", p.encantos.arma == antes)
-    local ok, l = Autoridad.aceptar(mundo, p, "encantar", { donde = "equipo", ref = "arma", pergamino = string.rep("x", 40) })
-    fallar(errores, "un id demasiado largo se ignora", ok and l.pergamino == nil)
-    -- al pulsarlo en la bolsa avisa de dónde se usa y no se gasta
-    mundo:darItem(p, "pergamino_forja", 1)
-    local i = 0
-    for k, s in ipairs(p.bolsa) do if s.id == "pergamino_forja" then i = k end end
-    local gasto = mundo:contarItem(p, "pergamino_forja")
-    fallar(errores, "en la bolsa explica dónde se usa", mundo:equipar(p, i) ~= nil and mundo:contarItem(p, "pergamino_forja") == gasto)
-    -- no se vende al mercader ni se puede perder el pergamino en un trato normal
-    fallar(errores, "no se vende en el mercado", mundo:vender(p, i) ~= nil)
+    fallar(errores, "los pergaminos de forja ya no existen", Mall.objeto("pergamino_forja") == nil and Mall.objeto("pergamino_forja_sagrado") == nil
+      and Datos.item("pergamino_forja") == nil and Datos.item("pergamino_forja_sagrado") == nil)
+    fallar(errores, "no se pueden comprar", mundo:comprarMall(p, "pergamino_forja") ~= nil)
+    -- un personaje guardado con pergaminos: se quitan y se devuelven sus Monedas Corona
+    local b = mundo:crearPersonaje({ nombre = "Antiguo", faccion = "albor", clase = "guerrero", nivel = 5 })
+    local ex = mundo:exportar(b)
+    ex.regaloMall, ex.monedas = true, 10
+    ex.bolsa = { { id = "pergamino_forja", cant = 2 }, { id = "pocion_vida", cant = 3 }, { id = "pergamino_forja_sagrado", cant = 1 } }
+    mundo:aplicarGuardado(b, ex)
+    fallar(errores, "los pergaminos retirados desaparecen de la bolsa", mundo:contarItem(b, "pergamino_forja") == 0 and mundo:contarItem(b, "pergamino_forja_sagrado") == 0
+      and mundo:contarItem(b, "pocion_vida") == 3)
+    fallar(errores, "y se devuelven en monedas (2 x 60 + 160)", b.monedas == 10 + 2 * 60 + 160, tostring(b.monedas))
   end)
   end)  paso("comandos de administrador", function()
     local mundo = Mundo.nuevo()
@@ -3185,8 +3148,7 @@ mundo.tiempo = 100
         pj.habilidades.vigor = 2
         pj.habilidades.golpe = 2
         pj.equipo.mochila = "mochila_2"
-        mundo:aceptarMision(pj, "q_auroria")
-        pj.misiones.q_auroria.progreso = 3
+        pj.misiones.q_auroria = { aceptada = true, entregada = false, progreso = 3 }
         pj.caceria = { gato = 5 }
         pj.casas = { ["9_9"] = { muebles = { cama = true }, cofre = { { id = "pocion_vida", cant = 2 } } } }
         local salida = transporte({ { tipo = "cierra", id = 5 } })
@@ -3207,8 +3169,7 @@ mundo.tiempo = 100
           fallar(errores, "recupera la bolsa", tiene)
           fallar(errores, "recupera la mochila puesta", otra.equipo.mochila == "mochila_2", tostring(otra.equipo.mochila))
           fallar(errores, "recupera el progreso de la misión",
-            otra.misiones.q_auroria and otra.misiones.q_auroria.progreso == 3 and otra.misiones.q_auroria.aceptada
-              and otra.misiones.q_auroria.cantidad == 6)
+            otra.misiones.q_auroria and otra.misiones.q_auroria.progreso == 3 and otra.misiones.q_auroria.aceptada)
           fallar(errores, "recupera la cacería", otra.caceria.gato == 5)
           fallar(errores, "recupera el oficio y su nivel", otra.oficioElegido == "trader" and otra.job == "trader" and otra.oficios.trader.nivel == 3 and otra.oficios.trader.xp == 40
             and otra.oficios.thief and otra.oficios.thief.nivel == 2)
@@ -3724,6 +3685,121 @@ mundo.tiempo = 100
     fallar(errores, "encantar cuesta más cuanto más alto", Encanto.coste(arma, 5).oro > Encanto.coste(arma, 0).oro)
     fallar(errores, "la mochila grande vale más que la pequeña", Datos.item("mochila_4").precio > Datos.item("mochila_1").precio * 10)
   end)
+  paso("misiones: una de cazar por criatura, PNJ por el mapa, recompensas y cadenas", function()
+    local Misiones = require("compartido.dominio.misiones")
+    local Mall = require("compartido.dominio.mall")
+    local mundo = Mundo.nuevo()
+    -- hay una misión de cazar para cada criatura (normales, élites y jefes)
+    local sin = {}
+    for _, m in ipairs(Datos.monstruos) do if not Misiones.por_id["h1_" .. m.id] then sin[#sin + 1] = m.id end end
+    fallar(errores, "cada criatura tiene su misión de cazar", #sin == 0, table.concat(sin, ","))
+    fallar(errores, "las élites y los jefes son más difíciles", Misiones.por_id.h1_behemot.dif == "epica" and Misiones.por_id.h1_jefe_manada.dif == "dificil"
+      and Misiones.por_id.h1_gato.dif == "normal")
+    -- las recompensas suben con el nivel y la dificultad
+    fallar(errores, "más nivel, más recompensa", Misiones.por_id.h1_dragon.xp > Misiones.por_id.h1_gato.xp and Misiones.por_id.h1_dragon.oro > Misiones.por_id.h1_gato.oro)
+    fallar(errores, "la repetición paga más que la primera", Misiones.por_id.h2_gato.xp > Misiones.por_id.h1_gato.xp)
+    fallar(errores, "los finales de cadena pagan mucho", Misiones.por_id.cb_6.xp > Misiones.por_id.h1_dragon.xp)
+    fallar(errores, "la experiencia se ajusta al nivel de quien entrega", Misiones.factorNivel(1, 10) > 1 and Misiones.factorNivel(20, 10) < 1)
+    -- cada PNJ de misiones existe en el mundo con su id y tiene encargos
+    local npcs = {}
+    for _, e in pairs(mundo.entidades) do if e.kind == "npc" and e.qid then npcs[e.qid] = e end end
+    local nQ, vacios = 0, {}
+    for qid in pairs(Misiones.npcs) do
+      nQ = nQ + 1
+      if not npcs[qid] then vacios[#vacios + 1] = qid end
+    end
+    fallar(errores, "los PNJ de misiones están en el mapa (ciudades y puestos)", nQ >= 30 and #vacios == 0, nQ .. " " .. table.concat(vacios, ","))
+    local sinMisiones = 0
+    for qid in pairs(Misiones.npcs) do if #(Misiones.porNpc[qid] or {}) == 0 then sinMisiones = sinMisiones + 1 end end
+    fallar(errores, "todos tienen misiones que dar", sinMisiones == 0, tostring(sinMisiones))
+    -- las cadenas con premio: pocas y difíciles
+    local addons, monturas = 0, 0
+    for _, q in ipairs(Misiones.lista) do
+      if q.addon then addons = addons + 1 fallar(errores, "el addon " .. q.addon .. " existe", Mall.ADDONS[q.addon] ~= nil) end
+      if q.montura then monturas = monturas + 1 fallar(errores, "la montura " .. q.montura .. " existe", require("compartido.dominio.monturas").especies[q.montura] ~= nil) end
+      if q.addon or q.montura then fallar(errores, "el premio gordo es de una misión difícil o épica", q.dif ~= "normal") end
+    end
+    fallar(errores, "solo unas pocas dan addon o montura", addons >= 2 and addons <= 4 and monturas >= 2 and monturas <= 4, addons .. "/" .. monturas)
+
+    -- flujo: aceptar y entregar solo junto al PNJ
+    local p = mundo:crearPersonaje({ nombre = "Misionero", faccion = "albor", clase = "guerrero", nivel = 12 })
+    p.bolsa, p.equipo.mochila = {}, "mochila_4"
+    local tablon = npcs.c_auroria
+    p.x, p.y, p.modo, p.z = tablon.x + 60, tablon.y, "mundo", 0
+    fallar(errores, "lejos del PNJ no se acepta", mundo:aceptarMision(p, "q_auroria") ~= nil)
+    p.x, p.y = tablon.x + 1, tablon.y
+    fallar(errores, "junto al PNJ se acepta", mundo:aceptarMision(p, "q_auroria") == nil and p.misiones.q_auroria.aceptada)
+    fallar(errores, "no se acepta dos veces", mundo:aceptarMision(p, "q_auroria") ~= nil)
+    fallar(errores, "el siguiente paso de la cadena exige el anterior", mundo:aceptarMision(p, "q_auroria_2") ~= nil)
+    fallar(errores, "sin terminar no se entrega", mundo:entregarMision(p, "q_auroria") ~= nil)
+    for _ = 1, 6 do mundo:avanzarMisiones(p, "gato") end
+    fallar(errores, "al derrotar las criaturas avanza y se completa", p.misiones.q_auroria.progreso == 6 and Misiones.completa(p, Misiones.por_id.q_auroria, p.misiones.q_auroria))
+    local oro0, xp0 = p.oro, p.xp
+    p.x, p.y = tablon.x + 60, tablon.y
+    fallar(errores, "lejos del PNJ no se entrega", mundo:entregarMision(p, "q_auroria") ~= nil)
+    p.x, p.y = tablon.x + 1, tablon.y
+    fallar(errores, "junto al PNJ se entrega", mundo:entregarMision(p, "q_auroria") == nil and p.misiones.q_auroria.entregada)
+    fallar(errores, "da oro y experiencia", p.oro > oro0 and (p.xp > xp0 or p.nivel > 12))
+    fallar(errores, "y encadena la siguiente misión", p.misiones.q_auroria_2 and p.misiones.q_auroria_2.aceptada)
+    fallar(errores, "una entregada no se repite", mundo:aceptarMision(p, "q_auroria") ~= nil)
+    -- nivel mínimo
+    local bajo = mundo:crearPersonaje({ nombre = "Novato", faccion = "albor", clase = "guerrero", nivel = 1 })
+    bajo.x, bajo.y, bajo.modo, bajo.z = tablon.x + 1, tablon.y, "mundo", 0
+    fallar(errores, "falta nivel para una misión difícil", mundo:aceptarMision(bajo, "ca_5") ~= nil)
+    -- recolectar: el trofeo cae mientras la misión lo pide
+    local cazador = mundo:crearPersonaje({ nombre = "Recolector", faccion = "albor", clase = "guerrero", nivel = 12 })
+    cazador.bolsa, cazador.equipo.mochila = {}, "mochila_4"
+    local liria = npcs.c_liria
+    cazador.x, cazador.y, cazador.modo, cazador.z = liria.x + 1, liria.y, "mundo", 0
+    fallar(errores, "recolectar: se acepta", mundo:aceptarMision(cazador, "ca_1") == nil)
+    math.randomseed(7)
+    for _ = 1, 60 do mundo:avanzarMisiones(cazador, "jabali") end
+    fallar(errores, "los jabalíes sueltan trofeos mientras lo pide", mundo:contarItem(cazador, "mat_jabali") >= 6, tostring(mundo:contarItem(cazador, "mat_jabali")))
+    fallar(errores, "un trofeo no se vende", Datos.item("mat_jabali").quest == true)
+    fallar(errores, "el avance cuenta los trofeos de la bolsa", Misiones.progreso(cazador, Misiones.por_id.ca_1, cazador.misiones.ca_1) == 6)
+    fallar(errores, "al entregar se gastan los trofeos", mundo:entregarMision(cazador, "ca_1") == nil and mundo:contarItem(cazador, "mat_jabali") == 0)
+    -- entregar: el paquete viaja de un PNJ a otro
+    fallar(errores, "entrega: se acepta y llevas el paquete", mundo:aceptarMision(cazador, "ca_2") == nil and mundo:contarItem(cazador, "paq_ca_2") == 1)
+    fallar(errores, "entrega: no se entrega en el PNJ equivocado", mundo:entregarMision(cazador, "ca_2") ~= nil)
+    local henar = npcs.c_henar
+    cazador.x, cazador.y = henar.x + 1, henar.y
+    fallar(errores, "entrega: en el PNJ destino se entrega", mundo:entregarMision(cazador, "ca_2") == nil and mundo:contarItem(cazador, "paq_ca_2") == 0)
+    -- abandonar
+    fallar(errores, "se puede aceptar la siguiente", mundo:aceptarMision(cazador, "ca_3") == nil)
+    fallar(errores, "se abandona", mundo:abandonarMision(cazador, "ca_3") == nil and cazador.misiones.ca_3 == nil)
+    -- el premio gordo: montura al terminar una cadena difícil
+    local heroe = mundo:crearPersonaje({ nombre = "Heroe", faccion = "umbra", clase = "guerrero", nivel = 28 })
+    heroe.bolsa, heroe.equipo.mochila = {}, "mochila_4"
+    local nox = npcs.c_nox
+    heroe.x, heroe.y, heroe.modo, heroe.z = nox.x + 1, nox.y, "mundo", 0
+    for _, id in ipairs({ "cd_1", "cd_2", "cd_3", "cd_4", "cd_5" }) do
+      local q = Misiones.por_id[id]
+      heroe.misiones[id] = { aceptada = true, entregada = false, progreso = q.cantidad }
+      if id ~= "cd_5" then heroe.misiones[id].entregada = true heroe.misiones[id].aceptada = false end
+    end
+    heroe.monturas = {}
+    fallar(errores, "el final de la cadena da la montura", mundo:entregarMision(heroe, "cd_5") == nil and heroe.monturas[1] == "toro_trueno")
+    fallar(errores, "y monedas y polvo", (heroe.monedas or 0) >= 40 and mundo:contarItem(heroe, "polvo_arcano") >= 40)
+    -- sin sitio en la bolsa no se pierde el premio
+    local lleno = mundo:crearPersonaje({ nombre = "Lleno", faccion = "albor", clase = "guerrero", nivel = 14 })
+    lleno.equipo.mochila = "mochila_1"
+    lleno.bolsa = {}
+    for i = 1, Datos.capacidadBolsa(lleno.equipo) do lleno.bolsa[i] = { id = "guerrero_arma_2", cant = 1 } end
+    lleno.x, lleno.y, lleno.modo, lleno.z = henar.x + 1, henar.y, "mundo", 0
+    lleno.misiones.ca_5 = { aceptada = true, entregada = false, progreso = 8 }
+    fallar(errores, "con la bolsa llena pide hacer sitio y no entrega", mundo:entregarMision(lleno, "ca_5") ~= nil and not lleno.misiones.ca_5.entregada)
+    -- la marca del PNJ: "!" con algo nuevo y "?" para entregar
+    local nuevo = mundo:crearPersonaje({ nombre = "Nuevo", faccion = "albor", clase = "guerrero", nivel = 1 })
+    fallar(errores, "el tablón de Auroria tiene algo nuevo", Misiones.marcaNpc(nuevo, "c_auroria") == "!")
+    nuevo.misiones.q_auroria = { aceptada = true, entregada = false, progreso = 6 }
+    fallar(errores, "y con la misión lista marca para entregar", Misiones.marcaNpc(nuevo, "c_auroria") == "?")
+    -- destinos para el mapa: el PNJ si no la tienes, los campamentos si hay que cazar
+    local d0 = Misiones.destinos(nuevo, Misiones.por_id.q_auroria_2, nil)
+    fallar(errores, "sin aceptar, el destino es quien la da", d0[1] and d0[1].tipo == "npc")
+    nuevo.misiones.q_auroria_2 = { aceptada = true, entregada = false, progreso = 0 }
+    local d1 = Misiones.destinos(nuevo, Misiones.por_id.q_auroria_2, nuevo.misiones.q_auroria_2)
+    fallar(errores, "para cazar, los destinos son los campamentos de la criatura", #d1 >= 1 and d1[1].tipo == "criatura")
+  end)
   paso("movimiento", function()
     local mundo = Mundo.nuevo()
     local c
@@ -4148,9 +4224,7 @@ mundo.tiempo = 100
       fallar(errores, "reclama el día " .. d, mundo:reclamarDiaria(p) == nil)
       if d == 7 then
         fallar(errores, "el día 7 da Monedas Corona", (p.monedas or 0) >= monedas0 + 40)
-        local forja = 0
-        for _, s in ipairs(p.bolsa) do if s.id == "pergamino_forja" then forja = forja + s.cant end end
-        fallar(errores, "y un pergamino de forja", forja >= 1)
+        fallar(errores, "y polvo arcano", mundo:contarItem(p, "polvo_arcano") >= 20)
       end
     end
     fallar(errores, "siete días seguidos: racha 7", p.diaria.racha == 7)

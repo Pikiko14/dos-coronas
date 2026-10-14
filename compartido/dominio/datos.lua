@@ -89,7 +89,7 @@ for _, c in ipairs(D.ciudades) do
   if not D.biomas[c.bioma] then error("ciudades.xml: ciudad '" .. c.id .. "': el bioma '" .. c.bioma .. "' no existe", 0) end
 end
 for _, q in ipairs(D.misiones) do
-  Config.validar("misiones.xml", "mision", q.id, q, { ciudad = "texto", titulo = "texto", monstruo = "texto", cantidad = "numero", oro = "numero", xp = "numero" })
+  Config.validar("misiones.xml", "mision", q.id, q, { titulo = "texto" })
 end
 
 D.tiles = {
@@ -163,6 +163,8 @@ D.items = {}
 local function add(it)
   D.items[it.id] = it
 end
+-- (las misiones registran sus objetos al prepararse: trofeos, paquetes y cartas)
+D.agregarItem = add
 
 -- Armas, armaduras, escudos, anillos y amuletos: ver items.lua.
 require("compartido.dominio.items").generar(D)
@@ -178,7 +180,7 @@ function D.capacidadBolsa(equipo)
 end
 -- Objetos del Item Mall (se pagan con monedas especiales, ver dominio/mall.lua)
 for _, o in ipairs(Mall.OBJETOS) do
-  add({ id = o.id, nombre = o.nombre, apila = 20, mall = true, monedas = o.precio, bono = o.bono, forja = o.forja,
+  add({ id = o.id, nombre = o.nombre, apila = 20, mall = true, monedas = o.precio, bono = o.bono,
     hoja = o.hoja or "equipment", sprite = o.sprite, texto = o.texto, tinte = o.color or (o.bono and Mall.BONOS[o.bono].color) })
 end
 

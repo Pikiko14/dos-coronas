@@ -163,6 +163,7 @@ function Juego.tickCliente(app, dt)
       else
         Interfaz.panel = msg.panel
         Interfaz.ciudad = msg.ciudad
+        Interfaz.npcMision = msg.npc
         if msg.tienda then Interfaz.tienda = msg.tienda end
       end
     end

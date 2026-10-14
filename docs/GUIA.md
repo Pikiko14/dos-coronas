@@ -118,11 +118,18 @@ cambias números a propósito, actualiza esas pruebas.
   el loot puede ser de cualquier clase.
 - **Eventos:** *Captura del estandarte* y *Batalla de cristales* (mapas temáticos por facción, no lineales; el portador del cristal se ve; aviso en marquesina).
   Premios: 1000 de oro al equipo ganador del estandarte, monedas del mall (5 ganar / 2 perder), polvo arcano, pergaminos.
+- **Misiones** (`compartido/dominio/misiones.lua`, curadas en `compartido/datos/misiones.xml`): tipos *cazar*, *recolectar* (trofeos que sueltan las criaturas
+  solo mientras la misión está activa) y *entregar* (paquetes y cartas entre PNJ). Hay una misión de cazar por **cada criatura** (élites y jefes incluidos), otra
+  de repetición más difícil y entregas entre ciudades y puestos. Las dan el tablón de cada ciudad y un PNJ en cada puesto del mapa (marca `!` sobre su cabeza;
+  `?` si puedes entregar). La recompensa sale de la dificultad (normal/difícil/épica) y el nivel de la misión; la experiencia se ajusta al nivel de quien la
+  entrega y no pasa de un nivel entero. Las **cadenas** (`requiere`/`siguiente`) difíciles dan premio gordo, pero pocos: 2 addons y 2 monturas en total.
+  **Q** abre el diario: elige una misión y verás qué hacer, dónde ir y qué dan; "Seguir" la marca en el minimapa, el mapa del mundo (M), una flecha junto
+  al personaje y el cuadro de la esquina. Aceptar y entregar solo se puede junto al PNJ (lo valida el servidor).
 - **Viajes:** muelles con barqueros y barcos entre continentes; monturas (también de vehículo).
 - **Grupos:** invita solo el líder; cualquiera puede salir; se puede cambiar de líder.
 - **Chat:** pestañas con iconos; solo ves mensajes desde que te conectas; scroll con rueda/AvPág/RePág.
 - **Item Mall** (se paga con Monedas Corona, repartidas con `/admin monedas`):
-  - *Objetos:* tarjeta de experiencia, pergaminos de atributos y de forja (+6, +10 seguro).
+  - *Objetos:* tarjeta de experiencia y pergaminos de atributos.
   - *Forja:* paquetes de **polvo de encantamiento** (x10, x50, x150) que van directo a la bolsa.
   - *Addons:* skins de personaje; se ven en el panel del personaje. 12 en total (2 exclusivos + 10 de clase).
   - *Monturas.*

@@ -74,16 +74,13 @@ function E.correr()
     local def = Personajes.skins[id]
     if def then
       guardar("addon_" .. id, def)
-      if id == "skin_gladiador" or id == "skin_barbaro" or id == "skin_archimago" or id == "skin_hechicero_fuego" or id == "skin_montaraz"
-        or id == "skin_arquero_elfico" or id == "skin_sacerdotisa_alba" or id == "skin_hoplita" or id == "skin_senor_huesos" or id == "skin_dama_lich" then
-        lista[#lista + 1] = def
-      end
+      lista[#lista + 1] = def
       n = n + 1
     end
   end
   do
     local E = 3
-    local ancho, alto = 4 * 36 * E + 10, #lista * 36 * E + 10
+    local ancho, alto = 4 * 52 * E + 10, #lista * 52 * E + 10
     local cv = love.graphics.newCanvas(ancho, alto)
     love.graphics.push("all")
     love.graphics.setCanvas({ cv, stencil = true })
@@ -91,7 +88,7 @@ function E.correr()
     for k, def in ipairs(lista) do
       for dir = 1, 4 do
         love.graphics.push()
-        love.graphics.translate(5 + (dir - 1) * 36 * E + 18 * E, (k - 1) * 36 * E + 33 * E)
+        love.graphics.translate(5 + (dir - 1) * 52 * E + 26 * E, (k - 1) * 52 * E + 47 * E)
         love.graphics.scale(E, E)
         love.graphics.setColor(1, 1, 1, 1)
         Personajes.dibujar(def, dir, false, 0, 0, 0)
@@ -146,6 +143,32 @@ function E.correr()
     love.graphics.pop()
     local datos = cv:newImageData()
     local f = io.open(Log.carpeta() .. "/capturas/web/ataques_vista.png", "wb")
+    if f then f:write(datos:encode("png"):getString()) f:close() end
+  end
+  -- hoja de revisión del vaivén de los árboles: 10 instantes (cada 0,45 s) de un árbol, un pino, una palma y un arbusto
+  do
+    local Objetos = require("src.presentacion.render.objetos")
+    local nombres = { "arbol", "arbol_pino", "palma", "arbusto", "arbol_seco" }
+    local E2 = 3
+    local cv = love.graphics.newCanvas(10 * 40 * E2, #nombres * 70 * E2)
+    local reloj = love.timer.getTime
+    love.graphics.push("all")
+    love.graphics.setCanvas({ cv, stencil = true })
+    love.graphics.clear(0.35, 0.55, 0.3, 1)
+    for r, nombre in ipairs(nombres) do
+      for c = 1, 10 do
+        love.timer.getTime = function() return 10 + (c - 1) * 0.45 end
+        love.graphics.push()
+        love.graphics.translate((c - 1) * 40 * E2, (r - 1) * 70 * E2)
+        love.graphics.scale(E2, E2)
+        Objetos.dibujar(nombre, 0, 20, 64, nil, nil, 0)
+        love.graphics.pop()
+      end
+    end
+    love.timer.getTime = reloj
+    love.graphics.pop()
+    local datos = cv:newImageData()
+    local f = io.open(Log.carpeta() .. "/capturas/web/arboles_vista.png", "wb")
     if f then f:write(datos:encode("png"):getString()) f:close() end
   end
   Log.info("exportar_web: " .. n .. " sprites en " .. Log.carpeta() .. "/capturas/web")

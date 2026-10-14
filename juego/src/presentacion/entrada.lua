@@ -2,6 +2,7 @@ local Interfaz = require("src.presentacion.interfaz")
 local Sonido = require("src.presentacion.sonido")
 local Util = require("compartido.dominio.util")
 local Datos = require("compartido.dominio.datos")
+local Misiones = require("compartido.dominio.misiones")
 local Dibujo = require("src.presentacion.render.dibujo")
 local Ajustes = require("src.presentacion.ajustes")
 local Config = require("src.infraestructura.config")
@@ -246,12 +247,6 @@ function Entrada.manejar(app, id)
   if id:sub(1, 8) == "gr_sube_" then app.actuar("gremio_rango", { id = tonumber(id:sub(9)), sube = true }) return end
   if id:sub(1, 8) == "gr_baja_" then app.actuar("gremio_rango", { id = tonumber(id:sub(9)), sube = false }) return end
   if id:sub(1, 7) == "gr_exp_" then app.actuar("gremio_expulsar", { id = tonumber(id:sub(8)) }) return end
-  if id:sub(1, 10) == "enc_forja_" then
-    -- forjar con un pergamino del mall: sube la pieza +1 sin fallar
-    local donde, ref = tostring(Interfaz.encSel or ""):match("^(%a+)_(.+)$")
-    if donde then app.actuar("encantar", { donde = donde, ref = ref, pergamino = id:sub(11) }) end
-    return
-  end
   if id == "enc_go" then
     local donde, ref = tostring(Interfaz.encSel or ""):match("^(%a+)_(.+)$")
     if donde then app.actuar("encantar", { donde = donde, ref = ref }) end
@@ -337,8 +332,46 @@ function Entrada.manejar(app, id)
   if id:sub(1, 12) == "casa_entrar_" then app.actuar("casa_entrar", { id = id:sub(13) }) Interfaz.panel = "casa" return end
   if id == "casa_salir" then app.actuar("casa_salir") Interfaz.panel = nil return end
   if id:sub(1, 7) == "mueble_" then app.actuar("mueble", { tipo = id:sub(8) }) return end
-  if id:sub(1, 10) == "mision_ok_" then app.actuar("mision_aceptar", { id = id:sub(11) }) return end
-  if id:sub(1, 11) == "mision_fin_" then app.actuar("mision_entregar", { id = id:sub(12) }) return end
+  if id:sub(1, 10) == "mision_ok_" then
+    local mid = id:sub(11)
+    app.actuar("mision_aceptar", { id = mid })
+    -- si no seguías ninguna, la nueva pasa a ser la que se marca en el mapa
+    if not Misiones.seguida then Misiones.seguida = mid end
+    return
+  end
+  if id:sub(1, 11) == "mision_fin_" then
+    app.actuar("mision_entregar", { id = id:sub(12) })
+    if Misiones.seguida == id:sub(12) then Misiones.seguida = nil end
+    return
+  end
+  if id:sub(1, 11) == "mision_sel_" then
+    if Interfaz.panel == "diario" then Interfaz.misSelDiario = id:sub(12) else Interfaz.misSel = id:sub(12) end
+    Interfaz.misAband = nil
+    return
+  end
+  if id:sub(1, 14) == "mision_seguir_" then Misiones.seguida = id:sub(15) return end
+  if id == "mision_noseguir" then Misiones.seguida = nil return end
+  if id:sub(1, 12) == "mision_mapa_" then
+    local q = Misiones.por_id[id:sub(13)]
+    local pj = app.jugador
+    local d = q and pj and Misiones.destinos(pj, q, pj.misiones and pj.misiones[q.id])[1]
+    Misiones.seguida = id:sub(13)
+    Interfaz.panel = "mapa"
+    if d and Interfaz.mapaCentrarEn then Interfaz.mapaCentrarEn(d.x, d.y, 4) end
+    return
+  end
+  if id:sub(1, 13) == "mision_aband_" then
+    local mid = id:sub(14)
+    if Interfaz.misAband == mid then
+      app.actuar("mision_abandonar", { id = mid })
+      if Misiones.seguida == mid then Misiones.seguida = nil end
+      Interfaz.misAband = nil
+    else
+      Interfaz.misAband = mid
+    end
+    return
+  end
+  if id == "hud_misiones" or id == "hud_diario" then Interfaz.panel = (Interfaz.panel ~= "diario") and "diario" or nil return end
   local jugador, mundo = app.jugador, app.mundo
   if id == "oro_10" then app.actuar("comercio_oro", { oro = ((jugador.sesion and mundo.sesiones[jugador.sesion] and mundo.sesiones[jugador.sesion].oferta[jugador.id].oro) or 0) + 10 }) return end
   if id == "oro_50" then app.actuar("comercio_oro", { oro = ((jugador.sesion and mundo.sesiones[jugador.sesion] and mundo.sesiones[jugador.sesion].oferta[jugador.id].oro) or 0) + 50 }) return end
@@ -672,6 +705,10 @@ function Entrada.rueda(app, dy)
     local mx, my = love.mouse.getPosition()
     local esc = Interfaz.escala or 1
     Interfaz.mapaZoomar(dy > 0 and 1.25 or 1 / 1.25, mx / esc, my / esc)
+  elseif Interfaz.panel == "misiones" then
+    Interfaz.misScroll = math.max(0, math.min(Interfaz.misScrollMax or 0, (Interfaz.misScroll or 0) - dy))
+  elseif Interfaz.panel == "diario" then
+    Interfaz.misScrollDiario = math.max(0, math.min(Interfaz.misScrollMax or 0, (Interfaz.misScrollDiario or 0) - dy))
   elseif Interfaz.panel == "vivienda" then
     Interfaz.casaScroll = math.max(0, math.min(Interfaz.casaScrollMax or 0, (Interfaz.casaScroll or 0) - dy))
   elseif Interfaz.panel == "mall" then
@@ -857,6 +894,7 @@ function Entrada.tecla(app, tecla)
   end
   if tecla == "k" then Interfaz.panel = (Interfaz.panel ~= "arbol") and "arbol" or nil end
   if tecla == "m" then Interfaz.panel = (Interfaz.panel ~= "mapa") and "mapa" or nil end
+  if tecla == "q" then Interfaz.panel = (Interfaz.panel ~= "diario") and "diario" or nil end
   if tecla == interactuar then app.actuar("interactuar") end
   if tecla == "t" then Entrada.manejar(app, "hud_comercio") end
   if tecla == "f1" then Interfaz.panel = "ayuda" end

@@ -78,7 +78,7 @@ local function trozo(nombre, variante)
   if t then return t end
   local img = Arte.img(d[1])
   local r = Arte.recorte(d[1], d[2] * 32, d[3] * 32, d[4] * 32, d[5] * 32)
-  t = { img = img, quad = Arte.quad(img, r.x, r.y, r.w, r.h), w = r.w, h = r.h }
+  t = { img = img, quad = Arte.quad(img, r.x, r.y, r.w, r.h), w = r.w, h = r.h, rx = r.x, ry = r.y }
   cache[clave] = t
   return t
 end
@@ -95,15 +95,49 @@ function O.catalogo()
   return lista
 end
 
--- Plantas vivas: se mecen con el viento (los árboles secos, las rocas y lo demás no). amp = cuánto se inclina la copa
--- (cizalla horizontal anclada en la base), vel = rapidez. Cada una lleva su fase para que no se muevan todas a la vez.
+-- Plantas vivas: se mecen con el viento (los árboles secos, las rocas y lo demás no). El sprite va sobre una malla de tiras
+-- finas y cada fila se desplaza una fracción de píxel distinta: la base queda quieta y la copa se dobla en una curva suave,
+-- sin saltos. amp = píxeles que se mueve la copa al máximo, vel = rapidez del vaivén. El viento avanza como una ola por el mapa
+-- (la fase sale de la posición) y sube y baja con ráfagas lentas.
 local VIVAS = {
-  arbol = { 0.030, 1.1 }, arbol_pino = { 0.026, 1.3 }, palma = { 0.050, 1.5 },
-  arbusto = { 0.018, 1.7 }, matorral = { 0.016, 1.8 }, matas = { 0.020, 2.0 }, helecho = { 0.030, 1.9 },
-  hierba_alta = { 0.035, 2.2 }, hierba_seca = { 0.03, 2.1 }, flor_amarilla = { 0.04, 2.0 }, flor_blanca = { 0.04, 2.0 },
-  flor_roja = { 0.04, 2.0 }, flores_mixtas = { 0.04, 2.0 }, flores_naranja = { 0.03, 2.0 }, arbusto_rosa = { 0.02, 1.7 },
-  cultivo = { 0.03, 1.9 },
+  arbol = { 2.4, 0.9 }, arbol_pino = { 2.0, 1.0 }, palma = { 3.0, 1.1 },
+  arbusto = { 1.2, 1.2 }, matorral = { 1.1, 1.2 }, matas = { 1.1, 1.4 }, helecho = { 1.3, 1.4 },
+  hierba_alta = { 1.5, 1.5 }, hierba_seca = { 1.3, 1.5 }, flor_amarilla = { 1.1, 1.4 }, flor_blanca = { 1.1, 1.4 },
+  flor_roja = { 1.1, 1.4 }, flores_mixtas = { 1.1, 1.4 }, flores_naranja = { 1.0, 1.4 }, arbusto_rosa = { 1.1, 1.2 },
+  cultivo = { 0.9, 1.4 },
 }
+local TIRA = 4   -- alto de cada fila de la malla, en píxeles
+
+-- La malla de un sprite (una sola vez): su propia copia con filtro suave, para que los desplazamientos de fracción de píxel no
+-- parpadeen, y los vértices preparados. En reposo se ve idéntico al original.
+local function malla(t)
+  if t.malla ~= nil then return t.malla end
+  t.malla = false
+  local ok = pcall(function()
+    local cv = love.graphics.newCanvas(t.w, t.h)
+    love.graphics.push("all")
+    love.graphics.setCanvas(cv)
+    love.graphics.clear(0, 0, 0, 0)
+    love.graphics.origin()
+    love.graphics.setBlendMode("replace", "premultiplied")
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(t.img, t.quad, 0, 0)
+    love.graphics.pop()
+    cv:setFilter("linear", "linear")
+    local filas = math.max(2, math.ceil(t.h / TIRA))
+    local verts = {}
+    for k = 0, filas do
+      local v = k / filas
+      verts[#verts + 1] = { 0, v * t.h, 0, v, 1, 1, 1, 1 }
+      verts[#verts + 1] = { t.w, v * t.h, 1, v, 1, 1, 1, 1 }
+    end
+    local m = love.graphics.newMesh(verts, "strip", "stream")
+    m:setTexture(cv)
+    t.malla, t.filas, t.verts = m, filas, verts
+  end)
+  if not ok then t.malla = false end
+  return t.malla
+end
 
 -- Dibuja con la base en (sx, sy) (centro de abajo de la casilla). fase: desfase del vaivén de las plantas vivas.
 function O.dibujar(nombre, variante, sx, sy, tinte, alfa, fase)
@@ -112,15 +146,29 @@ function O.dibujar(nombre, variante, sx, sy, tinte, alfa, fase)
   if tinte then love.graphics.setColor(tinte[1], tinte[2], tinte[3], alfa or 1)
   else love.graphics.setColor(1, 1, 1, alfa or 1) end
   local viva = VIVAS[nombre]
-  local kx = 0
-  if viva then
-    local ahora = love.timer.getTime()
-    local f = fase or 0
-    -- ráfagas lentas que suben y bajan la fuerza del viento, y un vaivén propio de cada planta
-    local rafaga = 0.75 + 0.25 * math.sin(ahora * 0.35 + f * 0.1)
-    kx = viva[1] * rafaga * (math.sin(ahora * viva[2] + f) + 0.35 * math.sin(ahora * viva[2] * 2.3 + f * 1.7))
+  if viva and t.h >= 8 then
+    local m = malla(t)
+    if m then
+      local ahora = love.timer.getTime()
+      local f = fase or 0
+      -- ráfagas lentas y un vaivén propio con un segundo armónico suave, para que no sea un péndulo perfecto
+      local rafaga = 0.7 + 0.3 * math.sin(ahora * 0.3 + f * 0.15)
+      local viento = (math.sin(ahora * viva[2] + f) + 0.25 * math.sin(ahora * viva[2] * 1.9 + f * 1.6)) * rafaga
+      local verts, filas = t.verts, t.filas
+      local x0, y0 = sx - t.w / 2, sy - t.h
+      for k = 0, filas do
+        local arriba = 1 - k / filas                      -- 0 en la base, 1 en la copa
+        local d = viva[1] * viento * arriba * arriba       -- curva: casi nada abajo, mucho arriba
+        local a, b = verts[k * 2 + 1], verts[k * 2 + 2]
+        a[1], a[2] = x0 + d, y0 + (k / filas) * t.h
+        b[1], b[2] = x0 + t.w + d, y0 + (k / filas) * t.h
+      end
+      m:setVertices(verts)
+      love.graphics.draw(m)
+      return true
+    end
   end
-  love.graphics.draw(t.img, t.quad, sx, sy, 0, 1, 1, t.w / 2, t.h, kx, 0)
+  love.graphics.draw(t.img, t.quad, sx, sy, 0, 1, 1, t.w / 2, t.h)
   return true
 end
 
