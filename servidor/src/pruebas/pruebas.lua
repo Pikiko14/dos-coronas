@@ -3412,12 +3412,18 @@ mundo.tiempo = 100
       end
       return lista
     end
-    local oroAntes = p.oro
+    local oroAntes, monedasAntes = p.oro, p.monedas or 0
+    local addonsAntes = 0
+    for _ in pairs(p.addons or {}) do addonsAntes = addonsAntes + 1 end
     mundo:interactuar(p)
     local caido = suelo(p.id)
     local oroSuelo, objetosSuelo = 0, 0
     for _, e in ipairs(caido) do oroSuelo = oroSuelo + (e.oro or 0) objetosSuelo = objetosSuelo + (#(e.items or {})) end
-    fallar(errores, "abrir el cofre deja el oro y un objeto en el suelo", oroSuelo >= 600 and objetosSuelo >= 1, oroSuelo .. "/" .. objetosSuelo)
+    local addonsDespues = 0
+    for _ in pairs(p.addons or {}) do addonsDespues = addonsDespues + 1 end
+    -- el premio es un objeto en el suelo, salvo que toque un addon o monedas (esos se entregan al momento)
+    local entregado = addonsDespues > addonsAntes or (p.monedas or 0) > monedasAntes
+    fallar(errores, "abrir el cofre deja el oro y el premio en el suelo", oroSuelo >= 600 and (objetosSuelo >= 1 or entregado), oroSuelo .. "/" .. objetosSuelo)
     fallar(errores, "no se entrega al momento", p.oro == oroAntes)
     fallar(errores, "el cofre desaparece al abrirlo", cofre.borrar == true and cofre.vivo == false)
     -- los premios: equipo del escalón máximo de cualquier oficio, objetos del mall y addons

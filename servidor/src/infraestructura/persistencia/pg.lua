@@ -1,24 +1,8 @@
 local Red = require("compartido.infraestructura.red")
 
 local Pg = {}
+local Sock = require("compartido.infraestructura.sockets")
 local okffi, ffi = pcall(require, "ffi")
-if okffi then
-  pcall(function()
-    ffi.cdef[[
-      typedef struct timeval {
-        long tv_sec;
-        long tv_usec;
-      } timeval;
-      typedef struct fd_set {
-        unsigned int fd_count;
-        unsigned long long fd_array[64];
-      } fd_set;
-      int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, const timeval *timeout);
-    ]]
-  end)
-end
-
-local FIONBIO = -2147195266
 
 local function i32(n)
   n = math.floor(n)
@@ -64,43 +48,31 @@ end
 
 function Pg.conectar(host, puerto, usuario, base, clave)
   if not okffi or not Red.disponible() then return nil, "Sin red para la base de datos." end
-  local ws2 = ffi.load("ws2_32")
-  local s = ws2.socket(2, 1, 6)
-  if s == nil or tonumber(s) == tonumber(ffi.cast("unsigned long long", -1)) then
-    return nil, "No se pudo abrir el socket de Postgres."
+  local s = Sock.abrir()
+  if not s then return nil, "No se pudo abrir el socket de Postgres." end
+  Sock.nobloqueo(s)
+  local resultado, err0 = Sock.iniciarConexion(s, host, puerto)
+  if resultado == "error" or (resultado == "pendiente" and not Sock.esperar(s, true, 3000)) then
+    Sock.cerrar(s)
+    return nil, "Postgres no responde en " .. host .. ":" .. puerto .. "."
   end
-  local nb = ffi.new("unsigned long[1]", 1)
-  ws2.ioctlsocket(s, FIONBIO, nb)
-  local function esperar(leer, ms)
-    local set = ffi.new("fd_set")
-    set.fd_count = 1
-    set.fd_array[0] = s
-    local tv = ffi.new("timeval")
-    tv.tv_sec = math.floor(ms / 1000)
-    tv.tv_usec = (ms % 1000) * 1000
-    local r = leer and ws2.select(0, set, nil, nil, tv) or ws2.select(0, nil, set, nil, tv)
-    return r > 0
-  end
-  local addr = ffi.new("sockaddr_in")
-  addr.sin_family = 2
-  addr.sin_port = ws2.htons(puerto)
-  addr.sin_addr = ws2.inet_addr(host)
-  if ws2.connect(s, addr, ffi.sizeof(addr)) ~= 0 then
-    local err = ws2.WSAGetLastError()
-    if err ~= 10035 or not esperar(false, 3000) then
-      ws2.closesocket(s)
+  if resultado == "pendiente" then
+    -- la espera terminó: comprobar que la conexión de verdad se hizo
+    local ok = Sock.conexionLista(s)
+    if not ok then
+      Sock.cerrar(s)
       return nil, "Postgres no responde en " .. host .. ":" .. puerto .. "."
     end
   end
   local buf = ""
   local function recvRaw()
     local raw = ffi.new("char[8192]")
-    local n = ws2.recv(s, raw, 8191, 0)
-    if n < 0 and ws2.WSAGetLastError() == 10035 then
-      if not esperar(true, 3000) then return nil end
-      n = ws2.recv(s, raw, 8191, 0)
+    local n, tipo = Sock.recibir(s, raw, 8191)
+    if not n and tipo == "espera" then
+      if not Sock.esperar(s, false, 3000) then return nil end
+      n = Sock.recibir(s, raw, 8191)
     end
-    if n <= 0 then return nil end
+    if not n or n <= 0 then return nil end
     return ffi.string(raw, n)
   end
   local function pull(n)
@@ -117,14 +89,12 @@ function Pg.conectar(host, puerto, usuario, base, clave)
     local off = 1
     while off <= #texto do
       local resto = texto:sub(off)
-      local raw = ffi.new("char[?]", #resto + 1)
-      ffi.copy(raw, resto, #resto)
-      local n = ws2.send(s, raw, #resto, 0)
-      if n < 0 and ws2.WSAGetLastError() == 10035 then
-        if not esperar(false, 3000) then return false end
-        n = ws2.send(s, raw, #resto, 0)
+      local n, tipo = Sock.enviar(s, resto)
+      if not n and tipo == "espera" then
+        if not Sock.esperar(s, true, 3000) then return false end
+        n, tipo = Sock.enviar(s, resto)
       end
-      if n <= 0 then return false end
+      if not n or n <= 0 then return false end
       off = off + n
     end
     return true
@@ -155,12 +125,12 @@ function Pg.conectar(host, puerto, usuario, base, clave)
           local pass = cstr(clave or "")
           enviar("p" .. i32(#pass + 4) .. pass)
         elseif auth ~= 0 then
-          ws2.closesocket(s)
+          Sock.cerrar(s)
           return nil, "Postgres pide una autenticación que este cliente no soporta (solo trust o password)."
         end
       elseif tipo == "E" then
         local texto = textoPg(cuerpo, "M") or "Error de Postgres."
-        ws2.closesocket(s)
+        Sock.cerrar(s)
         return nil, texto
       elseif tipo == "Z" then
         break
@@ -170,9 +140,9 @@ function Pg.conectar(host, puerto, usuario, base, clave)
   end
   local listo, err = arranque()
   if not listo then return nil, err end
-  local conn = { sock = s, ws2 = ws2 }
+  local conn = { sock = s }
   function conn:cerrar()
-    if self.sock then self.ws2.closesocket(self.sock) self.sock = nil end
+    if self.sock then Sock.cerrar(self.sock) self.sock = nil end
   end
   function conn:consulta(sql)
     local payload = sql .. "\0"

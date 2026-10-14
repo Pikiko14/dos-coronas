@@ -1,120 +1,19 @@
 local Util = require("compartido.dominio.util")
 local Red = { lista = false }
 
+-- Los sockets los pone sockets.lua: Winsock en Windows (desarrollo y cliente) y la libc en Linux (servidor de la beta).
+local Sock = require("compartido.infraestructura.sockets")
 local okffi, ffi = pcall(require, "ffi")
-if not okffi then
-  function Red.disponible() return false end
-  return Red
-end
-
-ffi.cdef[[
-typedef unsigned long long UINT_PTR;
-typedef UINT_PTR SOCKET;
-typedef struct WSAData {
-  unsigned short wVersion;
-  unsigned short wHighVersion;
-  unsigned short iMaxSockets;
-  unsigned short iMaxUdpDg;
-  char resto[512];
-} WSADATA;
-int WSAStartup(unsigned short wVersionRequested, WSADATA *lpWSAData);
-int WSACleanup(void);
-int WSAGetLastError(void);
-SOCKET socket(int af, int type, int protocol);
-int closesocket(SOCKET s);
-int bind(SOCKET s, const void *name, int namelen);
-int listen(SOCKET s, int backlog);
-SOCKET accept(SOCKET s, void *addr, int *addrlen);
-int connect(SOCKET s, const void *name, int namelen);
-int send(SOCKET s, const char *buf, int len, int flags);
-int recv(SOCKET s, char *buf, int len, int flags);
-int ioctlsocket(SOCKET s, long cmd, unsigned long *argp);
-int getsockopt(SOCKET s, int level, int optname, char *optval, int *optlen);
-int setsockopt(SOCKET s, int level, int optname, const char *optval, int optlen);
-unsigned short htons(unsigned short hostshort);
-unsigned long inet_addr(const char *cp);
-typedef struct sockaddr_in {
-  short sin_family;
-  unsigned short sin_port;
-  unsigned long sin_addr;
-  char sin_zero[8];
-} sockaddr_in;
-typedef struct timeval {
-  long tv_sec;
-  long tv_usec;
-} timeval;
-typedef struct fd_set {
-  unsigned int fd_count;
-  unsigned long long fd_array[64];
-} fd_set;
-int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, const timeval *timeout);
-]]
-
-local ws2 = ffi.load("ws2_32")
--- 0x8004667E no cabe en un long con signo; este valor conserva esos bits.
-local FIONBIO = -2147195266
-local SOL_SOCKET = 0xffff
-local SO_ERROR = 0x1007
-local iniciado = false
-
-local function asegurar()
-  if iniciado then return true end
-  local datos = ffi.new("WSADATA")
-  local r = ws2.WSAStartup(0x0202, datos)
-  iniciado = r == 0
-  return iniciado
-end
-
-local function nobloqueo(s)
-  local nb = ffi.new("unsigned long[1]", 1)
-  ws2.ioctlsocket(s, FIONBIO, nb)
-end
-
-local function valido(s)
-  if s == nil then return false end
-  -- INVALID_SOCKET es -1. Comparar el cdata tal cual falla: no cabe en un número de Lua.
-  return ffi.cast("intptr_t", s) ~= -1
-end
-
-local function sinDemora(s)
-  local uno = ffi.new("int[1]", 1)
-  ws2.setsockopt(s, 6, 1, ffi.cast("const char *", uno), 4)
-end
-
-local function errorSocket(s)
-  if not valido(s) then return 10038 end
-  local valor = ffi.new("int[1]")
-  local largo = ffi.new("int[1]", 4)
-  if ws2.getsockopt(s, SOL_SOCKET, SO_ERROR, ffi.cast("char *", valor), largo) ~= 0 then
-    return ws2.WSAGetLastError()
-  end
-  return tonumber(valor[0]) or 0
-end
-
-local function handshake(s)
-  local set = ffi.new("fd_set")
-  set.fd_count = 1
-  set.fd_array[0] = s
-  local tv = ffi.new("timeval")
-  if ws2.select(0, nil, set, nil, tv) <= 0 then return false end
-  local fallo = errorSocket(s)
-  if fallo ~= 0 and fallo ~= 10035 and fallo ~= 10036 then return false, fallo end
-  return true
-end
 
 local function enviarRaw(sock, texto, cola)
-  if not valido(sock) or not texto or #texto == 0 then return true end
-  -- ffi.copy con un string copia también el \0 final: el buffer necesita un byte más
-  local buf = ffi.new("char[?]", #texto + 1)
-  ffi.copy(buf, texto, #texto)
-  local n = ws2.send(sock, buf, #texto, 0)
-  if n < 0 then
-    local err = ws2.WSAGetLastError()
-    if err == 10035 or err == 10055 then
+  if not sock or not texto or #texto == 0 then return true end
+  local n, tipo, cod = Sock.enviar(sock, texto)
+  if not n then
+    if tipo == "espera" then
       if #cola < 24 then cola[#cola + 1] = texto end
       return true
     end
-    return false, err
+    return false, cod
   end
   if n < #texto then cola[#cola + 1] = texto:sub(n + 1) end
   return true
@@ -134,15 +33,15 @@ local function bombear(sock, estado)
   end
   local buf = ffi.new("char[8192]")
   while true do
-    local n = ws2.recv(sock, buf, 8191, 0)
-    if n > 0 then
+    local n, tipo, err = Sock.recibir(sock, buf, 8191)
+    if n and n > 0 then
       estado.buffer = (estado.buffer or "") .. ffi.string(buf, n)
       if #estado.buffer > 800000 then estado.buffer = estado.buffer:sub(-200000) end
     elseif n == 0 then
       return false, 0
+    elseif tipo == "espera" then
+      break
     else
-      local err = ws2.WSAGetLastError()
-      if err == 10035 or err == 0 then break end
       return false, err
     end
   end
@@ -167,27 +66,23 @@ local function sacarLineas(estado)
 end
 
 function Red.disponible()
-  return asegurar()
+  return okffi and Sock.disponible()
 end
 
 function Red.escuchar(puerto)
-  if not asegurar() then return nil, "sin red" end
-  local s = ws2.socket(2, 1, 6)
-  if not valido(s) then return nil, "socket" end
-  nobloqueo(s)
-  local addr = ffi.new("sockaddr_in")
-  addr.sin_family = 2
-  addr.sin_port = ws2.htons(puerto)
-  addr.sin_addr = ws2.inet_addr("0.0.0.0")
-  if ws2.bind(s, addr, ffi.sizeof(addr)) ~= 0 then
-    ws2.closesocket(s)
-    return nil, "puerto ocupado"
+  if not Red.disponible() then return nil, "sin red" end
+  local s = Sock.abrir()
+  if not s then return nil, "socket" end
+  Sock.nobloqueo(s)
+  local ok, err = Sock.escuchar(s, puerto)
+  if not ok then
+    Sock.cerrar(s)
+    return nil, err or "puerto ocupado"
   end
-  ws2.listen(s, 8)
   local srv = { sock = s, clientes = {}, log = {} }
   function srv:cerrar()
-    for _, c in ipairs(self.clientes) do ws2.closesocket(c.sock) end
-    ws2.closesocket(self.sock)
+    for _, c in ipairs(self.clientes) do Sock.cerrar(c.sock) end
+    Sock.cerrar(self.sock)
   end
   function srv:puedeEnviar(id)
     for _, c in ipairs(self.clientes) do
@@ -218,10 +113,10 @@ function Red.escuchar(puerto)
   function srv:actualizar()
     local eventos = {}
     while true do
-      local nuevo = ws2.accept(self.sock, nil, nil)
-      if not valido(nuevo) then break end
-      nobloqueo(nuevo)
-      sinDemora(nuevo)
+      local nuevo = Sock.aceptar(self.sock)
+      if not nuevo then break end
+      Sock.nobloqueo(nuevo)
+      Sock.sinDemora(nuevo)
       self.seq = (self.seq or 0) + 1
       local id = "c" .. self.seq
       self.clientes[#self.clientes + 1] = { id = id, sock = nuevo, buffer = "", cola = {} }
@@ -235,7 +130,7 @@ function Red.escuchar(puerto)
         if #(c.cola or {}) == 0 or c.cerrar > 20 then bien, cod = false, "expulsado" end
       end
       if not bien then
-        ws2.closesocket(c.sock)
+        Sock.cerrar(c.sock)
         eventos[#eventos + 1] = { tipo = "cierra", id = c.id, codigo = cod }
       else
         for _, msg in ipairs(sacarLineas(c)) do
@@ -251,16 +146,12 @@ function Red.escuchar(puerto)
 end
 
 function Red.conectar(host, puerto)
-  if not asegurar() then return nil, "sin red" end
-  local s = ws2.socket(2, 1, 6)
-  if not valido(s) then return nil, "socket" end
-  nobloqueo(s)
-  sinDemora(s)
-  local addr = ffi.new("sockaddr_in")
-  addr.sin_family = 2
-  addr.sin_port = ws2.htons(puerto)
-  addr.sin_addr = ws2.inet_addr(host)
-  ws2.connect(s, addr, ffi.sizeof(addr))
+  if not Red.disponible() then return nil, "sin red" end
+  local s = Sock.abrir()
+  if not s then return nil, "socket" end
+  Sock.nobloqueo(s)
+  Sock.sinDemora(s)
+  Sock.iniciarConexion(s, host, puerto)
   local cli = { sock = s, buffer = "", cola = {}, listo = false }
   function cli:enviar(tabla)
     local texto = Util.jsonEnc(tabla) .. "\n"
@@ -272,8 +163,8 @@ function Red.conectar(host, puerto)
   end
   function cli:actualizar()
     if not self.listo then
-      local ok, fallo = handshake(self.sock)
-      if fallo then return nil, "cerrado", fallo end
+      local ok, fallo = Sock.conexionLista(self.sock)
+      if ok == nil then return nil, "cerrado", fallo end
       if not ok then return {} end
       self.listo = true
     end
@@ -282,7 +173,7 @@ function Red.conectar(host, puerto)
     return sacarLineas(self)
   end
   function cli:cerrar()
-    ws2.closesocket(self.sock)
+    Sock.cerrar(self.sock)
   end
   return cli
 end

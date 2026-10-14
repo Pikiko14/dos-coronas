@@ -2,7 +2,13 @@ local Log = {}
 
 function Log.carpeta()
   if love and love.filesystem and love.filesystem.getSource then
-    return (love.filesystem.getSource() or "."):gsub("\\", "/")
+    local fuente = (love.filesystem.getSource() or "."):gsub("\\", "/")
+    -- empaquetado (servidor.love) la fuente es el archivo: los registros van a la carpeta que lo contiene
+    if fuente:lower():sub(-5) == ".love" and love.filesystem.getSourceBaseDirectory then
+      local base = (love.filesystem.getSourceBaseDirectory() or "."):gsub("\\", "/")
+      return base
+    end
+    return fuente
   end
   return "."
 end
@@ -21,8 +27,11 @@ function Log.asegurar(sub)
   if love and love.filesystem and love.filesystem.createDirectory then
     love.filesystem.createDirectory(sub)
   end
-  local destino = (Log.carpeta() .. "/" .. sub):gsub("/", "\\")
-  os.execute('mkdir "' .. destino .. '" 2>nul')
+  -- en Windows el mkdir del sistema (en Linux basta con love.filesystem.createDirectory)
+  if package.config:sub(1, 1) == "\\" then
+    local destino = (Log.carpeta() .. "/" .. sub):gsub("/", "\\")
+    os.execute('mkdir "' .. destino .. '" 2>nul')
+  end
 end
 
 function Log.volcar(nombre, texto)

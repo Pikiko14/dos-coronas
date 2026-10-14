@@ -569,3 +569,5 @@ CRIATURAS CADA DOS NIVELES, CAMPAMENTOS Y MONEDAS
 
 == Comercio de oficio ==
 - Las mercancías solo se compran y se entregan en las ciudades (los puestos del camino ya no comercian). La entrega paga más cuanto más lejos está la ciudad de la que compraste: DIST_BONO y DIST_BONO_MAX en constantes.xml (sección oficios). El panel del mercader enseña el bono en verde bajo lo que llevas.
+
+Despliegue del servidor en un VPS Linux (beta): ver despliegue/DESPLIEGUE_VPS.md (instalacion, operacion, copias y seguridad).

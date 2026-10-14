@@ -1,0 +1,31 @@
+[Unit]
+Description=Servidor de Dos Coronas
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=doscoronas
+Group=doscoronas
+# El .env (con el puerto, la clave de PostgreSQL y los ajustes) está junto a servidor.love
+WorkingDirectory=/opt/doscoronas
+# LÖVE sin pantalla ni sonido: solo consola y red
+Environment=HOME=/var/lib/doscoronas
+Environment=SDL_VIDEODRIVER=dummy
+Environment=SDL_AUDIODRIVER=dummy
+ExecStart=/usr/bin/love /opt/doscoronas/servidor.love
+Restart=always
+RestartSec=5
+# El servidor guarda a los jugadores al recibir la señal de parada
+KillSignal=SIGINT
+TimeoutStopSec=30
+# Endurecimiento básico
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/doscoronas /opt/doscoronas
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

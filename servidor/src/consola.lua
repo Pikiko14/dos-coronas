@@ -17,6 +17,13 @@ end
 function Consola.cargar()
   nota("Dos Coronas — servidor")
   nota("Configuración: " .. (Config.origen or "valores por defecto (no hay .env)"))
+  -- una base de datos que no sea la local de desarrollo debe llevar una clave fuerte
+  local pg = Config.postgres
+  if Config.almacen == "postgres" and pg and #(pg.clave or "") < 16 and pg.host ~= "127.0.0.1" and pg.host ~= "localhost" then
+    nota("AVISO: la clave de PostgreSQL (DOSCORONAS_PG_PASSWORD) es corta o está vacía: usa una de 24 caracteres o más.")
+  elseif Config.almacen == "postgres" and pg and #(pg.clave or "") < 16 then
+    nota("AVISO: la clave de PostgreSQL es corta o está vacía (vale para desarrollo local; en el VPS usa la que genera instalar.sh).")
+  end
   estado.mundo = Servicio.crearMundo({ admin = Config.admin, eventos = Config.eventos, ajustes = { juego = Config.juego, eventos = Config.eventos } })
   if #(estado.mundo.ajustesCambiados or {}) > 0 then
     nota("Ajustes del .env: " .. table.concat(estado.mundo.ajustesCambiados, "; "))
