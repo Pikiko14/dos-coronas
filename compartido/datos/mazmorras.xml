@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Mazmorras: nombre, nivel minimo, biomas donde se busca su puerta, criaturas (id,nivel), jefe y planos de las salas.
+  Mazmorras: nombre, nivel minimo, biomas donde se busca su puerta, criaturas (id,nivel), jefe y planos.
 -->
 <mazmorras>
   <!-- ---- datos de cada mazmorra ---- -->
@@ -37,46 +37,18 @@
     </monstruos>
     <tinte lista="0.85,0.75,1"/>
   </mazmorra>
-  <!-- ---- planos: rectangulos x,y,ancho,alto en casillas ---- -->
-  <plano id="mz1" h="72" w="56">
-    <entrada lista="20,60,16,8"/>
-    <jefe lista="14,2,28,9"/>
-    <pasillos>
-      <i lista="26,52,4,8"/>
-      <i lista="26,30,4,8"/>
-      <i lista="26,10,4,6"/>
-    </pasillos>
-    <salas>
-      <i lista="10,38,36,14"/>
-      <i lista="12,16,32,14"/>
-    </salas>
+  <!-- ---- planos: tamaño, sala de entrada y sala del jefe (x,y,ancho,alto en casillas), salas intermedias, campos de
+       trampas y semilla del generador (compartido/dominio/mazmorras.lua las distribuye en ramas, bucles y callejones) ---- -->
+  <plano id="mz1" h="84" w="68" salas="8" trampas="14" semilla="11">
+    <entrada lista="26,72,16,10"/>
+    <jefe lista="18,2,32,12"/>
   </plano>
-  <plano id="mz2" h="56" w="76">
-    <entrada lista="3,40,14,11"/>
-    <jefe lista="44,2,28,14"/>
-    <pasillos>
-      <i lista="17,43,11,4"/>
-      <i lista="44,40,12,4"/>
-      <i lista="62,16,4,10"/>
-    </pasillos>
-    <salas>
-      <i lista="28,34,16,16"/>
-      <i lista="56,26,16,18"/>
-    </salas>
+  <plano id="mz2" h="68" w="88" salas="9" trampas="16" semilla="23">
+    <entrada lista="3,54,14,11"/>
+    <jefe lista="56,2,28,14"/>
   </plano>
-  <plano id="mz3" h="66" w="66">
-    <entrada lista="27,54,12,9"/>
-    <jefe lista="20,3,26,19"/>
-    <pasillos>
-      <i lista="31,44,4,10"/>
-      <i lista="13,34,8,4"/>
-      <i lista="45,34,8,4"/>
-      <i lista="31,22,4,8"/>
-    </pasillos>
-    <salas>
-      <i lista="21,30,24,14"/>
-      <i lista="2,26,11,18"/>
-      <i lista="53,26,11,18"/>
-    </salas>
+  <plano id="mz3" h="80" w="80" salas="10" trampas="18" semilla="37">
+    <entrada lista="34,68,12,9"/>
+    <jefe lista="26,3,28,16"/>
   </plano>
 </mazmorras>

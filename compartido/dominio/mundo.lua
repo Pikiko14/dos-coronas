@@ -171,7 +171,9 @@ end
 -- también en la pestaña "Eventos" del chat.
 function Mundo:avisoEvento(canal, de, texto, origen)
   self:mensaje(canal, de, texto, origen)
-  self.mensajes[#self.mensajes].evento = true
+  local m = self.mensajes[#self.mensajes]
+  -- los avisos de eventos (empieza, termina, programado, cancelado...) también cruzan la pantalla
+  m.evento, m.marquesina = true, true
 end
 
 function Mundo:decir(p, texto)
@@ -1397,6 +1399,7 @@ function Mundo:autoataque(p)
 end
 
 function Mundo:actualizarJugador(e, dt)
+  if e.modo ~= "mundo" and e.modo ~= "casa" then self:trampasMazmorra(e) end
   if not e.vivo then
     if self.tiempo >= (e.respawn or 0) then self:revivir(e) end
     return
@@ -2057,7 +2060,6 @@ function Mundo:cerrarInstancia(modo, ganador)
   inst.activa = false
   local titulo = modo == "batalla" and "La batalla por cristales" or "Captura el estandarte"
   self:avisoEvento("mundo", "", titulo .. " termina. Victoria: " .. (ganador == "albor" and "Albor" or ganador == "umbra" and "Umbra" or "nadie") .. ".", nil)
-  self.mensajes[#self.mensajes].marquesina = true
   if ganador == "albor" or ganador == "umbra" then
     self.gloria[ganador] = self.gloria[ganador] + 40
   end
@@ -3091,7 +3093,7 @@ function Mundo:compactar(e)
     modo = e.modo, hp = e.hp, hpMax = e.hpMax, mp = e.mp, mpMax = e.mpMax,
     nivel = e.nivel, hoja = e.hoja, base = e.base, cuadros = e.cuadros,
     tam = e.tam, paso = e.paso, porDir = e.porDir, elite = e.elite,
-    estructura = e.estructura, llevaBandera = e.llevaBandera, equipo = e.equipo,
+    estructura = e.estructura, llevaBandera = e.llevaBandera, llevaCristales = e.llevaCristales, equipo = e.equipo,
     rol = e.rol, staff = e.staff, casaId = e.casaId, casaTamano = e.casaTamano, anim = e.anim, portador = e.portador,
     mov = e.mov and true or nil, objetivo = (e.kind == "monstruo") and e.objetivo or nil,
     respawn = (e.kind == "monstruo" or e.kind == "puerta") and e.respawn or nil,

@@ -5,6 +5,7 @@ local Campo = require("src.presentacion.render.campo")
 local Terreno = require("src.presentacion.render.terreno")
 local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
+local Trampas = require("src.presentacion.render.trampas")
 local Efectos = require("src.presentacion.render.efectos")
 local MonturaFx = require("src.presentacion.render.monturas_fx")
 local Arte = require("src.presentacion.render.arte")
@@ -114,6 +115,7 @@ local function placa(e, px, py, alto, jugador, tiempo)
     color = e.staff == "gm" and { 1, 0.82, 0.3 } or { 0.45, 0.85, 1 }
   end
   if e.llevaBandera then nombre = nombre .. " [estandarte]" end
+  if (e.llevaCristales or 0) > 0 then nombre = nombre .. " [" .. e.llevaCristales .. (e.llevaCristales == 1 and " cristal]" or " cristales]") end
   if e.gremio and (e.kind == "jugador" or e.kind == "bot") then nombre = nombre .. " <" .. e.gremio .. ">" end
   local ancho = f:getWidth(nombre)
   local y = py - alto - 15
@@ -189,6 +191,7 @@ function D.escena(mundo, jugador, cam, mx, my)
   else
     love.graphics.setColor(1, 1, 1, 1)
     Terreno.dibujar(mapa, cam.x, cam.y, ancho, alto, mundo.tiempo)
+    if mapa.trampas then Trampas.dibujar(mapa, mundo.tiempo, cam.x, cam.y, ancho, alto) end
   end
   -- zonas elevadas: desde el suelo se marca su contorno y su nombre con el nivel de sus criaturas
   if pz == 0 and jugador.modo == "mundo" then
@@ -569,6 +572,26 @@ function D.entidad(e, sx, sy, mundo, jugador)
           Personajes.dibujar(m, e.dir or 1, anda, reloj, sx, pies)
           piesJinete = pies - (m.altura or 10)
         end
+      end
+    end
+    -- quien lleva cristales enemigos: halo del color del cristal y los cristales flotando sobre su cabeza
+    if (e.llevaCristales or 0) > 0 and (e.kind == "jugador" or e.kind == "bot") then
+      local fac = e.faccion == "albor" and "umbra" or "albor"
+      local col = fac == "umbra" and { 0.7, 0.4, 1 } or { 1, 0.85, 0.3 }
+      local reloj = love.timer.getTime()
+      local pulso = 0.5 + 0.5 * math.sin(reloj * 5)
+      love.graphics.setColor(col[1], col[2], col[3], 0.22 + 0.2 * pulso)
+      love.graphics.ellipse("fill", sx, pies - 1, 22, 9)
+      love.graphics.setColor(col[1], col[2], col[3], 0.9)
+      love.graphics.ellipse("line", sx, pies - 1, 22 + 2 * pulso, 9 + pulso)
+      local n = math.min(e.llevaCristales, 5)
+      for i = 1, n do
+        local ang = reloj * 2 + (i - 1) * (math.pi * 2 / n)
+        love.graphics.push()
+        love.graphics.translate(sx + math.cos(ang) * 13, piesJinete - 30 + math.sin(ang) * 4)
+        love.graphics.scale(0.42, 0.42)
+        Objetos.cristal(fac, math.sin(reloj * 4 + i) > 0, 0, 0)
+        love.graphics.pop()
       end
     end
     -- quien lleva el estandarte enemigo: halo del color de esa bandera en el suelo y la bandera a la espalda

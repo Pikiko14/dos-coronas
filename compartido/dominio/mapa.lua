@@ -1345,25 +1345,46 @@ function M.batalla()
   local w, h = 96, 64
   local mapa = M.nuevo(w, h)
   local medio = math.floor(h / 2)
+  local cx = w / 2
   mapa.decorado = {}
+  local function umbra(x) return x >= cx end
+  local function lado(x) return umbra(x) and "umbra" or nil end
+  -- zona de guerra del centro: una franja quemada de borde irregular entre los dos reinos
+  local function mitadFranja(y) return 11 + 3 * math.sin(y * 0.2) + 2 * math.sin(y * 0.47 + 1) end
+  local function enGuerra(x, y) return math.abs(x + 0.5 - cx) <= mitadFranja(y) end
+  local reservado = {}
+  local function reservar(x, y, r)
+    r = r or 0
+    for dx = -r, r do
+      for dy = -r, r do reservado[(x + dx) * 1000 + (y + dy)] = true end
+    end
+  end
+  local function esReservado(x, y) return reservado[x * 1000 + y] end
+
+  -- 1) suelo: Alba (hierba clara) al oeste, Umbra (hierba oscura) al este y la tierra quemada en medio
+  -- (bioma "batalla": sin la decoración al azar del resto del mundo; todo se coloca a mano)
   for y = 0, h - 1 do
     for x = 0, w - 1 do
-      local enCalle = math.abs(y - medio) <= 1 or math.abs(x - w / 2) <= 1
-      -- bioma "batalla": sin la decoración al azar del resto del mundo (todo se coloca a mano)
-      setSuelo(mapa, x, y, enCalle and "camino" or "cicatriz", "batalla", nil)
+      if enGuerra(x, y) then setSuelo(mapa, x, y, "cicatriz", "batalla", lado(x))
+      elseif umbra(x) then setSuelo(mapa, x, y, "hierba_osc", "batalla", "umbra")
+      else setSuelo(mapa, x, y, "hierba", "batalla", nil) end
       if x == 0 or y == 0 or x == w - 1 or y == h - 1 then setBloque(mapa, x, y, true) end
     end
   end
   local function base(x0, y0, bw, bh)
     for y = 0, bh - 1 do
       for x = 0, bw - 1 do
-        setSuelo(mapa, x0 + x, y0 + y, "plaza", "batalla", nil)
+        setSuelo(mapa, x0 + x, y0 + y, "plaza", "batalla", lado(x0 + x))
         setBloque(mapa, x0 + x, y0 + y, false)
       end
     end
   end
   base(4, medio - 8, 16, 16)
   base(w - 20, medio - 8, 16, 16)
+  for y = 1, h - 2 do
+    for x = 1, 23 do reservar(x, y) end
+    for x = w - 24, w - 2 do reservar(x, y) end
+  end
   -- Cada muro tiene varias entradas: la puerta principal en el centro y dos laterales.
   local ENTRADAS = { medio, medio - 14, medio + 14 }
   local function muro(x, faccion)
@@ -1372,18 +1393,19 @@ function M.batalla()
     for y = 1, h - 2 do
       if not esPuerta[y] then
         setBloque(mapa, x, y, true)
-        setSuelo(mapa, x, y, "muralla", "batalla", nil)
+        setSuelo(mapa, x, y, "muralla", "batalla", lado(x))
       end
     end
     mapa.puerta = mapa.puerta or {}
     for _, py in ipairs(ENTRADAS) do
       mapa.puerta[x .. "_" .. py] = { faccion = faccion, viva = true, x = x, y = py }
       setBloque(mapa, x, py, true)
-      setSuelo(mapa, x, py, "camino", "batalla", nil)
+      setSuelo(mapa, x, py, "camino", "batalla", lado(x))
     end
   end
   muro(22, "albor")
-  muro(w - 23, "umbra")  mapa.spawns = { albor = { x = 8.5, y = medio + 0.5 }, umbra = { x = w - 8.5, y = medio + 0.5 } }
+  muro(w - 23, "umbra")
+  mapa.spawns = { albor = { x = 8.5, y = medio + 0.5 }, umbra = { x = w - 8.5, y = medio + 0.5 } }
   mapa.objetivos = {
     { tipo = "altar", faccion = "albor", x = 12.5, y = medio + 0.5 },
     { tipo = "altar", faccion = "umbra", x = w - 12.5, y = medio + 0.5 },
@@ -1398,79 +1420,100 @@ function M.batalla()
     { tipo = "puerta", faccion = "umbra", x = (w - 23) + 0.5, y = medio - 14 + 0.5 },
     { tipo = "puerta", faccion = "umbra", x = (w - 23) + 0.5, y = medio + 14 + 0.5 },
   }
+  for _, o in ipairs(mapa.objetivos) do reservar(math.floor(o.x), math.floor(o.y), 3) end
 
-  -- Relieve y obstáculos. Todo es determinista (mismo mapa en servidor y cliente) y con colisiones.
-  local cx = w / 2
-  local function libreDeRuta(x, y)
-    -- fuera de las calles, las bases, los muros y los objetivos
-    if math.abs(y - medio) <= 2 or math.abs(x - cx) <= 2 then return false end
-    if x < 24 or x > w - 25 then return false end
-    for _, o in ipairs(mapa.objetivos) do
-      if math.abs(o.x - x) < 5 and math.abs(o.y - y) < 5 then return false end
-    end
-    return true
-  end
   local function decor(x, y, tipo)
     mapa.decorado[x] = mapa.decorado[x] or {}
     mapa.decorado[x][y] = tipo
     setBloque(mapa, x, y, true)
   end
-  -- 1) piedras al borde de los caminos (a ambos lados, con huecos para cruzar)
-  for x = 24, w - 25 do
-    if math.abs(x - cx) > 5 and azar(x, 3, 91) < 0.62 then
-      decor(x, medio - 3, "piedra")
-      if azar(x, 4, 92) < 0.3 then decor(x, medio - 4, "piedra") end
-    end
-    if math.abs(x - cx) > 5 and azar(x, 5, 93) < 0.62 then
-      decor(x, medio + 3, "piedra")
-      if azar(x, 6, 94) < 0.3 then decor(x, medio + 4, "piedra") end
+  local function prop(x, y, tipo, bloquea)
+    mapa.props[#mapa.props + 1] = { x = x, y = y, tipo = tipo }
+    if bloquea then setBloque(mapa, x, y, true) end
+  end
+
+  -- 2) caminos que serpentean desde cada puerta hasta la plaza central, y la plaza en ruinas
+  local function camino(xa, ya, xb, yb, ancho, amp, fase)
+    local dir = xb >= xa and 1 or -1
+    local n = math.abs(xb - xa)
+    local anterior
+    for i = 0, n do
+      local x = xa + i * dir
+      local t = n > 0 and i / n or 0
+      local s = t * t * (3 - 2 * t)
+      local y = math.floor(ya + (yb - ya) * s + amp * math.sin(t * math.pi * 2 + fase) * math.sin(t * math.pi) + 0.5)
+      local desde, hasta = y, y
+      if anterior then desde, hasta = math.min(y, anterior), math.max(y, anterior) end
+      for yy = desde - math.floor(ancho / 2), hasta + math.floor((ancho - 1) / 2) do
+        if not (mapa.puerta and mapa.puerta[x .. "_" .. yy]) then
+          setSuelo(mapa, x, yy, "camino", "batalla", lado(x))
+          setBloque(mapa, x, yy, false)
+        end
+        reservar(x, yy, 1)
+      end
+      anterior = y
     end
   end
-  for y = 3, h - 4 do
-    if math.abs(y - medio) > 5 and azar(y, 7, 95) < 0.62 then
-      decor(math.floor(cx) - 3, y, "piedra")
-      if azar(y, 8, 96) < 0.3 then decor(math.floor(cx) - 4, y, "piedra") end
-    end
-    if math.abs(y - medio) > 5 and azar(y, 9, 97) < 0.62 then
-      decor(math.floor(cx) + 3, y, "piedra")
-      if azar(y, 10, 98) < 0.3 then decor(math.floor(cx) + 4, y, "piedra") end
+  local RPLAZA = 6
+  for yy = medio - RPLAZA, medio + RPLAZA do
+    for xx = math.floor(cx) - RPLAZA, math.floor(cx) + RPLAZA do
+      if (xx + 0.5 - cx) ^ 2 + (yy - medio) ^ 2 <= RPLAZA * RPLAZA then
+        setSuelo(mapa, xx, yy, "plaza", "batalla", lado(xx))
+        setBloque(mapa, xx, yy, false)
+        reservar(xx, yy, 1)
+      end
     end
   end
-  -- 2) crestas de montaña (relieve): bloques de 2x2 en el campo abierto, agrupados por ruido
+  local salidas = { { medio, 3, 3, 0.4 }, { medio - 14, 2, 7, 1.9 }, { medio + 14, 2, 7, 3.6 } }
+  local destinoY = { medio, medio - 3, medio + 3 }
+  for i, s in ipairs(salidas) do
+    camino(23, s[1], math.floor(cx) - RPLAZA, destinoY[i], s[2], s[3], s[4])
+    camino(w - 24, s[1], math.floor(cx) + RPLAZA, destinoY[i], s[2], s[3], s[4] + 2.3)
+  end
+  -- columnas en ruinas alrededor de la plaza: de cada reino a su lado, con huecos para entrar
+  for k = 0, 11 do
+    local a = k / 12 * math.pi * 2 + 0.26
+    local px, py = math.floor(cx + math.cos(a) * (RPLAZA + 1.5)), math.floor(medio + math.sin(a) * (RPLAZA + 1.5))
+    if not (mapa.puerta and mapa.puerta[px .. "_" .. py]) and M.get(mapa, px, py) ~= "camino" then
+      prop(px, py, umbra(px) and "columna_umbra" or "columna_albor", true)
+    end
+  end
+
+  -- 3) la zona de guerra: crestas de montaña, huecos y rocas (siempre fuera de los caminos)
+  local function libre(x, y)
+    if x < 2 or y < 2 or x > w - 3 or y > h - 3 or esReservado(x, y) then return false end
+    return not (mapa.bloque[x] and mapa.bloque[x][y])
+  end
   local function libre2(x, y)
     for dy = 0, 1 do
       for dx = 0, 1 do
-        local tx, ty = x + dx, y + dy
-        if not libreDeRuta(tx, ty) or (mapa.bloque[tx] and mapa.bloque[tx][ty]) then return false end
+        if not libre(x + dx, y + dy) or not enGuerra(x + dx, y + dy) then return false end
       end
     end
     return true
   end
   for y = 4, h - 6, 2 do
-    for x = 26, w - 28, 2 do
+    for x = 24, w - 26, 2 do
       local n = math.sin(x * 0.21 + y * 0.09) + math.sin(x * 0.07 - y * 0.23) + azar(x, y, 99) * 0.9
       if n > 1.2 and libre2(x, y) then
         for dy = 0, 1 do
-          for dx = 0, 1 do
-            setBloque(mapa, x + dx, y + dy, true)
-          end
+          for dx = 0, 1 do setBloque(mapa, x + dx, y + dy, true) end
         end
         -- risco dibujado por el cliente (render/campo.lua)
         mapa.props[#mapa.props + 1] = { x = x, y = y, ancho = 2, alto = 2, tipo = x < cx and "risco_albor" or "risco_umbra" }
       end
     end
   end
-  -- 3) huecos (grietas) en parches de 2x2 o 3x2: no se pueden pisar
   for y = 5, h - 7, 4 do
-    for x = 27, w - 30, 5 do
+    for x = 25, w - 30, 5 do
       local px, py = x + math.floor(azar(x, y, 101) * 3), y + math.floor(azar(x, y, 102) * 2)
-      if azar(x, y, 103) < 0.38 then
+      if azar(x, y, 103) < 0.45 then
         local ancho = 2 + math.floor(azar(x, y, 104) * 2)
         local ok = true
         for dy = 0, 1 do
           for dx = 0, ancho - 1 do
             local tx, ty = px + dx, py + dy
-            if not libreDeRuta(tx, ty) or (mapa.bloque[tx] and mapa.bloque[tx][ty]) or M.get(mapa, tx, ty) ~= "cicatriz" then ok = false end
+            if not libre(tx, ty) or M.get(mapa, tx, ty) ~= "cicatriz" then ok = false end
           end
         end
         if ok then
@@ -1481,12 +1524,19 @@ function M.batalla()
       end
     end
   end
-  -- 4) marcas del suelo. Los huesos también tienen colisión.
+  for y = 3, h - 4 do
+    for x = 24, w - 25 do
+      if libre(x, y) and M.get(mapa, x, y) == "cicatriz" and not (mapa.decorado[x] and mapa.decorado[x][y]) then
+        local r = azar(x, y, 91)
+        if r < 0.09 then decor(x, y, "piedra") end
+      end
+    end
+  end
+  -- marcas del suelo (sin colisión; los huesos sí la tienen)
   for y = 3, h - 4 do
     for x = 24, w - 25 do
       if not (mapa.bloque[x] and mapa.bloque[x][y]) and not (mapa.decorado[x] and mapa.decorado[x][y]) then
-        local suelo = M.get(mapa, x, y)
-        if suelo == "cicatriz" then
+        if M.get(mapa, x, y) == "cicatriz" then
           local r = azar(x, y, 105)
           local tipo
           if r < 0.006 then tipo = "restos"
@@ -1499,6 +1549,55 @@ function M.batalla()
       end
     end
   end
+
+  -- 4) el patio de cada reino, con su identidad: Alba con bosque claro, flores y farolas; Umbra con árboles
+  -- secos, tumbas, setas y fogatas
+  for y = 3, h - 4 do
+    for x = 24, w - 25 do
+      if libre(x, y) and not enGuerra(x, y) and not (mapa.decorado[x] and mapa.decorado[x][y]) then
+        local n = math.sin(x * 0.33 + y * 0.17) + math.sin(x * 0.13 - y * 0.37) + azar(x, y, 71) * 0.9
+        local r = azar(x, y, 72)
+        if n > 1.4 then
+          local tipo
+          if umbra(x) then tipo = r < 0.6 and "arbol_seco" or (r < 0.8 and "tumba" or "roca")
+          else tipo = r < 0.7 and "arbol_pino" or (r < 0.85 and "arbusto" or "roca") end
+          prop(x, y, tipo, true)
+        else
+          local d = azar(x, y, 81)
+          if umbra(x) then
+            if d < 0.025 then prop(x, y, "seta_roja")
+            elseif d < 0.05 then prop(x, y, "hierba_seca")
+            elseif d < 0.06 then prop(x, y, "restos") end
+          else
+            if d < 0.03 then prop(x, y, "flores_mixtas")
+            elseif d < 0.05 then prop(x, y, "flor_amarilla")
+            elseif d < 0.065 then prop(x, y, "hierba_alta") end
+          end
+        end
+      end
+    end
+  end
+  -- farolas (Alba) y fogatas (Umbra) a lo largo de los caminos de cada reino
+  for _, lado_ in ipairs({ "albor", "umbra" }) do
+    local x0, x1 = 24, math.floor(cx) - 9
+    for x = x0, x1, 6 do
+      local xx = lado_ == "albor" and x or (w - 1 - x)
+      for yy = 4, h - 5 do
+        if M.get(mapa, xx, yy) == "camino" and M.get(mapa, xx, yy - 1) ~= "camino" and not (mapa.bloque[xx] and mapa.bloque[xx][yy - 1]) and not enGuerra(xx, yy - 1) then
+          prop(xx, yy - 1, lado_ == "albor" and "farol" or "fogata", lado_ == "albor")
+          break
+        end
+      end
+    end
+  end
+  -- estatuas de cada reino a la entrada de su muro
+  for _, py in ipairs(ENTRADAS) do
+    for _, dy in ipairs({ -2, 2 }) do
+      if libre(24, py + dy) then prop(24, py + dy, "estatua_albor", true) end
+      if libre(w - 25, py + dy) then prop(w - 25, py + dy, "estatua_umbra", true) end
+    end
+  end
+
   -- 5) nunca se debe cerrar el paso: de la base de Albor se llega a todos los objetivos y a la base rival
   local function alcanzable(desdeX, desdeY, destinos)
     local visto, cola, i = {}, { { desdeX, desdeY } }, 1

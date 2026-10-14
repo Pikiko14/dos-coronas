@@ -1066,7 +1066,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local lado, consola = Interfaz.medidas()
     local yTab = 720 - consola + 12
     for i, canal in ipairs({ "todo", "mundo", "faccion", "sistema" }) do
-      local id = Interfaz.consumir(8 + (i - 1) * 76 + 36, yTab)
+      local id = Interfaz.consumir(8 + (i - 1) * 48 + 22, yTab)
       fallar(errores, "pestaña del chat " .. canal, id == "canal_" .. canal, tostring(id))
     end
     fallar(errores, "la entrada del chat recibe el clic", Interfaz.consumir(200, 720 - 14) == "foco_chat")

@@ -1041,17 +1041,22 @@ function I.consola(mundo, p, x, y, w, h)
   -- El fondo se registra primero: lo que se registra después (pestañas, entrada
   -- de chat) queda por encima y recibe los clics.
   I.registrar(x, y, w, h, "panel")
-  local canales = { { "todo", "Todo" }, { "mundo", "Mundo" }, { "faccion", "Facción" }, { "sistema", "Sistema" }, { "gremio", "Gremio" }, { "grupo", "Grupo" }, { "evento", "Eventos" } }
+  -- pestañas como iconos (el nombre sale al pasar el ratón); índices en la hoja "hud"
+  local canales = { { "todo", "Todo", 4 }, { "mundo", "Mundo", 5 }, { "faccion", "Facción", 6 }, { "sistema", "Sistema", 7 },
+    { "gremio", "Gremio", 8 }, { "grupo", "Grupo", 9 }, { "evento", "Eventos", 10 } }
   for i, c in ipairs(canales) do
-    local bx = x + 8 + (i - 1) * 76
+    local bw = 44
+    local bx = x + 8 + (i - 1) * (bw + 4)
     local activo = I.canal == c[1]
-    love.graphics.setColor(activo and 0.27 or 0.09, activo and 0.4 or 0.13, activo and 0.8 or 0.27, 0.95)
-    love.graphics.rectangle("fill", bx, y + 2, 72, 20, 6, 6)
-    love.graphics.setColor(0.45, 0.6, 0.95)
-    love.graphics.rectangle("line", bx + 0.5, y + 2.5, 71, 19, 6, 6)
-    love.graphics.setColor(1, 0.95, 0.85)
-    love.graphics.printf(c[2], bx, y + 4, 72, "center")
-    I.registrar(bx, y + 2, 72, 20, "canal_" .. c[1])
+    local hover = sobre(bx, y + 2, bw, 22)
+    if hover then I.pista = "Chat: " .. c[2] end
+    love.graphics.setColor(activo and 0.27 or (hover and 0.16 or 0.09), activo and 0.4 or (hover and 0.24 or 0.13), activo and 0.8 or (hover and 0.45 or 0.27), 0.95)
+    love.graphics.rectangle("fill", bx, y + 2, bw, 22, 6, 6)
+    love.graphics.setColor(activo and 0.7 or 0.45, activo and 0.8 or 0.6, 0.95)
+    love.graphics.rectangle("line", bx + 0.5, y + 2.5, bw - 1, 21, 6, 6)
+    love.graphics.setColor(1, 1, 1, activo and 1 or 0.85)
+    Atlas.dibujar("hud", c[3], bx + bw / 2, y + 13, 0.62, 16, 16)
+    I.registrar(bx, y + 2, bw, 22, "canal_" .. c[1])
   end
   local cy = y + 26
   local ch = h - 26

@@ -13,8 +13,10 @@ local M = {}
 require("compartido.dominio.configuracion").aplicar(M, "mazmorras")
 
 
--- Planos de cada mazmorra (compartido/datos/mazmorras.xml): rectángulos { x, y, ancho, alto } en casillas. La
--- entrada está en la sala "entrada": el jugador aparece ahí y la puerta de salida está en su muro de abajo.
+-- Planos de cada mazmorra (compartido/datos/mazmorras.xml): tamaño, la sala de entrada y la del jefe (rectángulos
+-- { x, y, ancho, alto } en casillas), cuántas salas intermedias y campos de trampas lleva y la semilla con que se
+-- genera. El resto (salas, pasillos y trampas) se genera con esa semilla: el mismo plano da siempre la misma
+-- mazmorra, pero no es una fila de salas: hay ramas, bucles, callejones sin salida y varias rutas hasta el jefe.
 local DISENOS = require("compartido.dominio.configuracion").mapaOrden("mazmorras", "plano", false)
 
 local function tallar(mapa, r)
@@ -35,6 +37,26 @@ local function pilar(mapa, x, y)
   end
 end
 
+-- Trampas del suelo. Cada una es una casilla que cicla entre reposo, aviso (asoman las púas o el fuego) y activa
+-- (hace daño a quien pise). La fase depende solo del reloj del mundo, así servidor y cliente la ven igual.
+--   pinchos: púas que salen del suelo (golpe seco)   fuego: chorro de llamas (daño fuerte)
+--   gas: nube venenosa (daño pequeño cada medio segundo mientras dure)
+-- dano = fracción de la vida máxima del jugador por golpe; cada = segundos entre golpes mientras siga encima.
+M.TRAMPAS = {
+  pinchos = { ciclo = 3.4, aviso = 0.9, dur = 0.9, dano = 0.09, cada = 1.0 },
+  fuego = { ciclo = 4.6, aviso = 1.0, dur = 1.5, dano = 0.12, cada = 0.8 },
+  gas = { ciclo = 5.4, aviso = 1.2, dur = 2.4, dano = 0.035, cada = 0.5 },
+}
+
+-- Estado de una trampa en el instante t: "reposo", "aviso" o "activa".
+function M.faseTrampa(tr, t)
+  local d = M.TRAMPAS[tr.tipo]
+  local u = (t + tr.fase) % d.ciclo
+  if u >= d.ciclo - d.dur then return "activa" end
+  if u >= d.ciclo - d.dur - d.aviso then return "aviso" end
+  return "reposo"
+end
+
 -- Mapa de una mazmorra. grupos: sitios donde sale cada grupo de criaturas; jefe y entrada.
 function M.mapa(def)
   local d = DISENOS[def.id]
@@ -46,32 +68,183 @@ function M.mapa(def)
       mapa.suelo[x][y], mapa.bioma[x][y], mapa.bloque[x][y] = "muralla", "mazmorra", true
     end
   end
-  tallar(mapa, d.entrada)
-  for _, r in ipairs(d.pasillos) do tallar(mapa, r) end
-  mapa.grupos = {}
-  for _, r in ipairs(d.salas) do
-    tallar(mapa, r)
-    pilar(mapa, r[1] + 3, r[2] + 3)
-    pilar(mapa, r[1] + r[3] - 5, r[2] + 3)
-    pilar(mapa, r[1] + 3, r[2] + r[4] - 5)
-    pilar(mapa, r[1] + r[3] - 5, r[2] + r[4] - 5)
-    local cx, cy = r[1] + r[3] / 2, r[2] + r[4] / 2
-    mapa.grupos[#mapa.grupos + 1] = { x = cx, y = cy }
-    mapa.grupos[#mapa.grupos + 1] = { x = r[1] + r[3] * 0.25, y = cy }
-    mapa.grupos[#mapa.grupos + 1] = { x = r[1] + r[3] * 0.75, y = cy }
+  -- generador pseudoaleatorio con semilla (determinista)
+  local semilla = d.semilla or 1
+  local function rnd()
+    semilla = (semilla * 1103515245 + 12345) % 2147483648
+    return semilla / 2147483648
   end
-  local j = d.jefe
-  tallar(mapa, j)
+  local function entre(a, b) return a + math.floor(rnd() * (b - a + 1)) end
+
+  local E, J = d.entrada, d.jefe
+  tallar(mapa, E)
+  tallar(mapa, J)
+  -- salas intermedias de tamaños distintos, sin pisarse entre sí ni a la entrada ni al jefe
+  local salas = {}
+  local function solapa(r, o, margen)
+    return r[1] < o[1] + o[3] + margen and r[1] + r[3] + margen > o[1] and r[2] < o[2] + o[4] + margen and r[2] + r[4] + margen > o[2]
+  end
+  local intentos = 0
+  while #salas < (d.salas or 6) and intentos < 600 do
+    intentos = intentos + 1
+    local w, h = entre(8, 15), entre(7, 12)
+    local r = { entre(3, d.w - w - 3), entre(3, d.h - h - 3), w, h }
+    local ok = not solapa(r, E, 4) and not solapa(r, J, 4)
+    for _, o in ipairs(salas) do if ok and solapa(r, o, 4) then ok = false end end
+    if ok then salas[#salas + 1] = r end
+  end
+  local nodos = { E }
+  for _, r in ipairs(salas) do nodos[#nodos + 1] = r end
+  nodos[#nodos + 1] = J
+  for _, r in ipairs(salas) do tallar(mapa, r) end
+  local function centro(r) return math.floor(r[1] + r[3] / 2), math.floor(r[2] + r[4] / 2) end
+
+  -- conexiones: árbol mínimo (todas las salas alcanzables) más algunos pasillos extra que forman bucles
+  local function dist(a, b)
+    local ax, ay = centro(a)
+    local bx, by = centro(b)
+    return math.abs(ax - bx) + math.abs(ay - by)
+  end
+  local unidos, aristas, par = { [1] = true }, {}, {}
+  local n = #nodos
+  for _ = 2, n do
+    local mejor, mi, mj = math.huge, nil, nil
+    for i = 1, n do
+      if unidos[i] then
+        for j = 1, n do
+          if not unidos[j] then
+            local dd = dist(nodos[i], nodos[j])
+            if dd < mejor then mejor, mi, mj = dd, i, j end
+          end
+        end
+      end
+    end
+    unidos[mj] = true
+    aristas[#aristas + 1] = { mi, mj }
+    par[mi .. "_" .. mj], par[mj .. "_" .. mi] = true, true
+  end
+  for i = 1, n do
+    if rnd() < 0.6 then
+      local mejor, mj = math.huge, nil
+      for j = 1, n do
+        if j ~= i and not par[i .. "_" .. j] then
+          local dd = dist(nodos[i], nodos[j])
+          if dd < mejor then mejor, mj = dd, j end
+        end
+      end
+      if mj and mejor < 38 then
+        aristas[#aristas + 1] = { i, mj }
+        par[i .. "_" .. mj], par[mj .. "_" .. i] = true, true
+      end
+    end
+  end
+  -- pasillos de 3 casillas en L (un tramo horizontal y otro vertical, en orden al azar)
+  local pasillos = {}
+  for _, ar in ipairs(aristas) do
+    local ax, ay = centro(nodos[ar[1]])
+    local bx, by = centro(nodos[ar[2]])
+    local tramos = {}
+    if rnd() < 0.5 then
+      tramos[1] = { math.min(ax, bx) - 1, ay - 1, math.abs(bx - ax) + 3, 3, "h" }
+      tramos[2] = { bx - 1, math.min(ay, by) - 1, 3, math.abs(by - ay) + 3, "v" }
+    else
+      tramos[1] = { ax - 1, math.min(ay, by) - 1, 3, math.abs(by - ay) + 3, "v" }
+      tramos[2] = { math.min(ax, bx) - 1, by - 1, math.abs(bx - ax) + 3, 3, "h" }
+    end
+    for _, tr in ipairs(tramos) do
+      tallar(mapa, tr)
+      pasillos[#pasillos + 1] = tr
+    end
+  end
+  -- pilares en las esquinas de las salas grandes, solo donde no estorban a ningún pasillo
+  local function sobrePasillo(x, y)
+    for _, tr in ipairs(pasillos) do
+      if x + 1 >= tr[1] - 1 and x <= tr[1] + tr[3] and y + 1 >= tr[2] - 1 and y <= tr[2] + tr[4] then return true end
+    end
+    return false
+  end
+  for _, r in ipairs(salas) do
+    if r[3] >= 11 and r[4] >= 11 then
+      for _, q in ipairs({ { r[1] + 3, r[2] + 3 }, { r[1] + r[3] - 5, r[2] + 3 }, { r[1] + 3, r[2] + r[4] - 5 }, { r[1] + r[3] - 5, r[2] + r[4] - 5 } }) do
+        if not sobrePasillo(q[1], q[2]) then pilar(mapa, q[1], q[2]) end
+      end
+    end
+  end
+
+  mapa.grupos = {}
+  for _, r in ipairs(salas) do
+    local cx, cy = centro(r)
+    mapa.grupos[#mapa.grupos + 1] = { x = cx + 0.5, y = cy + 0.5 }
+    mapa.grupos[#mapa.grupos + 1] = { x = r[1] + r[3] * 0.25, y = cy + 0.5 }
+    mapa.grupos[#mapa.grupos + 1] = { x = r[1] + r[3] * 0.75, y = cy + 0.5 }
+  end
+  -- ningún grupo puede salir sobre un pilar o una pared: se desplaza a la casilla libre más cercana
+  local function suelo(x, y) return x >= 1 and y >= 1 and x < d.w - 1 and y < d.h - 1 and not mapa.bloque[x][y] and mapa.suelo[x][y] == "mazmorra" end
+  for _, g in ipairs(mapa.grupos) do
+    if not suelo(math.floor(g.x), math.floor(g.y)) then
+      local hallado
+      for r = 1, 6 do
+        for dy = -r, r do
+          for dx = -r, r do
+            if not hallado and suelo(math.floor(g.x) + dx, math.floor(g.y) + dy) then hallado = { math.floor(g.x) + dx, math.floor(g.y) + dy } end
+          end
+        end
+        if hallado then break end
+      end
+      if hallado then g.x, g.y = hallado[1] + 0.5, hallado[2] + 0.5 end
+    end
+  end
+  local j = J
   pilar(mapa, j[1] + 3, j[2] + j[4] - 6)
   pilar(mapa, j[1] + j[3] - 5, j[2] + j[4] - 6)
   mapa.jefe = { x = j[1] + j[3] / 2, y = j[2] + 3.5 }
   mapa.grupos[#mapa.grupos + 1] = { x = j[1] + j[3] * 0.3, y = j[2] + j[4] * 0.6 }
   mapa.grupos[#mapa.grupos + 1] = { x = j[1] + j[3] * 0.7, y = j[2] + j[4] * 0.6 }
-  local e = d.entrada
+  local e = E
   local cx = e[1] + math.floor(e[3] / 2)
   mapa.entrada = { x = cx + 0.5, y = e[2] + e[4] - 2.5 }
   mapa.salida = { x = cx + 0.5, y = e[2] + e[4] - 1.5 }
   mapa.props[#mapa.props + 1] = { x = cx, y = e[2] + e[4] - 1, tipo = "puerta_mazmorra", mz = def.id, salida = true }
+
+  -- trampas: campos en los pasillos (hay que cruzarlos con el compás justo) y salpicadas por las salas
+  mapa.trampas, mapa.trampasIdx = {}, {}
+  local function libre(x, y)
+    if x < 1 or y < 1 or x >= d.w - 1 or y >= d.h - 1 then return false end
+    if mapa.bloque[x][y] or mapa.suelo[x][y] ~= "mazmorra" or mapa.trampasIdx[x * 1000 + y] then return false end
+    if x >= E[1] - 1 and x <= E[1] + E[3] and y >= E[2] - 1 and y <= E[2] + E[4] then return false end   -- ni en la entrada
+    return true
+  end
+  local function poner(x, y, tipo, fase)
+    if not libre(x, y) then return end
+    local tr = { x = x, y = y, tipo = tipo, fase = fase }
+    mapa.trampas[#mapa.trampas + 1] = tr
+    mapa.trampasIdx[x * 1000 + y] = tr
+  end
+  local TIPOS = { "pinchos", "fuego", "gas" }
+  for k = 1, d.trampas or 10 do
+    local tipo = TIPOS[((k - 1) % 3) + 1]
+    if k % 2 == 1 and #pasillos > 0 then
+      -- campo de 3 de ancho en medio de un pasillo (casillas desfasadas: una ola de púas o llamas)
+      local tr = pasillos[entre(1, #pasillos)]
+      local largo = tr[5] == "h" and tr[3] or tr[4]
+      if largo > 12 then
+        local pos = entre(5, largo - 6)
+        for a = 0, entre(1, 2) - 1 do
+          for b = 0, 2 do
+            local x, y
+            if tr[5] == "h" then x, y = tr[1] + pos + a, tr[2] + b else x, y = tr[1] + b, tr[2] + pos + a end
+            poner(x, y, tipo, (a * 0.7 + b * 0.25) % 2 + k * 0.37)
+          end
+        end
+      end
+    elseif #salas > 0 then
+      -- salpicadas dentro de una sala (no en la entrada)
+      local r = salas[entre(1, #salas)]
+      for _ = 1, entre(3, 6) do
+        poner(entre(r[1] + 1, r[1] + r[3] - 2), entre(r[2] + 1, r[2] + r[4] - 2), tipo, rnd() * 4)
+      end
+    end
+  end
   return mapa
 end
 
@@ -79,6 +252,24 @@ function M.instalar(Mundo)
   -- Mapas propios de cada mazmorra (se añaden a self.mapas con su id como clave).
   function Mundo:crearMapasMazmorras()
     for _, def in ipairs(Datos.mazmorras) do self.mapas[def.id] = M.mapa(def) end
+  end
+
+  -- Trampas del suelo: quien pisa una casilla activa recibe un golpe (un porcentaje de su vida máxima) y, mientras
+  -- siga encima, otro cada pocos instantes. Solo afecta a los jugadores.
+  function Mundo:trampasMazmorra(e)
+    local mapa = self.mapas[e.modo]
+    local idx = mapa and mapa.trampasIdx
+    if not idx or not e.vivo then return end
+    local tr = idx[math.floor(e.x) * 1000 + math.floor(e.y)]
+    if not tr or M.faseTrampa(tr, self.tiempo) ~= "activa" then return end
+    if (e.trampaHasta or 0) > self.tiempo then return end
+    local d = M.TRAMPAS[tr.tipo]
+    e.trampaHasta = self.tiempo + d.cada
+    local antes = e.hp
+    self:danar(e, (e.hpMax or 100) * d.dano, nil, false)
+    if e.hp < antes then
+      self:mensaje("sistema", "", ({ pinchos = "¡Pinchos!", fuego = "¡Llamas!", gas = "¡Gas venenoso!" })[tr.tipo], e)
+    end
   end
 
   function Mundo:enMazmorra(e)

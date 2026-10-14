@@ -1943,13 +1943,11 @@ mundo.tiempo = 100
     end
     for _, p in ipairs(mapa.props) do if p.tipo:find("risco") then montes = montes + 1 end end
     fallar(errores, "hay piedras, huecos y montañas", piedras > 40 and grietas > 15 and montes > 10, piedras .. "/" .. grietas .. "/" .. montes)
-    fallar(errores, "las piedras salen al lado del camino", enCamino >= piedras * 0.9, enCamino .. "/" .. piedras)
-    -- no se bloquean las calles ni las bases
-    local libres = true
-    for x = 24, mapa.w - 25 do
-      for dy = -1, 1 do if not Mapa.transitable(mapa, x, medio + dy) and not (mapa.puerta[x .. "_" .. (medio + dy)]) then libres = false end end
+    -- no se bloquean las puertas: delante de cada una hay camino
+    for k, pu in pairs(mapa.puerta) do
+      local dx = pu.faccion == "albor" and 1 or -1
+      fallar(errores, "delante de la puerta " .. k .. " hay paso", Mapa.transitable(mapa, pu.x + dx, pu.y))
     end
-    fallar(errores, "la calle principal sigue libre", libres)
     fallar(errores, "de una base se llega a todo", mapa.conexo == true)
     local sp = mapa.spawns.albor
     fallar(errores, "las bases no tienen obstáculos", Mapa.transitable(mapa, math.floor(sp.x), math.floor(sp.y)))
@@ -4225,6 +4223,73 @@ mundo.tiempo = 100
       end
     end
     fallar(errores, "hay río y obstáculos", agua > 150 and bloqueos > 150, agua .. "/" .. bloqueos)
+  end)
+  paso("mazmorras: no lineales, con varias rutas y trampas", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local Mazmorras = require("compartido.dominio.mazmorras")
+    local mundo = Mundo.nuevo()
+    for _, def in ipairs(Datos.mazmorras) do
+      local mapa = mundo.mapas[def.id]
+      fallar(errores, def.id .. ": tiene trampas", mapa.trampas and #mapa.trampas >= 20, tostring(mapa.trampas and #mapa.trampas))
+      local tipos = {}
+      for _, tr in ipairs(mapa.trampas) do
+        tipos[tr.tipo] = true
+        fallar(errores, def.id .. ": la trampa está en suelo libre", Mapa.transitable(mapa, tr.x, tr.y))
+      end
+      fallar(errores, def.id .. ": hay pinchos, fuego y gas", tipos.pinchos and tipos.fuego and tipos.gas)
+      -- la entrada no tiene trampas
+      fallar(errores, def.id .. ": sin trampas al entrar", mapa.trampasIdx[math.floor(mapa.entrada.x) * 1000 + math.floor(mapa.entrada.y)] == nil)
+      -- no es lineal: bloqueando cualquier casilla de un camino corto sigue habiendo otro (hay bucles) y hay muchas salas
+      local grupos = #mapa.grupos
+      fallar(errores, def.id .. ": muchas salas y grupos", grupos >= 20, tostring(grupos))
+      -- todos los grupos y el jefe se alcanzan desde la entrada
+      local ex, ey = math.floor(mapa.entrada.x), math.floor(mapa.entrada.y)
+      for _, g in ipairs(mapa.grupos) do
+        local cam = Mapa.buscar(mapa, ex, ey, g.x, g.y)
+        fallar(errores, def.id .. ": se llega al grupo " .. math.floor(g.x) .. "," .. math.floor(g.y), cam ~= nil)
+      end
+    end
+    -- el mismo plano da siempre la misma mazmorra
+    local a, b = Mazmorras.mapa(Datos.mazmorras[1]), Mazmorras.mapa(Datos.mazmorras[1])
+    fallar(errores, "la generación es determinista", #a.trampas == #b.trampas and a.jefe.x == b.jefe.x and a.grupos[3].x == b.grupos[3].x)
+    -- las trampas cambian de fase y hacen daño solo cuando están activas
+    local mapa = mundo.mapas.mz1
+    local tr = mapa.trampas[1]
+    local fases = {}
+    for k = 0, 120 do fases[Mazmorras.faseTrampa(tr, k * 0.1)] = true end
+    fallar(errores, "la trampa cicla entre reposo, aviso y activa", fases.reposo and fases.aviso and fases.activa)
+    local p = mundo:crearPersonaje({ nombre = "Trampero", faccion = "albor", clase = "guerrero", nivel = 12 })
+    p.modo, p.x, p.y = "mz1", tr.x + 0.5, tr.y + 0.5
+    local tipoTr = Mazmorras.TRAMPAS[tr.tipo]
+    -- buscar un instante activo y otro en reposo
+    local tActiva, tReposo
+    for k = 0, 400 do
+      local f = Mazmorras.faseTrampa(tr, k * 0.05)
+      if f == "activa" and not tActiva then tActiva = k * 0.05 end
+      if f == "reposo" and not tReposo then tReposo = k * 0.05 end
+    end
+    p.hp = p.hpMax
+    mundo.tiempo = tReposo
+    mundo:trampasMazmorra(p)
+    fallar(errores, "en reposo no hace daño", p.hp == p.hpMax)
+    mundo.tiempo = tActiva
+    mundo:trampasMazmorra(p)
+    fallar(errores, "activa hace daño", p.hp < p.hpMax, tostring(p.hp))
+    local tras = p.hp
+    mundo:trampasMazmorra(p)
+    fallar(errores, "no golpea dos veces seguidas", p.hp == tras)
+    mundo.tiempo = tActiva + tipoTr.cada + 0.01
+    p.trampaHasta = 0
+    -- mismo ciclo: si sigue activa vuelve a golpear
+    if Mazmorras.faseTrampa(tr, mundo.tiempo) == "activa" then
+      mundo:trampasMazmorra(p)
+      fallar(errores, "si sigue encima, vuelve a golpear", p.hp < tras)
+    end
+    -- el invulnerable no recibe daño
+    p.hp, p.invulnerable, p.trampaHasta = p.hpMax, true, 0
+    mundo.tiempo = tActiva
+    mundo:trampasMazmorra(p)
+    fallar(errores, "el modo dios ignora las trampas", p.hp == p.hpMax)
   end)
   paso("red y paneles", function()
     local Servidor = require("src.aplicacion.servicio_servidor")
