@@ -100,7 +100,8 @@ function Entrada.manejar(app, id)
   end
   if id == "pj_nuevo" then
     if not sesion.cuentaId then app.estado = "cuenta" return end
-    app.creacion = { nombre = "", faccion = nil, clase = nil, error = "" }
+    -- Alba viene elegida de entrada, así se ven desde el principio los oficios de una facción (cambia con el botón de Umbra)
+    app.creacion = { nombre = "", faccion = "albor", clase = nil, error = "" }
     app.estado = "crear"
     Interfaz.foco = "nombre"
     return

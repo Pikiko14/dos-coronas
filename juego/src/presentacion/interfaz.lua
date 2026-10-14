@@ -579,7 +579,7 @@ function I.crear(estado, w, h)
   tarjetaFaccion("albor", 348)
   tarjetaFaccion("umbra", 812)
 
-  -- las clases que ofrece la facción elegida (Alba suma al lancero y Ocaso al nigromante)
+  -- los oficios de la facción elegida (Alba suma al lancero y Ocaso al nigromante)
   local clases = Datos.clasesDe(estado.faccion)
   local paso = math.min(230, math.floor(920 / #clases))
   local ancho = paso - 12
@@ -597,10 +597,6 @@ function I.crear(estado, w, h)
     love.graphics.setColor(0.75, 0.72, 0.64)
     love.graphics.printf(c.rol, cx + 8, 414, ancho - 16, "center")
     I.boton(cx + 12, 472, ancho - 24, 30, elegida and "Oficio elegido" or "Elegir", "clase_" .. id)
-  end
-  if not estado.faccion then
-    love.graphics.setColor(0.7, 0.66, 0.58)
-    love.graphics.printf("Cada facción suma un oficio propio: elígela para verlo.", 348, 528, 920, "center")
   end
 
   caja(348, h - 92, 620, 76, "3. Nombre")
