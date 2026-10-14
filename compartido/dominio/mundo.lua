@@ -1791,13 +1791,23 @@ function Mundo:actualizarTrampa(t, dt)
   end
 end
 
+-- Aviso del estandarte para todos los que están dentro del evento: chat y marquesina de derecha a izquierda.
+function Mundo:avisarEstandarte(texto)
+  for _, e in pairs(self.entidades) do
+    if e.kind == "jugador" and e.modo == "estandarte" then
+      self:mensaje("sistema", "", texto, e)
+      self.mensajes[#self.mensajes].marquesina = true
+    end
+  end
+end
+
 function Mundo:tocarBandera(p)
   for _, f in pairs(self.entidades) do
     if f.kind == "bandera" and f.modo == "estandarte" then
       if not f.portador and f.faccion ~= p.faccion and Util.dist(p.x, p.y, f.x, f.y) < 1.15 and not p.llevaBandera then
         f.portador = p.id
         p.llevaBandera = f.faccion
-        self:mensaje("sistema", "", p.nombre .. " toma el estandarte enemigo.", p)
+        self:avisarEstandarte(p.nombre .. " toma el estandarte enemigo.")
       end
     end
   end
@@ -1816,7 +1826,7 @@ function Mundo:tocarBandera(p)
     p.llevaBandera = nil
     local inst = self.instancia.estandarte
     inst.puntos[p.faccion] = inst.puntos[p.faccion] + 1
-    self:mensaje("sistema", "", p.nombre .. " captura el estandarte. " .. inst.puntos[p.faccion] .. "/3", p)
+    self:avisarEstandarte(p.nombre .. " captura el estandarte. " .. inst.puntos[p.faccion] .. "/3")
     if inst.puntos[p.faccion] >= 3 then self:cerrarInstancia("estandarte", p.faccion) end
   end
 end
