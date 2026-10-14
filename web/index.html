@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dos Coronas — RPG multijugador en pixel art</title>
+  <meta name="description" content="Dos Coronas es un RPG online en pixel art: elige Albor o Umbra, sube de nivel con seis clases, vence mazmorras con trampas, comercia, cabalga monturas y lucha en la guerra de las dos coronas. Descarga la beta para Windows.">
+  <meta name="theme-color" content="#0a0e1f">
+  <meta property="og:title" content="Dos Coronas — Albor contra Umbra">
+  <meta property="og:description" content="RPG multijugador en pixel art. Descarga la beta para Windows.">
+  <meta property="og:image" content="img/portada.jpg">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+
+<header class="cabecera">
+  <div class="contenedor">
+    <a class="marca" href="#inicio" aria-label="Dos Coronas">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a3"/><stop offset="1" stop-color="#c8932d"/></linearGradient></defs><path d="M8 46 4 20l14 11 14-17 14 17 14-11-4 26z" fill="url(#g1)" stroke="#7a5214" stroke-width="2" stroke-linejoin="round"/><rect x="9" y="48" width="46" height="7" rx="2" fill="url(#g1)" stroke="#7a5214" stroke-width="2"/><circle cx="32" cy="12" r="3.4" fill="#9e6bf2" stroke="#fff" stroke-width="1"/><circle cx="4" cy="19" r="2.6" fill="#f2c747" stroke="#7a5214"/><circle cx="60" cy="19" r="2.6" fill="#f2c747" stroke="#7a5214"/></svg>
+      <span>DOS CORONAS</span>
+    </a>
+    <button class="burger" id="burger" aria-label="Menú">☰</button>
+    <nav class="menu" id="menu">
+      <a href="#juego">El juego</a>
+      <a href="#coronas">Las coronas</a>
+      <a href="#clases">Clases</a>
+      <a href="#mundo">El mundo</a>
+      <a href="#mazmorras">Mazmorras</a>
+      <a href="#monturas">Monturas</a>
+      <a href="#guerra">Guerra</a>
+      <a href="guia.html">Guía</a>
+      <a class="boton-menu" href="#descargar">Descargar</a>
+    </nav>
+  </div>
+</header>
+
+<main id="inicio">
+  <!-- ======================================================== héroe -->
+  <div class="heroe">
+    <div class="contenedor">
+      <span class="sello"><i></i> Beta abierta · Windows</span>
+      <h1>DOS CORONAS</h1>
+      <p class="lema">Un reino partido en dos. Elige <b>Albor</b>, la corona del amanecer, o <u>Umbra</u>, la corona del ocaso, y lucha por el mundo en un RPG multijugador en pixel art.</p>
+      <div class="acciones">
+        <a class="btn oro" href="#descargar" data-v="archivo">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
+          Descargar para Windows
+        </a>
+        <a class="btn" href="guia.html">Leer la guía del juego</a>
+      </div>
+      <p class="detalle"><span>Gratis</span>·<span>Windows 10 / 11 (64 bits)</span>·<span>Sin instalación</span></p>
+    </div>
+    <div class="duelo" aria-hidden="true">
+      <img src="img/sprites/clase_lancero_albor.png" alt="">
+      <img class="der" src="img/sprites/clase_nigromante_umbra.png" alt="">
+    </div>
+  </div>
+
+  <div class="cifras">
+    <div class="contenedor">
+      <div><b>2</b><span>Coronas en guerra</span></div>
+      <div><b>6</b><span>Clases</span></div>
+      <div><b>3</b><span>Continentes</span></div>
+      <div><b>3</b><span>Mazmorras con jefe</span></div>
+      <div><b>18</b><span>Monturas</span></div>
+      <div><b>30</b><span>Niveles</span></div>
+    </div>
+  </div>
+
+  <!-- ======================================================== el juego -->
+  <section id="juego">
+    <div class="contenedor">
+      <div class="cabeza-seccion rev">
+        <span class="sobre">El juego</span>
+        <h2>Un mundo vivo para jugar con otros</h2>
+        <p>Dos Coronas mezcla la exploración y el combate de los RPG clásicos con un mundo online compartido: cazas, comercio, mazmorras y una guerra que se repite cada día.</p>
+      </div>
+      <div class="rejilla c3">
+        <article class="rasgo cristal rev">
+          <div class="icono"><svg viewBox="0 0 24 24"><path d="M14.5 4 20 9.5 9.5 20 4 14.5zM4 20l3-3M13 5.5l5.5 5.5"/></svg></div>
+          <h3>Combate con seis poderes</h3>
+          <p>Cada clase tiene su propio árbol de poderes y seis habilidades en la barra, más pociones de vida y maná. Apunta tus hechizos al suelo, combina estados y juega en grupo.</p>
+        </article>
+        <article class="rasgo cristal rev">
+          <div class="icono"><svg viewBox="0 0 24 24"><path d="M5 20V7l7-4 7 4v13M9 20v-6h6v6M9 10h.01M15 10h.01"/></svg></div>
+          <h3>Mazmorras con trampas</h3>
+          <p>Tres cuevas generadas con ramas, bucles y callejones. Pinchos, fuego y gas que se activan al compás, un jefe al final y un cofre cuyo botín cae al suelo.</p>
+        </article>
+        <article class="rasgo cristal rev">
+          <div class="icono"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"/></svg></div>
+          <h3>La guerra de las coronas</h3>
+          <p>Cada día, captura del estandarte y batalla por cristales. Gana gloria para tu corona, medallas de oro y monedas del Item Mall.</p>
+        </article>
+        <article class="rasgo cristal rev">
+          <div class="icono"><svg viewBox="0 0 24 24"><path d="M3 7h18l-2 12H5zM8 7a4 4 0 0 1 8 0"/></svg></div>
+          <h3>Oficios y comercio</h3>
+          <p>Sé comerciante, cazarrecompensas o ladrón. Compra mercancías en una ciudad y véndelas lejos: mientras más lejos, más pagan. Pero cuidado con quien te siga el camino.</p>
+        </article>
+        <article class="rasgo cristal rev">
+          <div class="icono"><svg viewBox="0 0 24 24"><path d="M4 18c0-4 2-7 5-8l3-4 2 2 3 1-1 3c2 1 4 3 4 6M9 18v2M17 18v2"/></svg></div>
+          <h3>Monturas y mascotas</h3>
+          <p>Dieciocho monturas con efectos propios, desde un caballo hasta un dragón de hielo, y seis mascotas que suben de nivel contigo.</p>
+        </article>
+        <article class="rasgo cristal rev">
+          <div class="icono"><svg viewBox="0 0 24 24"><path d="M3 21V10l9-7 9 7v11zM9 21v-6h6v6"/></svg></div>
+          <h3>Casas, gremios y subastas</h3>
+          <p>Compra una casa y decórala, funda un gremio, forma un grupo de hasta cinco, encanta tu equipo y vende a través de la casa de subastas.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== las coronas -->
+  <section id="coronas" class="oscura">
+    <div class="contenedor">
+      <div class="cabeza-seccion rev">
+        <span class="sobre">La elección</span>
+        <h2>Albor o Umbra</h2>
+        <p>Tu corona decide tu ciudad, tu color y tu bando en la guerra. Cada una tiene una clase propia que la otra no puede usar.</p>
+      </div>
+      <div class="coronas-caja rev">
+        <div class="coronas">
+          <div class="corona albor">
+            <h3>Albor</h3>
+            <p class="titulo-fac">Corona del Amanecer</p>
+            <p>Tierras de trigo, puertos dorados y muros claros. Albor guarda la corona del día. Sus ciudades brillan al sol y sus lanzas no conocen el miedo.</p>
+            <ul>
+              <li>Clases: Guerrero, Mago, Cazador, Clérigo y <b>Lancero</b>.</li>
+              <li>Capital en el continente oeste, con Puerto del Sol como salida al mar.</li>
+              <li>Color dorado en el chat y sobre tu nombre.</li>
+            </ul>
+            <div class="figuras">
+              <img src="img/sprites/clase_guerrero_albor.png" alt="Guerrero de Albor">
+              <img src="img/sprites/clase_clerigo_albor.png" alt="Clérigo de Albor">
+              <img src="img/sprites/clase_lancero_albor.png" alt="Lancero">
+            </div>
+          </div>
+          <div class="corona umbra">
+            <h3>Umbra</h3>
+            <p class="titulo-fac">Corona del Ocaso</p>
+            <p>Ciénagas, puertos negros y fe de sombras. Umbra reclama la corona de la noche. Sus ciudades se alzan entre brumas y sus magos hablan con los muertos.</p>
+            <ul>
+              <li>Clases: Guerrero, Mago, Cazador, Clérigo y <b>Nigromante</b>.</li>
+              <li>Capital en el continente este, con Puerto Sombra como salida al mar.</li>
+              <li>Color violeta en el chat y sobre tu nombre.</li>
+            </ul>
+            <div class="figuras">
+              <img src="img/sprites/clase_guerrero_umbra.png" alt="Guerrero de Umbra">
+              <img src="img/sprites/clase_mago_umbra.png" alt="Mago de Umbra">
+              <img src="img/sprites/clase_nigromante_umbra.png" alt="Nigromante">
+            </div>
+          </div>
+        </div>
+        <div class="vs">VS</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== clases -->
+  <section id="clases">
+    <div class="contenedor">
+      <div class="cabeza-seccion rev">
+        <span class="sobre">Seis clases</span>
+        <h2>Elige cómo luchar</h2>
+        <p>Tanque, daño, apoyo o invocador. Las cifras son las de nivel 1; cada nivel las mejora y el árbol de poderes añade pasivas.</p>
+      </div>
+      <div class="pestanas" id="clases-pestanas" role="tablist"></div>
+      <div id="clases-contenido"></div>
+    </div>
+  </section>
+
+  <!-- ======================================================== el mundo -->
+  <section id="mundo" class="oscura">
+    <div class="contenedor">
+      <div class="cabeza-seccion rev">
+        <span class="sobre">El mundo</span>
+        <h2>Tres continentes y un mar por cruzar</h2>
+        <p>Alba al oeste, Umbra al este y, en el centro, la Isla de la Cicatriz: la zona de guerra. Entre ellos se viaja en barco desde los muelles; a pie no se cruza el mar.</p>
+      </div>
+      <div class="galeria rev">
+        <figure class="ancha" data-zoom><img loading="lazy" src="img/capturas/ciudad.png" alt="Una ciudad de Albor"><figcaption>Las ciudades son refugio: nadie puede atacarte dentro.</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/poderes.png" alt="Combate con poderes"><figcaption>Combate con poderes y estados</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/mzjefe.png" alt="Mazmorra"><figcaption>Mazmorras con trampas y jefes</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/batalla.png" alt="Batalla por cristales"><figcaption>Batalla por cristales</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/estandarte.png" alt="Captura del estandarte"><figcaption>Captura del estandarte: el río, los puentes y las dos coronas</figcaption></figure>
+        <figure class="ancha" data-zoom><img loading="lazy" src="img/capturas/muelle.png" alt="Muelle con el barquero"><figcaption>Los muelles: cruza el mar con el barquero</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/casa.png" alt="Casa decorada"><figcaption>Tu casa, a tu gusto</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/arbol.png" alt="Árbol de poderes"><figcaption>Árbol de poderes</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/establo.png" alt="Establo"><figcaption>El establo y sus monturas</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/subastas.png" alt="Casa de subastas"><figcaption>La casa de subastas</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== mazmorras -->
+  <section id="mazmorras">
+    <div class="contenedor">
+      <div class="cabeza-seccion rev">
+        <span class="sobre">Bajo tierra</span>
+        <h2>Mazmorras: salas, trampas y un jefe</h2>
+        <p>Tres puertas de piedra repartidas por el mapa. Dentro, las salas cambian de forma: ramas, bucles y callejones. Las criaturas no reaparecen una a una: vuelven todas cuando el jefe regresa.</p>
+      </div>
+      <div class="rejilla c3" style="margin-bottom:34px">
+        <article class="mazmorra cristal rev">
+          <img src="img/sprites/jefe_caballero.png" alt="Señor de la Cripta">
+          <div><span class="nivel">Nivel 10+</span><h3>Cripta del Olvido</h3><p>Un osario bajo la colina. Esqueletos, espectros y un caballero que no descansa.</p></div>
+        </article>
+        <article class="mazmorra cristal rev">
+          <img src="img/sprites/jefe_titan.png" alt="Titán del Foso">
+          <div><span class="nivel">Nivel 18+</span><h3>Foso de las Brasas</h3><p>Galerías de escoria al rojo vivo. Gólems, demonios y un titán que despierta con el calor.</p></div>
+        </article>
+        <article class="mazmorra cristal rev">
+          <img src="img/sprites/jefe_behemot.png" alt="Behemot del Eclipse">
+          <div><span class="nivel">Nivel 25+</span><h3>Santuario del Eclipse</h3><p>El templo donde la luz se apaga. Liches, ojos del abismo y el Behemot de guerra.</p></div>
+        </article>
+      </div>
+      <div class="rejilla c3 rev" style="grid-template-columns:repeat(3,1fr)">
+        <div class="rasgo cristal"><h3>Pinchos</h3><p>Púas que salen del suelo al compás. Un golpe seco del 9 % de tu vida: cruza cuando se escondan.</p></div>
+        <div class="rasgo cristal"><h3>Fuego</h3><p>Chorros de llamas que avisan antes de encenderse. El daño más fuerte: el 12 % de tu vida por golpe.</p></div>
+        <div class="rasgo cristal"><h3>Gas venenoso</h3><p>Una nube que te daña cada medio segundo mientras sigas dentro. Rodéala o cruza sin detenerte.</p></div>
+      </div>
+      <div class="cabeza-seccion rev" style="margin-top:70px;margin-bottom:34px"><h3>Criaturas que encontrarás</h3></div>
+      <div class="rejilla c4" id="bestiario-rejilla"></div>
+    </div>
+  </section>
+
+  <!-- ======================================================== monturas -->
+  <section id="monturas" class="oscura">
+    <div class="contenedor">
+      <div class="cabeza-seccion rev">
+        <span class="sobre">A galope</span>
+        <h2>Monturas con estilo</h2>
+        <p>Compra monturas en las cuadras de las ciudades o consigue las exclusivas en el Item Mall. Las de transporte se usan con el oficio activo; el resto, con el oficio apagado. Puedes guardar hasta 20 en tu colección y cambiar con la tecla <b>O</b>.</p>
+      </div>
+      <div class="rejilla c4" id="monturas-rejilla"></div>
+    </div>
+  </section>
+
+  <!-- ======================================================== guerra -->
+  <section id="guerra">
+    <div class="contenedor">
+      <div class="cabeza-seccion rev">
+        <span class="sobre">Cada día</span>
+        <h2>La guerra de las coronas</h2>
+        <p>Dos eventos por equipos. Cuando se juntan los jugadores necesarios en cada bando, empieza el combate. Se anotan desde el panel de eventos y avisan por toda la pantalla.</p>
+      </div>
+      <div class="eventos">
+        <article class="evento cristal rev">
+          <img loading="lazy" src="img/capturas/batalla.png" alt="Batalla por cristales">
+          <div class="texto">
+            <span class="hora">Todos los días · 21:00</span>
+            <h3>Batalla por cristales</h3>
+            <p>Dos fortalezas con muros y tres puertas cada una. Derriba las estatuas enemigas, recoge los cristales que sueltan y llévalos a tu altar. Quien porta cristales se ve con un halo y los cristales girando sobre su cabeza: ¡a por él!</p>
+          </div>
+        </article>
+        <article class="evento cristal rev">
+          <img loading="lazy" src="img/capturas/estandarte.png" alt="Captura del estandarte">
+          <div class="texto">
+            <span class="hora">Cada 4 horas</span>
+            <h3>Captura del estandarte</h3>
+            <p>Un campo partido por un río, con puentes, vados y bosques propios de cada corona. Roba el estandarte enemigo y llévalo a tu base. Al portador se le ve la bandera a la espalda: protégelo, o caza al del otro bando. A tres capturas, ganas.</p>
+          </div>
+        </article>
+      </div>
+      <p class="suave rev" style="text-align:center;margin-top:30px">Al terminar, todos reciben oro, experiencia, polvo arcano y Monedas Corona: <b style="color:var(--oro)">5 si ganas y 2 si pierdes</b>. El estandarte paga 1.000 de oro al bando ganador.</p>
+    </div>
+  </section>
+
+  <!-- ======================================================== descarga -->
+  <section id="descargar" class="descarga" data-version>
+    <div class="contenedor">
+      <div class="cabeza-seccion rev">
+        <span class="sobre">Juega ya</span>
+        <h2>Descarga Dos Coronas</h2>
+        <p>La beta ya está abierta. Descomprime, abre el juego, crea tu cuenta y elige tu corona. No hace falta instalar nada.</p>
+      </div>
+      <div class="caja-descarga cristal rev">
+        <div class="izq">
+          <h3>Dos Coronas para Windows</h3>
+          <p class="suave">Versión <b data-v="version">beta</b> · publicada el <span data-v="fecha">—</span></p>
+          <div class="meta">
+            <div><b data-v="tamano">~86 MB</b><span>Descarga</span></div>
+            <div><b>64 bits</b><span>Windows 10 / 11</span></div>
+            <div><b>Gratis</b><span>Sin anuncios</span></div>
+          </div>
+          <a class="btn oro gran" href="descargas/DosCoronas-Windows.zip" data-v="archivo" download>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
+            Descargar .zip
+          </a>
+          <p class="suave" style="margin:18px 0 10px;font-size:.9rem">¿Quieres comprobar que el archivo no se alteró? Compara su huella SHA-256 (clic para copiarla):</p>
+          <div class="hash" id="hash"><small>SHA-256</small><span data-v="sha256">—</span></div>
+        </div>
+        <div class="der">
+          <h3>Cómo empezar</h3>
+          <ol class="pasos">
+            <li><b>Descomprime</b> el .zip en una carpeta (clic derecho → Extraer todo).</li>
+            <li>Abre <b>DosCoronas.exe</b>. La primera vez Windows puede avisar de que es un programa desconocido: pulsa <b>Más información → Ejecutar de todas formas</b>.</li>
+            <li>Elige <b>Registrarte</b>, crea tu cuenta y tu personaje, y entra al mundo.</li>
+          </ol>
+          <ul class="reqs">
+            <li><span>Sistema</span><span>Windows 10 / 11, 64 bits</span></li>
+            <li><span>Memoria</span><span>2 GB de RAM</span></li>
+            <li><span>Gráficos</span><span>Compatibles con OpenGL 2.1</span></li>
+            <li><span>Espacio</span><span>~100 MB</span></li>
+            <li><span>Conexión</span><span>Internet (juego online)</span></li>
+          </ul>
+          <div class="aviso azul">El juego se conecta solo al servidor de la beta: no tienes que escribir ninguna dirección. Si el cortafuegos de Windows pregunta, permite el acceso.</div>
+        </div>
+      </div>
+      <p class="suave rev" style="text-align:center;margin-top:26px">¿Dudas? Lee <a href="guia.html#primeros-pasos">la guía de primeros pasos</a> o los <a href="guia.html#faq">problemas frecuentes</a>.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="contenedor">
+    <div class="marca"><span>DOS CORONAS</span></div>
+    <nav><a href="#juego">El juego</a><a href="guia.html">Guía</a><a href="#clases">Clases</a><a href="#descargar">Descargar</a></nav>
+    <p>© <span id="anio">2026</span> Dos Coronas. Beta en desarrollo. Hecho con LÖVE.</p>
+  </div>
+</footer>
+
+<script src="js/app.js"></script>
+</body>
+</html>

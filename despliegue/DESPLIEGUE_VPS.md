@@ -100,7 +100,10 @@ systemctl start doscoronas
 .\construir.ps1 -Servidor "IP_O_DOMINIO" -Puerto 30555
 ```
 
-Genera `dist\DosCoronas-Windows` apuntando a ese servidor.
+Genera `dist\DosCoronas-Windows` apuntando a ese servidor. La dirección va **dentro del paquete** (`src/infraestructura/destino.lua`,
+que escribe `construir.ps1`): los jugadores no reciben ningún `.env` suelto. No es un secreto (cualquier cliente puede verla en
+la red), así que la protección real es el firewall y los límites del servidor; con un dominio podrás cambiar de IP sin
+repartir otro cliente. Si el juego de `dist\` está abierto, `construir.ps1` avisa antes de borrar nada.
 
 ## 5. Cómo comprobar que está encendido
 

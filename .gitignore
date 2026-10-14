@@ -11,3 +11,7 @@ servidor/mapas/*.tmp
 # Configuración local (la plantilla es .env.example)
 .env
 error_log.txt
+
+# Web: el zip del juego es pesado y se genera con web/publicar.ps1
+web/descargas/*.zip
+web/descargas/version.json

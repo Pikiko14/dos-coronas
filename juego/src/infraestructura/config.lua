@@ -22,11 +22,16 @@ local function entero(nombre, defecto, minimo, maximo)
   return math.floor(n)
 end
 
+-- Destino por defecto: el paquete del juego lo lleva dentro (src/infraestructura/destino.lua, lo escribe construir.ps1),
+-- así los jugadores no necesitan ningún archivo .env. Un .env o una variable de entorno siguen mandando (desarrollo).
+local okDestino, destino = pcall(require, "src.infraestructura.destino")
+if not okDestino or type(destino) ~= "table" then destino = {} end
+
 return {
   origen = ruta,
   red = {
     -- Servidor al que se conecta el juego.
-    host = texto("DOSCORONAS_SERVIDOR_HOST", "127.0.0.1"),
-    puerto = entero("DOSCORONAS_PUERTO", 30555, 1, 65535),
+    host = texto("DOSCORONAS_SERVIDOR_HOST", destino.host or "127.0.0.1"),
+    puerto = entero("DOSCORONAS_PUERTO", destino.puerto or 30555, 1, 65535),
   },
 }

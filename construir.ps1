@@ -1,7 +1,7 @@
 # Empaqueta el proyecto para distribuirlo.
 #   dist\servidor.love  y  dist\juego.love        (con compartido\ dentro)
 #   dist\DosCoronas-Windows\                       el juego listo para entregar a los jugadores:
-#                                                  DosCoronas.exe + DLL de LÖVE + .env con la dirección del servidor
+#                                                  DosCoronas.exe + DLL de LÖVE (el servidor va dentro del paquete, sin .env)
 # Uso:  construir.bat              (o)  construir.ps1 -Servidor "mi.dominio.com" -Puerto 30555
 param(
   [string]$Servidor = "",
@@ -24,6 +24,11 @@ function Empaquetar($nombre) {
   New-Item -ItemType Directory -Force $stage | Out-Null
   robocopy $origen $stage /E /XD capturas preview /XF .env log.txt error_log.txt "prueba_*.txt" cuentas.json /NFL /NDL /NJH /NJS /NP | Out-Null
   robocopy (Join-Path $raiz "compartido") (Join-Path $stage "compartido") /E /NFL /NDL /NJH /NJS /NP | Out-Null
+  if ($nombre -eq "juego" -and ($Servidor -or $Puerto -gt 0)) {
+    # el servidor de destino va DENTRO del paquete (no en un .env suelto junto al .exe)
+    $lua = "-- Generado por construir.ps1: servidor al que se conecta este juego.`r`nreturn { host = `"$Servidor`", puerto = $Puerto }`r`n"
+    [System.IO.File]::WriteAllText((Join-Path $stage "src\infraestructura\destino.lua"), $lua, (New-Object System.Text.UTF8Encoding $false))
+  }
   $zip = Join-Path $dist ($nombre + ".zip")
   $love = Join-Path $dist ($nombre + ".love")
   if (Test-Path $zip) { Remove-Item $zip -Force }
@@ -47,6 +52,12 @@ if (-not $Love) {
   "No encontré la carpeta de LÖVE: no se genera el .exe. Usa -Love 'C:\ruta\a\love'."
 } else {
   $salida = Join-Path $dist "DosCoronas-Windows"
+  # si el juego está abierto, el .exe no se puede reemplazar: se avisa ANTES de borrar nada
+  $exeViejo = Join-Path $salida "DosCoronas.exe"
+  if (Test-Path $exeViejo) {
+    try { $f = [System.IO.File]::Open($exeViejo, "Open", "ReadWrite", "None"); $f.Close() }
+    catch { throw "DosCoronas.exe de dist\DosCoronas-Windows está en uso: cierra el juego y vuelve a ejecutar construir (no se ha borrado nada)." }
+  }
   Vaciar $salida
   New-Item -ItemType Directory -Force $salida | Out-Null
   $exe = Join-Path $salida "DosCoronas.exe"
@@ -58,11 +69,7 @@ if (-not $Love) {
   $out.Close()
   Get-ChildItem $Love -Filter *.dll | Copy-Item -Destination $salida
   Copy-Item (Join-Path $Love "license.txt") (Join-Path $salida "LICENCIA-LOVE.txt") -ErrorAction SilentlyContinue
-  $envTexto = Get-Content (Join-Path $raiz "juego\.env.example") -Raw
-  if ($Servidor) { $envTexto = $envTexto -replace "DOSCORONAS_SERVIDOR_HOST=.*", "DOSCORONAS_SERVIDOR_HOST=$Servidor" }
-  if ($Puerto -gt 0) { $envTexto = $envTexto -replace "DOSCORONAS_PUERTO=.*", "DOSCORONAS_PUERTO=$Puerto" }
-  [System.IO.File]::WriteAllText((Join-Path $salida ".env"), $envTexto, (New-Object System.Text.UTF8Encoding $false))
-  $leeme = "Dos Coronas`r`n`r`nAbre DosCoronas.exe. Crea una cuenta y juega.`r`nSi no conecta, revisa la direccion del servidor en el archivo .env (junto al .exe).`r`n"
+  $leeme = "Dos Coronas`r`n`r`nAbre DosCoronas.exe. Crea una cuenta y juega.`r`n"
   [System.IO.File]::WriteAllText((Join-Path $salida "LEEME.txt"), $leeme, (New-Object System.Text.UTF8Encoding $false))
   "{0}: {1:N1} MB (servidor: {2})" -f $salida, ((Get-ChildItem $salida -Recurse | Measure-Object Length -Sum).Sum / 1MB), $(if ($Servidor) { $Servidor } else { "127.0.0.1" })
 }

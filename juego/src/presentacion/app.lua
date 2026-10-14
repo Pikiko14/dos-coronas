@@ -44,6 +44,7 @@ App.modoTest = bandera("--test")
 App.modoFoto = bandera("--foto")
 App.modoBot = bandera("--bot")
 App.modoAuto = bandera("--auto")
+App.modoWeb = bandera("--web")
 
 App.modulos = {
   menu = Menu,
@@ -97,6 +98,7 @@ function App.actualizar(dt)
     Sonido.iniciar()
     if App.modoTest then Pruebas.correr() return end
     if App.modoBot then Pruebas.bot() return end
+    if App.modoWeb then require("src.pruebas.exportar_web").correr() return end
     if App.modoFoto then Pruebas.prepararFoto(App) App.fase = 2 return end
     App.estado = "menu"
     App.fase = 2

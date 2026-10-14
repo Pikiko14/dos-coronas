@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Guía del juego — Dos Coronas</title>
+  <meta name="description" content="Guía completa de Dos Coronas: controles, clases y poderes, equipo, oficios, mazmorras, guerra de las coronas, monturas, casas, gremios y consejos para empezar.">
+  <meta name="theme-color" content="#0a0e1f">
+  <link rel="icon" href="img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+
+<header class="cabecera">
+  <div class="contenedor">
+    <a class="marca" href="index.html" aria-label="Dos Coronas">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a3"/><stop offset="1" stop-color="#c8932d"/></linearGradient></defs><path d="M8 46 4 20l14 11 14-17 14 17 14-11-4 26z" fill="url(#g1)" stroke="#7a5214" stroke-width="2" stroke-linejoin="round"/><rect x="9" y="48" width="46" height="7" rx="2" fill="url(#g1)" stroke="#7a5214" stroke-width="2"/><circle cx="32" cy="12" r="3.4" fill="#9e6bf2" stroke="#fff" stroke-width="1"/><circle cx="4" cy="19" r="2.6" fill="#f2c747" stroke="#7a5214"/><circle cx="60" cy="19" r="2.6" fill="#f2c747" stroke="#7a5214"/></svg>
+      <span>DOS CORONAS</span>
+    </a>
+    <button class="burger" id="burger" aria-label="Menú">☰</button>
+    <nav class="menu" id="menu">
+      <a href="index.html#juego">El juego</a>
+      <a href="index.html#clases">Clases</a>
+      <a href="index.html#mundo">El mundo</a>
+      <a class="activo" href="guia.html">Guía</a>
+      <a class="boton-menu" href="index.html#descargar">Descargar</a>
+    </nav>
+  </div>
+</header>
+
+<div class="contenedor guia">
+  <aside class="indice cristal">
+    <h4>Guía del juego</h4>
+    <a href="#primeros-pasos">Primeros pasos</a>
+    <a href="#controles">Controles</a>
+    <a href="#pantalla">La pantalla</a>
+    <a href="#clases">Clases y poderes</a>
+    <a href="#combate">Combate y niveles</a>
+    <a href="#equipo">Equipo y encantamientos</a>
+    <a href="#mundo">El mundo y los viajes</a>
+    <a href="#mazmorras">Mazmorras</a>
+    <a href="#guerra">La guerra de las coronas</a>
+    <a href="#oficios">Oficios y comercio</a>
+    <a href="#monturas">Monturas y mascotas</a>
+    <a href="#social">Grupos, gremios y casas</a>
+    <a href="#economia">Subastas, Item Mall y premios</a>
+    <a href="#consejos">Consejos para empezar</a>
+    <a href="#faq">Problemas frecuentes</a>
+  </aside>
+
+  <article class="articulo">
+    <div class="portada-guia cristal">
+      <h1>Guía del juego</h1>
+      <p>Todo lo que necesitas para pasar de recién llegado a veterano de la guerra. Si es tu primera vez, empieza por <a href="#primeros-pasos">Primeros pasos</a> y <a href="#consejos">Consejos</a>.</p>
+    </div>
+
+    <!-- ====================================================== primeros pasos -->
+    <section id="primeros-pasos">
+      <h2>Primeros pasos</h2>
+      <ol class="pasos">
+        <li><b>Descarga y abre el juego.</b> Descomprime el .zip de la <a href="index.html#descargar">página de descarga</a> y ejecuta <b>DosCoronas.exe</b>. Si Windows avisa de un programa desconocido, pulsa <em>Más información → Ejecutar de todas formas</em>.</li>
+        <li><b>Crea tu cuenta.</b> En el menú elige <em>Registrarte</em>: un usuario y una clave. Una cuenta puede tener varios personajes.</li>
+        <li><b>Crea tu personaje.</b> Elige la <b>facción</b> (Albor o Umbra), el <b>oficio de combate</b> (la clase) y un nombre. Albor suma al Lancero y Umbra al Nigromante; las otras cuatro clases son de las dos.</li>
+        <li><b>Entra al mundo.</b> Empiezas en la ciudad de tu corona, que es refugio: nadie puede atacarte dentro. Habla con los PNJ y sal a cazar.</li>
+      </ol>
+      <div class="consejo"><b>Una corona para siempre.</b> La facción no se cambia después de crear el personaje. Si quieres probar la otra, crea otro personaje en la misma cuenta.</div>
+      <img class="captura pixel" data-zoom loading="lazy" src="img/capturas/crear.png" alt="Pantalla de creación de personaje">
+    </section>
+
+    <!-- ====================================================== controles -->
+    <section id="controles">
+      <h2>Controles</h2>
+      <table>
+        <tr><th>Acción</th><th>Tecla o ratón</th></tr>
+        <tr><td>Moverte</td><td><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> o las flechas (casilla a casilla, con diagonales), o <b>clic en el suelo</b></td></tr>
+        <tr><td>Atacar</td><td>Clic en un enemigo (o en la <em>Lista de batalla</em>): lo eliges y lo persigues</td></tr>
+        <tr><td>Siguiente enemigo / soltar objetivo</td><td><kbd>Tab</kbd> / <kbd>Esc</kbd></td></tr>
+        <tr><td>Mirar a alguien</td><td><kbd>Shift</kbd> + clic: la consola te cuenta qué es</td></tr>
+        <tr><td>Poderes</td><td><kbd>1</kbd> a <kbd>6</kbd></td></tr>
+        <tr><td>Poción de vida / de maná</td><td><kbd>7</kbd> / <kbd>8</kbd></td></tr>
+        <tr><td>Autopoción</td><td><kbd>R</kbd>: elige el porcentaje de vida y de maná al que se bebe sola</td></tr>
+        <tr><td>Árbol de poderes</td><td><kbd>K</kbd> (cada nivel da un punto)</td></tr>
+        <tr><td>Tu personaje y equipo</td><td><kbd>C</kbd></td></tr>
+        <tr><td>Bolsa</td><td><kbd>I</kbd>: un clic elige, otro en la misma casilla equipa, otro en otra casilla intercambia</td></tr>
+        <tr><td>Interactuar (PNJ, puertas, cofres)</td><td><kbd>E</kbd></td></tr>
+        <tr><td>Mapa</td><td><kbd>M</kbd>: clic en un punto para viajar hasta allí; rueda para acercar</td></tr>
+        <tr><td>Monturas</td><td><kbd>U</kbd> abre la colección · <kbd>O</kbd> monta y desmonta</td></tr>
+        <tr><td>Activar o desactivar tu oficio</td><td><kbd>Y</kbd> (solo se activa dentro de una ciudad)</td></tr>
+        <tr><td>Grupo</td><td><kbd>J</kbd></td></tr>
+        <tr><td>Item Mall</td><td><kbd>L</kbd></td></tr>
+        <tr><td>Premio diario</td><td><kbd>F2</kbd> o el botón del regalo bajo el minimapa</td></tr>
+        <tr><td>Robar (ladrón)</td><td><kbd>B</kbd></td></tr>
+        <tr><td>Chat</td><td><kbd>Enter</kbd>. <code>/m</code> habla al mundo, <code>/f</code> a tu facción, <code>/g</code> a tu gremio, <code>/p</code> a tu grupo</td></tr>
+        <tr><td>Menú del juego (ajustes, salir)</td><td><kbd>Esc</kbd> (si hay un panel abierto, lo cierra)</td></tr>
+        <tr><td>Ayuda / medidor de rendimiento / pantalla completa</td><td><kbd>F1</kbd> / <kbd>F3</kbd> / <kbd>F11</kbd></td></tr>
+      </table>
+      <p>Clic derecho sobre otro jugador abre un menú: tratar con él, invitarlo a tu gremio o a tu grupo, o mirarlo.</p>
+    </section>
+
+    <!-- ====================================================== pantalla -->
+    <section id="pantalla">
+      <h2>La pantalla</h2>
+      <ul>
+        <li><b>Arriba a la izquierda:</b> tu vida, maná, experiencia y oro, y el oficio activo con su carga.</li>
+        <li><b>Arriba a la derecha:</b> el minimapa y, debajo, cuatro botones con icono: <em>mapa</em>, <em>ayuda</em>, <em>menú</em> y el <em>regalo</em> del premio diario (late en dorado cuando hay uno por reclamar).</li>
+        <li><b>Abajo, en el centro:</b> la barra de poderes (1 a 6), las pociones (7 y 8) y la montura. Sobre ella ves los <b>estados</b> y los <b>bonos</b> activos con su duración.</li>
+        <li><b>Abajo a la derecha:</b> la lista de batalla, con los enemigos a la vista.</li>
+        <li><b>Abajo:</b> el chat, con pestañas de icono: todo, mundo, facción, sistema, gremio, grupo y eventos.</li>
+        <li><b>Arriba, cruzando la pantalla de derecha a izquierda:</b> los avisos importantes: eventos de guerra, anuncios de los administradores y los hitos de las capturas.</li>
+      </ul>
+      <img class="captura pixel" data-zoom loading="lazy" src="img/capturas/ciudad.png" alt="El juego en una ciudad">
+    </section>
+
+    <!-- ====================================================== clases -->
+    <section id="clases">
+      <h2>Clases y poderes</h2>
+      <p>Cada clase tiene seis poderes en la barra (teclas <kbd>1</kbd> a <kbd>6</kbd>) y un árbol (<kbd>K</kbd>) donde gastas un punto por nivel para mejorarlos y desbloquear pasivas. Las cifras son las de nivel 1.</p>
+      <table>
+        <tr><th>Clase</th><th>Vida</th><th>Maná</th><th>Ataque</th><th>Magia</th><th>Defensa</th><th>Estilo</th></tr>
+        <tr><td><b>Guerrero</b></td><td>160</td><td>50</td><td>15</td><td>4</td><td>9</td><td>Tanque y daño cuerpo a cuerpo. Parte a los enemigos en área.</td></tr>
+        <tr><td><b>Mago</b></td><td>100</td><td>160</td><td>5</td><td>17</td><td>3</td><td>Daño mágico a distancia. Frágil y devastador.</td></tr>
+        <tr><td><b>Cazador</b></td><td>118</td><td>90</td><td>16</td><td>5</td><td>5</td><td>Daño físico a distancia, trampas y flechas.</td></tr>
+        <tr><td><b>Clérigo</b></td><td>128</td><td>155</td><td>5</td><td>11</td><td>3</td><td>Cura, bendice y castiga con luz.</td></tr>
+        <tr><td><b>Lancero</b> <small>(Albor)</small></td><td>150</td><td>70</td><td>16</td><td>4</td><td>8</td><td>Daño físico con alcance largo: estocadas, embestidas, tormenta de lanzas.</td></tr>
+        <tr><td><b>Nigromante</b> <small>(Umbra)</small></td><td>104</td><td>175</td><td>5</td><td>16</td><td>3</td><td>Maldice, drena vida y alza esqueletos y espectros que luchan a su lado.</td></tr>
+      </table>
+      <p>Mira los seis poderes de cada clase, con su coste y enfriamiento, en <a href="index.html#clases">la sección de clases</a>.</p>
+      <div class="consejo"><b>Qué elegir.</b> Si quieres aguantar y proteger: Guerrero o Lancero. Para daño a distancia: Mago, Cazador o Nigromante. Para que todo grupo te quiera: Clérigo. El Nigromante invoca esbirros y casi nunca pelea solo.</div>
+      <h3>Poderes de zona</h3>
+      <p>Algunos hechizos (Meteoro, Lluvia de flechas, Tormenta de lanzas, Espinas de hueso) se apuntan: pulsa el poder, mueve el ratón hasta el punto y haz clic. El alcance está limitado; fuera de él, el poder se acorta.</p>
+    </section>
+
+    <!-- ====================================================== combate -->
+    <section id="combate">
+      <h2>Combate y niveles</h2>
+      <ul>
+        <li>Cada golpe tira entre un mínimo y un máximo que salen de tu <b>ataque</b> (físico o mágico, según la clase) y del poder del golpe. Hay un 8 % de probabilidad de <b>crítico</b>.</li>
+        <li>La <b>defensa</b> del objetivo reduce el daño: <em>defensa / (defensa + 40)</em>. Los golpes físicos se reducen con Defensa y los mágicos con <b>Defensa mágica</b> (Res).</li>
+        <li>El <b>nivel máximo es 30</b>. La experiencia se gana al derrotar criaturas; las de nivel muy inferior al tuyo dan poco.</li>
+        <li>Matar da <b>oro</b> y <b>botín</b>, que cae al suelo: recógelo pasando por encima o con clic. El botín puede ser equipo de <b>cualquier oficio</b>, no solo el tuyo: véndelo o cámbialo.</li>
+        <li><b>Si mueres</b> reapareces en tu ciudad. A partir del nivel 10 pierdes el 10 % de la experiencia que pide tu nivel (nunca bajas de nivel).</li>
+        <li><b>Estados</b>: lentitud, aturdimiento, veneno, heridas, escudos y bonos de ataque. Los ves sobre la barra de poderes con su duración.</li>
+        <li>Cerca de los grupos aparecen <b>criaturas de grupo</b> y <b>gigantes</b>: más duras y con mejor botín.</li>
+      </ul>
+      <img class="captura pixel" data-zoom loading="lazy" src="img/capturas/poderes.png" alt="Combate con poderes">
+    </section>
+
+    <!-- ====================================================== equipo -->
+    <section id="equipo">
+      <h2>Equipo y encantamientos</h2>
+      <p>Tienes nueve huecos: <b>arma, escudo, cabeza, pecho, piernas, pies, anillo, amuleto y mochila</b>. El escudo lo usan Guerrero y Clérigo. Cada clase lleva un tipo de armadura: pesada (Guerrero), ligera (Cazador), de tela (Mago y Clérigo), de lancero y de nigromante.</p>
+      <h3>Ocho escalones</h3>
+      <p>Todo el equipo viene en ocho calidades, cada una con su nivel mínimo: <b>tosca, de soldado, de veterano, de capitán, de campeón, de élite, legendaria y de corona</b>. Cuanto más alto, más ataque, defensa, vida y maná.</p>
+      <h3>Encantar y forjar</h3>
+      <ul>
+        <li>El <b>polvo arcano</b> lo sueltan las criaturas por encima del nivel 10 (con baja probabilidad) y los eventos de guerra. Sirve para encantar tus piezas.</li>
+        <li>Los <b>pergaminos de forja</b> (Item Mall y cofres) mejoran un arma. Encantar tiene riesgo: lee el panel antes de confirmar.</li>
+        <li>La <b>mochila</b> aumenta los espacios de la bolsa (hasta 24).</li>
+      </ul>
+      <img class="captura pixel" data-zoom loading="lazy" src="img/capturas/encantar.png" alt="Encantar equipo">
+    </section>
+
+    <!-- ====================================================== mundo -->
+    <section id="mundo">
+      <h2>El mundo y los viajes</h2>
+      <p>El mundo son <b>tres continentes</b>: <b>Alba</b> al oeste, <b>Umbra</b> al este y la <b>Isla de la Cicatriz</b> en el centro, la zona de guerra. Cada continente tiene ciudades, caminos, puestos y campamentos de criaturas cuyo nivel sube a medida que te alejas de la ciudad.</p>
+      <ul>
+        <li><b>Ciudades:</b> son refugio. Dentro nadie puede atacarte. Tienen mercader, armero, establo, mayordomo (casas), heraldo (guerra), maestro de oficios, escribano del gremio, subastador, criador de mascotas y encantador.</li>
+        <li><b>Mapa (<kbd>M</kbd>):</b> muestra todo lo que has descubierto con iconos de cada servicio. Haz clic en un sitio para caminar hasta allí.</li>
+        <li><b>Barcos:</b> entre continentes se viaja en barco. En los muelles de <b>Puerto del Sol</b>, <b>Puerto Sombra</b> y del <b>Embarcadero de la Cicatriz</b> hay un barquero (<kbd>E</kbd>) que te lleva al instante a cambio de oro. A pie no se cruza el mar.</li>
+        <li><b>Zonas:</b> el nombre de la zona sale arriba en la pantalla al entrar; mira su nivel antes de adentrarte.</li>
+      </ul>
+      <img class="captura pixel" data-zoom loading="lazy" src="img/capturas/muelle.png" alt="Muelle con el barquero y su barco">
+    </section>
+
+    <!-- ====================================================== mazmorras -->
+    <section id="mazmorras">
+      <h2>Mazmorras</h2>
+      <table>
+        <tr><th>Mazmorra</th><th>Nivel</th><th>Jefe</th></tr>
+        <tr><td>Cripta del Olvido</td><td>10+</td><td>Señor de la Cripta</td></tr>
+        <tr><td>Foso de las Brasas</td><td>18+</td><td>Titán del Foso</td></tr>
+        <tr><td>Santuario del Eclipse</td><td>25+</td><td>Behemot del Eclipse</td></tr>
+      </table>
+      <ul>
+        <li>Las tres <b>puertas de piedra</b> están repartidas por el mapa (violeta en el mapa). Pulsa <kbd>E</kbd> junto a la puerta para entrar si tienes el nivel.</li>
+        <li>Dentro, las salas se generan con <b>ramas, bucles y callejones</b>: hay varias rutas hasta el jefe, <b>No puedes entrar en pleno combate.</b></li>
+        <li><b>Trampas:</b> casillas que alternan entre reposo, aviso y activas. <em>Pinchos</em> (9 % de tu vida), <em>fuego</em> (12 %) y <em>gas</em> (3,5 % cada medio segundo). Fíjate en el parpadeo: cuando avisan, aún puedes pasar rápido o rodearlas.</li>
+        <li>Las criaturas no reaparecen una a una. Cuando el jefe vuelve (a los 5 minutos de caer), la mazmorra se reinicia y regresan todas.</li>
+        <li><b>El cofre:</b> al caer el jefe aparece un cofre durante 150 segundos. Al abrirlo con <kbd>E</kbd>, el premio de cada jugador presente cae al suelo junto a él (<b>600 de oro y un objeto</b> del Item Mall o una pieza de equipo del escalón máximo de cualquier oficio) y el cofre desaparece. Tienes 180 segundos para recogerlo; los addons y las monedas se entregan al momento.</li>
+      </ul>
+      <img class="captura pixel" data-zoom loading="lazy" src="img/capturas/mzjefe.png" alt="Interior de una mazmorra">
+      <div class="consejo peligro"><b>Ojo.</b> Si mueres dentro de una mazmorra reapareces fuera, en tu punto de reaparición, y pierdes experiencia (desde el nivel 10). Entra con pociones y, si puedes, con un grupo.</div>
+    </section>
+
+    <!-- ====================================================== guerra -->
+    <section id="guerra">
+      <h2>La guerra de las coronas</h2>
+      <p>Dos eventos por equipos. Los lanza el servidor y avisan por la pantalla y el chat unos minutos antes. Para empezar hace falta un mínimo de jugadores por bando (el servidor lo configura; en la beta puede ser bajo).</p>
+      <h3>Batalla por cristales (cada día a las 21:00)</h3>
+      <ul>
+        <li>Dos fortalezas con muro y <b>tres puertas</b> cada una, y un campo en medio con riscos, huecos y caminos que serpentean hasta una plaza central.</li>
+        <li>Derriba las <b>estatuas</b> enemigas: sueltan <b>cristales</b>. Recógelos y llévalos al <b>altar</b> de tu base: cada cristal da puntos.</li>
+        <li>Quien lleva cristales se ve: halo bajo los pies, cristales girando sobre la cabeza y su nombre con la cantidad. <b>Caza a los portadores enemigos</b> y protege a los tuyos.</li>
+      </ul>
+      <h3>Captura del estandarte (cada 4 horas)</h3>
+      <ul>
+        <li>Un campo dividido por un <b>río</b> con tres puentes y dos vados. Albor a un lado, Umbra al otro, cada uno con su bosque, flores o árboles secos.</li>
+        <li>Roba el estandarte enemigo en su base y llévalo a la tuya. El portador lleva una <b>bandera a la espalda</b> y un halo; va algo más lento.</li>
+        <li>Gana quien consigue <b>tres capturas</b> primero, o quien lleve más cuando se acabe el tiempo.</li>
+      </ul>
+      <img class="captura pixel" data-zoom loading="lazy" src="img/capturas/estandarte.png" alt="El campo del estandarte">
+      <h3>Premios</h3>
+      <p>Todos los participantes reciben oro, experiencia, polvo arcano, a veces un pergamino y <b>Monedas Corona</b>: 5 si ganas y 2 si pierdes. El estandarte paga 1.000 de oro al bando ganador. Además, tu corona suma <b>gloria</b>.</p>
+    </section>
+
+    <!-- ====================================================== oficios -->
+    <section id="oficios">
+      <h2>Oficios y comercio</h2>
+      <p>Un <b>oficio</b> es una profesión extra que se aprende con el <em>Maestro de oficios</em> de una ciudad y se activa con <kbd>Y</kbd> (solo dentro de una ciudad). Cambia tu aspecto y tus reglas.</p>
+      <table>
+        <tr><th>Oficio</th><th>Qué hace</th></tr>
+        <tr><td><b>Comerciante</b></td><td>Compra mercancías en la ciudad (trigo, vino, telas…) y las vende en otra: <b>cuanto más lejos, más pagan</b>. Solo se compra y vende en ciudades. Puede llevar una montura de transporte (buey, carreta) para cargar más.</td></tr>
+        <tr><td><b>Cazarrecompensas</b></td><td>Caza a los <em>buscados</em> por la ley. El Capitán de cazadores te enseña el oficio y te muestra el cartel.</td></tr>
+        <tr><td><b>Ladrón</b></td><td>Roba mercancías a los comerciantes con <kbd>B</kbd> y las vende al Contacto en las sombras. Si lo ven, queda <em>buscado</em> durante un rato.</td></tr>
+      </table>
+      <div class="consejo peligro">
+        <b>Reglas del oficio activo.</b>
+        <ul>
+          <li>Con un oficio activo <b>la facción no te protege</b>: fuera de las ciudades puedes atacar y ser atacado, incluso por tu propia corona.</li>
+          <li>Con un oficio activo solo puedes montar <b>monturas de transporte</b>; las normales se desmontan solas.</li>
+          <li>Las ciudades siguen siendo refugio para todos.</li>
+        </ul>
+      </div>
+      <img class="captura pixel" data-zoom loading="lazy" src="img/capturas/mercado.png" alt="Panel del mercader">
+    </section>
+
+    <!-- ====================================================== monturas -->
+    <section id="monturas">
+      <h2>Monturas y mascotas</h2>
+      <h3>Monturas</h3>
+      <ul>
+        <li>Se compran en el <b>establo</b> de cada ciudad (por oro y nivel) o en el <b>Item Mall</b> (las exclusivas con efectos: dragones, fénix, corcel astral, gárgola de oro).</li>
+        <li>Tu <b>colección</b> (<kbd>U</kbd>) guarda hasta 20 y siempre está a mano. Monta y desmonta con <kbd>O</kbd>.</li>
+        <li>Las <b>normales</b> las usas sin oficio. Las de <b>transporte</b> (buey, carreta) piden el oficio activo. Las monturas se bajan solas en las casas, en las guerras y al cruzar en barco.</li>
+        <li>Montado, los golpes bajan primero la <b>vida de la montura</b>; si cae, necesita descansar antes de volver a usarse.</li>
+      </ul>
+      <h3>Mascotas</h3>
+      <p>El <b>Criador de mascotas</b> vende seis: gatito, murciélago, limo guardián, flor curativa, hada y avispa. Se invocan y suben de nivel a tu lado (hasta el tuyo). Cada especie da un beneficio distinto: míralo en el criador antes de adoptar.</p>
+      <img class="captura pixel" data-zoom loading="lazy" src="img/capturas/establo.png" alt="El establo">
+    </section>
+
+    <!-- ====================================================== social -->
+    <section id="social">
+      <h2>Grupos, gremios y casas</h2>
+      <h3>Grupos</h3>
+      <ul>
+        <li>Hasta <b>5 jugadores de la misma corona</b>. <b>Solo el líder invita</b>; también puede pasar el mando o expulsar. Cualquiera puede <b>salir</b> cuando quiera, y si se va el líder, el mando pasa al siguiente.</li>
+        <li>Al derrotar una criatura, la experiencia, el oro y el progreso de encargos se reparten entre los miembros cercanos, con <b>+10 %</b> de experiencia por ir en grupo. Panel con <kbd>J</kbd>; chat con <code>/p</code>.</li>
+      </ul>
+      <h3>Gremios</h3>
+      <p>Funda uno con el <em>Escribano del gremio</em> (nivel 8 y 1.500 de oro). Hasta 25 miembros, chat propio (<code>/g</code>) y un bono de experiencia por compañero cerca. Invita con clic derecho sobre otro jugador.</p>
+      <h3>Casas</h3>
+      <p>El <em>Mayordomo</em> de la ciudad vende casas. La tuya se ve dorada en la calle. Dentro hay una cama, un cofre, una mesa y un estandarte: clic en un mueble y luego en el suelo para moverlo; clic derecho lo rota. La puerta del sur es la salida. Los muebles y el cofre se guardan con tu personaje.</p>
+      <img class="captura pixel" data-zoom loading="lazy" src="img/capturas/casa.png" alt="Interior de una casa">
+    </section>
+
+    <!-- ====================================================== economía -->
+    <section id="economia">
+      <h2>Subastas, Item Mall y premios</h2>
+      <h3>Casa de subastas</h3>
+      <p>Publica tus objetos y puja por los de otros (<em>Subastador</em> de la ciudad). Hay una comisión del 5 % al publicar y un impuesto del 8 % al vender; cada jugador puede tener hasta 8 subastas, de 1, 6, 12 o 24 horas. Si pujan en el último momento, se alarga un poco.</p>
+      <h3>Item Mall (<kbd>L</kbd>)</h3>
+      <p>La tienda de <b>Monedas Corona</b>: bonos de experiencia y botín, pergaminos de forja, <b>addons</b> (aspectos de personaje únicos) y monturas exclusivas. Las monedas se ganan jugando (premios diarios, eventos y mazmorras). Los bonos siguen contando aunque no estés conectado.</p>
+      <h3>Premio diario</h3>
+      <p>Un premio al día por personaje, con un ciclo de <b>7 días seguidos</b>: oro según tu nivel, experiencia, Monedas Corona y objetos; el día 7 es el mayor. Si fallas un día, la racha vuelve a 1. Reclámalo con <kbd>F2</kbd> o con el botón del regalo bajo el minimapa.</p>
+      <h3>Encargos</h3>
+      <p>El <em>Tablón de encargos</em> da misiones de caza con recompensa. Avanzan solas al derrotar a las criaturas pedidas.</p>
+    </section>
+
+    <!-- ====================================================== consejos -->
+    <section id="consejos">
+      <h2>Consejos para empezar</h2>
+      <ul>
+        <li>Gasta tus puntos del árbol (<kbd>K</kbd>) en cuanto subas de nivel: son la mejora más fácil.</li>
+        <li>Lleva siempre pociones en <kbd>7</kbd> y <kbd>8</kbd> y configura la <b>autopoción</b> con <kbd>R</kbd>.</li>
+        <li>Mira el nivel de la zona antes de entrar. Los campamentos cercanos a la ciudad son para los primeros niveles.</li>
+        <li>Forma <b>grupo</b>: es más experiencia y mejor botín que cazar solo, y las mazmorras sin clérigo cuestan.</li>
+        <li>Reclama el <b>premio diario</b> cada día: los 7 días seguidos dan el mejor premio.</li>
+        <li>Mira siempre el chat de <b>Eventos</b>: ahí salen los avisos de la guerra.</li>
+        <li>No salgas de la ciudad con un oficio activo sin saber a qué te expones: cualquiera puede atacarte.</li>
+        <li>El botín puede ser equipo de otra clase: no lo tires, véndelo o ponlo en la subasta.</li>
+        <li>Guarda un poco de oro para el pasaje del barco: así puedes cruzar a otro continente en cuanto lo necesites.</li>
+      </ul>
+    </section>
+
+    <!-- ====================================================== faq -->
+    <section id="faq">
+      <h2>Problemas frecuentes</h2>
+      <h3>Windows dice que el programa es desconocido</h3>
+      <p>El juego no está firmado digitalmente. Pulsa <em>Más información → Ejecutar de todas formas</em>. Puedes comprobar que el archivo es el original comparando su huella SHA-256 con la de la <a href="index.html#descargar">página de descarga</a>.</p>
+      <h3>El antivirus lo borra o lo bloquea</h3>
+      <p>Algunos antivirus desconfían de los juegos nuevos. Añade la carpeta del juego a las exclusiones y vuelve a descomprimir el .zip.</p>
+      <h3>No conecta con el servidor</h3>
+      <ul>
+        <li>Comprueba tu conexión a internet y que el cortafuegos de Windows permite el juego (si preguntó la primera vez, di que sí).</li>
+        <li>Algunas redes de empresa o universidad bloquean puertos poco habituales: prueba con otra red o con los datos del móvil.</li>
+        <li>Si el servidor de la beta se está reiniciando, espera un minuto y vuelve a intentarlo.</li>
+      </ul>
+      <h3>"Ese personaje ya está en el mundo"</h3>
+      <p>Tu personaje sigue conectado por una sesión anterior. Espera unos segundos a que el servidor lo guarde y lo desconecte, y entra de nuevo.</p>
+      <h3>El juego va lento</h3>
+      <p>Pulsa <kbd>F3</kbd> para ver el medidor de rendimiento. Cierra otros programas pesados y asegúrate de tener los controladores de la tarjeta gráfica actualizados (hace falta OpenGL 2.1).</p>
+      <h3>Se pierde progreso al cerrar</h3>
+      <p>El servidor guarda tu personaje al instante cuando sales y cada pocos minutos mientras juegas. Sal siempre con <kbd>Esc</kbd> → salir en lugar de cerrar a la fuerza.</p>
+      <div class="consejo"><b>¿Algo no está aquí?</b> Pulsa <kbd>F1</kbd> dentro del juego para ver la ayuda rápida, o pregunta en el chat del mundo (<code>/m</code>).</div>
+    </section>
+  </article>
+</div>
+
+<footer>
+  <div class="contenedor">
+    <div class="marca"><span>DOS CORONAS</span></div>
+    <nav><a href="index.html">Inicio</a><a href="#primeros-pasos">Primeros pasos</a><a href="index.html#descargar">Descargar</a></nav>
+    <p>© <span id="anio">2026</span> Dos Coronas. Beta en desarrollo. Hecho con LÖVE.</p>
+  </div>
+</footer>
+
+<script src="js/app.js"></script>
+</body>
+</html>
