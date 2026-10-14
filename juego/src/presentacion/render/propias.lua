@@ -298,23 +298,37 @@ local function diademaElfico(fila, col)
   destello(x - 7, 9 + (col % 2), 0.6, 1, 0.7)
 end
 
+-- Arma sujeta con la mano derecha del personaje: de frente a la izquierda del dibujo, de espaldas a la derecha (la
+-- misma mano), y de lado junto al cuerpo, hacia delante. Siempre se dibuja ENCIMA del personaje y con el puño sobre
+-- el asta, así parece que la lleva en la mano y no que flota a un lado.
+local function puñoArma(fila)
+  if fila == 0 then return 8 end
+  if fila == 3 then return 24 end
+  if fila == 1 then return 10 end
+  return 21
+end
+
+local function manoSobre(x, y)
+  love.graphics.setColor(0.96, 0.78, 0.62, 1)
+  love.graphics.rectangle("fill", x - 1, y, 3.6, 3)
+  love.graphics.setColor(0.7, 0.5, 0.38, 1)
+  love.graphics.rectangle("fill", x - 1, y + 2.4, 3.6, 0.8)
+end
+
 local function lanzaLateral(fila, col)
-  local lado = lado_de(fila)
-  local x = lado == 0 and 26 or (lado == -1 and 8 or 24)
-  if fila == 3 then x = 6 end
+  local x = puñoArma(fila)
   love.graphics.setColor(0.6, 0.38, 0.18, 1)
   love.graphics.rectangle("fill", x, 5, 1.6, 26)
   love.graphics.setColor(0.4, 0.24, 0.1, 1)
-  love.graphics.rectangle("fill", x, 18, 1.6, 3)
+  love.graphics.rectangle("fill", x, 25, 1.6, 3)
   poli({ x + 0.8, 0, x + 3.2, 4.6, x + 0.8, 6, x - 1.6, 4.6 }, 0.85, 0.9, 1)
   poli({ x + 0.8, 0.6, x + 1.5, 4, x + 0.8, 5, x - 0.2, 4 }, 1, 1, 1, 0.9)
   poli({ x - 0.5, 6, x + 2.2, 6, x + 3 + (col - 1), 9.5, x - 1 + (col - 1), 9.5 }, 0.86, 0.14, 0.16)
+  manoSobre(x, 20)
 end
 
 local function bastonCalavera(fila, col)
-  local lado = lado_de(fila)
-  local x = lado == 0 and 26 or (lado == -1 and 9 or 23)
-  if fila == 3 then x = 6 end
+  local x = puñoArma(fila)
   love.graphics.setColor(0.32, 0.22, 0.18, 1)
   love.graphics.rectangle("fill", x, 6, 1.6, 25)
   love.graphics.setColor(0.93, 0.92, 0.84, 1)
@@ -322,6 +336,7 @@ local function bastonCalavera(fila, col)
   love.graphics.rectangle("fill", x - 0.8, 6, 3.2, 2)
   love.graphics.setColor(0.2, 0.1, 0.3, 1)
   love.graphics.points(x - 0.5, 3.5, x - 0.5, 4.5, x + 2, 3.5, x + 2, 4.5, x + 0.8, 6.5)
+  manoSobre(x, 20)
   -- ascuas violeta que suben del cráneo
   local d = (col * 2) % 4
   destello(x - 2, 2 - d * 0.3, 0.75, 0.4, 1)
