@@ -1076,7 +1076,10 @@ function I.consola(mundo, p, x, y, w, h)
   local areaH = ch - entrada - 6
   local fh = f:getHeight()
   local ly = cy + areaH + 2
-  for i = #lineas, 1, -1 do
+  -- la rueda del ratón sobre el chat recorre lo escrito desde que entraste (I.chatScroll = mensajes por encima del último)
+  I.consolaRect = { x = x, y = cy, w = w, h = ch }
+  I.chatScroll = math.max(0, math.min(I.chatScroll or 0, math.max(0, #lineas - 1)))
+  for i = #lineas - I.chatScroll, 1, -1 do
     local m = lineas[i]
     local c = COLOR_CANAL[m.canal] or COLOR_CANAL["local"]
     local pref = m.canal == "sistema" and "" or (m.de .. ": ")
@@ -1087,6 +1090,10 @@ function I.consola(mundo, p, x, y, w, h)
     if ly < cy + 2 then break end
     love.graphics.setColor(c[1], c[2], c[3])
     love.graphics.printf(etiqueta .. pref .. m.texto, x + 8, ly, w - 16, "left")
+  end
+  if I.chatScroll > 0 then
+    love.graphics.setColor(1, 0.85, 0.4, 0.9)
+    love.graphics.printf("↓ rueda para volver a lo último (" .. I.chatScroll .. ")", x + 8, cy + 3, w - 16, "right")
   end
   local ey = cy + ch - entrada
   love.graphics.setColor(0.09, 0.12, 0.23)

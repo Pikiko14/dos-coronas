@@ -3182,13 +3182,15 @@ function Mundo:foto(pid)
   local msgs = {}
   for i = #self.mensajes, 1, -1 do
     local m = self.mensajes[i]
+    -- lo anterior a su entrada al mundo no se le manda (los mensajes van en orden de id)
+    if p and p.chatDesde and m.id <= p.chatDesde then break end
     local visible = true
     if m.canal == "sistema" and m.para and m.para ~= pid then visible = false end
     if m.canal == "gremio" and (not p or m.gremio ~= p.gremioId) then visible = false end
     if m.canal == "grupo" and (not p or not p.grupoId or m.grupo ~= p.grupoId) then visible = false end
     if visible then
       table.insert(msgs, 1, m)
-      if #msgs >= 13 then break end
+      if #msgs >= 40 then break end
     end
   end
   if not self._resumen or self.tiempo - (self._resumenT or 0) > 0.5 then
@@ -3241,7 +3243,27 @@ function Mundo:aplicarFoto(snap, pid)
   if p and snap.tu then
     for k, v in pairs(snap.tu) do p[k] = v end
   end
-  if snap.msgs then self.mensajes = snap.msgs end
+  if snap.msgs then
+    -- el chat se acumula desde que entras: cada foto trae lo reciente y aquí se añade lo que aún no se tenía
+    local chat = self._chatAcum
+    if not chat then
+      chat = { ultimo = 0, epoca = nil }
+      self._chatAcum = chat
+      self.mensajes = {}
+    end
+    for _, m in ipairs(snap.msgs) do
+      if m.epoca ~= chat.epoca then
+        -- el servidor se reinició: sus números de mensaje empiezan de cero
+        chat.epoca, chat.ultimo = m.epoca, 0
+        self.mensajes = {}
+      end
+      if m.id > chat.ultimo then
+        self.mensajes[#self.mensajes + 1] = m
+        chat.ultimo = m.id
+      end
+    end
+    while #self.mensajes > 300 do table.remove(self.mensajes, 1) end
+  end
   if snap.gloria then self.gloria = snap.gloria end
   if snap.instancia then self.instancia = snap.instancia end
   self.resumenes = snap.resumen

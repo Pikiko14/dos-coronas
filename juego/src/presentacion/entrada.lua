@@ -640,6 +640,17 @@ function Entrada.soltarRaton(app, mx, my)
 end
 
 function Entrada.rueda(app, dy)
+  -- sobre el chat, la rueda recorre los mensajes recibidos desde que entraste
+  local r = Interfaz.consolaRect
+  if r and app.estado == "juego" then
+    local mx, my = love.mouse.getPosition()
+    local esc = Interfaz.escala or 1
+    mx, my = mx / esc, my / esc
+    if mx >= r.x and mx <= r.x + r.w and my >= r.y and my <= r.y + r.h then
+      Interfaz.chatScroll = math.max(0, (Interfaz.chatScroll or 0) + (dy > 0 and 2 or -2))
+      return
+    end
+  end
   if Interfaz.panel == "comercio" then
     local mx, my = love.mouse.getPosition()
     local esc = Interfaz.escala or 1

@@ -230,11 +230,14 @@ function Servicio.tratar(servidor, mundo, idCon, msg)
         return
       end
     end
+    -- el chat de este jugador empieza cuando entra: no recibe lo que se dijo antes (solo lo nuevo, incluidos los avisos que reciba al entrar)
+    local chatDesde = mundo._msgId or 0
     local pj = mundo:crearPersonaje({
       nombre = datos.nombre,
       faccion = datos.faccion,
       clase = datos.clase,
     })
+    pj.chatDesde = chatDesde
     -- la cuenta decide si es del personal: GM o CM por su rol guardado, o GM si está en el .env (solo el servidor lo marca)
     local _, usuario, rolCuenta = Cuentas.cuentaDeToken(msg.token)
     if usuario and mundo.admins and mundo.admins[tostring(usuario):lower()] then rolCuenta = "gm" end

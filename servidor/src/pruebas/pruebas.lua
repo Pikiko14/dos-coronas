@@ -4420,6 +4420,39 @@ mundo.tiempo = 100
     expulsados = {}
     fallar(errores, "con 0 está desactivado", #Servicio.revisarInactividad(srv, mundo, t0 + 99999, 0) == 0 and #expulsados == 0)
   end)
+  paso("chat: solo desde que entras y acumulado en el cliente", function()
+    local mundo = Mundo.nuevo()
+    -- lo que se dijo antes de entrar
+    for k = 1, 30 do mundo:mensaje("mundo", "Viejo", "mensaje antiguo " .. k, nil) end
+    local desde = mundo._msgId
+    local pj = mundo:crearPersonaje({ nombre = "Recien", faccion = "albor", clase = "guerrero", nivel = 1 })
+    pj.chatDesde = desde
+    local snap = mundo:foto(pj.id)
+    local antiguos = 0
+    for _, m in ipairs(snap.msgs) do if m.texto:find("antiguo", 1, true) then antiguos = antiguos + 1 end end
+    fallar(errores, "al entrar no le llega lo anterior", antiguos == 0, tostring(antiguos))
+    mundo:mensaje("mundo", "Otro", "primero nuevo", nil)
+    local snap2 = mundo:foto(pj.id)
+    fallar(errores, "lo nuevo sí le llega", #snap2.msgs == 1 and snap2.msgs[1].texto == "primero nuevo")
+    -- cliente: acumula lo nuevo a lo largo de varias fotos, sin repetir y pasando de 13
+    local cliente = Mundo.nuevo()
+    cliente:aplicarFoto(snap2, pj.id)
+    local base = #cliente.mensajes
+    for k = 1, 25 do
+      mundo:mensaje("mundo", "Otro", "nuevo " .. k, nil)
+      cliente:aplicarFoto(mundo:foto(pj.id), pj.id)
+      cliente:aplicarFoto(mundo:foto(pj.id), pj.id)   -- la misma foto otra vez no duplica
+    end
+    fallar(errores, "el cliente conserva todo lo recibido", #cliente.mensajes == base + 25, #cliente.mensajes .. " vs " .. (base + 25))
+    fallar(errores, "en orden", cliente.mensajes[#cliente.mensajes].texto == "nuevo 25" and cliente.mensajes[base + 1].texto == "nuevo 1")
+    -- si el servidor se reinicia (otra época), el chat del cliente empieza de nuevo
+    mundo.epoca = "otra"
+    mundo._msgId = 0
+    mundo:mensaje("mundo", "Otro", "tras reinicio", nil)
+    pj.chatDesde = 0
+    cliente:aplicarFoto(mundo:foto(pj.id), pj.id)
+    fallar(errores, "tras un reinicio se vuelve a empezar", cliente.mensajes[#cliente.mensajes].texto == "tras reinicio" and #cliente.mensajes <= 3)
+  end)
   paso("red y paneles", function()
     local Servidor = require("src.aplicacion.servicio_servidor")
     local mundo = Mundo.nuevo()
