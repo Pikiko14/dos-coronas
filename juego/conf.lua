@@ -1,6 +1,7 @@
 function love.conf(t)
   t.identity = "doscoronas"
   t.window.title = "Dos Coronas"
+  t.window.icon = "arte/icono.png"      -- la corona del juego en la ventana y la barra de tareas
   t.window.width = 1280
   t.window.height = 720
   t.window.resizable = true

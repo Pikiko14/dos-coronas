@@ -719,6 +719,16 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
         fallar(errores, id .. " se dibuja en la dirección " .. dir, ok, tostring(err))
       end
     end
+    -- los diez addons de clase (guerrero, mago, cazador, clérigo, lancero y nigromante): tienda, precio y dibujo
+    local DE_CLASE = { "skin_gladiador", "skin_barbaro", "skin_archimago", "skin_hechicero_fuego", "skin_montaraz",
+      "skin_arquero_elfico", "skin_sacerdotisa_alba", "skin_hoplita", "skin_senor_huesos", "skin_dama_lich" }
+    for _, id in ipairs(DE_CLASE) do
+      fallar(errores, id .. " está en el mall con precio", Mall.ADDONS[id] and Mall.ADDONS[id].precio > 0 and P.skins[id] and P.skins[id].generada ~= nil)
+      for dir = 1, 4 do
+        local ok, err = pcall(P.dibujar, P.skins[id], dir, dir % 2 == 0, 0.3, 100, 100)
+        fallar(errores, id .. " se dibuja en la dirección " .. dir, ok, tostring(err))
+      end
+    end
     local primeras = Mall.ORDEN_ADDONS[1] == "skin_hada_cristal" and Mall.ORDEN_ADDONS[2] == "skin_caballero_solar"
     fallar(errores, "salen las primeras de la lista", primeras)
   end)
@@ -1082,6 +1092,16 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     Entrada.tecla({ estado = "juego" }, "pagedown")
     fallar(errores, "AvPág baja", (Interfaz.chatScroll or 0) == 0)
     Interfaz.hud(mundo, pj, 1280, 720)
+    -- en "Todo" no salen los avisos del sistema: solo en su pestaña, que muestra un punto cuando llega alguno
+    Interfaz.canal = "todo"
+    mundo:mensaje("sistema", "", "aviso de sistema de prueba", pj)
+    Interfaz.hud(mundo, pj, 1280, 720)
+    fallar(errores, "la pestaña del sistema avisa de lo nuevo", Interfaz.sistemaNuevo == true)
+    Interfaz.canal = "sistema"
+    Interfaz.hud(mundo, pj, 1280, 720)
+    Interfaz.hud(mundo, pj, 1280, 720)
+    fallar(errores, "al abrirla se da por visto", Interfaz.sistemaNuevo == false)
+    Interfaz.canal = "todo"
   end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()

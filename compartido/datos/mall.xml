@@ -48,6 +48,17 @@
   <!-- ---- addons (skins de personaje), en el orden en que salen en la tienda ---- -->
   <addon id="skin_hada_cristal" nombre="Hada de cristal" desc="Exclusiva: alas de hielo, melena celeste y tiara de cristal." precio="700"/>
   <addon id="skin_caballero_solar" nombre="Caballero solar" desc="Exclusiva: armadura dorada, penacho rojo y emblema de sol." precio="700"/>
+  <!-- addons de clase: uno o dos por cada oficio de combate -->
+  <addon id="skin_gladiador" nombre="Gladiador" desc="Guerrero: armadura de bronce y cresta roja de arena." precio="500"/>
+  <addon id="skin_barbaro" nombre="Bárbaro del norte" desc="Guerrero: yelmo de cuernos y piel de las nieves." precio="500"/>
+  <addon id="skin_archimago" nombre="Archimago" desc="Mago: sombrero de ala ancha, túnica azul y destellos arcanos." precio="600"/>
+  <addon id="skin_hechicero_fuego" nombre="Hechicero de fuego" desc="Mago: túnica de brasas y llamas que le rodean." precio="600"/>
+  <addon id="skin_montaraz" nombre="Montaraz" desc="Cazador: sombrero con pluma y capa del bosque." precio="500"/>
+  <addon id="skin_arquero_elfico" nombre="Arquero élfico" desc="Cazador: diadema de plata con gema verde." precio="500"/>
+  <addon id="skin_sacerdotisa_alba" nombre="Sacerdotisa del alba" desc="Clérigo: hábito blanco y una aureola dorada." precio="600"/>
+  <addon id="skin_hoplita" nombre="Hoplita" desc="Lancero: armadura de bronce, cresta roja y lanza al hombro." precio="500"/>
+  <addon id="skin_senor_huesos" nombre="Señor de los huesos" desc="Nigromante: túnica violeta y báculo con calavera." precio="600"/>
+  <addon id="skin_dama_lich" nombre="Dama lich" desc="Nigromante: piel espectral, corona de hueso y luz verde." precio="600"/>
   <addon id="skin_rey" nombre="Rey" desc="Corona, capa y porte de monarca." precio="300"/>
   <addon id="skin_princesa" nombre="Princesa" desc="Cabello dorado y vestido real." precio="300"/>
   <addon id="skin_explorador" nombre="Explorador" desc="Pelo verde y ropa de viaje." precio="200"/>

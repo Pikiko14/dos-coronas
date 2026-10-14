@@ -67,6 +67,42 @@ function E.correr()
       n = n + 1
     end
   end
+  -- addons del Item Mall: uno de frente cada uno, y una hoja con las cuatro direcciones para revisarlos
+  local Mall = require("compartido.dominio.mall")
+  local lista = {}
+  for _, id in ipairs(Mall.ORDEN_ADDONS) do
+    local def = Personajes.skins[id]
+    if def then
+      guardar("addon_" .. id, def)
+      if id == "skin_gladiador" or id == "skin_barbaro" or id == "skin_archimago" or id == "skin_hechicero_fuego" or id == "skin_montaraz"
+        or id == "skin_arquero_elfico" or id == "skin_sacerdotisa_alba" or id == "skin_hoplita" or id == "skin_senor_huesos" or id == "skin_dama_lich" then
+        lista[#lista + 1] = def
+      end
+      n = n + 1
+    end
+  end
+  do
+    local E = 3
+    local ancho, alto = 4 * 36 * E + 10, #lista * 36 * E + 10
+    local cv = love.graphics.newCanvas(ancho, alto)
+    love.graphics.push("all")
+    love.graphics.setCanvas({ cv, stencil = true })
+    love.graphics.clear(0.3, 0.42, 0.55, 1)
+    for k, def in ipairs(lista) do
+      for dir = 1, 4 do
+        love.graphics.push()
+        love.graphics.translate(5 + (dir - 1) * 36 * E + 18 * E, (k - 1) * 36 * E + 33 * E)
+        love.graphics.scale(E, E)
+        love.graphics.setColor(1, 1, 1, 1)
+        Personajes.dibujar(def, dir, false, 0, 0, 0)
+        love.graphics.pop()
+      end
+    end
+    love.graphics.pop()
+    local datos = cv:newImageData()
+    local f = io.open(Log.carpeta() .. "/capturas/web/addons_vista.png", "wb")
+    if f then f:write(datos:encode("png"):getString()) f:close() end
+  end
   Log.info("exportar_web: " .. n .. " sprites en " .. Log.carpeta() .. "/capturas/web")
   print("exportar_web: " .. n .. " sprites")
   love.event.quit(0)

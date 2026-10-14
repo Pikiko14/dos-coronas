@@ -1064,6 +1064,12 @@ function I.consola(mundo, p, x, y, w, h)
     love.graphics.rectangle("line", bx + 0.5, y + 2.5, bw - 1, 21, 6, 6)
     love.graphics.setColor(1, 1, 1, activo and 1 or 0.85)
     Atlas.dibujar("hud", c[3], bx + bw / 2, y + 13, 0.62, 16, 16)
+    if c[1] == "sistema" and I.sistemaNuevo and not activo then
+      love.graphics.setColor(1, 0.3, 0.25, 1)
+      love.graphics.circle("fill", bx + bw - 7, y + 6, 4)
+      love.graphics.setColor(1, 1, 1, 0.9)
+      love.graphics.circle("line", bx + bw - 7, y + 6, 4)
+    end
     I.registrar(bx, y + 2, bw, 22, "canal_" .. c[1])
   end
   local cy = y + 26
@@ -1073,15 +1079,25 @@ function I.consola(mundo, p, x, y, w, h)
   love.graphics.setColor(0.3, 0.44, 0.82)
   love.graphics.line(x, cy + 0.5, x + w, cy + 0.5)
   local lineas = {}
+  local nuevoSistema = false
   for _, m in ipairs(mundo.mensajes) do
     local ver = m.canal == "sistema" or m.canal == "mundo"
     if m.canal == "faccion" and m.faccion == p.faccion then ver = true end
     if m.canal == "gremio" or m.canal == "grupo" then ver = true end -- el servidor solo manda los tuyos
     if m.canal == "local" and m.modo == p.modo then ver = true end
     if I.canal == "evento" then ver = m.evento == true
+    elseif I.canal == "todo" and m.canal == "sistema" then ver = false   -- los avisos del sistema solo van en su pestaña
     elseif I.canal ~= "todo" and m.canal ~= I.canal then ver = false end
+    -- punto en la pestaña del sistema cuando llega algo mientras miras otra
+    if m.canal == "sistema" and m.id then
+      if I.canal == "sistema" then I.sistemaVisto = math.max(I.sistemaVisto or 0, m.id)
+      elseif ver or I.canal ~= "sistema" then
+        if m.id > (I.sistemaVisto or 0) and (m.para == nil or m.para == p.id) then nuevoSistema = true end
+      end
+    end
     if ver then lineas[#lineas + 1] = m end
   end
+  I.sistemaNuevo = nuevoSistema
   local entrada = 24
   local areaH = ch - entrada - 6
   local fh = f:getHeight()

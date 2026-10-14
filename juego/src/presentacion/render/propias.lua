@@ -218,6 +218,156 @@ local function brillosSol(fila, col)
   destello(27, 26 - d, 1, 0.85, 0.4)
 end
 
+-- --------------------------------------------------------------------- complementos de los addons de clase
+-- Un complemento por addon (cuernos, sombrero, aureola, lanza...), dibujado por código sobre el sprite recoloreado.
+-- Todos usan el mismo sistema: fila 0 de frente, 1 izquierda, 2 derecha y 3 de espaldas; col 0 a 2 es el cuadro de
+-- caminar (en los pasos se mueven un poco las llamas, las plumas y los brillos).
+local function cuernos(fila, col)
+  local lado = lado_de(fila)
+  local function cuerno(x0, dir)
+    local pts = { x0, 6, x0 + dir * 2, 6, x0 + dir * 4.5, 1, x0 + dir * 3.2, 0, x0 + dir * 0.5, 3.5 }
+    poli(pts, 0.96, 0.93, 0.82)
+    contorno(pts, 0.45, 0.38, 0.3, 0.95)
+  end
+  if lado == 0 then
+    cuerno(10.5, -1)
+    cuerno(21.5, 1)
+  else
+    cuerno(16 + lado * 0.5, -lado)
+  end
+  love.graphics.setColor(0.55, 0.57, 0.65, 1)
+  love.graphics.rectangle("fill", 11, 6, 10, 2)    -- aro del yelmo
+  love.graphics.setColor(0.85, 0.87, 0.95, 1)
+  love.graphics.rectangle("fill", 11, 6, 10, 1)
+end
+
+local function sombreroMago(fila, col)
+  local lado = lado_de(fila)
+  local c = { 0.2, 0.18, 0.55 }
+  -- ala ancha y cono con la punta caída hacia un lado
+  elipse(16, 6.4, 10.5, 2.1, c[1] * 0.6, c[2] * 0.6, c[3] * 0.85)
+  elipse(16, 5.8, 10, 1.8, c[1], c[2], c[3])
+  poli({ 10.5, 6, 21.5, 6, 20 + lado * 1.5, 2.5, 16 + lado * 2.5, 0.2, 13, 3 }, c[1], c[2], c[3])
+  poli({ 10.5, 6, 14, 6, 14, 3, 13, 3 }, 0.32, 0.3, 0.75, 0.9)
+  love.graphics.setColor(0.98, 0.8, 0.25, 1)
+  love.graphics.rectangle("fill", 11, 5, 10, 1)     -- cinta dorada
+  if fila == 0 then
+    love.graphics.setColor(1, 0.9, 0.4, 1)
+    love.graphics.points(16, 3, 15, 4, 17, 4, 16, 4)  -- estrellita
+  end
+end
+
+local function sombreroPluma(fila, col)
+  local lado = lado_de(fila)
+  elipse(16, 5.5, 8.5, 2.3, 0.16, 0.34, 0.14)
+  poli({ 9, 6, 23, 6, 21, 2.5, 11, 2.5 }, 0.22, 0.46, 0.2)
+  love.graphics.setColor(0.5, 0.3, 0.12, 1)
+  love.graphics.rectangle("fill", 10, 5, 12, 1)
+  -- pluma roja
+  local o = col == 1 and 0 or 1
+  local x = 21 + (lado == -1 and -9 or 0)
+  poli({ x, 4, x + 3, 0 + o, x + 5, 1, x + 3.5, 3.5, x + 1, 5 }, 0.86, 0.18, 0.16)
+  love.graphics.setColor(1, 0.7, 0.6, 1)
+  love.graphics.points(x + 2, 3)
+end
+
+local function aureola(fila, col)
+  local k = col == 1 and 0 or 0.4
+  love.graphics.setColor(1, 0.95, 0.55, 0.28)
+  love.graphics.ellipse("fill", 16, 2.4, 9, 3, 24)
+  love.graphics.setColor(1, 0.9, 0.35, 1)
+  love.graphics.setLineWidth(1)
+  love.graphics.ellipse("line", 16, 2.4 + k, 6.5, 1.8, 24)
+  love.graphics.setColor(1, 1, 0.8, 1)
+  love.graphics.points(12, 2.5, 20, 2.5)
+end
+
+local function diademaElfico(fila, col)
+  if fila == 3 then
+    love.graphics.setColor(0.85, 0.9, 0.95, 1)
+    love.graphics.rectangle("fill", 10, 8, 12, 1)
+    return
+  end
+  local x = 16 + lado_de(fila) * 2
+  love.graphics.setColor(0.88, 0.93, 0.98, 1)
+  love.graphics.rectangle("fill", x - 6, 7, 12, 1)
+  love.graphics.setColor(0.55, 0.7, 0.8, 1)
+  love.graphics.rectangle("fill", x - 6, 8, 12, 1)
+  poli({ x, 4.5, x - 1.6, 7, x + 1.6, 7 }, 0.3, 0.95, 0.55)
+  poli({ x, 5, x - 0.6, 6.4, x + 0.6, 6.4 }, 0.85, 1, 0.9)
+  destello(x - 7, 9 + (col % 2), 0.6, 1, 0.7)
+end
+
+local function lanzaLateral(fila, col)
+  local lado = lado_de(fila)
+  local x = lado == 0 and 26 or (lado == -1 and 8 or 24)
+  if fila == 3 then x = 6 end
+  love.graphics.setColor(0.6, 0.38, 0.18, 1)
+  love.graphics.rectangle("fill", x, 5, 1.6, 26)
+  love.graphics.setColor(0.4, 0.24, 0.1, 1)
+  love.graphics.rectangle("fill", x, 18, 1.6, 3)
+  poli({ x + 0.8, 0, x + 3.2, 4.6, x + 0.8, 6, x - 1.6, 4.6 }, 0.85, 0.9, 1)
+  poli({ x + 0.8, 0.6, x + 1.5, 4, x + 0.8, 5, x - 0.2, 4 }, 1, 1, 1, 0.9)
+  poli({ x - 0.5, 6, x + 2.2, 6, x + 3 + (col - 1), 9.5, x - 1 + (col - 1), 9.5 }, 0.86, 0.14, 0.16)
+end
+
+local function bastonCalavera(fila, col)
+  local lado = lado_de(fila)
+  local x = lado == 0 and 26 or (lado == -1 and 9 or 23)
+  if fila == 3 then x = 6 end
+  love.graphics.setColor(0.32, 0.22, 0.18, 1)
+  love.graphics.rectangle("fill", x, 6, 1.6, 25)
+  love.graphics.setColor(0.93, 0.92, 0.84, 1)
+  love.graphics.ellipse("fill", x + 0.8, 4, 3.3, 3.5, 16)
+  love.graphics.rectangle("fill", x - 0.8, 6, 3.2, 2)
+  love.graphics.setColor(0.2, 0.1, 0.3, 1)
+  love.graphics.points(x - 0.5, 3.5, x - 0.5, 4.5, x + 2, 3.5, x + 2, 4.5, x + 0.8, 6.5)
+  -- ascuas violeta que suben del cráneo
+  local d = (col * 2) % 4
+  destello(x - 2, 2 - d * 0.3, 0.75, 0.4, 1)
+  destello(x + 4, 1 + d * 0.3, 0.65, 0.35, 0.95)
+end
+
+local function coronaLich(fila, col)
+  if fila == 3 then
+    love.graphics.setColor(0.8, 0.85, 0.75, 1)
+    love.graphics.rectangle("fill", 11, 4, 10, 2)
+    return
+  end
+  local x = 16 + lado_de(fila) * 1.5
+  love.graphics.setColor(0.55, 1, 0.65, 0.3)
+  love.graphics.ellipse("fill", x, 4, 8, 4, 20)
+  local pts = { x - 6, 6.5, x - 6, 1.5, x - 3, 4, x - 1.5, 0.5, x, 4, x + 1.5, 0.5, x + 3, 4, x + 6, 1.5, x + 6, 6.5 }
+  poli(pts, 0.86, 0.9, 0.78)
+  contorno(pts, 0.3, 0.4, 0.3, 0.9)
+  love.graphics.setColor(0.4, 1, 0.55, 1)
+  love.graphics.points(x, 5, x - 1, 5, x + 1, 5)
+  destello(x - 7, 8 + (col % 2), 0.5, 1, 0.65)
+  destello(x + 7, 9 - (col % 2), 0.5, 1, 0.65)
+end
+
+local function llamasFuego(fila, col)
+  local o = (col * 1.5) % 3
+  local function llama(x, y, h)
+    poli({ x - 1.6, y, x + 1.6, y, x + 0.5, y - h - o * 0.3, x - 0.4, y - h * 0.5 }, 1, 0.42, 0.08, 0.95)
+    poli({ x - 0.9, y, x + 0.9, y, x, y - h * 0.65 }, 1, 0.85, 0.3, 0.95)
+  end
+  llama(7, 17, 5)
+  llama(25, 17, 5)
+  llama(16, 3, 4)
+  llama(12, 4, 3)
+  llama(20, 4, 3)
+  destello(4, 12 + o, 1, 0.7, 0.2)
+  destello(28, 10 - o, 1, 0.6, 0.15)
+end
+
+local function brillosHueso(fila, col)
+  local d = (col * 2) % 5
+  destello(3 + d, 14, 0.8, 0.55, 1)
+  destello(28 - d, 20, 0.9, 0.8, 1)
+  destello(6, 27 - d, 0.7, 0.45, 1)
+end
+
 -- ------------------------------------------------------------------- clases y monturas por facción
 -- Cada clase tiene su personaje del pack con la paleta de su facción (Alba: acero azulado, blanco y
 -- oro; Ocaso: negro, violeta y carmesí) y un escudo en el pecho: el color de la facción con el signo
@@ -293,6 +443,18 @@ end
 local DISENOS = {
   hada_cristal = { hoja = "Characters/Spiritual.png", idx = 1, modo = 0, detras = { alasHada }, delante = { tiaraHada, brillosHada } },
   caballero_solar = { hoja = "Characters/People4.png", idx = 6, modo = 1, detras = { auraSol }, delante = { emblemaSol, penacho, brillosSol } },
+
+  -- addons de clase del Item Mall: un sprite del pack recoloreado + un complemento dibujado por código
+  gladiador = clase("g", "Characters/Actor3.png", 6, { neutro = { 1.25, 0.82, 0.48 }, plus = 0.03, delante = { penacho } }),
+  barbaro = clase("b", "Characters/Actor3.png", 0, { neutro = { 0.85, 0.95, 1.18 }, delante = { cuernos } }),
+  archimago = clase("a", "Characters/Actor2.png", 4, { ra = { 0.55, 0.75, 0.05, 1.3 }, va = 0.95, neutro = { 0.9, 0.85, 1.25 }, delante = { sombreroMago, brillosHueso } }),
+  hechicero_fuego = clase("h", "Characters/Actor5.png", 6, { ra = { 0.0, 0.1, 0.03, 1.4 }, va = 1.1, rb = { 0.9, 1.0, 0.0, 1.4 }, vb = 1.1, delante = { llamasFuego } }),
+  montaraz = clase("m", "Characters/Actor4.png", 6, { ra = { 0.4, 0.62, -0.08, 1.25 }, va = 0.9, neutro = { 0.95, 1.05, 0.9 }, delante = { sombreroPluma } }),
+  arquero_elfico = clase("e", "Characters/Actor3.png", 5, { neutro = { 0.95, 1.1, 1.05 }, delante = { diademaElfico } }),
+  sacerdotisa_alba = clase("s", "Characters/People2.png", 5, { neutro = { 1.1, 1.08, 0.96 }, plus = 0.05, delante = { aureola } }),
+  hoplita = clase("o", "Characters/People4.png", 6, { neutro = { 1.25, 0.86, 0.5 }, plus = 0.04, delante = { penacho, lanzaLateral } }),
+  senor_huesos = clase("z", "Characters/Actor1.png", 7, { ra = { 0.05, 0.2, 0.7, 0.7 }, va = 0.7, neutro = { 0.75, 0.7, 0.9 }, delante = { bastonCalavera } }),
+  dama_lich = clase("l", "Characters/Actor4.png", 7, { ra = { 0.9, 1.0, 0.65, 1.1 }, va = 0.9, rb = { 0.0, 0.1, 0.5, 1.1 }, vb = 0.85, neutro = { 0.75, 1.1, 0.95 }, delante = { coronaLich, brillosHueso } }),
 
   clase_guerrero_albor = clase("g", "Characters/Actor3.png", 6, { neutro = { 0.92, 1.0, 1.2 }, delante = { escudoPecho("guerrero", "albor") } }),
   clase_guerrero_umbra = clase("g", "Characters/Evil.png", 7, { neutro = { 1.12, 0.85, 1.2 }, delante = { escudoPecho("guerrero", "umbra") } }),

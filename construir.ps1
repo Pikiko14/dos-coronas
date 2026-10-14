@@ -61,12 +61,24 @@ if (-not $Love) {
   Vaciar $salida
   New-Item -ItemType Directory -Force $salida | Out-Null
   $exe = Join-Path $salida "DosCoronas.exe"
+  # love.exe con el icono del juego (la corona): se cambia en una copia ANTES de pegarle el juego
+  $base = Join-Path $Love "love.exe"
+  $copiaIcono = Join-Path $dist "love-icono.exe"
+  try {
+    . (Join-Path $raiz "recursos\PonerIcono.ps1")
+    Copy-Item (Join-Path $Love "love.exe") $copiaIcono -Force
+    Poner-Icono $copiaIcono (Join-Path $raiz "recursos\DosCoronas.ico")
+    $base = $copiaIcono
+  } catch {
+    "AVISO: no se pudo poner el icono del juego en el .exe ($($_.Exception.Message)); se usa el de LÖVE."
+  }
   $out = [System.IO.File]::Create($exe)
-  foreach ($parte in @((Join-Path $Love "love.exe"), (Join-Path $dist "juego.love"))) {
+  foreach ($parte in @($base, (Join-Path $dist "juego.love"))) {
     $bytes = [System.IO.File]::ReadAllBytes($parte)
     $out.Write($bytes, 0, $bytes.Length)
   }
   $out.Close()
+  if (Test-Path $copiaIcono) { Remove-Item $copiaIcono -Force }
   Get-ChildItem $Love -Filter *.dll | Copy-Item -Destination $salida
   Copy-Item (Join-Path $Love "license.txt") (Join-Path $salida "LICENCIA-LOVE.txt") -ErrorAction SilentlyContinue
   $leeme = "Dos Coronas`r`n`r`nAbre DosCoronas.exe. Crea una cuenta y juega.`r`n"
