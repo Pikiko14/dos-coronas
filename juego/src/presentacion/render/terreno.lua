@@ -490,6 +490,7 @@ local function dibujarEdificio(e, ox, oy)
   local im = imagenes()
   local roja = TEJADO[e.faccion] or TEJADO.albor
   local pared = PARED[e.faccion] or PARED.albor
+  if e.estilo == "establo" then roja, pared = { 3, 2 }, { 1, 3 } end  -- tejado de paja y tablones oscuros
   local filasTecho = e.techo or 2
   local puertaX, puertaY = e.puertaX - e.x, e.puertaY - e.y
   -- cada columna puede empezar más abajo (alas bajas de las casas en L y en T): su tejado va sobre su fachada
@@ -499,7 +500,10 @@ local function dibujarEdificio(e, ox, oy)
     if e.vacio and e.vacio[fx .. "," .. fy] then return false end
     return true
   end
-  local function esTecho(fx, fy) return fy - cima(fx) < filasTecho end
+  local function esTecho(fx, fy)
+    if e.techoSur then return (e.h - 1 - fy) < filasTecho end
+    return fy - cima(fx) < filasTecho
+  end
   for fy = 0, e.h - 1 do
     for fx = 0, e.w - 1 do
       if solido(fx, fy) then
@@ -528,6 +532,34 @@ local function dibujarEdificio(e, ox, oy)
     if fx ~= puertaX and solido(fx, fy) and fy < e.h and not (fx == puertaX and fy == puertaY) then
       love.graphics.draw(im.b, Arte.quad(im.b, 32, 4 * 32, 32, 32), (e.x + fx) * TILE - ox, (e.y + fy) * TILE - oy)
     end
+  end
+  if e.estilo == "establo" then
+    -- puerta doble de granero (tres casillas de ancho y dos de alto) con aspas y un hueco oscuro entre las hojas
+    local px, py = (e.x + puertaX) * TILE - ox, (e.y + puertaY) * TILE - oy
+    local y0 = e.techoSur and py or (py - TILE)
+    local x0, ancho, alto = px - TILE + 2, TILE * 3 - 4, TILE * 2 - 2
+    love.graphics.setColor(0.13, 0.08, 0.04, 1)
+    love.graphics.rectangle("fill", x0 - 2, y0 + 1, ancho + 4, alto + 1, 3, 3)
+    for lado = 0, 1 do
+      local hx = x0 + lado * (ancho / 2 + 1)
+      local hw = ancho / 2 - 1
+      love.graphics.setColor(0.56, 0.37, 0.19, 1)
+      love.graphics.rectangle("fill", hx, y0 + 4, hw, alto - 4)
+      love.graphics.setColor(0.4, 0.25, 0.12, 1)
+      for k = 1, 3 do love.graphics.rectangle("fill", hx + k * hw / 4, y0 + 4, 1, alto - 4) end
+      love.graphics.setLineWidth(3)
+      love.graphics.setColor(0.27, 0.16, 0.08, 1)
+      love.graphics.line(hx + 2, y0 + 6, hx + hw - 2, y0 + alto - 3)
+      love.graphics.line(hx + hw - 2, y0 + 6, hx + 2, y0 + alto - 3)
+      love.graphics.setLineWidth(1)
+      love.graphics.rectangle("line", hx + 0.5, y0 + 4.5, hw - 1, alto - 5)
+    end
+    love.graphics.setColor(0.3, 0.19, 0.09, 1)
+    love.graphics.rectangle("fill", x0 - 3, y0, ancho + 6, 5, 2, 2)
+    love.graphics.setColor(0.95, 0.8, 0.3, 1)
+    love.graphics.circle("fill", x0 + ancho / 2 - 4, y0 + alto / 2 + 4, 1.8)
+    love.graphics.circle("fill", x0 + ancho / 2 + 4, y0 + alto / 2 + 4, 1.8)
+    return
   end
   -- la puerta: marco de piedra y hoja de madera sobre la pared de la fila de abajo
   local dx, dy = (e.x + puertaX) * TILE - ox, (e.y + puertaY) * TILE - oy

@@ -9,6 +9,7 @@ P.CONTRATO = {
     "cuentaDeToken", "cargarAutorizado", "guardar", "marcarEvento", "borrarUsuario",
     "cargarGremios", "guardarGremio", "borrarGremio",
     "cargarSubastas", "guardarSubasta", "borrarSubasta", "guardarBuzon",
+    "rolDeCuenta", "fijarRol", "listarRoles", "banear", "desbanear", "estadoBan", "listarBaneos",
   },
 }
 

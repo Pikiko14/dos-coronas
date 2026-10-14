@@ -6,6 +6,7 @@ local Terreno = require("src.presentacion.render.terreno")
 local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
 local Efectos = require("src.presentacion.render.efectos")
+local MonturaFx = require("src.presentacion.render.monturas_fx")
 local Arte = require("src.presentacion.render.arte")
 
 local D = {}
@@ -107,6 +108,11 @@ local function placa(e, px, py, alto, jugador, tiempo)
     color = { 1, 0.3, 0.25 }
     nombre = "☠ " .. nombre
   end
+  -- personal del servidor: etiqueta [GM] (dorada) o [CM] (celeste) delante del nombre
+  if e.staff and (e.kind == "jugador" or e.kind == "bot") then
+    nombre = "[" .. e.staff:upper() .. "] " .. nombre
+    color = e.staff == "gm" and { 1, 0.82, 0.3 } or { 0.45, 0.85, 1 }
+  end
   if e.llevaBandera then nombre = nombre .. " [estandarte]" end
   if e.gremio and (e.kind == "jugador" or e.kind == "bot") then nombre = nombre .. " <" .. e.gremio .. ">" end
   local ancho = f:getWidth(nombre)
@@ -163,6 +169,7 @@ local function dibujarPiso(mapa, jugador, cam, w, h)
 end
 
 local marcarCasaPropia
+local marcarTiendas
 
 function D.escena(mundo, jugador, cam, mx, my)
   local mapa = mundo:mapaDe(jugador)
@@ -316,6 +323,9 @@ function D.escena(mundo, jugador, cam, mx, my)
   if D.apuntando and mx and my and D.dentroVista(mx, my) then
     D.zonaApuntada(D.apuntando, jugador, cam, mx, my, mundo.tiempo or 0)
   end
+  if pz == 0 and jugador.modo == "mundo" then
+    marcarTiendas(mapa, jugador, cam, radio)
+  end
   love.graphics.pop()
   love.graphics.setScissor()
 
@@ -412,6 +422,48 @@ function marcarCasaPropia(mapa, jugador, cam, radio)
   end
 end
 
+function marcarTiendas(mapa, jugador, cam, radio)
+  -- Lo que se ve en el letrero: la clériga, una poción; el armero, un arma; el establo, una montura.
+  local iconos = {
+    mercado = { "pocion_vida" },
+    armero = { "guerrero_arma_1" },
+    establo = { "montura" },
+  }
+  local function dibujarIcono(id, x, y, faccion)
+    if id == "montura" then
+      local def = Personajes.monturaDe("caballo", faccion)
+      if not def then return end
+      love.graphics.push()
+      love.graphics.translate(x, y + 8)
+      love.graphics.scale(0.45, 0.45)
+      Personajes.dibujar(def, 1, false, 0, 0, 0)
+      love.graphics.pop()
+      return
+    end
+    local it = Datos.item(id)
+    if it then Atlas.dibujar(it.hoja, it.sprite, x, y, 0.55, 16, 16) end
+  end
+  -- Letrero pequeño sobre la puerta de cada tienda, con un solo icono que dice qué vende.
+  for _, e in ipairs(mapa.edificios or {}) do
+    local lista = e.rotulo and iconos[e.tienda]
+    if lista
+      and math.abs(e.puertaX + 0.5 - jugador.x) < radio
+      and math.abs(e.puertaY + 0.5 - jugador.y) < radio then
+      local fila = e.techoSur and (e.puertaY + 1) or (e.puertaY - 1)
+      if e.estilo == "establo" then fila = e.techoSur and (e.puertaY + 2) or (e.puertaY - 2) end  -- la puerta grande ocupa dos filas: el letrero va en el tejado
+      local cx = (e.puertaX + 0.5) * TILE - cam.x
+      local cy = (fila + 0.5) * TILE - cam.y
+      love.graphics.setColor(0, 0, 0, 0.35)
+      love.graphics.rectangle("fill", cx - 11, cy - 9, 24, 24, 4, 4)
+      love.graphics.setColor(0.36, 0.24, 0.1, 1)
+      love.graphics.rectangle("fill", cx - 12, cy - 11, 24, 22, 4, 4)
+      love.graphics.setColor(0.85, 0.66, 0.3, 1)
+      love.graphics.rectangle("line", cx - 11.5, cy - 10.5, 23, 21, 4, 4)
+      dibujarIcono(lista[1], cx, cy, e.faccion)
+    end
+  end
+end
+
 function D.mueble(nombre, sx, sy, rot, elegido)
   rot = ((rot or 0) % 4) * (math.pi / 2)
   if nombre == "cofre" then
@@ -499,6 +551,8 @@ function D.entidad(e, sx, sy, mundo, jugador)
     if e.montado then
       -- la montura va debajo y el jinete algo más arriba
       local m = Personajes.monturaDe(e.montado, e.faccion)
+      -- monturas vistosas: aura, alas y humo van antes de la montura; los brillos, después del jinete
+      MonturaFx.detras(e.montado, sx, pies, e.dir or 1, love.timer.getTime(), m and m.escala or 1)
       if m and m.vehiculo then
         local img = Arte.img("Characters/Vehicle.png")
         local fila = ({ [1] = 0, [4] = 1, [3] = 2, [2] = 3 })[e.dir or 1] or 0
@@ -517,10 +571,26 @@ function D.entidad(e, sx, sy, mundo, jugador)
         end
       end
     end
+    -- quien lleva el estandarte enemigo: halo del color de esa bandera en el suelo y la bandera a la espalda
+    local llevaEst = e.llevaBandera and (e.kind == "jugador" or e.kind == "bot") and e.llevaBandera or nil
+    if llevaEst then
+      local col = llevaEst == "umbra" and { 0.7, 0.4, 1 } or { 1, 0.85, 0.3 }
+      local pulso = 0.5 + 0.5 * math.sin(love.timer.getTime() * 5)
+      love.graphics.setColor(col[1], col[2], col[3], 0.22 + 0.2 * pulso)
+      love.graphics.ellipse("fill", sx, pies - 1, 22, 9)
+      love.graphics.setColor(col[1], col[2], col[3], 0.9)
+      love.graphics.ellipse("line", sx, pies - 1, 22 + 2 * pulso, 9 + pulso)
+      if (e.dir or 1) ~= 1 then Objetos.dibujar(llevaEst == "umbra" and "bandera_umbra" or "bandera_albor", 0, sx + 10, piesJinete + 4) end
+    end
     -- montado, la que camina es la montura: el jinete va quieto (sin mover los pies)
     alto = Personajes.dibujar(def, e.dir or 1, anda and not e.montado, reloj, sx, piesJinete, rojo and { 1, 0.6, 0.6 } or nil)
     if montaFrente then Personajes.dibujar(montaFrente, 1, anda, reloj, sx, pies) end
-    if e.montado then alto = alto + math.max(10, pies - piesJinete) end
+    if llevaEst and (e.dir or 1) == 1 then Objetos.dibujar(llevaEst == "umbra" and "bandera_umbra" or "bandera_albor", 0, sx + 12, piesJinete + 4) end
+    if e.montado then
+      local m = Personajes.monturaDe(e.montado, e.faccion)
+      MonturaFx.delante(e.montado, sx, pies, e.dir or 1, love.timer.getTime(), m and m.escala or 1, alto)
+      alto = alto + math.max(10, pies - piesJinete)
+    end
   elseif e.kind == "estatua" then
     Objetos.dibujar(e.faccion == "umbra" and "estatua_umbra" or "estatua_albor", 0, sx, pies)
     alto = 64

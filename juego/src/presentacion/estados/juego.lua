@@ -163,6 +163,7 @@ function Juego.tickCliente(app, dt)
       else
         Interfaz.panel = msg.panel
         Interfaz.ciudad = msg.ciudad
+        if msg.tienda then Interfaz.tienda = msg.tienda end
       end
     end
     if msg.t == "snap" and app.miId then

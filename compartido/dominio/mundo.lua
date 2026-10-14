@@ -7,6 +7,8 @@ local Estados = require("compartido.dominio.estados")
 local Items = require("compartido.dominio.items")
 local Encanto = require("compartido.dominio.encanto")
 local Mascotas = require("compartido.dominio.mascotas")
+local Esbirros = require("compartido.dominio.esbirros")
+local Diaria = require("compartido.dominio.diaria")
 local Gremios = require("compartido.dominio.gremios")
 local Oficios = require("compartido.dominio.oficios")
 local Ley = require("compartido.dominio.ley")
@@ -176,6 +178,13 @@ function Mundo:decir(p, texto)
   texto = Util.limpiar(texto)
   if texto == "" then return end
   if texto:sub(1, 6) == "/admin" and (#texto == 6 or texto:sub(7, 7) == " ") then return self:comandoAdmin(p, texto) end
+  if p.silenciadoHasta then
+    if os.time() < p.silenciadoHasta then
+      self:mensaje("sistema", "", "Estás silenciado: te quedan " .. math.ceil((p.silenciadoHasta - os.time()) / 60) .. " minuto(s).", p)
+      return
+    end
+    p.silenciadoHasta = nil
+  end
   local canal = "local"
   if texto:sub(1, 3) == "/m " then canal, texto = "mundo", texto:sub(4)
   elseif texto:sub(1, 3) == "/f " then canal, texto = "faccion", texto:sub(4)
@@ -189,7 +198,7 @@ function Mundo:decir(p, texto)
     self:mensaje("sistema", "", "Mover: clic o WASD. Atacar: clic en enemigo. Poderes: 1-6 (árbol: K). Curar: selecciona aliado y pulsa 1. E interactúa. I bolsa, P equipo, T comercio, M mapa.", p)
     return
   end
-  self:mensaje(canal, p.nombre, texto, p)
+  self:mensaje(canal, p.staff and ("[" .. p.staff:upper() .. "] " .. p.nombre) or p.nombre, texto, p)
 end
 
 function Mundo:recalcular(e)
@@ -352,11 +361,14 @@ function Mundo:poblar()
         id = self:idNuevo(), kind = n.rol == "guardia" and "guardia" or "npc",
         nombre = n.nombre, rol = n.rol, faccion = n.faccion,
         x = n.x, y = n.y, modo = "mundo", dir = 1, vivo = true,
-        clase = ({ mercado = "mago", heraldo = "clerigo", mayordomo = "guerrero", encargos = "cazador", guardia = "guerrero", encantador = "mago", criador = "cazador", gremio = "guerrero", oficios = "guerrero", comercio = "guerrero", establo = "cazador", subastas = "mago" })[n.rol] or "guerrero",
+        clase = ({ mercado = "clerigo", armero = "guerrero", heraldo = "clerigo", mayordomo = "guerrero", encargos = "cazador", guardia = "guerrero", encantador = "mago", criador = "cazador", gremio = "guerrero", oficios = "guerrero", comercio = "guerrero", establo = "cazador", subastas = "mago" })[n.rol] or "guerrero",
         nivel = 12, hp = 400, hpMax = 400, atk = 28, def = 14, matk = 8, mdef = 7, spd = 3.2, rango = 1.4,
         cds = {},
         equipo = { arma = "guerrero_arma_2", pecho = "guerrero_pecho_2", cabeza = "guerrero_cabeza_2" },
       }
+      e.puestoX, e.puestoY = e.x, e.y
+      e.ruta = n.ruta or self:rutaPatrulla(e)
+      e.paso, e.espera = 1, 0.6
       self.entidades[e.id] = e
     end
   end
@@ -742,7 +754,7 @@ function Mundo:ponerBuff(e, id, dur, extra)
   for i, b in ipairs(e.buffs) do
     if b.id == id then table.remove(e.buffs, i) break end
   end
-  local b = { id = id, dur = dur }
+  local b = { id = id, dur = dur, max = dur }
   if extra then for k, v in pairs(extra) do b[k] = v end end
   e.buffs[#e.buffs + 1] = b
 end
@@ -750,6 +762,8 @@ end
 function Mundo:puedeDanar(origen, objetivo)
   if not origen or not objetivo or not objetivo.vivo then return false end
   local kind = objetivo.kind
+  -- el personal (GM y CM) no recibe daño de las criaturas
+  if origen.kind == "monstruo" and objetivo.staff then return false end
   if (kind == "jugador" or kind == "bot" or kind == "mascota" or kind == "caravana")
     and (self:enSantuario(objetivo) or (origen.kind ~= "monstruo" and self:enSantuario(origen))) then
     if origen.modo == "casa" or objetivo.modo == "casa" then return false end
@@ -1236,16 +1250,17 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
     end
   elseif h.tipo == "aliado" then
     if h.cura then self:curar(objetivo, self:potenciaCura(p, h), p) end
-    if h.buff == "bendicion" then self:ponerBuff(objetivo, "bendicion", h.dur, { def = 0.18 * h.pot, regen = 4 * h.pot }) end
+    if h.buff == "bendicion" then self:ponerBuff(objetivo, "bendicion", h.dur, { def = 0.18 * h.pot, regen = 4 * h.pot, habilidad = idh }) end
   elseif h.tipo == "propio" then
     if h.buff == "escudo" then
       local abs = (30 + p.nivel * 4) * h.pot
-      self:ponerBuff(p, "escudo", h.dur, { absorbe = abs })
+      self:ponerBuff(p, "escudo", h.dur, { absorbe = abs, habilidad = idh })
       self:numero(p, "escudo", { 0.55, 0.7, 1 })
     else
       -- potenciadores propios (furia, paso ágil...): sus cifras crecen con el rango
       local ef = {}
       for k, v in pairs(h.efecto or {}) do ef[k] = v * h.pot end
+      ef.habilidad = idh
       self:ponerBuff(p, h.buff, h.dur, ef)
       self:numero(p, h.nombre, { 1, 0.85, 0.4 })
     end
@@ -1258,10 +1273,10 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
   elseif h.tipo == "buff_alrededor" then
     for _, o in pairs(self.entidades) do
       if o.vivo and self:aliado(p, o) and Util.dist(p.x, p.y, o.x, o.y) <= h.rango then
-        self:ponerBuff(o, "grito", h.dur, { atk = 0.22 * h.pot })
+        self:ponerBuff(o, "grito", h.dur, { atk = 0.22 * h.pot, habilidad = idh })
       end
     end
-    self:ponerBuff(p, "grito", h.dur, { atk = 0.22 * h.pot })
+    self:ponerBuff(p, "grito", h.dur, { atk = 0.22 * h.pot, habilidad = idh })
   elseif h.tipo == "mixto" then
     for _, o in pairs(self.entidades) do
       if o.vivo and self:mismoLugar(p, o) and Util.dist(p.x, p.y, o.x, o.y) <= h.rango then
@@ -1270,6 +1285,9 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
       end
     end
     self:curar(p, self:potenciaCura(p, h), p)
+  elseif h.tipo == "invocar" then
+    self:invocarEsbirros(p, h)
+    self:numero(p, h.nombre, { 0.6, 1, 0.7 })
   elseif h.tipo == "suelo" then
     local id = self:idNuevo()
     self.entidades[id] = {
@@ -1285,11 +1303,14 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
     curar = "cura", bendicion = "sagrado", castigo = "sagrado", consagrar = "sagrado",
     desgarro = "corte", furia = "grito", sombra = "magia", meteoro = "fuego",
     flecha_veneno = "flecha", paso_agil = "flecha", sanacion = "cura", juicio = "sagrado",
+    estocada = "corte", barrido = "corte", embestida = "corte", jabalina = "flecha", tormenta_lanzas = "flecha",
+    muro_lanzas = "grito", toque_necro = "magia", espinas = "magia", maldecir = "magia", alzar_esqueletos = "magia",
+    drenar = "magia", espectro = "magia",
   }
   self:sonar(sonidos[idh] or "magia")
   local ex = objetivo and objetivo.x or p.x
   local ey = objetivo and objetivo.y or p.y
-  if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" then
+  if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" or h.tipo == "invocar" then
     self:efecto(idh, p.x, p.y, 0.5)
   elseif h.tipo == "punto" then
     self:efecto(idh, p.impactoX or tx or ex, p.impactoY or ty or ey, 0.55)
@@ -1368,7 +1389,7 @@ function Mundo:autoataque(p)
   if c and (c.proyectil or rango > 3) then
     self:proyectil(p, o, {
       coef = 1, dano = self:tipoDanoBasico(p),
-      proyectil = p.clase == "clerigo" and "sagrado" or (p.clase == "mago" and "misil" or "flecha"),
+      proyectil = ({ clerigo = "sagrado", mago = "misil", nigromante = "necro" })[p.clase] or "flecha",
     })
   else
     self:golpear(p, o, 1)
@@ -1509,11 +1530,11 @@ function Mundo:actualizarMonstruo(e, dt)
     e.sensor = 0.45
     local mejor, md = nil, (e.agresivo and 6.5 or 0)
     local amenaza = e.amenaza and self.entidades[e.amenaza]
-    if amenaza and amenaza.vivo and not (amenaza.kind ~= "guardia" and self:enSantuario(amenaza)) and self:mismoLugar(e, amenaza) and Util.dist(e.x, e.y, amenaza.x, amenaza.y) < 12 then
+    if amenaza and amenaza.vivo and not amenaza.staff and not (amenaza.kind ~= "guardia" and self:enSantuario(amenaza)) and self:mismoLugar(e, amenaza) and Util.dist(e.x, e.y, amenaza.x, amenaza.y) < 12 then
       mejor = amenaza
     else
       for _, o in objetivosPosibles(self) do
-        if o.vivo and o.id ~= e.id and self:mismoLugar(e, o) and (o.kind == "guardia" or not self:enSantuario(o))
+        if o.vivo and o.id ~= e.id and not o.staff and self:mismoLugar(e, o) and (o.kind == "guardia" or not self:enSantuario(o))
           and (o.kind == "jugador" or o.kind == "bot" or o.kind == "guardia" or (e.bandido and o.kind == "caravana")) then
           if not (o.kind == "jugador" and o.nivel + 3 < e.nivel and not e.amenaza) then
             local d = Util.dist(e.x, e.y, o.x, o.y)
@@ -1527,6 +1548,7 @@ function Mundo:actualizarMonstruo(e, dt)
   end
   local o = e.objetivo and self.entidades[e.objetivo]
   if o and o.kind ~= "guardia" and o.kind ~= "monstruo" and self:enSantuario(o) then o, e.objetivo = nil, nil end -- zona segura
+  if o and o.staff then o, e.objetivo = nil, nil end -- los monstruos ignoran al personal
   local dx, dy = 0, 0
   if o and o.vivo and self:mismoLugar(e, o) then
     local d = Util.dist(e.x, e.y, o.x, o.y)
@@ -1618,10 +1640,68 @@ function Mundo:actualizarGuardia(e, dt)
         self:golpear(e, o, 1)
       end
     end
+  elseif self:patrullar(e, dt) then
+    return
   elseif Util.dist(e.x, e.y, e.puestoX, e.puestoY) > 1.2 then
     ddx, ddy = self:mejorDireccion(e, e.puestoX - e.x, e.puestoY - e.y)
   end
   self:avanzar(e, dt, ddx, ddy, e.spd or 3)
+end
+
+-- Ida y vuelta por la calle: dos puntos fijos, una pausa en cada extremo.
+function Mundo:rutaPatrulla(e)
+  local mapa = self:mapaDe(e)
+  local ciudad = self:ciudadEn(e.x, e.y)
+  local function dentro(x, y)
+    if Mapa.bloqueado(mapa, x, y, e.faccion) then return false end
+    if not ciudad then return true end
+    local tx, ty = math.floor(x), math.floor(y)
+    return tx > ciudad.x and ty > ciudad.y and tx < ciudad.x + ciudad.w - 1 and ty < ciudad.y + ciudad.h - 1
+  end
+  local function largo(dx, dy)
+    local n, px, py = 0, e.x, e.y
+    for _ = 1, 4 do
+      local nx, ny = px + dx, py + dy
+      if not dentro(nx, ny) then break end
+      px, py, n = nx, ny, n + 1
+    end
+    return n
+  end
+  local horizontal = largo(1, 0) + largo(-1, 0)
+  local vertical = largo(0, 1) + largo(0, -1)
+  local dx, dy = horizontal >= vertical and 1 or 0, horizontal >= vertical and 0 or 1
+  local atras, adelante = largo(-dx, -dy), largo(dx, dy)
+  if atras + adelante < 2 then return nil end
+  return {
+    { x = e.x - dx * atras, y = e.y - dy * atras },
+    { x = e.x + dx * adelante, y = e.y + dy * adelante },
+  }
+end
+
+function Mundo:patrullar(e, dt)
+  local ruta = e.ruta
+  if not ruta or #ruta < 2 or e.modo ~= "mundo" then return false end
+  for _, o in pairs(self.entidades) do
+    if (o.kind == "jugador" or o.kind == "bot") and o.vivo and self:mismoLugar(e, o) and Util.dist(e.x, e.y, o.x, o.y) < 2.6 then
+      self:avanzar(e, dt, 0, 0, 2.2)
+      return true
+    end
+  end
+  e.espera = (e.espera or 0) - dt
+  if e.espera > 0 then
+    self:avanzar(e, dt, 0, 0, 2.2)
+    return true
+  end
+  local meta = ruta[e.paso or 1] or ruta[1]
+  if Util.dist(e.x, e.y, meta.x, meta.y) < 0.2 then
+    e.paso = (e.paso or 1) % #ruta + 1
+    e.espera = 1.6
+    self:avanzar(e, dt, 0, 0, 2.2)
+    return true
+  end
+  local ddx, ddy = self:mejorDireccion(e, meta.x - e.x, meta.y - e.y)
+  self:avanzar(e, dt, ddx, ddy, 2.2)
+  return true
 end
 
 function Mundo:pensarBot(e, dt)
@@ -1967,13 +2047,14 @@ function Mundo:cerrarInstancia(modo, ganador)
   inst.activa = false
   local titulo = modo == "batalla" and "La batalla por cristales" or "Captura el estandarte"
   self:avisoEvento("mundo", "", titulo .. " termina. Victoria: " .. (ganador == "albor" and "Albor" or ganador == "umbra" and "Umbra" or "nadie") .. ".", nil)
+  self.mensajes[#self.mensajes].marquesina = true
   if ganador == "albor" or ganador == "umbra" then
     self.gloria[ganador] = self.gloria[ganador] + 40
   end
   for _, e in pairs(self.entidades) do
     if e.modo == modo and (e.kind == "jugador" or e.kind == "bot") then
       local gano = e.faccion == ganador
-      local oro = gano and 220 or 70
+      local oro = gano and (modo == "estandarte" and 1000 or 220) or 70
       local xp = gano and 280 or 90
       if e.kind == "jugador" then
         -- los cristales sin entregar valen algo de oro
@@ -2001,8 +2082,13 @@ function Mundo:cerrarInstancia(modo, ganador)
           if self:darItem(e, id, 1) then premios[#premios + 1] = def.nombre
           else premios[#premios + 1] = def.nombre .. " (bolsa llena, se pierde)" end
         end
+        -- los eventos dan también Monedas Corona del Item Mall: 5 al ganar y 2 al perder
+        local monedas = gano and 5 or 2
+        e.monedas = (e.monedas or 0) + monedas
+        premios[#premios + 1] = monedas .. " Monedas Corona"
         self:marcarProgreso(e)
         self:mensaje("sistema", "", (gano and "Victoria" or "Derrota") .. ". +" .. oro .. " de oro, " .. table.concat(premios, " y ") .. ".", e)
+        self.mensajes[#self.mensajes].marquesina = true
       end
       local ret = e.retorno
       if e.kind == "jugador" and ret then
@@ -2238,11 +2324,23 @@ function Mundo:configurarAutopocion(p, datos)
   self:marcarProgreso(p)
 end
 
+function Mundo:puestoDe(it)
+  if it.hueco == "arma" then return "armero" end
+  if it.hueco == "cabeza" or it.hueco == "pecho" or it.hueco == "piernas" or it.hueco == "pies"
+    or it.hueco == "escudo" or it.hueco == "anillo" or it.hueco == "amuleto" or it.hueco == "mochila" then
+    return "armero"
+  end
+  if (it.cura or it.mana) and not it.hueco then return "mercado" end
+end
+
 function Mundo:comprar(p, itemId)
   self:marcarProgreso(p)
   local it = Datos.item(itemId)
   if not it or it.quest or it.mall then return "No está a la venta." end
   if (it.cura or it.mana) and it.nivel and (p.nivel or 1) < it.nivel then return "Necesitas nivel " .. it.nivel .. "." end
+  local puesto = self:puestoDe(it)
+  if puesto == "mercado" and not self:npcCerca(p, "mercado") then return "Las pociones se compran a la clériga." end
+  if puesto == "armero" and not self:npcCerca(p, "armero") then return "Eso se compra al armero." end
   if p.oro < it.precio then return "Oro insuficiente." end
   if not self:darItem(p, itemId, 1) then return "Bolsa llena." end
   p.oro = p.oro - it.precio
@@ -2610,7 +2708,8 @@ function Mundo:interactuar(p)
     end
   end
   if mejor then
-    if mejor.rol == "mercado" then return { panel = "mercado" } end
+    if mejor.rol == "mercado" then return { panel = "mercado", tienda = "mercado" } end
+    if mejor.rol == "armero" then return { panel = "mercado", tienda = "armero" } end
     if mejor.rol == "heraldo" then return { panel = "guerra" } end
     if mejor.rol == "barquero" then return { panel = "viaje" } end
     if mejor.rol == "encantador" then return { panel = "encantar" } end
@@ -2633,6 +2732,15 @@ function Mundo:interactuar(p)
         end
       end
       return { panel = "misiones", ciudad = cid }
+    end
+    if mejor.rol == "aldeano" then
+      local frases = {
+        "Buen día, viajero. La ciudad está tranquila.", "Dicen que más allá de las murallas hay criaturas muy fuertes.",
+        "Si buscas casa, habla con el mayordomo.", "El pan de esta ciudad es el mejor del reino.",
+        "Cuida tu montura: en el camino hay ladrones.", "Yo solo quiero paz y una buena cosecha.",
+      }
+      self:mensaje("local", mejor.nombre, frases[math.random(#frases)], mejor)
+      return { panel = nil }
     end
     if mejor.kind == "guardia" then
       self:mensaje("local", mejor.nombre, "Mantén la corona en alto.", mejor)
@@ -2775,9 +2883,11 @@ function Mundo:actualizar(dt)
           end
         end
       elseif e.kind == "guardia" then self:actualizarGuardia(e, dt)
+      elseif e.kind == "npc" then self:patrullar(e, dt)
       elseif e.kind == "proyectil" then self:actualizarProyectil(e, dt)
       elseif e.kind == "trampa" then self:actualizarTrampa(e, dt)
       elseif e.kind == "mascota" then self:actualizarMascota(e, dt)
+      elseif e.kind == "esbirro" then self:actualizarEsbirro(e, dt)
       elseif e.kind == "caravana" then self:actualizarCaravana(e, dt)
       elseif e.kind == "bandera" then self:actualizarBandera(e)
       elseif (e.kind == "loot" or e.kind == "cuerpo" or e.kind == "cristal" or e.kind == "cofre_mz") and self.tiempo > (e.hasta or 0) then e.borrar = true
@@ -2864,7 +2974,7 @@ function Mundo:exportar(p)
     habilidades = p.habilidades, encantos = p.encantos,
     mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
     job = p.oficioElegido, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
-    monturas = p.monturas, monturaPreferida = p.monturaPreferida,
+    monturas = p.monturas, monturaPreferida = p.monturaPreferida, diaria = p.diaria,
     autoPocion = p.autoPocion and true or false,
     autoPocionUmbral = p.autoPocionUmbral or Mundo.AUTOPOCION_UMBRAL,
     autoMana = p.autoMana and true or false,
@@ -2890,6 +3000,7 @@ function Mundo:aplicarGuardado(p, data)
   p.job = nil
   if p.oficioElegido and self:pesoCarga(p) > 0 then p.job = p.oficioElegido end
   p.monturas, p.monturaPreferida = data.monturas or {}, data.monturaPreferida
+  p.diaria = type(data.diaria) == "table" and data.diaria or nil
   p.autoPocion = data.autoPocion and true or false
   p.autoMana = data.autoMana and true or false
   local function umbralGuardado(v)
@@ -2971,7 +3082,7 @@ function Mundo:compactar(e)
     nivel = e.nivel, hoja = e.hoja, base = e.base, cuadros = e.cuadros,
     tam = e.tam, paso = e.paso, porDir = e.porDir, elite = e.elite,
     estructura = e.estructura, llevaBandera = e.llevaBandera, equipo = e.equipo,
-    rol = e.rol, casaId = e.casaId, casaTamano = e.casaTamano, anim = e.anim, portador = e.portador,
+    rol = e.rol, staff = e.staff, casaId = e.casaId, casaTamano = e.casaTamano, anim = e.anim, portador = e.portador,
     mov = e.mov and true or nil, objetivo = (e.kind == "monstruo") and e.objetivo or nil,
     respawn = (e.kind == "monstruo" or e.kind == "puerta") and e.respawn or nil,
     flash = (e.flash or 0) > 0 and e.flash or nil,
@@ -3015,7 +3126,7 @@ function Mundo:foto(pid)
       robo = p.robo and { desde = p.robo.desde, hasta = p.robo.hasta } or nil,
       gremioRango = p.gremioRango, gremioEtiqueta = p.gremioEtiqueta,
       invGremio = (p.invitacionGremio and p.invitacionGremio.hasta > self.tiempo) and p.invitacionGremio or nil,
-      estadosResta = {},
+      estadosResta = {}, buffsResta = {},
     }
     if p.gremioId and self.gremios[p.gremioId] then tu.gremioNombre = self.gremios[p.gremioId].nombre end
     tu.grupo = self:resumenGrupo(p)
@@ -3032,6 +3143,8 @@ function Mundo:foto(pid)
       local hp, mx = self:vidaMontura(p, p.montado)
       tu.monturaHp, tu.monturaHpMax = math.floor(hp), mx
     end
+    tu.monturasEstado = self:estadoMonturas(p)
+    tu.diaria = self:estadoDiaria(p)
     if p.invitacionGrupo and p.invitacionGrupo.hasta > self.tiempo then
       tu.invGrupo = { nombre = p.invitacionGrupo.nombre }
     end
@@ -3040,6 +3153,10 @@ function Mundo:foto(pid)
       if p.job == "hunter" then tu.buscados = self:buscadosVisibles(p) end
     end
     for tipo, st in pairs(p.estados or {}) do tu.estadosResta[tipo] = math.max(0, st.hasta - self.tiempo) end
+    -- potenciadores activos (escudo arcano, furia, grito...): quién los dio, cuánto queda y cuánto duraban
+    for _, b in ipairs(p.buffs or {}) do
+      tu.buffsResta[#tu.buffsResta + 1] = { id = b.id, hab = b.habilidad, resta = math.max(0, b.dur), max = b.max or b.dur }
+    end
     for k, v in pairs(p.cds or {}) do tu.cds[k] = v end
   end
   local msgs = {}
@@ -3158,6 +3275,10 @@ function Mundo:accion(pid, nombre, datos)
     else err = "Acércate al criador de mascotas." end
     if err then self:mensaje("sistema", "", err, p) end
   end
+  if nombre == "diaria_reclamar" then
+    local err = self:reclamarDiaria(p)
+    if err then self:mensaje("sistema", "", err, p) end
+  end
   if nombre == "mascota_invocar" then
     local err = self:invocarMascota(p, datos.idx)
     if err then self:mensaje("sistema", "", err, p) end
@@ -3256,6 +3377,8 @@ end
 
 Estados.instalar(Mundo)
 Mascotas.instalar(Mundo)
+Esbirros.instalar(Mundo)
+Diaria.instalar(Mundo)
 Gremios.instalar(Mundo)
 Oficios.instalar(Mundo)
 Ley.instalar(Mundo)

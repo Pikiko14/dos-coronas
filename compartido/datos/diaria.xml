@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Recompensas diarias: un ciclo de siete días seguidos (si pasa un día sin reclamar, la racha vuelve al día 1; tras
+  el día 7 el ciclo empieza otra vez, y la racha sigue contando). Se reclaman una vez al día, con el reloj del servidor.
+  n = día del ciclo; oro = oro base y oroN = oro extra por nivel; xp = experiencia, como fracción de la que pide el
+  nivel actual (0.05 = el 5%); monedas = Monedas Corona; items = objetos (id y cant, ids de items.xml o del mall).
+-->
+<diaria>
+  <dia n="1" oro="120" oroN="12">
+    <items><i id="pocion_vida" cant="5"/></items>
+  </dia>
+  <dia n="2" oro="150" oroN="14" xp="0.04">
+    <items><i id="pocion_mana" cant="5"/></items>
+  </dia>
+  <dia n="3" oro="180" oroN="16">
+    <items><i id="polvo_arcano" cant="4"/><i id="pocion_vida" cant="5"/></items>
+  </dia>
+  <dia n="4" oro="240" oroN="20" xp="0.06">
+    <items><i id="pocion_vida" cant="8"/><i id="pocion_mana" cant="8"/></items>
+  </dia>
+  <dia n="5" oro="300" oroN="24" monedas="10">
+    <items><i id="polvo_arcano" cant="8"/></items>
+  </dia>
+  <dia n="6" oro="400" oroN="30" xp="0.1">
+    <items><i id="tarjeta_exp" cant="1"/></items>
+  </dia>
+  <dia n="7" oro="600" oroN="40" xp="0.15" monedas="40">
+    <items><i id="pergamino_forja" cant="1"/><i id="pocion_vida" cant="15"/></items>
+  </dia>
+</diaria>

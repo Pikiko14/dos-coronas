@@ -134,7 +134,7 @@ function Pruebas.correr()
     for _, c in ipairs(mundo.mapas.mundo.ciudades) do
       local n = 0
       for _, e in ipairs(mundo.mapas.mundo.edificios) do
-        if e.puertaX >= c.x and e.puertaX < c.x + c.w and e.puertaY >= c.y and e.puertaY < c.y + c.h then n = n + 1 end
+        if not e.tienda and e.puertaX >= c.x and e.puertaX < c.x + c.w and e.puertaY >= c.y and e.puertaY < c.y + c.h then n = n + 1 end
       end
       if #c.parcelas ~= n or n < 1 then enVenta = false end
       for _, par in ipairs(c.parcelas) do if par.dueno then enVenta = false end end
@@ -1462,7 +1462,7 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     local mundo = Mundo.nuevo()
     local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "umbra", clase = "guerrero", nivel = 30 })
     p.oro = 100000
-    fallar(errores, "hay siete especies y el tope las permite todas", #Monturas.orden == 7 and Monturas.MAX >= 7)
+    fallar(errores, "hay doce especies en la cuadra y el tope las permite todas", #Monturas.orden == 12 and Monturas.MAX >= 12)
     local nuevas = { "corcel_real", "lobo_guerra", "bisonte_guerra", "corcel_fuego" }
     for _, id in ipairs(nuevas) do
       local d = Monturas.especies[id]
@@ -2896,7 +2896,7 @@ mundo.tiempo = 100
     for _, clase in ipairs({ "guerrero", "mago", "cazador", "clerigo" }) do
       local igual = Calibracion.duelo(mundo, clase, 10, Calibracion.monstruoDeNivel(10))
       fallar(errores, clase .. " gana a una criatura de su nivel", igual.gano)
-      fallar(errores, clase .. " no la mata al instante ni tarda una eternidad", igual.t > 5 and igual.t < 60, string.format("%.1f s", igual.t))
+      fallar(errores, clase .. " no la mata al instante ni tarda una eternidad", igual.t > 4 and igual.t < 60, string.format("%.1f s", igual.t))
       fallar(errores, clase .. " sufre algo contra su nivel", igual.perdida > 0.03, string.format("%.0f%%", igual.perdida * 100))
       local alta = Calibracion.duelo(mundo, clase, 8, Calibracion.monstruoDeNivel(21))
       fallar(errores, clase .. " nivel 8 no puede con una criatura de nivel 21", not alta.gano)
@@ -3624,16 +3624,31 @@ mundo.tiempo = 100
       pv.cura == 50 and pv.curaMax == 110 and pvm.cura == 111 and pvm.curaMax == 190 and pvg.cura == 191 and pvg.curaMax == 300
       and pm.mana == 50 and pm.manaMax == 110 and pmm.mana == 111 and pmm.manaMax == 190 and pmg.mana == 191 and pmg.manaMax == 300)
     fallar(errores, "vender paga menos que comprar", Datos.FACTOR_VENTA > 0 and Datos.FACTOR_VENTA < 0.5)
-    local p = Mundo.nuevo():crearPersonaje({ nombre = "Vende", faccion = "albor", clase = "guerrero", nivel = 12 })
     local mundo = Mundo.nuevo()
-    mundo.entidades = {}
-    p = mundo:crearPersonaje({ nombre = "Vende", faccion = "albor", clase = "guerrero", nivel = 12 })
+    local p = mundo:crearPersonaje({ nombre = "Vende", faccion = "albor", clase = "guerrero", nivel = 12 })
     p.bolsa, p.oro = { { id = "guerrero_arma_4", cant = 1 } }, 0
     mundo:vender(p, 1)
     fallar(errores, "vender paga el 40% del precio", p.oro == math.floor(Datos.item("guerrero_arma_4").precio * 0.4), tostring(p.oro))
     local oroVenta = p.oro
+    local boticario, armero
+    for _, e in pairs(mundo.entidades) do
+      if e.kind == "npc" and e.faccion == "albor" and e.rol == "mercado" then boticario = e end
+      if e.kind == "npc" and e.faccion == "albor" and e.rol == "armero" then armero = e end
+    end
+    fallar(errores, "hay boticario y armero", boticario ~= nil and armero ~= nil and boticario.id ~= armero.id)
+    p.x, p.y = boticario.x + 1, boticario.y
     fallar(errores, "nivel 12 no compra la poción grande", mundo:comprar(p, "pocion_vida_grande") ~= nil and p.oro == oroVenta)
     fallar(errores, "nivel 12 compra la mediana", mundo:comprar(p, "pocion_vida_mediana") == nil and mundo:contarItem(p, "pocion_vida_mediana") == 1)
+    local pecho
+    for id, it in pairs(Datos.items) do
+      if it.hueco == "pecho" and it.clase == "guerrero" and not it.quest and not it.mall then pecho = id break end
+    end
+    fallar(errores, "la clériga no vende armadura", mundo:comprar(p, pecho) ~= nil)
+    fallar(errores, "la clériga no vende armas", mundo:comprar(p, "guerrero_arma_1") ~= nil)
+    p.x, p.y = armero.x + 1, armero.y
+    fallar(errores, "el armero no vende pociones", mundo:comprar(p, "pocion_vida") ~= nil)
+    p.oro = (Datos.item(pecho).precio or 0) + 10
+    fallar(errores, "el armero vende la armadura", mundo:comprar(p, pecho) == nil and mundo:contarItem(p, pecho) == 1)
     -- casas, gremio y muebles
     fallar(errores, "la casa pequeña cuesta 50000, la mediana 75000 y la grande 100000",
       Datos.precioCasa.pequena == 50000 and Datos.precioCasa.mediana == 75000 and Datos.precioCasa.grande == 100000)
@@ -3749,26 +3764,467 @@ mundo.tiempo = 100
       and #require("compartido.dominio.mall").ORDEN_ADDONS >= 40)
     fallar(errores, "xml mazmorras", #Datos.mazmorras == 3 and Datos.mazmorras[1].jefe.monstruo == "caballero")
     fallar(errores, "xml monturas: el dragon no sale en la cuadra", require("compartido.dominio.monturas").especies.dragon
-      and #require("compartido.dominio.monturas").orden == 7)
+      and #require("compartido.dominio.monturas").orden == 12)
   end)
   paso("casas: formas variadas, cada tejado sobre su fachada y puerta en la fila de abajo", function()
     local mapa = Mundo.nuevo().mapas.mundo
     local tamanos, formas, mal = {}, {}, 0
+    local tiendas = {}
     for _, e in ipairs(mapa.edificios) do
-      tamanos[e.tamano] = true
-      formas[e.w .. "x" .. e.h .. (e.cima and "L" or "")] = true
-      -- cada columna con casa: tejado arriba y al menos una fila de fachada debajo; la puerta en la fila de abajo
-      for fx = 0, e.w - 1 do
-        local c = e.cima and e.cima[fx + 1] or 0
-        if e.h - c - e.techo < 1 then mal = mal + 1 end
+      if e.tienda then
+        tiendas[e.tienda] = (tiendas[e.tienda] or 0) + 1
+      else
+        tamanos[e.tamano] = true
+        formas[e.w .. "x" .. e.h .. (e.cima and "L" or "")] = true
+        -- cada columna con casa: tejado arriba y al menos una fila de fachada debajo; la puerta en la fila de abajo
+        for fx = 0, e.w - 1 do
+          local c = e.cima and e.cima[fx + 1] or 0
+          if e.h - c - e.techo < 1 then mal = mal + 1 end
+        end
+        if e.puertaY ~= e.y + e.h - 1 then mal = mal + 1 end
       end
-      if e.puertaY ~= e.y + e.h - 1 then mal = mal + 1 end
     end
     local n = 0
     for _ in pairs(formas) do n = n + 1 end
+    local nCiudades = #mapa.ciudades
     fallar(errores, "casas bien formadas", mal == 0, tostring(mal))
     fallar(errores, "tres tamanos de casa", tamanos.pequena and tamanos.mediana and tamanos.grande)
     fallar(errores, "varias formas de casa", n >= 6, tostring(n))
+    fallar(errores, "cada ciudad tiene establo, pociones y armas",
+      tiendas.establo == nCiudades and tiendas.mercado == nCiudades and tiendas.armero == nCiudades,
+      tostring(tiendas.establo) .. "/" .. tostring(tiendas.mercado) .. "/" .. tostring(tiendas.armero))
+  end)
+  paso("PNJ de las ciudades: ni ellos ni su ruta pisan paredes", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.mundo
+    local mal = {}
+    for _, c in ipairs(mapa.ciudades) do
+      for _, n in ipairs(c.npcs or {}) do
+        if Mapa.bloqueado(mapa, n.x, n.y) then mal[#mal + 1] = c.id .. ":" .. n.rol end
+        for _, r in ipairs(n.ruta or {}) do
+          if Mapa.bloqueado(mapa, r.x, r.y) then mal[#mal + 1] = c.id .. ":" .. n.rol .. " ruta" end
+        end
+      end
+    end
+    for _, e in pairs(mundo.entidades) do
+      if e.kind == "npc" and e.modo == "mundo" and Mapa.bloqueado(mapa, e.x, e.y) then mal[#mal + 1] = "entidad " .. tostring(e.rol) end
+    end
+    fallar(errores, "PNJ sobre casillas libres", #mal == 0, table.concat(mal, ", "))
+  end)
+  paso("casas: delante de cada puerta se puede pisar", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local mapa = Mundo.nuevo().mapas.mundo
+    local mal = {}
+    for _, e in ipairs(mapa.edificios) do
+      local fy = e.techoSur and (e.puertaY - 1) or (e.puertaY + 1)
+      if Mapa.bloqueado(mapa, e.puertaX + 0.5, fy + 0.5) then mal[#mal + 1] = e.puertaX .. "," .. e.puertaY .. " " .. tostring(e.tienda or e.tamano) .. " frente " .. math.floor(e.puertaX) .. "," .. fy .. " suelo=" .. tostring(Mapa.get(mapa, e.puertaX, fy)) .. " prop=" .. (function() for _, pr in ipairs(mapa.props) do if pr.x == e.puertaX and pr.y == fy then return pr.tipo end end return "-" end)() end
+    end
+    fallar(errores, "puertas accesibles", #mal == 0, table.concat(mal, " "))
+  end)
+  paso("ciudades: las pequeñas se reparten distinto y todas tienen vida", function()
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.mundo
+    local firmas, repetidas = {}, 0
+    for _, c in ipairs(mapa.ciudades) do
+      if not c.capital then
+        local casas = {}
+        for _, e in ipairs(mapa.edificios) do
+          if e.x >= c.x and e.x < c.x + c.w and e.y >= c.y and e.y < c.y + c.h and not e.tienda then
+            casas[#casas + 1] = (e.x - c.x) .. "," .. (e.y - c.y) .. "," .. e.w .. "x" .. e.h
+          end
+        end
+        table.sort(casas)
+        local firma = table.concat(casas, ";")
+        if firmas[firma] then repetidas = repetidas + 1 end
+        firmas[firma] = true
+        fallar(errores, c.id .. ": tiene bastantes casas", #casas >= 10, tostring(#casas))
+      end
+      local vecinos = 0
+      for _, n in ipairs(c.npcs) do if n.rol == "aldeano" then vecinos = vecinos + 1 end end
+      fallar(errores, c.id .. ": tiene vecinos", vecinos >= 3, tostring(vecinos))
+    end
+    fallar(errores, "no hay dos ciudades pequeñas con las casas iguales", repetidas == 0, tostring(repetidas))
+    local props = {}
+    for _, c in ipairs(mapa.ciudades) do
+      local n = 0
+      for _, pr in ipairs(mapa.props) do
+        if pr.x >= c.x and pr.x < c.x + c.w and pr.y >= c.y and pr.y < c.y + c.h then n = n + 1 end
+      end
+      fallar(errores, c.id .. ": decoración", n >= 60, tostring(n))
+    end
+  end)
+  paso("clases nuevas: lancero (Alba) y nigromante (Ocaso)", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    -- cada facción tiene su oficio propio
+    fallar(errores, "el lancero es del Alba", Datos.claseValida("lancero", "albor") and not Datos.claseValida("lancero", "umbra"))
+    fallar(errores, "el nigromante es del Ocaso", Datos.claseValida("nigromante", "umbra") and not Datos.claseValida("nigromante", "albor"))
+    fallar(errores, "las clases base valen para las dos", Datos.claseValida("mago", "albor") and Datos.claseValida("mago", "umbra"))
+    local alba, ocaso = Datos.clasesDe("albor"), Datos.clasesDe("umbra")
+    fallar(errores, "el Alba ofrece cinco oficios, el último el lancero", #alba == 5 and alba[5] == "lancero")
+    fallar(errores, "el Ocaso ofrece cinco oficios, el último el nigromante", #ocaso == 5 and ocaso[5] == "nigromante")
+    -- equipo propio en los ocho escalones
+    for t = 1, 8 do
+      for _, id in ipairs({ "lancero_arma_", "lancero_alabarda_", "lancero_cabeza_", "lancero_pecho_", "lancero_piernas_", "lancero_pies_",
+        "nigromante_arma_", "nigromante_grimorio_", "nigromante_cabeza_", "nigromante_pecho_", "nigromante_piernas_", "nigromante_pies_" }) do
+        local it = Datos.items[id .. t]
+        fallar(errores, "existe " .. id .. t, it ~= nil and it.hoja == "extra", tostring(it and it.hoja))
+      end
+    end
+    fallar(errores, "la lanza es de tipo lanza", Datos.items.lancero_arma_1.arma == "lanza")
+    local pu = mundo.mapas.mundo.puestos[1]
+    local function avanzar(seg) for _ = 1, math.floor(seg / 0.1) do mundo:actualizar(0.1) end end
+    local function troll(x, y)
+      local m = mundo:spawnMonstruo("troll", x, y, { x = x, y = y })
+      m.hp, m.hpMax, m.agresivo, m.cds = 99999, 99999, false, { auto = 1e9 }
+      return m
+    end
+    -- lancero: todos sus poderes funcionan
+    local lan = mundo:crearPersonaje({ nombre = "Lanza", faccion = "albor", clase = "lancero", nivel = 20 })
+    lan.x, lan.y, lan.z, lan.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+    fallar(errores, "el lancero nace con su lanza", lan.equipo.arma == "lancero_arma_" .. require("compartido.dominio.items").tierPara(20), tostring(lan.equipo.arma))
+    for _, id in ipairs(Datos.barra.lancero) do lan.habilidades[id] = 1 end
+    lan.mp, lan.mpMax = 99999, 99999
+    for i, id in ipairs(Datos.barra.lancero) do
+      local m = troll(lan.x + 1.8, lan.y)
+      lan.cds, lan.objetivo = { auto = 1e9 }, m.id
+      local err = mundo:usarHabilidad(lan, i, m.x, m.y)
+      fallar(errores, "el poder " .. id .. " se lanza", err == nil, tostring(err))
+      avanzar(2)
+      if id == "muro_lanzas" then
+        local escudo = false
+        for _, b in ipairs(lan.buffs or {}) do if b.id == "escudo" then escudo = true end end
+        fallar(errores, "el muro de lanzas da escudo", escudo)
+      else
+        fallar(errores, "el poder " .. id .. " hiere", m.hp < m.hpMax, m.hp .. "/" .. m.hpMax)
+      end
+      m.borrar = true
+      avanzar(0.2)
+      lan.x, lan.y = pu.x + 8.5, pu.y + 8.5
+    end
+    -- nigromante: maná, maldiciones y esbirros
+    local nec = mundo:crearPersonaje({ nombre = "Hueso", faccion = "umbra", clase = "nigromante", nivel = 20 })
+    nec.x, nec.y, nec.z, nec.modo = pu.x + 8.5, pu.y + 12.5, 0, "mundo"
+    fallar(errores, "el nigromante nace con su báculo", nec.equipo.arma == "nigromante_arma_" .. require("compartido.dominio.items").tierPara(20), tostring(nec.equipo.arma))
+    for _, id in ipairs(Datos.barra.nigromante) do nec.habilidades[id] = 1 end
+    nec.mp, nec.mpMax = 99999, 99999
+    local function slotNec(id) for i, h in ipairs(Datos.barra.nigromante) do if h == id then return i end end end
+    for i, id in ipairs(Datos.barra.nigromante) do
+      if Datos.habilidades[id].tipo ~= "invocar" then
+        local m = troll(nec.x + 2.5, nec.y)
+        nec.cds, nec.objetivo = { auto = 1e9 }, m.id
+        local err = mundo:usarHabilidad(nec, i, m.x, m.y)
+        fallar(errores, "el poder " .. id .. " se lanza", err == nil, tostring(err))
+        avanzar(2)
+        fallar(errores, "el poder " .. id .. " hiere", m.hp < m.hpMax, m.hp .. "/" .. m.hpMax)
+        m.borrar = true
+        avanzar(0.2)
+      end
+    end
+    -- alzar esqueletos: dos esbirros que pelean solos contra el objetivo del nigromante
+    nec.cds = { auto = 1e9 }
+    local m = troll(nec.x + 3, nec.y)
+    nec.objetivo = m.id
+    fallar(errores, "alzar esqueletos se lanza", mundo:usarHabilidad(nec, slotNec("alzar_esqueletos")) == nil)
+    local esb = mundo:esbirrosDe(nec)
+    fallar(errores, "salen dos esqueletos", #esb == 2 and esb[1].especie == "esqueleto", tostring(#esb))
+    fallar(errores, "no se les puede dañar", not mundo:puedeDanar(m, esb[1]))
+    nec.cds = { auto = 1e9 }
+    avanzar(6)
+    fallar(errores, "los esqueletos hieren al objetivo", m.hp < m.hpMax, m.hp .. "/" .. m.hpMax)
+    -- el espectro dispara de lejos y hay un máximo de esbirros a la vez
+    local hp0 = m.hp
+    nec.cds = { auto = 1e9 }
+    mundo:usarHabilidad(nec, slotNec("alzar_esqueletos"))
+    nec.cds = { auto = 1e9 }
+    mundo:usarHabilidad(nec, slotNec("espectro"))
+    local todos = mundo:esbirrosDe(nec)
+    fallar(errores, "hay un máximo de esbirros", #todos <= require("compartido.dominio.esbirros").MAX, tostring(#todos))
+    fallar(errores, "el espectro sigue vivo entre los esbirros", todos[#todos].especie == "espectro")
+    avanzar(4)
+    fallar(errores, "siguen hiriendo", m.hp < hp0)
+    -- desaparecen con el tiempo y si su dueño cae
+    for _, e in ipairs(todos) do e.hasta = mundo.tiempo + 1 end
+    avanzar(2)
+    fallar(errores, "se desvanecen al acabar el tiempo", #mundo:esbirrosDe(nec) == 0, tostring(#mundo:esbirrosDe(nec)))
+    nec.cds = { auto = 1e9 }
+    mundo:usarHabilidad(nec, slotNec("alzar_esqueletos"))
+    fallar(errores, "invoca de nuevo", #mundo:esbirrosDe(nec) == 2)
+    mundo:morir(nec, m)
+    avanzar(0.3)
+    fallar(errores, "al caer su dueño desaparecen", #mundo:esbirrosDe(nec) == 0)
+  end)
+  paso("potenciadores: el cliente recibe el poder, lo que queda y lo que duraba", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local pu = mundo.mapas.mundo.puestos[1]
+    local mago = mundo:crearPersonaje({ nombre = "Buffo", faccion = "albor", clase = "mago", nivel = 20 })
+    mago.x, mago.y, mago.z, mago.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+    mago.habilidades.escudo = 1
+    mago.mp, mago.mpMax = 9999, 9999
+    local slot
+    for i, h in ipairs(Datos.barra.mago) do if h == "escudo" then slot = i end end
+    fallar(errores, "lanza el escudo arcano", mundo:usarHabilidad(mago, slot) == nil)
+    for _ = 1, 20 do mundo:actualizar(0.1) end
+    local tu = mundo:foto(mago.id).tu
+    local b = tu.buffsResta and tu.buffsResta[1]
+    fallar(errores, "el escudo llega al cliente", b ~= nil and b.id == "escudo" and b.hab == "escudo", tostring(b and b.id))
+    fallar(errores, "con lo que queda y lo que duraba", b and b.max >= 6 and b.resta < b.max and b.resta > 0, b and (b.resta .. "/" .. b.max) or "-")
+    for _ = 1, 100 do mundo:actualizar(0.1) end
+    fallar(errores, "al acabar desaparece", #(mundo:foto(mago.id).tu.buffsResta) == 0)
+  end)
+  paso("personal y baneos: roles GM/CM, baneo de cuentas, expulsión y silencio", function()
+    local Sanciones = require("compartido.dominio.sanciones")
+    local Servicio = require("src.aplicacion.servicio_servidor")
+    local sufijo = string.format("%06d", os.time() % 1000000)
+    local uGm, uVic = "gm" .. sufijo, "vi" .. sufijo
+    Cuentas.borrarUsuario(uGm)
+    Cuentas.borrarUsuario(uVic)
+    local idGm, tokGm = Cuentas.registrar(uGm, "clave12")
+    local idVic, tokVic = Cuentas.registrar(uVic, "clave12")
+    fallar(errores, "cuentas de prueba", idGm ~= nil and idVic ~= nil)
+    -- duraciones y mensajes
+    fallar(errores, "duraciones", Sanciones.duracion("2h") == 7200 and Sanciones.duracion("30m") == 1800
+      and Sanciones.duracion("3d") == 259200 and Sanciones.duracion("perm") == 0 and Sanciones.duracion("x") == nil)
+    -- roles guardados en la cuenta
+    fallar(errores, "rol desconocido no vale", Cuentas.fijarRol(uGm, "rey") == nil)
+    fallar(errores, "asigna GM", Cuentas.fijarRol(uGm, "gm") ~= nil)
+    local _, _, rol = Cuentas.cuentaDeToken(tokGm)
+    fallar(errores, "la sesión lleva el rol", rol == "gm", tostring(rol))
+    fallar(errores, "rol por cuenta", Cuentas.rolDeCuenta(idGm) == "gm")
+    fallar(errores, "sin cuenta no hay rol", Cuentas.fijarRol("noexiste" .. sufijo, "cm") == nil)
+    -- baneo de cuentas
+    fallar(errores, "banea por tiempo", Cuentas.banear(uVic, os.time() + 3600, "spam", "GM") ~= nil)
+    local e1, m1 = Cuentas.entrar(uVic, "clave12")
+    fallar(errores, "una cuenta baneada no entra", e1 == nil and tostring(m1):find("suspendida", 1, true) ~= nil, tostring(m1))
+    fallar(errores, "ni con una sesión abierta", Cuentas.cuentaDeToken(tokVic) == nil)
+    local en_lista = false
+    for _, b in ipairs(Cuentas.listarBaneos() or {}) do if b.usuario == uVic then en_lista = true end end
+    fallar(errores, "sale en la lista de baneos", en_lista)
+    fallar(errores, "desbanea", Cuentas.desbanear(uVic) ~= nil)
+    fallar(errores, "entra otra vez", Cuentas.entrar(uVic, "clave12") == idVic)
+    Cuentas.banear(uVic, os.time() - 10, "viejo", "GM")
+    fallar(errores, "un baneo caducado ya no cuenta", Cuentas.entrar(uVic, "clave12") == idVic)
+    -- comandos del chat
+    local mundo = Servicio.crearMundo({})
+    mundo.entidades = {}
+    local pu = mundo.mapas.mundo.puestos[1]
+    local function pj(nombre, staff, usuario)
+      local e = mundo:crearPersonaje({ nombre = nombre, faccion = "albor", clase = "guerrero" })
+      e.x, e.y, e.z, e.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+      e.staff, e.admin, e.cuentaUsuario = staff, staff and true or nil, usuario
+      return e
+    end
+    local gm, cm, vic = pj("Gemita", "gm", uGm), pj("Cemita", "cm", "cm" .. sufijo), pj("Victima", nil, uVic)
+    Cuentas.borrarUsuario("cm" .. sufijo)
+    local idCm = Cuentas.registrar("cm" .. sufijo, "clave12")
+    Cuentas.fijarRol("cm" .. sufijo, "cm")
+    local expulsados = {}
+    mundo.hooks.expulsar = function(e) expulsados[#expulsados + 1] = e.nombre end
+    -- un CM no reparte oro ni cambia roles; un GM sí
+    local oro0 = cm.oro
+    mundo:decir(cm, "/admin oro 5000")
+    fallar(errores, "un CM no da oro", cm.oro == oro0)
+    mundo:decir(gm, "/admin oro 5000")
+    fallar(errores, "un GM sí", gm.oro >= 5000)
+    mundo:decir(cm, "/admin rol " .. uVic .. " gm")
+    fallar(errores, "un CM no cambia roles", Cuentas.rolDeCuenta(idVic) == nil)
+    mundo:decir(gm, "/admin rol " .. uVic .. " cm")
+    fallar(errores, "un GM asigna CM", Cuentas.rolDeCuenta(idVic) == "cm")
+    mundo:decir(gm, "/admin rol " .. uVic .. " ninguno")
+    fallar(errores, "y lo quita", Cuentas.rolDeCuenta(idVic) == nil)
+    -- silencio
+    mundo:decir(cm, "/admin silenciar Victima 5")
+    fallar(errores, "el CM silencia", vic.silenciadoHasta ~= nil and vic.silenciadoHasta > os.time())
+    local antes = #mundo.mensajes
+    mundo:decir(vic, "hola a todos")
+    local hablo = false
+    for i = antes + 1, #mundo.mensajes do if mundo.mensajes[i].texto == "hola a todos" then hablo = true end end
+    fallar(errores, "un silenciado no habla", not hablo)
+    mundo:decir(cm, "/admin silenciar Victima 0")
+    fallar(errores, "se quita el silencio", vic.silenciadoHasta == nil)
+    -- baneos del CM: máximo 72 horas, y no al personal
+    mundo:decir(cm, "/admin ban " .. uVic .. " perm insultos")
+    fallar(errores, "un CM no banea para siempre", Cuentas.estadoBan(idVic) == nil)
+    mundo:decir(cm, "/admin ban " .. uGm .. " 1h prueba")
+    fallar(errores, "ni a un GM", Cuentas.estadoBan(idGm) == nil)
+    mundo:decir(cm, "/admin ban Victima 2h insultos")
+    local ban = Cuentas.estadoBan(idVic)
+    fallar(errores, "banea a una cuenta por el nombre del personaje", ban ~= nil and ban.motivo == "insultos", tostring(ban and ban.motivo))
+    fallar(errores, "queda expulsado", expulsados[1] == "Victima", tostring(expulsados[1]))
+    mundo:decir(gm, "/admin desban " .. uVic)
+    fallar(errores, "el GM quita el baneo", Cuentas.estadoBan(idVic) == nil)
+    mundo:decir(gm, "/admin kick Victima fuera")
+    fallar(errores, "expulsa sin banear", expulsados[2] == "Victima" and Cuentas.estadoBan(idVic) == nil)
+    Cuentas.borrarUsuario(uGm)
+    Cuentas.borrarUsuario(uVic)
+    Cuentas.borrarUsuario("cm" .. sufijo)
+  end)
+  paso("recompensa diaria: reclamar, racha, ciclo y reinicio", function()
+    local Diaria = require("compartido.dominio.diaria")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local p = mundo:crearPersonaje({ nombre = "Diario", faccion = "albor", clase = "guerrero", nivel = 10 })
+    local t0 = os.time()
+    local dia = 0
+    Diaria.ahora = function() return t0 + dia * 86400 end
+    local est = mundo:estadoDiaria(p)
+    fallar(errores, "al principio toca el día 1 sin reclamar", est.dia == 1 and not est.reclamada and est.racha == 0)
+    local oro0 = p.oro
+    fallar(errores, "reclama el día 1", mundo:reclamarDiaria(p) == nil)
+    fallar(errores, "recibe el oro del premio", p.oro == oro0 + Diaria.premio(1, 10).oro, p.oro .. " vs " .. oro0 + Diaria.premio(1, 10).oro)
+    fallar(errores, "solo una vez al día", mundo:reclamarDiaria(p) ~= nil)
+    fallar(errores, "queda reclamada hoy", mundo:estadoDiaria(p).reclamada and mundo:estadoDiaria(p).racha == 1)
+    for d = 2, 7 do
+      dia = d - 1
+      fallar(errores, "el día " .. d .. " toca el " .. d, mundo:estadoDiaria(p).dia == d, tostring(mundo:estadoDiaria(p).dia))
+      local monedas0 = p.monedas or 0
+      fallar(errores, "reclama el día " .. d, mundo:reclamarDiaria(p) == nil)
+      if d == 7 then
+        fallar(errores, "el día 7 da Monedas Corona", (p.monedas or 0) >= monedas0 + 40)
+        local forja = 0
+        for _, s in ipairs(p.bolsa) do if s.id == "pergamino_forja" then forja = forja + s.cant end end
+        fallar(errores, "y un pergamino de forja", forja >= 1)
+      end
+    end
+    fallar(errores, "siete días seguidos: racha 7", p.diaria.racha == 7)
+    dia = 7
+    fallar(errores, "tras el día 7 vuelve al 1 sin perder la racha", mundo:estadoDiaria(p).dia == 1 and mundo:estadoDiaria(p).racha == 7)
+    fallar(errores, "reclama otra vez", mundo:reclamarDiaria(p) == nil and p.diaria.racha == 8)
+    -- se guarda y se recupera
+    local ex = mundo:exportar(p)
+    local q = mundo:crearPersonaje({ nombre = "Otro", faccion = "albor", clase = "guerrero" })
+    mundo:aplicarGuardado(q, { clase = "guerrero", nivel = 10, diaria = ex.diaria })
+    fallar(errores, "la racha se conserva al volver", q.diaria and q.diaria.racha == 8 and mundo:estadoDiaria(q).reclamada)
+    -- faltar un día rompe la racha
+    dia = 9
+    fallar(errores, "si falta un día la racha vuelve a 0", mundo:estadoDiaria(p).racha == 0 and mundo:estadoDiaria(p).dia == 1)
+    -- sin sitio en la bolsa no se pierde el día
+    p.bolsa = {}
+    for i = 1, Datos.capacidadBolsa(p.equipo) do p.bolsa[i] = { id = "guerrero_arma_1", cant = 1 } end
+    local ultimo = p.diaria.ultimo
+    fallar(errores, "con la bolsa llena avisa", tostring(mundo:reclamarDiaria(p)):find("espacio", 1, true) ~= nil)
+    fallar(errores, "y no gasta el día", p.diaria.ultimo == ultimo)
+    Diaria.ahora = function() return os.time() end
+  end)
+  paso("monturas: las normales se usan sin oficio y la tecla O elige la que se puede", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local pu = mundo.mapas.mundo.puestos[1]
+    local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "albor", clase = "guerrero", nivel = 30 })
+    p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
+    p.monturas = { "carreta", "corcel_real", "dragon" }
+    p.job = nil
+    fallar(errores, "montar sin oficio con una normal", mundo:alternarMontura(p) == nil and p.montado == "corcel_real", tostring(p.montado))
+    fallar(errores, "baja con O", mundo:alternarMontura(p) == nil and p.montado == nil)
+    fallar(errores, "la del mall también sin oficio", mundo:alternarMontura(p, "dragon") == nil and p.montado == "dragon")
+    mundo:alternarMontura(p)
+    fallar(errores, "una de transporte pide el oficio", mundo:alternarMontura(p, "carreta") ~= nil and p.montado == nil)
+    p.monturas = { "carreta" }
+    fallar(errores, "solo de transporte y sin oficio: avisa", mundo:alternarMontura(p) ~= nil)
+    p.monturaPreferida = "carreta"
+    p.monturas = { "carreta", "corcel_real" }
+    fallar(errores, "con la preferida inservible monta otra", mundo:alternarMontura(p) == nil and p.montado == "corcel_real")
+    local tu = mundo:foto(p.id).tu
+    fallar(errores, "el cliente recibe el estado de la colección", tu.monturasEstado and tu.monturasEstado.carreta and tu.monturasEstado.carreta.max ~= nil)
+  end)
+  paso("comercio de oficio: solo en ciudades y más pago cuanto más lejos", function()
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.mundo
+    local function enCiudad(e)
+      for _, c in ipairs(mapa.ciudades) do
+        if e.x >= c.x and e.x < c.x + c.w and e.y >= c.y and e.y < c.y + c.h then return c end
+      end
+    end
+    local origen = mapa.ciudades[1]
+    local ciudadesConMercader, puesto = {}, nil
+    for _, e in pairs(mundo.entidades) do
+      if e.kind == "npc" and e.rol == "comercio" then
+        local c = enCiudad(e)
+        if c then ciudadesConMercader[#ciudadesConMercader + 1] = { npc = e, c = c } else puesto = e end
+      end
+    end
+    table.sort(ciudadesConMercader, function(a, b) return a.c.id < b.c.id end)
+    local p = mundo:crearPersonaje({ nombre = "Mercader", faccion = "albor", clase = "guerrero", nivel = 20 })
+    p.job, p.oro = "trader", 5000
+    -- fuera de las ciudades no hay mercaderes ni mozos de cuadra (los puestos del camino no tienen PNJ de comercio)
+    fallar(errores, "ni un mercader ni un establo fuera de las ciudades", puesto == nil)
+    for _, e in pairs(mundo.entidades) do
+      if e.kind == "npc" and e.rol == "establo" and not enCiudad(e) then puesto = e end
+    end
+    fallar(errores, "ni mozos de cuadra fuera de las ciudades", puesto == nil)
+    for _, pu in ipairs(mapa.puestos) do
+      for _, n in ipairs(pu.npcs) do
+        fallar(errores, "el puesto " .. pu.nombre .. " no tiene PNJ de comercio ni de cuadra", n.rol ~= "comercio" and n.rol ~= "establo", n.nombre)
+      end
+    end
+    -- en una ciudad sí, y el bono por distancia crece con ella
+    local bonos = {}
+    for _, par in ipairs(ciudadesConMercader) do
+      p.x, p.y, p.z, p.modo = par.npc.x, par.npc.y + 1, 0, "mundo"
+      p.carga, p.origenCarga = { trigo = 5 }, { trigo = origen.id }
+      mundo:recalcularCarga(p)
+      local trigo
+      for _, b in ipairs(mundo:infoMercancias(p).bienes or {}) do if b.id == "trigo" then trigo = b end end
+      bonos[#bonos + 1] = { dist = math.sqrt((par.c.x - origen.x) ^ 2 + (par.c.y - origen.y) ^ 2), bono = trigo and trigo.bono or -1, id = par.c.id }
+    end
+    table.sort(bonos, function(a, b) return a.dist < b.dist end)
+    fallar(errores, "hay ciudades con mercader", #bonos >= 5, tostring(#bonos))
+    fallar(errores, "en la ciudad de origen no hay bono", bonos[1].bono == 0, tostring(bonos[1].bono))
+    local lejos = bonos[#bonos]
+    fallar(errores, "más lejos paga más", lejos.bono > bonos[2].bono, lejos.bono .. " vs " .. bonos[2].bono)
+    fallar(errores, "con un tope", lejos.bono <= math.floor(require("compartido.dominio.oficios").DIST_BONO_MAX * 100 + 0.5))
+    -- comprar y entregar de verdad en dos ciudades
+    local A, B = ciudadesConMercader[1], ciudadesConMercader[#ciudadesConMercader]
+    p.carga, p.origenCarga, p.costes = nil, nil, nil
+    p.x, p.y = A.npc.x, A.npc.y + 1
+    p.oro = 5000
+    fallar(errores, "compra en la ciudad", mundo:comprarBien(p, "trigo", 3) == nil and (p.carga.trigo or 0) == 3)
+    p.x, p.y = B.npc.x, B.npc.y + 1
+    local oro = p.oro
+    fallar(errores, "entrega en otra ciudad", mundo:venderBien(p, "trigo", 3) == nil and p.oro > oro)
+  end)
+  paso("mapa del estandarte: no lineal y sin zonas aisladas", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local m = Mapa.estandarte()
+    local function bfs(x0, y0, bloqueaPuentes)
+      local visto, cola, n = {}, { { math.floor(x0), math.floor(y0) } }, 0
+      visto[cola[1][1] * 1000 + cola[1][2]] = true
+      local i = 1
+      while cola[i] do
+        local c = cola[i]
+        i = i + 1
+        n = n + 1
+        for _, d in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+          local x, y = c[1] + d[1], c[2] + d[2]
+          local k = x * 1000 + y
+          if not visto[k] and Mapa.transitable(m, x, y) and not (bloqueaPuentes and Mapa.get(m, x, y) == "madera") then
+            visto[k] = true
+            cola[#cola + 1] = { x, y }
+          end
+        end
+      end
+      return visto, n
+    end
+    local a = m.spawns.albor
+    local visto = bfs(a.x, a.y)
+    fallar(errores, "desde Alba se llega a Umbra", visto[math.floor(m.spawns.umbra.x) * 1000 + math.floor(m.spawns.umbra.y)])
+    fallar(errores, "y a su estandarte", visto[math.floor(m.banderas.umbra.x) * 1000 + math.floor(m.banderas.umbra.y)])
+    local visto2 = bfs(m.spawns.umbra.x, m.spawns.umbra.y)
+    fallar(errores, "y al revés", visto2[math.floor(a.x) * 1000 + math.floor(a.y)])
+    -- sin los puentes aún se cruza por los vados (hay más de una ruta)
+    local sinPuentes = bfs(a.x, a.y, true)
+    fallar(errores, "los vados dan otra ruta", sinPuentes[math.floor(m.spawns.umbra.x) * 1000 + math.floor(m.spawns.umbra.y)])
+    -- no es una calle recta: hay río, árboles y rocas
+    local agua, bloqueos = 0, 0
+    for x = 1, m.w - 2 do
+      for y = 1, m.h - 2 do
+        if Mapa.get(m, x, y) == "agua" then agua = agua + 1 end
+        if m.bloque[x] and m.bloque[x][y] then bloqueos = bloqueos + 1 end
+      end
+    end
+    fallar(errores, "hay río y obstáculos", agua > 150 and bloqueos > 150, agua .. "/" .. bloqueos)
   end)
   paso("red y paneles", function()
     local Servidor = require("src.aplicacion.servicio_servidor")

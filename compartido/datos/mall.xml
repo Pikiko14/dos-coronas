@@ -88,4 +88,9 @@
   <addon id="skin_caballero_oscuro" nombre="Caballero oscuro" desc="Armadura negra con cuernos." precio="500"/>
   <!-- ---- monturas exclusivas ---- -->
   <montura id="dragon" nombre="Dragón" desc="Exclusiva: dorado en el Alba y violeta en el Ocaso. La más rápida y resistente; sin oficio y se pelea montado." precio="1500"/>
+  <montura id="fenix" nombre="Fénix" desc="Exclusiva: un caballo de fuego con alas de llamas y una estela de ascuas. Sin oficio; se pelea montado." precio="1400"/>
+  <montura id="corcel_astral" nombre="Corcel astral" desc="Exclusiva: noche estrellada, un halo de luz sobre el jinete y estrellas que lo rodean." precio="1100"/>
+  <montura id="dragon_hielo" nombre="Dragón de hielo" desc="Exclusiva: escamas de cristal y una nevada que lo sigue a todas partes." precio="1500"/>
+  <montura id="dragon_sombra" nombre="Dragón de sombra" desc="Exclusiva: humo oscuro y destellos violeta; nadie lo ve llegar." precio="1500"/>
+  <montura id="gargola_oro" nombre="Gárgola de oro" desc="Exclusiva: una gárgola dorada que va dejando destellos como monedas." precio="1000"/>
 </mall>

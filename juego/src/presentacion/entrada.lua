@@ -118,8 +118,17 @@ function Entrada.manejar(app, id)
   end
   if id == "foco_nombre" then Interfaz.foco = "nombre" return end
   if id == "foco_chat" then Interfaz.foco = "chat" Interfaz.texto = "" return end
-  if id:sub(1, 8) == "faccion_" then creacion.faccion = id:sub(9) return end
-  if id:sub(1, 6) == "clase_" then creacion.clase = id:sub(7) return end
+  if id:sub(1, 8) == "faccion_" then
+    creacion.faccion = id:sub(9)
+    -- un oficio exclusivo de la otra facción se descarta
+    if creacion.clase and not Datos.claseValida(creacion.clase, creacion.faccion) then creacion.clase = nil end
+    return
+  end
+  if id:sub(1, 6) == "clase_" then
+    local clase = id:sub(7)
+    if Datos.claseValida(clase, creacion.faccion) then creacion.clase = clase end
+    return
+  end
   if id == "crear_entrar" then
     creacion = app.creacion
     if not sesion.cuentaId then app.cuenta.error = "Regístrate para jugar." app.estado = "cuenta" return end
@@ -297,7 +306,7 @@ function Entrada.manejar(app, id)
   end
   if id:sub(1, 6) == "canal_" then Interfaz.canal = id:sub(7) return end
   if id:sub(1, 6) == "viaje_" then app.actuar("viaje", { destino = id:sub(7) }) Interfaz.panel = nil return end
-  if id:sub(1, 8) == "est_tab_" then Interfaz.establoTab = id:sub(9) return end
+  if id:sub(1, 8) == "est_tab_" then Interfaz.establoTab, Interfaz.establoPag = id:sub(9), 1 return end
   if id:sub(1, 9) == "merc_tab_" then Interfaz.mercadoTab = id:sub(10) Interfaz.scroll = 0 return end
   if id:sub(1, 6) == "bolsa_" then
     local i = tonumber(id:sub(7))
@@ -378,7 +387,14 @@ function Entrada.manejar(app, id)
   if id:sub(1, 12) == "mall_ad_buy_" then app.actuar("mall_addon_comprar", { id = id:sub(13) }) return end
   if id:sub(1, 8) == "mall_ad_" then app.actuar("mall_addon", { id = id:sub(9) }) return end
   if id == "menu_oficio" then app.actuar("oficio_alternar", {}) Interfaz.panel = nil return end
+  if id == "hud_diaria" then Interfaz.panel = (Interfaz.panel ~= "diaria") and "diaria" or nil return end
+  if id == "diaria_reclamar" then app.actuar("diaria_reclamar", {}) return end
   if id == "hud_montura" then app.actuar("montura_alternar", {}) return end
+  if id == "hud_monturas" then Interfaz.panel = (Interfaz.panel ~= "montura") and "montura" or nil return end
+  if id == "est_pag_ant" then Interfaz.establoPag = math.max(1, (Interfaz.establoPag or 1) - 1) return end
+  if id == "est_pag_sig" then Interfaz.establoPag = (Interfaz.establoPag or 1) + 1 return end
+  if id == "mon_pag_ant" then Interfaz.monturaPag = math.max(1, (Interfaz.monturaPag or 1) - 1) return end
+  if id == "mon_pag_sig" then Interfaz.monturaPag = (Interfaz.monturaPag or 1) + 1 return end
   if id == "aj_1280" then Ajustes.ancho, Ajustes.alto, Ajustes.completo = 1280, 720, false Ajustes.aplicarVentana() Ajustes.guardar() return end
   if id == "aj_1600" then Ajustes.ancho, Ajustes.alto, Ajustes.completo = 1600, 900, false Ajustes.aplicarVentana() Ajustes.guardar() return end
   if id == "aj_completo" then Ajustes.completo = not Ajustes.completo Ajustes.aplicarVentana() Ajustes.guardar() return end
@@ -517,7 +533,8 @@ function Entrada.clicMundo(app, mx, my, boton)
     local hostil = mundo:puedeDanar(jugador, ent)
     app.actuar("objetivo", { id = ent.id, persigue = hostil or boton == 2 })
     if not hostil and ent.kind == "npc" then app.actuar("interactuar") end
-    return
+    -- un clic izquierdo sobre algo que no es un enemigo ni un PNJ (una caravana, otro jugador) también camina
+    if hostil or ent.kind == "npc" or boton ~= 1 then return end
   end
   app.actuar("objetivo", { id = nil, persigue = false })
   app.actuar("destino", { x = x, y = y })
@@ -818,6 +835,7 @@ function Entrada.tecla(app, tecla)
   if tecla == interactuar then app.actuar("interactuar") end
   if tecla == "t" then Entrada.manejar(app, "hud_comercio") end
   if tecla == "f1" then Interfaz.panel = "ayuda" end
+  if tecla == "f2" then Interfaz.panel = (Interfaz.panel ~= "diaria") and "diaria" or nil end
   if tecla == "1" or tecla == "2" or tecla == "3" or tecla == "4" or tecla == "5" or tecla == "6" then
     Entrada.lanzarHabilidad(app, tonumber(tecla))
   end

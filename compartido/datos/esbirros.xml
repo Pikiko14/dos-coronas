@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Esbirros que invoca el nigromante (poderes de tipo "invocar" en habilidades.xml, campo esbirro).
+  coef = fracción del ataque mágico de su dueño que pega cada golpe; cd = segundos entre golpes; rango = alcance
+  del golpe (casillas); vel = velocidad respecto a la de su dueño; proyectil: tipo de efecto de los golpes a
+  distancia. Nunca reciben daño: desaparecen al acabar el tiempo del poder, si su dueño cae o en las guerras.
+-->
+<esbirros>
+  <esbirro id="esqueleto" nombre="Esqueleto" coef="0.55" cd="1.3" rango="1.5" vel="1.12" desc="Un guerrero de huesos: ataca cuerpo a cuerpo."/>
+  <esbirro id="espectro" nombre="Espectro" coef="0.95" cd="1.7" rango="5" vel="1.05" proyectil="necro" desc="Un alma fiel: dispara descargas de sombra a distancia."/>
+</esbirros>

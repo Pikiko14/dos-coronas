@@ -15,6 +15,8 @@ local HOJAS = {
   "otsp_creatures_03.png",
   "otsp_creatures_04.png",
   "otsp_misc_01.png",
+  "equipo_extra.png",
+  "iconos_hud.png",
 }
 
 local alias = {
@@ -32,6 +34,8 @@ local alias = {
   creatures_03 = "otsp_creatures_03.png",
   creatures_04 = "otsp_creatures_04.png",
   misc = "otsp_misc_01.png",
+  extra = "equipo_extra.png",
+  hud = "iconos_hud.png",
 }
 
 local CARPETA = "arte/hojas"

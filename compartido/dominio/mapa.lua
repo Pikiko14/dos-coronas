@@ -273,17 +273,189 @@ local function estamparCiudad(mapa, ciudad)
   local function recorte(forma, xx) return forma.cima and forma.cima[xx + 1] or 0 end
   local function hueco(forma, xx, yy) return yy < recorte(forma, xx) end
   local puertas = {}
+  local reservado = {}
+  -- Variedad por ciudad: una semilla sacada de su id (cada ciudad se reparte distinto) y un azar repetible.
+  local semilla = 0
+  for i = 1, #ciudad.id do semilla = (semilla * 31 + ciudad.id:byte(i)) % 9973 end
+  local function azar(a, b, c)
+    return ((a * 73856093 + b * 19349663 + (c or 0) * 3571 + semilla * 83492791) % 1000003) / 1000003
+  end
+  -- Decoración (árboles, flores, cajas...). Nunca sobre las avenidas ni la plaza; lo sólido bloquea el paso.
+  local ocupado = {}
+  local function deco(lx, ly, tipo, solido)
+    if lx <= 1 or ly <= 1 or lx >= w - 2 or ly >= h - 2 then return end
+    if avenida(lx, ly) or enPlaza(lx, ly) then return end
+    local k = lx .. "," .. ly
+    if ocupado[k] then return end
+    ocupado[k] = true
+    if solido ~= false then setBloque(mapa, x0 + lx, y0 + ly, true) end
+    mapa.props[#mapa.props + 1] = { x = x0 + lx, y = y0 + ly, tipo = tipo }
+  end
+  local FLORES = { "flor_amarilla", "flor_blanca", "flor_roja", "flores_mixtas" }
+  local function flor(lx, ly, r) deco(lx, ly, FLORES[math.floor(r * 40) % 4 + 1], false) end
+  local function rectLibre(rx, ry, rw, rh)
+    for yy = ry - 1, ry + rh do
+      for xx = rx - 1, rx + rw do
+        if xx <= 2 or yy <= 2 or xx >= w - 3 or yy >= h - 3 then return false end
+        if avenida(xx, yy) or enPlaza(xx, yy) or reservado[xx .. "," .. yy] then return false end
+      end
+    end
+    return true
+  end
+  local function reservar(rx, ry, rw, rh)
+    for yy = ry - 1, ry + rh do for xx = rx - 1, rx + rw do reservado[xx .. "," .. yy] = true end end
+  end
   local function libre(forma, ex, ey)
     for yy = 0, forma.h - 1 do
       for xx = 0, forma.w - 1 do
         if not hueco(forma, xx, yy) then
           local lx, ly = ex + xx, ey + yy
           if lx <= 0 or ly <= 0 or lx >= w - 1 or ly >= h - 1 then return false end
-          if avenida(lx, ly) or enPlaza(lx, ly) then return false end
+          if avenida(lx, ly) or enPlaza(lx, ly) or reservado[lx .. "," .. ly] then return false end
         end
       end
     end
+    -- la casilla delante de la puerta (abajo, en el medio) tiene que estar libre para poder entrar
+    local fx, fy = ex + math.ceil(forma.w / 2) - 1, ey + forma.h
+    if fy >= h - 1 or reservado[fx .. "," .. fy] or M.bloqueado(mapa, x0 + fx + 0.5, y0 + fy + 0.5) then return false end
     return true
+  end
+  -- Tiendas: una casita de aspecto normal (tejado, fachada con ventanas y puerta) con un letrero de un
+  -- icono sobre la puerta que dice qué vende (lo dibuja el cliente, render/dibujo.lua). El PNJ pasea por la
+  -- calle delante de su puerta. La puerta da a la avenida. "sur": el local queda al norte y la puerta abajo;
+  -- "norte": al sur de la calle y la puerta arriba.
+  local function tienda(ex, ey, ancho, alto, rol, nombre, rotulo, frente)
+    frente = frente or "sur"
+    local puertaFx = math.floor(ancho / 2)
+    local puertaFy = frente == "norte" and 0 or (alto - 1)
+    local techoFy = frente == "norte" and (alto - 1) or 0
+    for yy = 0, alto - 1 do
+      for xx = 0, ancho - 1 do
+        local puerta = xx == puertaFx and yy == puertaFy
+        local lx, ly = ex + xx, ey + yy
+        reservado[lx .. "," .. ly] = true
+        local tx, ty = x0 + lx, y0 + ly
+        if puerta then
+          setBloque(mapa, tx, ty, false)
+          setSuelo(mapa, tx, ty, "adoquin", "ciudad", ciudad.faccion)
+        else
+          setBloque(mapa, tx, ty, true)
+          setSuelo(mapa, tx, ty, yy == techoFy and techo or "fachada", "ciudad", ciudad.faccion)
+        end
+      end
+    end
+    local puertaX, puertaY = x0 + ex + puertaFx, y0 + ey + puertaFy
+    mapa.edificios[#mapa.edificios + 1] = {
+      x = x0 + ex, y = y0 + ey, w = ancho, h = alto,
+      faccion = ciudad.faccion, puertaX = puertaX, puertaY = puertaY,
+      techo = 1, techoSur = frente == "norte" or nil, vacio = {}, tienda = rol, rotulo = rotulo,
+      estilo = rol == "establo" and "establo" or nil,
+    }
+    local iy = frente == "norte" and (puertaY - 1) or (puertaY + 1)
+    ciudad.npcs[#ciudad.npcs + 1] = {
+      x = puertaX + 0.5, y = iy + 0.5,
+      rol = rol, nombre = nombre, faccion = ciudad.faccion,
+      ruta = {
+        { x = puertaX - 1 + 0.5, y = iy + 0.5 },
+        { x = puertaX + 1 + 0.5, y = iy + 0.5 },
+      },
+    }
+    -- el establo: pacas de heno a los lados de la puerta grande
+    if rol == "establo" then
+      for _, sx in ipairs({ -2, 2 }) do
+        setBloque(mapa, puertaX + sx, iy, true)
+        mapa.props[#mapa.props + 1] = { x = puertaX + sx, y = iy, tipo = "heno" }
+      end
+    end
+  end
+  local altoLocal = 3
+  local eyLocal = (medioY - 3) - (altoLocal - 1)
+  local anchoTienda = 5
+  tienda((medio - prx) - anchoTienda - 1, eyLocal, anchoTienda, altoLocal, "mercado", "Clériga de " .. ciudad.nombre, "Pociones")
+  tienda(medio + prx + 2, eyLocal, anchoTienda, altoLocal, "armero", "Armero de " .. ciudad.nombre, "Armas")
+  -- El establo, en la misma fila al oeste de la clériga, con el tejado arriba y la puerta a la avenida.
+  tienda(3, eyLocal, 9, altoLocal, "establo", "Establo de " .. ciudad.nombre, "Establo")
+  -- detrás del establo no se construyen casas: queda un patio despejado
+  for yy = eyLocal - 5, eyLocal - 1 do
+    for xx = 3 - 1, 3 + 9 do reservado[xx .. "," .. yy] = true end
+  end
+  -- ...y decorado como corral: heno, abrevadero, barriles, leña, arbustos y flores
+  do
+    local px0, py0 = 2, eyLocal - 5
+    for _, d in ipairs({
+      { 0, 0, "arbol_pino" }, { 10, 0, "arbol_pino" }, { 2, 0, "arbusto" }, { 8, 0, "arbusto" }, { 5, 0, "arbusto" },
+      { 3, 1, "heno" }, { 4, 1, "heno" }, { 7, 2, "barril" }, { 8, 2, "cubo" }, { 1, 3, "madera_apilada" },
+      { 2, 3, "madera_apilada" }, { 9, 3, "caja" }, { 10, 3, "caja" }, { 5, 3, "cubo" }, { 6, 4, "barril" },
+      { 1, 1, "matas", false }, { 9, 1, "flores_mixtas", false }, { 4, 3, "hierba_alta", false },
+      { 6, 1, "flor_amarilla", false }, { 3, 4, "flor_blanca", false }, { 8, 4, "matas", false },
+    }) do deco(px0 + d[1], py0 + d[2], d[3], d[4]) end
+  end
+  -- Rincones temáticos: cada ciudad tiene los suyos (jardín, huerto, mercadillo, bosquecillo, cementerio...)
+  local TEMAS = {}
+  TEMAS.jardin = { 9, 7, function(rx, ry, rw, rh)
+    for yy = ry, ry + rh - 1 do
+      for xx = rx, rx + rw - 1 do
+        local r = azar(xx, yy, 1)
+        if xx == rx or xx == rx + rw - 1 or yy == ry or yy == ry + rh - 1 then
+          if r < 0.55 then deco(xx, yy, "arbusto") end
+        elseif r < 0.55 then flor(xx, yy, r) end
+      end
+    end
+    deco(rx + math.floor(rw / 2), ry + math.floor(rh / 2), "pozo")
+    deco(rx + 1, ry + 1, "farol")
+  end }
+  TEMAS.huerto = { 10, 6, function(rx, ry, rw, rh)
+    for yy = ry + 1, ry + rh - 2, 2 do
+      for xx = rx + 1, rx + rw - 2 do deco(xx, yy, "cultivo", false) end
+    end
+    deco(rx + math.floor(rw / 2), ry + 2, "espantapajaros")
+    deco(rx, ry + rh - 1, "heno")
+    deco(rx + rw - 1, ry + rh - 1, "madera_apilada")
+  end }
+  TEMAS.mercadillo = { 9, 5, function(rx, ry, rw, rh)
+    local puestos = { "caja", "barril", "madera_apilada", "cubo" }
+    for i = 0, math.floor(rw / 3) - 1 do
+      local xx = rx + 1 + i * 3
+      deco(xx, ry + 1, puestos[(i + semilla) % 4 + 1])
+      deco(xx + 1, ry + 1, puestos[(i + semilla + 1) % 4 + 1])
+      deco(xx, ry + 3, puestos[(i + semilla + 2) % 4 + 1])
+      deco(xx + 1, ry + 3, "jarron")
+    end
+    deco(rx + math.floor(rw / 2), ry + 2, "cartel")
+  end }
+  TEMAS.bosquecillo = { 8, 7, function(rx, ry, rw, rh)
+    for yy = ry, ry + rh - 1 do
+      for xx = rx, rx + rw - 1 do
+        local r = azar(xx, yy, 2)
+        if r < 0.3 then deco(xx, yy, r < 0.15 and "arbol_pino" or "arbusto")
+        elseif r < 0.5 then deco(xx, yy, "matas", false)
+        elseif r < 0.55 then deco(xx, yy, "tocon") end
+      end
+    end
+  end }
+  TEMAS.cementerio = { 8, 6, function(rx, ry, rw, rh)
+    for yy = ry + 1, ry + rh - 2, 2 do
+      for xx = rx + 1, rx + rw - 2, 2 do deco(xx, yy, azar(xx, yy, 3) < 0.25 and "roca" or "tumba") end
+    end
+    deco(rx, ry, "arbol_seco")
+    deco(rx + rw - 1, ry, "arbol_seco")
+    deco(rx + 3, ry + rh - 1, "restos", false)
+  end }
+  do
+    local lista = ciudad.faccion == "umbra" and { "cementerio", "mercadillo", "bosquecillo", "jardin", "huerto" }
+      or { "jardin", "huerto", "mercadillo", "bosquecillo" }
+    for i = 0, (grande and 2 or 1) do
+      local tema = TEMAS[lista[(i + semilla) % #lista + 1]]
+      for intento = 1, 80 do
+        local rx = 3 + math.floor(azar(intento, i, 4) * (w - tema[1] - 7))
+        local ry = 3 + math.floor(azar(intento, i, 5) * (h - tema[2] - 7))
+        if rectLibre(rx, ry, tema[1], tema[2]) then
+          reservar(rx, ry, tema[1], tema[2])
+          tema[3](rx, ry, tema[1], tema[2])
+          break
+        end
+      end
+    end
   end
   local function poner(forma, ex, ey)
     local fondo = {}
@@ -318,17 +490,73 @@ local function estamparCiudad(mapa, ciudad)
       techo = forma.techo, vacio = vacio, tamano = forma.tamano, cima = forma.cima,
     }
     puertas[#puertas + 1] = { x = x0 + dx, y = y0 + dy, tamano = forma.tamano }
+    -- una casilla libre alrededor de cada casa (y delante de su puerta): las demás no se pegan a ella
+    for yy = ey - 1, ey + forma.h do
+      for xx = ex - 1, ex + forma.w do reservado[xx .. "," .. yy] = true end
+    end
   end
   local n = 0
-  for ey = 2, h - 7, 6 do
-    for ex = 2, w - 9, 8 do
+  -- la rejilla de casas arranca en un punto distinto en cada ciudad pequeña y deja algunas parcelas vacías
+  local cx0, cy0 = grande and 2 or (2 + semilla % 3), grande and 2 or (2 + math.floor(semilla / 3) % 3)
+  for ey = cy0, h - 7, 6 do
+    for ex = cx0, w - 9, 8 do
       n = n + 1
-      local puesta = false
+      local puesta = (not grande) and azar(ex, ey, 6) < 0.2
       for k = 0, #FORMAS - 1 do
-        local forma = FORMAS[((n + k - 1) % #FORMAS) + 1]
+        if puesta then break end
+        local forma = FORMAS[((n + k - 1 + (grande and 0 or semilla)) % #FORMAS) + 1]
         if libre(forma, ex, ey) then poner(forma, ex, ey) puesta = true break end
       end
       if not puesta and libre(FORMAS[1], ex, ey) then poner(FORMAS[1], ex, ey) end
+    end
+  end
+  -- Ciudades pequeñas: las casas de la rejilla dejan huecos grandes; se rellenan con más casas donde caben.
+  if not grande then
+    local eys, exs = {}, {}
+    for ey = 2, h - 6 do eys[#eys + 1] = ey end
+    for ex = 2, w - 8 do exs[#exs + 1] = ex end
+    local function invertir(l) local r = {} for i = #l, 1, -1 do r[#r + 1] = l[i] end return r end
+    if semilla % 2 == 1 then eys = invertir(eys) end
+    if math.floor(semilla / 2) % 2 == 1 then exs = invertir(exs) end
+    for _, ey in ipairs(eys) do
+      for _, ex in ipairs(exs) do
+        n = n + 1
+        if azar(ex, ey, 7) > 0.15 then
+          for k = 0, #FORMAS - 1 do
+            local forma = FORMAS[((n + k - 1 + semilla) % #FORMAS) + 1]
+            if libre(forma, ex, ey) then poner(forma, ex, ey) break end
+          end
+        end
+      end
+    end
+  end
+  -- Detalles: macetas junto a las puertas, árboles y faroles a los lados de las avenidas y flores sueltas
+  for i, pu in ipairs(puertas) do
+    local lx, ly = pu.x - x0, pu.y - y0
+    local r = azar(lx, ly, 8)
+    if r < 0.5 then deco(lx - 1, ly + 1, ({ "jarron", "cubo", "matas" })[i % 3 + 1], i % 3 == 2 and false or nil) end
+    if r > 0.3 and r < 0.8 then deco(lx + 1, ly + 1, ({ "barril", "jarron", "flores_mixtas" })[i % 3 + 1], i % 3 == 2 and false or nil) end
+  end
+  local function calle(lx, ly, i)
+    if reservado[lx .. "," .. ly] then return end
+    if i % 3 == 0 then deco(lx, ly, "farol") else deco(lx, ly, i % 3 == 1 and "arbol_pino" or "arbusto") end
+  end
+  do
+    local i = 0
+    for yy = 3 + semilla % 3, h - 4, 4 do
+      i = i + 1
+      calle(medio - 4, yy, i)
+      calle(medio + 4, yy, i + 1)
+    end
+    for xx = 3 + semilla % 3, w - 4, 4 do
+      i = i + 1
+      calle(xx, medioY - 4, i)
+      calle(xx, medioY + 4, i + 1)
+    end
+  end
+  for yy = 3, h - 4 do
+    for xx = 3, w - 4 do
+      if not reservado[xx .. "," .. yy] and azar(xx, yy, 9) < 0.06 then flor(xx, yy, azar(xx, yy, 10)) end
     end
   end
   table.sort(puertas, function(a, b)
@@ -357,10 +585,8 @@ local function estamparCiudad(mapa, ciudad)
     local nx, ny = en(dx, dy)
     npc(nx, ny, rol, nombre)
   end
-  npcEn(-11, 0, "mercado", "Mercader de " .. ciudad.nombre)
   npcEn(11, 0, "heraldo", "Heraldo")
   npcEn(-7, 0, "comercio", "Mercader mayor")
-  npcEn(7, 0, "establo", "Mozo de cuadra")
   npcEn(-2, -9, "mayordomo", "Mayordomo")
   npcEn(2, -9, "encargos", "Tablón de encargos")
   npcEn(-2, 9, "encantador", "Maestro de encantos")
@@ -372,6 +598,33 @@ local function estamparCiudad(mapa, ciudad)
   local gy = (ciudad.acceso == "norte" and not grande) and 2 or (h - 3)
   npc(medio - 2, gy, "guardia", "Guardia de " .. ciudad.nombre)
   npc(medio + 2, gy, "guardia", "Guardia de " .. ciudad.nombre)
+  -- Vecinos: dan vida a las avenidas yendo y viniendo (no venden nada y no salen en el mapa).
+  local NOMBRES_VECINOS = { "Vecino", "Vecina", "Aldeano", "Aldeana", "Campesino", "Panadera", "Pescador", "Anciano", "Niña", "Leñador" }
+  for i = 1, grande and 8 or 5 do
+    local lado = (i + semilla) % 4
+    local o = ({ -2, -1, 1, 2, 0 })[(i + semilla) % 5 + 1]
+    local a, b
+    if lado == 0 then
+      local ya = 3 + math.floor(azar(i, 1, 11) * math.max(1, medioY - pry - 9))
+      a, b = { x = medio + o, y = ya }, { x = medio + o, y = ya + 5 }
+    elseif lado == 1 then
+      local ya = medioY + pry + 3 + math.floor(azar(i, 1, 12) * math.max(1, h - medioY - pry - 10))
+      a, b = { x = medio + o, y = ya }, { x = medio + o, y = ya + 5 }
+    elseif lado == 2 then
+      local xa = 3 + math.floor(azar(i, 1, 13) * math.max(1, medio - prx - 9))
+      a, b = { x = xa, y = medioY + o }, { x = xa + 5, y = medioY + o }
+    else
+      local xa = medio + prx + 3 + math.floor(azar(i, 1, 14) * math.max(1, w - medio - prx - 10))
+      a, b = { x = xa, y = medioY + o }, { x = xa + 5, y = medioY + o }
+    end
+    if not M.bloqueado(mapa, x0 + a.x + 0.5, y0 + a.y + 0.5) and not M.bloqueado(mapa, x0 + b.x + 0.5, y0 + b.y + 0.5) then
+      ciudad.npcs[#ciudad.npcs + 1] = {
+        x = x0 + a.x + 0.5, y = y0 + a.y + 0.5, rol = "aldeano",
+        nombre = NOMBRES_VECINOS[(i + semilla) % #NOMBRES_VECINOS + 1], faccion = ciudad.faccion,
+        ruta = { { x = x0 + a.x + 0.5, y = y0 + a.y + 0.5 }, { x = x0 + b.x + 0.5, y = y0 + b.y + 0.5 } },
+      }
+    end
+  end
 end
 
 -- Copia profunda de una estructura con referencias compartidas.
@@ -814,7 +1067,8 @@ local function generarMundo(rng)
         local x = math.floor(p.x + (-dy / l) * 8 * lado)
         local y = math.floor(p.y + (dx / l) * 8 * lado)
         if areaBuena(x, y, 4) and not cercaCiudad(x, y, 16) and not cercaDePuesto(x, y, 40) then
-          nuevoPuesto("comercio", "Puesto del camino", x, y, { { "comercio", "Mercader del camino" }, { "establo", "Mozo de posta" } })
+          -- sin PNJ: el comercio y las monturas solo se atienden en las ciudades
+          nuevoPuesto("comercio", "Puesto del camino", x, y, {})
           break
         end
       end
@@ -828,13 +1082,13 @@ local function generarMundo(rng)
     end
   end
   repartir(4, { "senda", "pinar", "colina", "campos", "bosque" }, "cazadores", "Campamento de cazadores",
-    { { "capitan", "Capitán de cazadores" }, { "comercio", "Proveedor del campamento" } }, 30)
+    { { "capitan", "Capitán de cazadores" } }, 30)
   repartir(4, { "marea", "cienaga", "eclipse", "muelle", "velo" }, "ladrones", "Refugio de ladrones",
     { { "contacto", "Contacto en las sombras" } }, 40)
   repartir(2, { "velo", "campos", "colina" }, "torre", "Torre de encantos",
     { { "encantador", "Maestro de encantos" } }, 40)
   repartir(2, { "trigal", "senda", "cienaga" }, "ermita", "Ermita del criador",
-    { { "criador", "Criador de mascotas" }, { "establo", "Mozo de cuadra" } }, 40)
+    { { "criador", "Criador de mascotas" } }, 40)
   -- Embarcadero de la isla de la Cicatriz: el barquero que la une con los puertos de los continentes.
   if mapa.cont[math.floor(cx)][math.floor(cy)] == 3 then
     local pu = nuevoPuesto("embarcadero", "Embarcadero de la Cicatriz", math.floor(cx), math.floor(cy) + 26,
@@ -847,7 +1101,7 @@ local function generarMundo(rng)
   mapa.npcsMapa = {}
   for _, c in ipairs(mapa.ciudades) do
     for _, n in ipairs(c.npcs) do
-      if n.rol ~= "guardia" then mapa.npcsMapa[#mapa.npcsMapa + 1] = { x = n.x, y = n.y, rol = n.rol, nombre = n.nombre } end
+      if n.rol ~= "guardia" and n.rol ~= "aldeano" then mapa.npcsMapa[#mapa.npcsMapa + 1] = { x = n.x, y = n.y, rol = n.rol, nombre = n.nombre } end
     end
   end
   for _, pu in ipairs(mapa.puestos) do
@@ -1285,32 +1539,221 @@ function M.estandarte()
   local mapa = M.nuevo(w, h)
   local medio = math.floor(h / 2)
   local centro = math.floor(w / 2)
+  mapa.props = mapa.props or {}
+  -- Todo se coloca de forma determinista (servidor y cliente generan el mismo mapa).
+  local reservado = {}          -- casillas que ningún obstáculo puede ocupar (caminos, plazas, pasos del río)
+  local function reservar(x, y, r)
+    r = r or 0
+    for dx = -r, r do
+      for dy = -r, r do
+        reservado[(x + dx) * 1000 + (y + dy)] = true
+      end
+    end
+  end
+  local function esReservado(x, y) return reservado[x * 1000 + y] end
+  local function umbra(x) return x >= centro end
+  local function lado(x) return umbra(x) and "umbra" or nil end
+  local function prop(x, y, tipo, bloquea)
+    mapa.props[#mapa.props + 1] = { x = x, y = y, tipo = tipo }
+    if bloquea then setBloque(mapa, x, y, true) end
+  end
+
+  -- 1) suelo: Alba (hierba clara) al oeste y Umbra (hierba oscura teñida) al este; el borde, bloqueado
   for y = 0, h - 1 do
     for x = 0, w - 1 do
-      local calle = math.abs(y - medio) <= 1
-      local lado = x < centro and "hierba" or "hierba_osc"
-      setSuelo(mapa, x, y, calle and "camino" or lado, "campo", nil)
+      if umbra(x) then setSuelo(mapa, x, y, "hierba_osc", "campo", "umbra") else setSuelo(mapa, x, y, "hierba", "campo", nil) end
       if x == 0 or y == 0 or x == w - 1 or y == h - 1 then setBloque(mapa, x, y, true) end
     end
   end
+
+  -- 2) el río que parte el campo en dos: serpentea de norte a sur y solo se cruza por puentes y vados
+  local function ejeRio(y) return centro + math.floor(4.5 * math.sin(y * 0.21) + 2.2 * math.sin(y * 0.53 + 1.3) + 0.5) end
+  for y = 1, h - 2 do
+    local rx = ejeRio(y)
+    for x = rx - 1, rx + 1 do setSuelo(mapa, x, y, "agua", "campo", lado(x)) end
+    setSuelo(mapa, rx - 2, y, "arena", "campo", lado(rx - 2))
+    setSuelo(mapa, rx + 2, y, "arena", "campo", lado(rx + 2))
+  end
+  -- pasos: tres puentes (anchos, con camino) y dos vados de arena (estrechos, entre árboles)
+  local PUENTES = { medio, medio - 16, medio + 15 }
+  local VADOS = { medio - 8, medio + 8 }
+  local function paso(yc, tipo)
+    for y = yc - 1, yc + 1 do
+      local rx = ejeRio(y)
+      for x = rx - 2, rx + 2 do
+        setSuelo(mapa, x, y, tipo, "campo", lado(x))
+        setBloque(mapa, x, y, false)
+        reservar(x, y, 1)
+      end
+    end
+  end
+  for _, y in ipairs(PUENTES) do paso(y, "madera") end
+  for _, y in ipairs(VADOS) do paso(y, "arena") end
+
+  -- 3) fuertes con plaza, y caminos que serpentean hasta los pasos (cada uno distinto)
   local function fuerte(x0)
     for y = medio - 6, medio + 6 do
       for x = x0, x0 + 10 do
-        setSuelo(mapa, x, y, "plaza", "campo", nil)
+        setSuelo(mapa, x, y, "plaza", "campo", lado(x))
+        reservar(x, y, 2)
       end
     end
   end
   fuerte(6)
   fuerte(w - 17)
-  for y = 8, h - 9 do
-    local paso = math.abs(y - medio) <= 1 or math.abs(y - (medio - 12)) <= 1 or math.abs(y - (medio + 12)) <= 1
-    if not paso then
-      setBloque(mapa, centro, y, true)
-      setSuelo(mapa, centro, y, "muralla", "campo", nil)
-    else
-      setSuelo(mapa, centro, y, "camino", "campo", nil)
+  local function camino(xa, ya, xb, yb, ancho, amp, fase)
+    local dir = xb >= xa and 1 or -1
+    local n = math.abs(xb - xa)
+    local anterior
+    for i = 0, n do
+      local x = xa + i * dir
+      local t = n > 0 and i / n or 0
+      local s = t * t * (3 - 2 * t)
+      local y = math.floor(ya + (yb - ya) * s + amp * math.sin(t * math.pi * 2 + fase) * math.sin(t * math.pi) + 0.5)
+      local desde, hasta = y, y
+      if anterior then desde, hasta = math.min(y, anterior), math.max(y, anterior) end
+      for yy = desde - math.floor(ancho / 2), hasta + math.floor((ancho - 1) / 2) do
+        setSuelo(mapa, x, yy, "camino", "campo", lado(x))
+        setBloque(mapa, x, yy, false)
+        reservar(x, yy, 1)
+      end
+      anterior = y
     end
   end
+  local salidas = { { medio, 3, 3, 0.0 }, { medio - 16, 2, 6, 1.7 }, { medio + 15, 2, 6, 3.4 } }
+  local origenes = { medio, medio - 4, medio + 4 }
+  for i, s in ipairs(salidas) do
+    local yb, ancho, amp, fase = s[1], s[2], s[3], s[4]
+    local rx = ejeRio(yb)
+    -- oeste: del fuerte de Alba al puente; este: del puente al fuerte de Umbra (otro vaivén)
+    camino(17, origenes[i], rx - 3, yb, ancho, amp, fase)
+    camino(rx + 3, yb, w - 18, origenes[i], ancho, amp, fase + 2.1)
+  end
+  -- los vados también tienen un sendero corto por cada orilla
+  for _, yv in ipairs(VADOS) do
+    local rx = ejeRio(yv)
+    local dy = yv < medio and 2 or -2
+    camino(rx - 8, yv + dy, rx - 3, yv, 1, 1, 0.5)
+    camino(rx + 3, yv, rx + 8, yv + dy, 1, 1, 2.0)
+  end
+  for _, sp in ipairs({ { 18, medio }, { w - 19, medio } }) do reservar(sp[1], sp[2], 2) end
+
+  -- 4) lagunas pequeñas y parches de terreno propios de cada reino
+  local function laguna(cx, cy, rx, ry)
+    for y = cy - ry - 1, cy + ry + 1 do
+      for x = cx - rx - 1, cx + rx + 1 do
+        if esReservado(x, y) then return end
+      end
+    end
+    for y = cy - ry - 1, cy + ry + 1 do
+      for x = cx - rx - 1, cx + rx + 1 do
+        local d = ((x - cx) / rx) ^ 2 + ((y - cy) / ry) ^ 2
+        if d <= 1 then setSuelo(mapa, x, y, "agua", "campo", lado(x)) else setSuelo(mapa, x, y, "arena", "campo", lado(x)) end
+        reservar(x, y, 0)
+      end
+    end
+  end
+  laguna(30, 10, 3, 2)
+  laguna(28, 53, 4, 2)
+  laguna(63, 12, 3, 2)
+  laguna(68, 51, 4, 3)
+  for y = 3, h - 4 do
+    for x = 3, w - 4 do
+      if not esReservado(x, y) then
+        local n = math.sin(x * 0.27 + y * 0.11) + math.sin(x * 0.09 - y * 0.29) + azar(x, y, 61) * 0.6
+        if umbra(x) then
+          -- Umbra: tierra quemada y suelo de bosque oscuro
+          if n > 1.25 then setSuelo(mapa, x, y, "tierra", "campo", "umbra")
+          elseif n < -1.0 then setSuelo(mapa, x, y, "bosque", "campo", "umbra") end
+        else
+          -- Alba: prados con trozos de bosque claro
+          if n < -1.0 then setSuelo(mapa, x, y, "bosque", "campo", nil) end
+        end
+      end
+    end
+  end
+
+  -- 5) bosquecillos y rocas (con colisión) en grupos, siempre fuera de los caminos
+  local function libre(x, y)
+    if x < 2 or y < 2 or x > w - 3 or y > h - 3 or esReservado(x, y) then return false end
+    return not (mapa.bloque[x] and mapa.bloque[x][y])
+  end
+  for y = 2, h - 3 do
+    for x = 2, w - 3 do
+      if libre(x, y) then
+        local n = math.sin(x * 0.33 + y * 0.17) + math.sin(x * 0.13 - y * 0.37) + azar(x, y, 71) * 0.9
+        if n > 1.45 then
+          local r = azar(x, y, 72)
+          local tipo
+          if umbra(x) then tipo = r < 0.6 and "arbol_seco" or (r < 0.8 and "tumba" or "roca")
+          else tipo = r < 0.7 and "arbol_pino" or (r < 0.85 and "arbusto" or "roca") end
+          prop(x, y, tipo, true)
+        end
+      end
+    end
+  end
+  -- 6) decoración sin colisión según el reino
+  for y = 2, h - 3 do
+    for x = 2, w - 3 do
+      if libre(x, y) then
+        local r = azar(x, y, 81)
+        if umbra(x) then
+          if r < 0.025 then prop(x, y, "seta_roja")
+          elseif r < 0.05 then prop(x, y, "hierba_seca")
+          elseif r < 0.065 then prop(x, y, "restos")
+          elseif r < 0.075 then prop(x, y, "matorral") end
+        else
+          if r < 0.03 then prop(x, y, "flores_mixtas")
+          elseif r < 0.05 then prop(x, y, "flor_amarilla")
+          elseif r < 0.065 then prop(x, y, "hierba_alta")
+          elseif r < 0.075 then prop(x, y, "flor_blanca") end
+        end
+      end
+    end
+  end
+  -- 7) los fuertes y los pasos, con su propia identidad
+  for _, bando in ipairs({ "albor", "umbra" }) do
+    local x0 = bando == "albor" and 6 or w - 17
+    for _, cx in ipairs({ x0, x0 + 10 }) do
+      for _, cy in ipairs({ medio - 6, medio + 6 }) do prop(cx, cy, "columna_" .. bando, true) end
+    end
+    prop(x0 + 5, medio - 6, "farol", true)
+    prop(x0 + 5, medio + 6, "farol", true)
+    prop(bando == "albor" and x0 + 1 or x0 + 9, medio - 3, "estatua_" .. bando, true)
+    prop(bando == "albor" and x0 + 1 or x0 + 9, medio + 3, "estatua_" .. bando, true)
+  end
+  -- ruinas a orillas de los puentes: columnas de cada reino que miran el paso
+  for _, yb in ipairs(PUENTES) do
+    local rx = ejeRio(yb)
+    for _, dy in ipairs({ -3, 3 }) do
+      if libre(rx - 4, yb + dy) then prop(rx - 4, yb + dy, "columna_albor", true) end
+      if libre(rx + 4, yb + dy) then prop(rx + 4, yb + dy, "columna_umbra", true) end
+    end
+  end
+  for _, yv in ipairs(VADOS) do
+    local rx = ejeRio(yv)
+    local dy = yv < medio and -3 or 3
+    if libre(rx - 5, yv + dy) then prop(rx - 5, yv + dy, "estatua_albor", true) end
+    if libre(rx + 5, yv + dy) then prop(rx + 5, yv + dy, "estatua_umbra", true) end
+  end
+  -- farolas de Alba junto al camino central y fogatas de Umbra
+  for x = 22, centro - 10, 8 do
+    for yy = medio - 12, medio + 12 do
+      if M.get(mapa, x, yy) == "camino" and M.get(mapa, x, yy - 1) ~= "camino" and not (mapa.bloque[x] and mapa.bloque[x][yy - 1]) then
+        prop(x, yy - 1, "farol", true)
+        break
+      end
+    end
+  end
+  for x = centro + 14, w - 22, 8 do
+    for yy = medio - 12, medio + 12 do
+      if M.get(mapa, x, yy) == "camino" and M.get(mapa, x, yy - 1) ~= "camino" and not (mapa.bloque[x] and mapa.bloque[x][yy - 1]) then
+        prop(x, yy - 1, "fogata", false)
+        break
+      end
+    end
+  end
+
   mapa.spawns = { albor = { x = 18.5, y = medio + 0.5 }, umbra = { x = w - 18.5, y = medio + 0.5 } }
   mapa.banderas = { albor = { x = 11.5, y = medio + 0.5 }, umbra = { x = w - 11.5, y = medio + 0.5 } }
   return mapa

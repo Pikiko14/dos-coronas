@@ -20,6 +20,16 @@ for _, clase in ipairs({ "guerrero", "mago", "cazador", "clerigo" }) do
   P.clases[clase] = { albor = claseGenerada(clase, "albor"), umbra = claseGenerada(clase, "umbra") }
 end
 
+-- Clases nuevas: personajes dibujados a mano (herramientas/generar_clases) que sirven para las dos facciones.
+P.clases.lancero = { albor = { hoja = "Characters/Lancero.png", idx = 0 }, umbra = { hoja = "Characters/Lancero.png", idx = 0 } }
+P.clases.nigromante = { albor = { hoja = "Characters/Nigromante.png", idx = 0 }, umbra = { hoja = "Characters/Nigromante.png", idx = 0 } }
+
+-- Esbirros invocados por el nigromante.
+P.esbirros = {
+  esqueleto = { hoja = "Characters/Esbirro_esqueleto.png", idx = 0 },
+  espectro = { hoja = "Characters/Esbirro_espectro.png", idx = 0 },
+}
+
 -- Aspecto de cada oficio mientras esta activo (sustituye al de la clase).
 P.oficios = {
   trader = { hoja = "Characters/People3.png", idx = 0 },
@@ -72,8 +82,19 @@ P.skins = {
 }
 
 P.npc = {
-  mercado = { hoja = "Characters/Actor1.png", idx = 7 },
+  mercado = {
+    albor = { generada = "clase_clerigo_albor", hoja = "Characters/Actor5.png", idx = 0 },
+    umbra = { generada = "clase_clerigo_umbra", hoja = "Characters/Actor5.png", idx = 0 },
+  },
   heraldo = { hoja = "Characters/People4.png", idx = 0 },
+  aldeano = { variantes = {
+    { hoja = "Characters/People1.png", idx = 0 }, { hoja = "Characters/People1.png", idx = 1 },
+    { hoja = "Characters/People1.png", idx = 3 }, { hoja = "Characters/People1.png", idx = 5 },
+    { hoja = "Characters/People2.png", idx = 0 }, { hoja = "Characters/People2.png", idx = 1 },
+    { hoja = "Characters/People2.png", idx = 2 }, { hoja = "Characters/People2.png", idx = 4 },
+    { hoja = "Characters/People3.png", idx = 0 }, { hoja = "Characters/People3.png", idx = 1 },
+    { hoja = "Characters/People3.png", idx = 2 }, { hoja = "Characters/People3.png", idx = 4 },
+  } },
   mayordomo = { hoja = "Characters/People4.png", idx = 5 },
   encargos = { hoja = "Characters/People1.png", idx = 4 },
   encantador = { hoja = "Characters/Actor2.png", idx = 7 },
@@ -81,6 +102,7 @@ P.npc = {
   gremio = { hoja = "Characters/People2.png", idx = 3 },
   oficios = { hoja = "Characters/People4.png", idx = 4 },
   comercio = { hoja = "Characters/People3.png", idx = 3 },
+  barquero = { hoja = "Characters/People3.png", idx = 1 },
   establo = { hoja = "Characters/People7.png", idx = 6 },
   capitan = { hoja = "Characters/People4.png", idx = 7 },
   contacto = { hoja = "Characters/Evil.png", idx = 3 },
@@ -113,6 +135,17 @@ P.monturas = {
   corcel_fuego = { porFaccion = "montura_fuego" },
   -- el dragon del Item Mall es mas grande: se dibuja a escala y el jinete va mas alto
   dragon = { porFaccion = "montura_dragon", escala = 1.35, altura = 20, extraFrente = 14 },
+  -- monturas vistosas de la cuadra y del Item Mall (efectos en render/monturas_fx.lua)
+  unicornio = { porFaccion = "montura_unicornio" },
+  lobo_ascua = { porFaccion = "montura_lobo_ascua" },
+  lobo_escarcha = { porFaccion = "montura_lobo_escarcha" },
+  toro_trueno = { porFaccion = "montura_toro_trueno" },
+  pegaso = { porFaccion = "montura_pegaso" },
+  fenix = { porFaccion = "montura_fenix" },
+  corcel_astral = { porFaccion = "montura_corcel_astral" },
+  dragon_hielo = { porFaccion = "montura_dragon_hielo", escala = 1.35, altura = 20, extraFrente = 14 },
+  dragon_sombra = { porFaccion = "montura_dragon_sombra", escala = 1.35, altura = 20, extraFrente = 14 },
+  gargola_oro = { porFaccion = "montura_gargola_oro", escala = 1.25, altura = 16, extraFrente = 12 },
 }
 
 -- Dibujo de una montura para un jinete de esa facción.
@@ -195,11 +228,20 @@ function P.de(e)
   elseif k == "guardia" then
     return P.npc.guardia[e.faccion or "albor"] or P.npc.guardia.albor
   elseif k == "npc" then
-    return P.npc[e.rol or "mercado"] or P.npc.mercado
+    local d = P.npc[e.rol or "mercado"] or P.npc.mercado
+    if d.variantes then
+      local suma = 0
+      for i = 1, #tostring(e.id or "") do suma = suma + tostring(e.id):byte(i) end
+      return d.variantes[suma % #d.variantes + 1]
+    end
+    if d.albor then return d[e.faccion or "albor"] or d.albor end
+    return d
   elseif k == "monstruo" then
     return P.monstruos[e.monstruo or ""] or P.monstruos.gato
   elseif k == "mascota" then
     return P.mascotas[e.especie or ""] or P.mascotas.gatito
+  elseif k == "esbirro" then
+    return P.esbirros[e.especie or ""] or P.esbirros.esqueleto
   end
 end
 

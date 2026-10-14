@@ -3,6 +3,7 @@
 local Util = require("compartido.dominio.util")
 local Credenciales = require("src.aplicacion.credenciales")
 local aleatorio = require("src.infraestructura.aleatorio")
+local Sanciones = require("compartido.dominio.sanciones")
 
 local M = { nombre = "archivo" }
 
@@ -89,6 +90,10 @@ function M.entrar(usuario, clave)
     return nil, "Usuario o clave incorrectos."
   end
   a.intentos[usuario] = nil
+  if fila.ban then
+    if Sanciones.vigente(fila.ban) then return nil, Sanciones.mensaje(fila.ban) end
+    fila.ban = nil
+  end
   local token = abrirSesionLocal(a, fila.id)
   local ok, err = volcarAlmacen()
   if not ok then return nil, err end
@@ -108,8 +113,8 @@ end
 function M.crearPersonaje(cuentaId, nombre, faccion, clase)
   if not nombreValido(nombre) then return nil, "El nombre del personaje usa 3 a 16 letras." end
   if faccion ~= "albor" and faccion ~= "umbra" then return nil, "Elige una facción." end
-  if clase ~= "guerrero" and clase ~= "mago" and clase ~= "cazador" and clase ~= "clerigo" then
-    return nil, "Elige un oficio."
+  if not require("compartido.dominio.datos").claseValida(clase, faccion) then
+    return nil, "Elige un oficio de tu facción."
   end
   local a = leerAlmacen()
   local cuenta = tonumber(cuentaId)
@@ -155,7 +160,8 @@ function M.cuentaDeToken(token)
   if not ses or (ses.expira or 0) <= os.time() then return nil, "La sesión caducó. Entra de nuevo." end
   local cuenta = buscar(a.cuentas, "id", ses.cuenta)
   if not cuenta then return nil, "La sesión caducó. Entra de nuevo." end
-  return cuenta.id, cuenta.usuario
+  if cuenta.ban and Sanciones.vigente(cuenta.ban) then return nil, Sanciones.mensaje(cuenta.ban) end
+  return cuenta.id, cuenta.usuario, cuenta.rol
 end
 
 function M.cargarAutorizado(token, personajeId)
@@ -257,6 +263,79 @@ function M.guardarBuzon(dbId, lista)
     if i then a.buzones[i] = fila else a.buzones[#a.buzones + 1] = fila end
   end
   return volcarAlmacen()
+end
+
+-- Roles (GM y CM) y baneos por cuenta. El usuario se busca sin distinguir mayúsculas.
+local function cuentaDe(a, usuario)
+  usuario = tostring(usuario or ""):lower()
+  for _, c in ipairs(a.cuentas) do
+    if c.usuario:lower() == usuario then return c end
+  end
+end
+
+function M.rolDeCuenta(cuentaId)
+  local c = buscar(leerAlmacen().cuentas, "id", tonumber(cuentaId))
+  return c and c.rol or nil
+end
+
+function M.fijarRol(usuario, rol)
+  if not Sanciones.rolValido(rol) then return nil, "Rol desconocido: usa gm, cm o ninguno." end
+  local c = cuentaDe(leerAlmacen(), usuario)
+  if not c then return nil, "No existe esa cuenta." end
+  c.rol = rol
+  local ok, err = volcarAlmacen()
+  if not ok then return nil, err end
+  return c.usuario
+end
+
+function M.listarRoles()
+  local lista = {}
+  for _, c in ipairs(leerAlmacen().cuentas) do
+    if c.rol then lista[#lista + 1] = { usuario = c.usuario, rol = c.rol } end
+  end
+  table.sort(lista, function(x, y) return x.usuario < y.usuario end)
+  return lista
+end
+
+-- hasta: segundos Unix en que acaba el baneo (0 = permanente).
+function M.banear(usuario, hasta, motivo, por)
+  local c = cuentaDe(leerAlmacen(), usuario)
+  if not c then return nil, "No existe esa cuenta." end
+  c.ban = { hasta = math.floor(tonumber(hasta) or 0), motivo = tostring(motivo or ""), por = tostring(por or ""), desde = os.time() }
+  for token, ses in pairs(leerAlmacen().sesiones) do
+    if ses.cuenta == c.id then leerAlmacen().sesiones[token] = nil end
+  end
+  local ok, err = volcarAlmacen()
+  if not ok then return nil, err end
+  return c.usuario
+end
+
+function M.desbanear(usuario)
+  local c = cuentaDe(leerAlmacen(), usuario)
+  if not c then return nil, "No existe esa cuenta." end
+  if not c.ban then return nil, "Esa cuenta no está baneada." end
+  c.ban = nil
+  local ok, err = volcarAlmacen()
+  if not ok then return nil, err end
+  return c.usuario
+end
+
+function M.estadoBan(cuentaId)
+  local c = buscar(leerAlmacen().cuentas, "id", tonumber(cuentaId))
+  if not c or not c.ban then return nil end
+  if not Sanciones.vigente(c.ban) then c.ban = nil volcarAlmacen() return nil end
+  return c.ban
+end
+
+function M.listarBaneos()
+  local lista = {}
+  for _, c in ipairs(leerAlmacen().cuentas) do
+    if c.ban and Sanciones.vigente(c.ban) then
+      lista[#lista + 1] = { usuario = c.usuario, hasta = c.ban.hasta, motivo = c.ban.motivo, por = c.ban.por }
+    end
+  end
+  table.sort(lista, function(x, y) return x.usuario < y.usuario end)
+  return lista
 end
 
 function M.borrarUsuario(usuario)

@@ -29,6 +29,25 @@ function Servicio.crearMundo(opciones)
     if id then Log.info("cuenta de administrador creada: " .. opciones.admin.primero)
     elseif not tostring(err):find("registrado") then Log.warn("cuenta de administrador: " .. tostring(err)) end
   end
+  -- roles del personal y baneos: el dominio los pide por estos enchufes (el almacén y la red los resuelven)
+  mundo.hooks = {
+    fijarRol = function(...) return Cuentas.fijarRol(...) end,
+    listarRoles = function() return Cuentas.listarRoles() end,
+    banear = function(...) return Cuentas.banear(...) end,
+    desbanear = function(...) return Cuentas.desbanear(...) end,
+    listarBaneos = function() return Cuentas.listarBaneos() end,
+    -- expulsa al jugador (entidad): le avisa y cierra su conexión; se guarda su progreso antes
+    expulsar = function(e, motivo)
+      local srv = mundo._servidor
+      if not srv then return end
+      for idCon, pid in pairs(srv.vinculo or {}) do
+        if pid == e.id then
+          Servicio.guardarUno(mundo, e)
+          srv:desconectar(idCon, { t = "no", error = motivo })
+        end
+      end
+    end,
+  }
   mundo.puertos.marcarEvento = function(...) return Cuentas.marcarEvento(...) end
   -- los gremios se cargan al arrancar y cada cambio se guarda al momento
   mundo.puertos.guardarGremio = function(g)
@@ -167,14 +186,18 @@ function Servicio.tratar(servidor, mundo, idCon, msg)
       faccion = datos.faccion,
       clase = datos.clase,
     })
-    -- la cuenta decide si es administrador (solo el servidor lo marca)
-    local _, usuario = Cuentas.cuentaDeToken(msg.token)
-    pj.admin = (usuario and mundo.admins and mundo.admins[tostring(usuario):lower()]) and true or nil
+    -- la cuenta decide si es del personal: GM o CM por su rol guardado, o GM si está en el .env (solo el servidor lo marca)
+    local _, usuario, rolCuenta = Cuentas.cuentaDeToken(msg.token)
+    if usuario and mundo.admins and mundo.admins[tostring(usuario):lower()] then rolCuenta = "gm" end
+    pj.staff = rolCuenta
+    pj.admin = rolCuenta and true or nil
+    pj.cuentaUsuario = usuario
     pj.remoto = true
     pj.dbId = datos.dbId
     pj.eventosDia = datos.eventosDia
     -- Siempre se aplica lo guardado: un personaje nuevo solo trae los valores iniciales.
     mundo:aplicarGuardado(pj, datos)
+    mundo:avisoDiaria(pj)
     servidor.vinculo[idCon] = pj.id
     servidor:enviar(idCon, { t = "ok", id = pj.id, nombre = pj.nombre })
     return
@@ -187,7 +210,7 @@ function Servicio.tratar(servidor, mundo, idCon, msg)
     if not ok then return end
     local r = mundo:accion(pid, msg.a, limpio)
     if r and (msg.a == "interactuar" or r.panel ~= nil) then
-      servidor:enviar(idCon, { t = "panel", panel = r.panel, ciudad = r.ciudad, datos = r.datos })
+      servidor:enviar(idCon, { t = "panel", panel = r.panel, ciudad = r.ciudad, datos = r.datos, tienda = r.tienda })
     end
   end
 end
@@ -197,6 +220,7 @@ end
 function Servicio.actualizar(ctx, dt)
   local mundo, servidor = ctx.mundo, ctx.servidor
   local cfg = ctx.config or {}
+  if mundo then mundo._servidor = servidor end
   local nota = ctx.nota or function() end
   if mundo then
     mundo:actualizar(dt)

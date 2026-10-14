@@ -46,6 +46,32 @@ for id, c in pairs(D.clases) do
   })
   if not D.barra[id] or #D.barra[id] ~= 6 then error("habilidades.xml: la barra de " .. id .. " debe tener 6 poderes", 0) end
 end
+-- Orden de las clases (el del campo orden del XML) y reparto por facción: una clase con faccion="..." solo la
+-- puede elegir esa facción; sin ese campo la pueden elegir las dos.
+D.ORDEN_CLASES = {}
+for id, c in pairs(D.clases) do
+  if type(c.orden) ~= "number" then error("clases.xml: clase '" .. id .. "': falta el campo orden", 0) end
+  if c.faccion and not D.facciones[c.faccion] then error("clases.xml: clase '" .. id .. "': la facción '" .. c.faccion .. "' no existe", 0) end
+  D.ORDEN_CLASES[#D.ORDEN_CLASES + 1] = id
+end
+table.sort(D.ORDEN_CLASES, function(a, b) return D.clases[a].orden < D.clases[b].orden end)
+
+-- Clases que puede elegir una facción, en orden.
+function D.clasesDe(faccion)
+  local lista = {}
+  for _, id in ipairs(D.ORDEN_CLASES) do
+    local f = D.clases[id].faccion
+    if not f or f == faccion then lista[#lista + 1] = id end
+  end
+  return lista
+end
+
+-- ¿Puede esa facción tener esa clase?
+function D.claseValida(clase, faccion)
+  local c = D.clases[clase]
+  return c ~= nil and (c.faccion == nil or c.faccion == faccion)
+end
+
 for id, h in pairs(D.habilidades) do
   Config.validar("habilidades.xml", "habilidad", id, h, { nombre = "texto", clase = "texto", cd = "numero", mana = "numero", tipo = "texto", desc = "texto" })
   if not D.clases[h.clase] then error("habilidades.xml: habilidad '" .. id .. "': la clase '" .. h.clase .. "' no existe", 0) end

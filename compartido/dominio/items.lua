@@ -20,6 +20,7 @@ local ADJ = EQ.adjetivos
 local CASILLA = EQ.casillas
 local TIPO = EQ.tipos_armadura
 local ICONO = EQ.iconos_armadura
+local HOJA_ARMADURA = EQ.hojas_armadura or {}
 local ARMAS = EQ.armas
 local ESCUDOS = EQ.escudos.iconos
 local ANILLOS = EQ.anillos.iconos
@@ -63,7 +64,7 @@ function M.generar(D)
           atk = a.atk and a.atk * u or nil, matk = a.matk and a.matk * u or nil,
           def = a.def and a.def * u or nil, hp = a.hp and a.hp * u or nil, mp = a.mp and a.mp * u or nil,
           spd = a.spd and a.spd * (1 + 0.15 * (t - 1)) or nil,
-          precio = precio(55, u), hoja = "equipment", sprite = a.iconos[t],
+          precio = precio(55, u), hoja = a.hoja or "equipment", sprite = a.iconos[t],
         })
       end
       -- armadura de su tipo
@@ -78,7 +79,7 @@ function M.generar(D)
           hp = c.hp * u * f.hp, spd = f.spd * peso,
           atk = f.atk and f.atk * u * peso or nil, matk = f.matk and f.matk * u * peso or nil,
           mp = f.mp and f.mp * u * peso or nil,
-          precio = precio(c.def * 17, u), hoja = "equipment", sprite = ICONO[tipo][hueco][t],
+          precio = precio(c.def * 17, u), hoja = HOJA_ARMADURA[tipo] or "equipment", sprite = ICONO[tipo][hueco][t],
         }
         if hueco == "pies" then it.spd = f.botas * (1 + 0.15 * (t - 1)) + (tipo == "pesada" and -0.02 or 0) end
         add(it)

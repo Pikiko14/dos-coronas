@@ -58,7 +58,9 @@ function Pruebas.correr()
     fallar(errores, "hay efectos", n >= 20)
     for _, id in ipairs({ "golpe", "tajo", "grito", "carga", "misil", "fuego", "escudo", "nova", "disparo",
       "lluvia", "trampa", "preciso", "curar", "bendicion", "castigo", "consagrar", "desgarro", "furia", "sombra",
-      "meteoro", "flecha_veneno", "paso_agil", "sanacion", "juicio" }) do
+      "meteoro", "flecha_veneno", "paso_agil", "sanacion", "juicio",
+      "estocada", "barrido", "muro_lanzas", "embestida", "jabalina", "tormenta_lanzas",
+      "toque_necro", "espinas", "maldecir", "alzar_esqueletos", "drenar", "espectro" }) do
       fallar(errores, "efecto del poder " .. id, Efectos.def[id] ~= nil)
     end
   end)
@@ -82,7 +84,7 @@ function Pruebas.correr()
     local datos = {}
     local function celda(hoja, idx)
       if not datos[hoja] then
-        local archivo = hoja == "equipment" and "otsp_equipment_01.png" or (hoja .. ".png")
+        local archivo = ({ equipment = "otsp_equipment_01.png", extra = "equipo_extra.png" })[hoja] or (hoja .. ".png")
         datos[hoja] = love.image.newImageData(love.filesystem.newFileData(Atlas.carpeta .. "/" .. archivo))
       end
       local d = datos[hoja]
@@ -120,6 +122,49 @@ function Pruebas.correr()
       fallar(errores, "se dibuja el botín " .. i, ok, tostring(err))
     end
   end)
+  paso("monturas nuevas: sprites, efectos y paneles de diaria y personal", function()
+    local Monturas = require("compartido.dominio.monturas")
+    local Personajes = require("src.presentacion.render.personajes")
+    local Propias = require("src.presentacion.render.propias")
+    local Fx = require("src.presentacion.render.monturas_fx")
+    local nuevas = { "unicornio", "lobo_ascua", "lobo_escarcha", "toro_trueno", "pegaso",
+      "fenix", "corcel_astral", "dragon_hielo", "dragon_sombra", "gargola_oro" }
+    for id, d in pairs(Monturas.especies) do
+      for _, fac in ipairs({ "albor", "umbra" }) do
+        local def = Personajes.monturaDe(id, fac)
+        fallar(errores, "la montura " .. id .. " tiene dibujo (" .. fac .. ")", def ~= nil)
+        if def and def.generada then fallar(errores, "su hoja " .. def.generada .. " se genera", Propias.hoja(def.generada) ~= nil) end
+      end
+    end
+    for _, id in ipairs(nuevas) do
+      fallar(errores, id .. " es una montura de las listas", Monturas.especies[id] ~= nil)
+      fallar(errores, id .. " tiene efectos", Fx.tiene(id))
+      for dir = 1, 4 do
+        local ok, err = pcall(function()
+          Fx.detras(id, 100, 100, dir, 1.3, 1)
+          Fx.delante(id, 100, 100, dir, 1.3, 1, 40)
+        end)
+        fallar(errores, id .. " dibuja sus efectos hacia " .. dir, ok, tostring(err))
+      end
+    end
+    local mall = require("compartido.dominio.mall")
+    local enMall = 0
+    for _, id in ipairs(mall.ORDEN_MONTURAS) do enMall = enMall + 1 end
+    fallar(errores, "el mall tiene seis monturas (el dragón y cinco nuevas)", enMall == 6, tostring(enMall))
+    local gratis = 0
+    for _, id in ipairs(Monturas.orden) do if Monturas.especies[id].precio >= 5000 and not Monturas.especies[id].requiereOficio then gratis = gratis + 1 end end
+    fallar(errores, "la cuadra suma cinco monturas nuevas de oro", gratis >= 5)
+    -- recompensa diaria y etiqueta del personal
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Gm", faccion = "albor", clase = "guerrero", nivel = 10 })
+    pj.staff, pj.diaria = "gm", mundo:estadoDiaria(pj)
+    Interfaz.escala, Interfaz.panel = 1, "diaria"
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el panel de la recompensa diaria se dibuja", ok, tostring(err))
+    local ok2, err2 = pcall(require("src.presentacion.render.dibujo").entidad, { id = "e1", kind = "jugador", nombre = "Gm", staff = "gm", x = 5, y = 5, vivo = true, faccion = "albor", clase = "guerrero" }, 100, 100, mundo, pj)
+    fallar(errores, "el jugador con etiqueta GM se dibuja", ok2, tostring(err2))
+    Interfaz.panel = nil
+  end)
   paso("interfaz: icono de montura y opción de oficio en el menú", function()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Menu", faccion = "albor", clase = "guerrero", nivel = 10 })
@@ -128,7 +173,15 @@ function Pruebas.correr()
     Interfaz.escala, Interfaz.panel = 1, nil
     pcall(Interfaz.hud, mundo, pj, 1280, 720)
     local lado0, consola0 = Interfaz.medidas()
-    fallar(errores, "sin oficio activo no sale el icono de montar", Interfaz.consumir((1280 - lado0) / 2 + 231, 720 - consola0 - 34) ~= "hud_montura")
+    fallar(errores, "con monturas el icono sale siempre, aunque no haya oficio activo", Interfaz.consumir((1280 - lado0) / 2 + 231, 720 - consola0 - 34) == "hud_montura")
+    -- la colección de monturas se dibuja con normales, del mall y de transporte, y con el estado de cada una
+    pj.monturas = { "caballo", "corcel_real", "dragon", "carreta" }
+    pj.monturasEstado = { caballo = { hp = 300, max = 350 }, carreta = { caida = 40, hp = 0, max = 1100 } }
+    Interfaz.panel = "montura"
+    local okCol, errCol = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "la colección de monturas se dibuja", okCol, tostring(errCol))
+    Interfaz.panel = nil
+    pj.monturas = { "caballo", "carreta" }
     pj.job = "trader"
     Interfaz.escala = 1
     Interfaz.panel = nil
@@ -1109,26 +1162,39 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local lado = Interfaz.medidas()
     fallar(errores, "sin panel lateral: el juego ocupa toda la pantalla", lado == 0)
   end)
-  paso("interfaz: el mercado tiene pestañas por categoría y una para vender", function()
+  paso("interfaz: el boticario y el armero tienen pestañas distintas", function()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Tienda", faccion = "albor", clase = "guerrero", nivel = 12 })
     pj.oro = 99999
     Interfaz.escala, Interfaz.panel, Interfaz.scroll = 1, "mercado", 0
-    for _, tab in ipairs({ "pociones", "armas", "armadura", "escudos", "accesorios", "mochilas", "vender" }) do
+    local function contarPestanas()
+      local pestanas = {}
+      for x = 320, 960, 4 do
+        local id = Interfaz.consumir(x, 116)
+        if id and id:sub(1, 9) == "merc_tab_" then pestanas[id] = true end
+      end
+      local n = 0
+      for _ in pairs(pestanas) do n = n + 1 end
+      return n
+    end
+    Interfaz.tienda = "mercado"
+    for _, tab in ipairs({ "pociones", "vender" }) do
       Interfaz.mercadoTab = tab
       local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
-      fallar(errores, "se dibuja la pestaña " .. tab, ok, tostring(err))
+      fallar(errores, "la clériga dibuja " .. tab, ok, tostring(err))
     end
     Interfaz.mercadoTab = "pociones"
     Interfaz.hud(mundo, pj, 1280, 720)
-    local pestanas = {}
-    for x = 400, 900, 4 do
-      local id = Interfaz.consumir(x, 60 + 42 + 14)
-      if id and id:sub(1, 9) == "merc_tab_" then pestanas[id] = true end
+    fallar(errores, "la clériga solo tiene pociones y vender", contarPestanas() == 2, tostring(contarPestanas()))
+    Interfaz.tienda = "armero"
+    for _, tab in ipairs({ "armas", "armadura", "escudos", "accesorios", "mochilas", "vender" }) do
+      Interfaz.mercadoTab = tab
+      local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+      fallar(errores, "el armero dibuja " .. tab, ok, tostring(err))
     end
-    local n = 0
-    for _ in pairs(pestanas) do n = n + 1 end
-    fallar(errores, "las siete pestañas responden al clic", n == 7, tostring(n))
+    Interfaz.mercadoTab = "armadura"
+    Interfaz.hud(mundo, pj, 1280, 720)
+    fallar(errores, "el armero tiene armadura, armas y el resto del equipo", contarPestanas() == 6, tostring(contarPestanas()))
     local armas = Interfaz.listaItemsClase(pj, "armas")
     local armadura = Interfaz.listaItemsClase(pj, "armadura")
     local pociones = Interfaz.listaItemsClase(pj, "pociones")
@@ -1147,7 +1213,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       if Interfaz.consumir(xx, yy) == "bolsa_1" then vende = true end
     end end
     fallar(errores, "la pestaña Vender ofrece la bolsa", vende)
-    Interfaz.panel, Interfaz.mercadoTab = nil, "pociones"
+    Interfaz.panel, Interfaz.mercadoTab, Interfaz.tienda = nil, "pociones", nil
   end)
   paso("interfaz: el barquero ofrece los puertos y el mapa nombra los continentes", function()
     local Entrada = require("src.presentacion.entrada")

@@ -154,6 +154,80 @@
         <requiere lista="nova,1"/>
       </i>
     </mago>
+    <lancero>
+      <i id="estocada" nivel="1" tipo="activa" gratis="true" slot="1"/>
+      <i id="barrido" nivel="3" tipo="activa" slot="2">
+        <requiere lista="estocada,2"/>
+      </i>
+      <i id="muro_lanzas" nivel="12" tipo="activa" slot="3">
+        <requiere lista="barrido,2"/>
+      </i>
+      <i id="embestida" nivel="7" tipo="activa" slot="4">
+        <requiere lista="estocada,2"/>
+      </i>
+      <i id="jabalina" nivel="15" tipo="activa" slot="5">
+        <requiere lista="estocada,3"/>
+      </i>
+      <i id="tormenta_lanzas" nivel="20" tipo="activa" slot="6">
+        <requiere lista="muro_lanzas,2"/>
+      </i>
+      <i id="temple" nombre="Temple de acero" nivel="1" tipo="pasiva" desc="Más vida máxima.">
+        <icono hoja="extra" sprite="36"/>
+        <por hp="0.06"/>
+      </i>
+      <i id="maestria" nombre="Maestría de la lanza" nivel="2" tipo="pasiva" desc="Más ataque físico.">
+        <icono hoja="extra" sprite="4"/>
+        <por atk="0.08"/>
+        <requiere lista="estocada,2"/>
+      </i>
+      <i id="escamas" nombre="Armadura de escamas" nivel="3" tipo="pasiva" desc="Más defensa física y mágica.">
+        <icono hoja="extra" sprite="44"/>
+        <por def="0.08" mdef="0.05"/>
+        <requiere lista="temple,2"/>
+      </i>
+      <i id="paso_ligero" nombre="Paso ligero" nivel="4" tipo="pasiva" desc="Caminas más rápido.">
+        <icono hoja="extra" sprite="60"/>
+        <por spd="0.07"/>
+        <requiere lista="embestida,1"/>
+      </i>
+    </lancero>
+    <nigromante>
+      <i id="toque_necro" nivel="1" tipo="activa" gratis="true" slot="1"/>
+      <i id="espinas" nivel="3" tipo="activa" slot="2">
+        <requiere lista="toque_necro,2"/>
+      </i>
+      <i id="maldecir" nivel="7" tipo="activa" slot="3">
+        <requiere lista="toque_necro,2"/>
+      </i>
+      <i id="alzar_esqueletos" nivel="12" tipo="activa" slot="4">
+        <requiere lista="maldecir,2"/>
+      </i>
+      <i id="drenar" nivel="15" tipo="activa" slot="5">
+        <requiere lista="toque_necro,3"/>
+      </i>
+      <i id="espectro" nivel="20" tipo="activa" slot="6">
+        <requiere lista="alzar_esqueletos,2"/>
+      </i>
+      <i id="mente_oscura" nombre="Mente oscura" nivel="1" tipo="pasiva" desc="Más ataque mágico.">
+        <icono hoja="extra" sprite="25"/>
+        <por matk="0.08"/>
+      </i>
+      <i id="pozo_almas" nombre="Pozo de almas" nivel="2" tipo="pasiva" desc="Más maná máximo.">
+        <icono hoja="extra" sprite="29"/>
+        <por mp="0.08"/>
+        <requiere lista="mente_oscura,2"/>
+      </i>
+      <i id="velo" nombre="Velo sombrío" nivel="3" tipo="pasiva" desc="Más defensa mágica.">
+        <icono hoja="extra" sprite="66"/>
+        <por mdef="0.08"/>
+        <requiere lista="pozo_almas,2"/>
+      </i>
+      <i id="paso_etereo" nombre="Paso etéreo" nivel="4" tipo="pasiva" desc="Caminas más rápido.">
+        <icono hoja="extra" sprite="90"/>
+        <por spd="0.07"/>
+        <requiere lista="drenar,1"/>
+      </i>
+    </nigromante>
   </arboles>
   <mejoras>
     <bendicion cd="0.04" dur="1.5" pot="0.12"/>
@@ -180,5 +254,17 @@
     <sombra cd="0.04" mana="0.03" pot="0.1"/>
     <tajo cd="0.05" mana="0.03" pot="0.1"/>
     <trampa cd="0.07" mana="0.05" pot="0"/>
+    <estocada cd="0.03" pot="0.1"/>
+    <barrido cd="0.05" mana="0.03" pot="0.1"/>
+    <muro_lanzas cd="0.04" dur="1" pot="0.15"/>
+    <embestida cd="0.05" mana="0.04" pot="0.1"/>
+    <jabalina cd="0.04" mana="0.03" pot="0.1"/>
+    <tormenta_lanzas cd="0.04" mana="0.03" pot="0.12"/>
+    <toque_necro cd="0.03" pot="0.1"/>
+    <espinas cd="0.04" mana="0.03" pot="0.12"/>
+    <maldecir cd="0.04" mana="0.03" pot="0.1"/>
+    <alzar_esqueletos cd="0.03" mana="0.03" dur="3" pot="0.12"/>
+    <drenar cd="0.04" mana="0.03" pot="0.1"/>
+    <espectro cd="0.03" mana="0.03" dur="3" pot="0.12"/>
   </mejoras>
 </arbol>

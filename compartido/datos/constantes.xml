@@ -49,6 +49,10 @@
     <precioCasa pequena="50000" mediana="75000" grande="100000"/>
   </datos>
   <encanto MATERIAL="polvo_arcano" MAX="10" PCT="0.08"/>
+  <esbirros DISTANCIA_MAX="12" DISTANCIA_SEGUIR="2.4" MAX="4">
+    <!-- MAX: esbirros que puede tener a la vez un nigromante (al pasarse, se desvanecen los más antiguos). -->
+    <!-- DISTANCIA_SEGUIR: a cuántas casillas de su dueño dejan de acercarse. DISTANCIA_MAX: si se alejan más, reaparecen a su lado. -->
+  </esbirros>
   <gremios BONO_POR_COMPANERO="0.05" COSTE="2500" DISTANCIA_BONO="14" INVITACION_SEG="60" MAX_MIEMBROS="25" NIVEL_MINIMO="8" TOPE_COMPANEROS="3">
     <!-- BONO_POR_COMPANERO: Ventaja de experiencia por cada compañero de gremio cerca (hasta TOPE_COMPANEROS). -->
     <NOMBRE_RANGO lider="Líder" miembro="Miembro" oficial="Oficial"/>
@@ -76,13 +80,16 @@
     <!-- DURA_COFRE: segundos que el cofre queda abierto a todos -->
     <!-- PROB_MALL: el resto del premio es equipo del escalón más alto -->
   </mazmorras>
-  <monturas MAX="8" RECUPERA_SEG="300" REGEN_ESPERA="15" REGEN_FRAC="0.02" VIDA_MULT="1">
+  <monturas MAX="20" RECUPERA_SEG="300" REGEN_ESPERA="15" REGEN_FRAC="0.02" VIDA_MULT="1">
     <!-- VIDA_MULT: Vida de las monturas: si vas montado, los golpes bajan primero la vida de la montura. Al llegar a cero cae (la carga queda en el suelo), te bajas y no puedes usarla un rato. -->
     <!-- RECUPERA_SEG: cuánto tarda en poder usarse de nuevo una montura caída -->
     <!-- REGEN_FRAC: fracción de su vida que recupera por segundo si no la golpean -->
     <!-- REGEN_ESPERA: segundos sin golpes antes de empezar a recuperar -->
   </monturas>
-  <oficios COSTE_CAMBIO="500" NIVEL_MAX="10"/>
+  <oficios COSTE_CAMBIO="500" DIST_BONO="0.004" DIST_BONO_MAX="1.5" NIVEL_MAX="10">
+    <!-- DIST_BONO: lo que se suma al pago de una entrega por cada casilla entre la ciudad donde se compró la mercancía y
+         la ciudad donde se entrega (0.004 = +40% a 100 casillas). DIST_BONO_MAX: tope de ese bono (1.5 = +150%). -->
+  </oficios>
   <programacion>
     <MODOS lista="estandarte,batalla"/>
     <POR_DEFECTO avisoMinutos="5" batallaHora="21" batallaMinuto="0" estandarteCadaHoras="4"/>

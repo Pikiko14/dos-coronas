@@ -6,6 +6,7 @@ local Estados = require("compartido.dominio.estados")
 local Encanto = require("compartido.dominio.encanto")
 local Mascotas = require("compartido.dominio.mascotas")
 local Monturas = require("compartido.dominio.monturas")
+local MonturaFx = require("src.presentacion.render.monturas_fx")
 local Subastas = require("compartido.dominio.subastas")
 local Ajustes = require("src.presentacion.ajustes")
 local Personajes = require("src.presentacion.render.personajes")
@@ -116,6 +117,12 @@ end
 -- motivo: si el botón está desactivado, el texto que explica por qué (sale al pasar el ratón).
 function I.boton(x, y, w, h, texto, id, activo, motivo)
   local s = I.escala or 1
+  -- todos los "Cerrar" son una X cuadrada pegada al borde derecho del hueco original
+  local equis = id == "cerrar" and texto == "Cerrar"
+  if equis then
+    local l = 28
+    x, y, w, h = x + w - l + 4, y, l, l
+  end
   local mx, my = love.mouse.getPosition()
   mx, my = mx / s, my / s
   local hover = mx >= x and mx <= x + w and my >= y and my <= y + h
@@ -139,7 +146,15 @@ function I.boton(x, y, w, h, texto, id, activo, motivo)
     love.graphics.rectangle("fill", x + 2, y + 2, w - 4, h / 2 - 2, rad - 1, rad - 1)
     love.graphics.setColor(0.98, 0.98, 1)
   end
-  love.graphics.printf(texto, x, y + h / 2 - 8, w, "center")
+  if equis then
+    local cx, cy, r = x + w / 2, y + h / 2, 5
+    love.graphics.setLineWidth(2.5)
+    love.graphics.line(cx - r, cy - r, cx + r, cy + r)
+    love.graphics.line(cx - r, cy + r, cx + r, cy - r)
+    love.graphics.setLineWidth(1)
+  else
+    love.graphics.printf(texto, x, y + h / 2 - 8, w, "center")
+  end
   if activo ~= false then I.registrar(x, y, w, h, id) end
 end
 
@@ -341,17 +356,18 @@ function I.portada(form, w, h, forzar)
   local colW = math.max(260, tx - margen - 48)
 
   local logo = imgPortada("logo.png")
-  local bajo = barra + 12
+  local bajo = barra + 44
+  local anchoFrase = math.min(440, colW)
   if logo then
     local iw, ih = logo:getDimensions()
     local lw = math.min(colW, 480)
     local lh = lw * ih / iw
+    local logoX = margen + (anchoFrase + 16 - lw) / 2
     love.graphics.setColor(0.04, 0.07, 0.12, 0.55)
-    love.graphics.rectangle("fill", margen + lw * 0.08, bajo + lh * 0.76, lw * 0.84, lh * 0.2, 10, 10)
-    dibujarImagen(logo, margen, bajo, lw, lh)
-    bajo = bajo + lh + 6
+    love.graphics.rectangle("fill", logoX + lw * 0.08, bajo + lh * 0.9, lw * 0.84, lh * 0.2, 10, 10)
+    dibujarImagen(logo, logoX, bajo, lw, lh)
+    bajo = bajo + lh + 56
   end
-  local anchoFrase = math.min(440, colW)
   love.graphics.setColor(0.03, 0.05, 0.1, 0.62)
   love.graphics.rectangle("fill", margen, bajo - 6, anchoFrase + 16, 56, 10, 10)
   love.graphics.setFont(I.fuente)
@@ -561,21 +577,28 @@ function I.crear(estado, w, h)
   tarjetaFaccion("albor", 348)
   tarjetaFaccion("umbra", 812)
 
-  local clases = { "guerrero", "mago", "cazador", "clerigo" }
+  -- las clases que ofrece la facción elegida (Alba suma al lancero y Ocaso al nigromante)
+  local clases = Datos.clasesDe(estado.faccion)
+  local paso = math.min(230, math.floor(920 / #clases))
+  local ancho = paso - 12
   for i, id in ipairs(clases) do
     local c = Datos.clases[id]
-    local cx = 348 + (i - 1) * 230
+    local cx = 348 + (i - 1) * paso
     local elegida = estado.clase == id
     love.graphics.setColor(elegida and 0.16 or 0.08, elegida and 0.12 or 0.07, 0.08, 0.96)
-    love.graphics.rectangle("fill", cx, 268, 218, 250, 6, 6)
+    love.graphics.rectangle("fill", cx, 268, ancho, 250, 6, 6)
     love.graphics.setColor(elegida and 0.95 or 0.7, elegida and 0.78 or 0.6, 0.35, 1)
-    love.graphics.rectangle("line", cx, 268, 218, 250, 6, 6)
+    love.graphics.rectangle("line", cx, 268, ancho, 250, 6, 6)
     love.graphics.setColor(0.95, 0.9, 0.75)
-    love.graphics.printf(c.nombre, cx, 278, 218, "center")
-    I.persona(id, cx + 109, 400, 1.15, estado.faccion)
+    love.graphics.printf(c.nombre, cx, 278, ancho, "center")
+    I.persona(id, cx + ancho / 2, 400, 1.15, estado.faccion)
     love.graphics.setColor(0.75, 0.72, 0.64)
-    love.graphics.printf(c.rol, cx + 10, 414, 198, "center")
-    I.boton(cx + 16, 472, 186, 30, elegida and "Oficio elegido" or "Elegir", "clase_" .. id)
+    love.graphics.printf(c.rol, cx + 8, 414, ancho - 16, "center")
+    I.boton(cx + 12, 472, ancho - 24, 30, elegida and "Oficio elegido" or "Elegir", "clase_" .. id)
+  end
+  if not estado.faccion then
+    love.graphics.setColor(0.7, 0.66, 0.58)
+    love.graphics.printf("Cada facción suma un oficio propio: elígela para verlo.", 348, 528, 920, "center")
   end
 
   caja(348, h - 92, 620, 76, "3. Nombre")
@@ -789,6 +812,26 @@ function I.hud(mundo, p, w, h)
       texto(t, x + 32 - f:getWidth(t) - 2, y + 17, { 1, 1, 1 }, f)
       if sobre(x, y, 32, 32) then I.pista = (def and def.nombre or s.tipo) .. ": " .. t .. " s" end
     end
+    -- potenciadores propios (escudo arcano, furia, grito...): a continuación, con borde verde y una barra que se vacía
+    for j, b in ipairs(p.buffsResta or {}) do
+      local x = bx0 + (#lista + j - 1) * 36
+      local y = by0 - 38
+      local hdef = b.hab and Datos.habilidades[b.hab]
+      local nombre = hdef and hdef.nombre or b.id
+      love.graphics.setColor(0.06, 0.1, 0.08, 0.92)
+      love.graphics.rectangle("fill", x, y, 32, 32, 4, 4)
+      love.graphics.setColor(0.45, 0.95, 0.55, 1)
+      love.graphics.rectangle("line", x, y, 32, 32, 4, 4)
+      Efectos.icono(Efectos.def[b.hab or ""] and b.hab or b.id, x + 2, y + 2, 28)
+      local frac = math.max(0, math.min(1, b.resta / math.max(0.1, b.max or b.resta)))
+      love.graphics.setColor(0, 0, 0, 0.7)
+      love.graphics.rectangle("fill", x + 2, y + 29, 28, 3)
+      love.graphics.setColor(0.45, 0.95, 0.55, 1)
+      love.graphics.rectangle("fill", x + 2, y + 29, 28 * frac, 3)
+      local t = string.format("%d", math.ceil(b.resta))
+      texto(t, x + 32 - f:getWidth(t) - 2, y + 15, { 1, 1, 1 }, f)
+      if sobre(x, y, 32, 32) then I.pista = nombre .. ": " .. t .. " s" end
+    end
   end
   local function pocion(tipo, slotIdx, etiqueta, cuenta)
     local x = bx0 + (slotIdx - 1) * (lado_c + sep)
@@ -831,7 +874,7 @@ function I.hud(mundo, p, w, h)
     local dm = Monturas.especies[id]
     if dm and not dm.requiereOficio then libre = true end
   end
-  if p.monturas and #p.monturas > 0 and (p.job or p.montado or libre) then
+  if p.monturas and #p.monturas > 0 then
     local x = bx0 + total + sep + 6
     casilla(x, by0, lado_c)
     local especie = p.montado or p.monturas[1]
@@ -866,6 +909,8 @@ function I.hud(mundo, p, w, h)
     end
     texto(p.montado and "bajar" or "montar", x + lado_c / 2 - f:getWidth(p.montado and "bajar" or "montar") / 2, by0 + lado_c - 15, { 1, 1, 1 }, f)
     I.registrar(x, by0, lado_c, lado_c, "hud_montura")
+    I.boton(x, by0 - 24, lado_c, 20, "U", "hud_monturas")
+    if sobre(x, by0 - 24, lado_c, 20) then I.pista = "Colección de monturas (U): todas las que tienes." end
     if sobre(x, by0, lado_c, lado_c) then
       local d = Monturas.especies[especie]
       I.pista = (p.montado and "Bajar de " or "Montar ") .. (d and d.nombre or "la montura") .. " (O). Alforjas: U."
@@ -937,6 +982,7 @@ function I.hud(mundo, p, w, h)
   elseif I.panel == "viaje" then I.panelViaje(mundo, p, vw, h)
   elseif I.panel == "montura" then I.panelMontura(mundo, p, vw, h)
   elseif I.panel == "mall" then I.panelMall(mundo, p, vw, h)
+  elseif I.panel == "diaria" then I.panelDiaria(mundo, p, vw, h)
   elseif I.panel == "subastas" then I.panelSubastas(mundo, p, vw, h)
   elseif I.panel == "grupo" then I.panelGrupo(mundo, p, vw, h)
   elseif I.panel == "mercado" then I.panelMercado(p, vw, h)
@@ -1053,7 +1099,8 @@ end
 
 -- Iconos de los PNJ para los mapas: forma y color según lo que hacen.
 local ICONO_NPC = {
-  mercado = { "circulo", { 1, 0.85, 0.2 }, "Mercader de equipo" },
+  mercado = { "circulo", { 1, 0.85, 0.2 }, "Clériga (pociones)" },
+  armero = { "cuadrado", { 0.75, 0.78, 0.85 }, "Armero (armaduras y armas)" },
   barquero = { "rombo", { 0.4, 0.8, 1 }, "Barquero (viajes entre continentes)" },
   comercio = { "cuadrado", { 0.95, 0.55, 0.2 }, "Mercader mayor (mercancías)" },
   heraldo = { "triangulo", { 0.95, 0.3, 0.3 }, "Heraldo (guerra)" },
@@ -1063,13 +1110,13 @@ local ICONO_NPC = {
   criador = { "circulo", { 0.4, 0.92, 0.4 }, "Criador de mascotas" },
   gremio = { "cuadrado", { 0.4, 0.62, 1 }, "Escribano del gremio" },
   oficios = { "rombo", { 0.4, 0.92, 0.92 }, "Maestro de oficios" },
-  establo = { "triangulo", { 0.72, 0.52, 0.3 }, "Cuadra (monturas)" },
+  establo = { "triangulo", { 0.72, 0.52, 0.3 }, "Establo (monturas)" },
   capitan = { "rombo", { 0.2, 0.85, 0.5 }, "Capitán de cazadores" },
   contacto = { "triangulo", { 0.85, 0.12, 0.2 }, "Contacto de ladrones" },
   subastas = { "estrella", { 1, 0.75, 0.15 }, "Casa de subastas" },
 }
 I.ICONO_NPC = ICONO_NPC
-I.ORDEN_ICONOS = { "mercado", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "criador", "gremio", "oficios", "establo", "barquero", "capitan", "contacto", "subastas" }
+I.ORDEN_ICONOS = { "mercado", "armero", "establo", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "criador", "gremio", "oficios", "barquero", "capitan", "contacto", "subastas" }
 
 function I.iconoNpc(rol, x, y, r)
   local d = ICONO_NPC[rol]
@@ -1203,6 +1250,7 @@ local AYUDA_BOTONES = {
   hud_mapa = "Mapa del mundo (M). Clic en un punto para viajar hasta allí; rueda para acercar.",
   hud_comercio = "Tratar con otro jugador (T): selecciona a un aventurero cercano y pulsa aquí.",
   hud_ayuda = "Ayuda: controles, combate, oficios, casas y mazmorras.",
+  hud_diaria = "Recompensa diaria (F2): un premio por día, más grande con días seguidos.",
   hud_menu = "Menú del juego (Esc): continuar, ajustes y salir.",
 }
 
@@ -1249,21 +1297,35 @@ function I.flotantes(mundo, p, vw, vh)
     texto(txt[2], mx0 - ancho + 1, 28, { 0.92, 0.95, 1 })
     if sobre(mx0 - ancho - 6, 10, ancho, 38) then I.pista = "Tus coordenadas en el mapa (X hacia la derecha, Y hacia abajo)." end
   end
-  local botones = { { "Mapa", "hud_mapa" }, { "Ayuda", "hud_ayuda" }, { "Menú", "hud_menu" } }
-  local bww = (lado - (#botones - 1) * 3) / #botones
+  -- botones del minimapa, como iconos del juego: mapa (pergamino), ayuda (signo de interrogación), menú (engranaje) y la
+  -- recompensa diaria (regalo, que brilla mientras haya premio sin reclamar). El nombre sale al pasar el ratón.
+  local botones = {
+    { "hud_mapa", "hud", 0 }, { "hud_ayuda", "hud", 1 }, { "hud_menu", "hud", 2 }, { "hud_diaria", "hud", 3 },
+  }
+  local bww, bhh = (lado - (#botones - 1) * 4) / #botones, 30
   local cy = 10 + lado + 6
   for i, b in ipairs(botones) do
-    local x = mx0 + (i - 1) * (bww + 3)
-    local hover = sobre(x, cy, bww, 22)
-    if hover then I.pista = AYUDA_BOTONES[b[2]] end
-    love.graphics.setColor(hover and 0.3 or 0.15, hover and 0.43 or 0.22, hover and 0.85 or 0.46, 0.95)
-    love.graphics.rectangle("fill", x, cy, bww, 22, 6, 6)
-    love.graphics.setColor(0.45, 0.6, 0.95)
-    love.graphics.rectangle("line", x + 0.5, cy + 0.5, bww - 1, 21, 6, 6)
-    love.graphics.setFont(f)
-    love.graphics.setColor(1, 0.95, 0.85)
-    love.graphics.printf(b[1], x, cy + 3, bww, "center")
-    I.registrar(x, cy, bww, 22, b[2])
+    local x = mx0 + (i - 1) * (bww + 4)
+    local hover = sobre(x, cy, bww, bhh)
+    if hover then I.pista = AYUDA_BOTONES[b[1]] end
+    local libre = b[1] == "hud_diaria" and p.diaria and not p.diaria.reclamada
+    local pulso = libre and (0.5 + 0.5 * math.sin(love.timer.getTime() * 4)) or 0
+    if libre then
+      love.graphics.setColor(0.45 + 0.3 * pulso, 0.34 + 0.2 * pulso, 0.06, 0.95)
+    else
+      love.graphics.setColor(hover and 0.3 or 0.12, hover and 0.43 or 0.18, hover and 0.85 or 0.4, 0.95)
+    end
+    love.graphics.rectangle("fill", x, cy, bww, bhh, 6, 6)
+    if libre then love.graphics.setColor(1, 0.82, 0.3) else love.graphics.setColor(0.45, 0.6, 0.95) end
+    love.graphics.rectangle("line", x + 0.5, cy + 0.5, bww - 1, bhh - 1, 6, 6)
+    love.graphics.setColor(1, 1, 1, 1)
+    Atlas.dibujar(b[2], b[3], x + bww / 2, cy + bhh / 2, 0.85, 16, 16)
+    if b[1] == "hud_diaria" and p.diaria and p.diaria.reclamada then
+      love.graphics.setColor(0.4, 1, 0.5, 1)
+      love.graphics.setFont(f)
+      love.graphics.print("✔", x + bww - 11, cy + bhh - 16)
+    end
+    I.registrar(x, cy, bww, bhh, b[1])
   end
 
   -- lista de batalla abajo a la derecha
@@ -1783,6 +1845,11 @@ function I.panelMercancias(mundo, p, w, h)
     love.graphics.print("Acércate a un mercader mayor.", px + 14, py + 50)
     return
   end
+  if d.soloCiudades then
+    love.graphics.setColor(1, 0.8, 0.5)
+    love.graphics.printf((d.sitio or "Este puesto") .. ": aquí no se comercia. Las mercancías solo se compran y se entregan en las ciudades; cuanto más lejos esté la ciudad donde entregas, más te pagan.", px + 14, py + 50, pw - 28, "left")
+    return
+  end
   love.graphics.setColor(1, 0.9, 0.55)
   love.graphics.print(d.sitio .. "   —   Oro: " .. Ayudas.num(p.oro), px + 14, py + 38)
   local esComerciante = d.job == "trader"
@@ -1809,6 +1876,10 @@ function I.panelMercancias(mundo, p, w, h)
     love.graphics.print(tostring(b.venta), px + 320, y + 10)
     love.graphics.setColor(0.9, 0.9, 0.85)
     love.graphics.print(tostring(b.tengo), px + 400, y + 10)
+    if b.bono and b.bono > 0 then
+      love.graphics.setColor(0.55, 1, 0.6)
+      love.graphics.print("+" .. b.bono .. "%", px + 400, y + 24)
+    end
     local motComprar = "Solo los comerciantes con el oficio activo compran mercancías."
     I.boton(px + 440, y + 6, 74, 26, "Comprar 1", "mc_c1_" .. b.id, esComerciante, motComprar)
     I.boton(px + 518, y + 6, 40, 26, "x5", "mc_c5_" .. b.id, esComerciante, motComprar)
@@ -1817,76 +1888,227 @@ function I.panelMercancias(mundo, p, w, h)
     I.boton(px + 640, y + 6, 100, 26, "Vender todo", "mc_vt_" .. b.id, esComerciante and b.tengo > 0)
   end
   love.graphics.setColor(0.7, 0.68, 0.6)
-  love.graphics.printf("Compra donde la mercancía SOBRA y vende donde FALTA, cuanto más lejos mejor. Los precios suben cuando compras y bajan cuando vendes, y se recuperan con el tiempo. Los ladrones acechan los caminos: viaja con escolta.",
+  love.graphics.printf("Solo se comercia en ciudades. Compra donde la mercancía SOBRA y entrégala donde FALTA, cuanto más lejos mejor (el bono por distancia se ve en verde bajo lo que llevas). Los precios suben cuando compras y bajan cuando vendes, y se recuperan con el tiempo. Los ladrones acechan los caminos: viaja con escolta.",
     px + 14, py + ph - 70, pw - 28, "left")
 end
 
--- Alforjas de la montura: la mercancía que llevas, lo que cabe y lo que aporta la montura.
+-- Colección de monturas (tecla U o el botón sobre el icono de montura): todas las que tienes, siempre a mano.
+-- Las normales y las del Item Mall se montan sin oficio; las de transporte piden el oficio activo. Debajo, la
+-- carga de las alforjas.
+local PAGINA_MONTURAS = 4
+
 function I.panelMontura(mundo, p, w, h)
   local Oficios = require("compartido.dominio.oficios")
-  local px, py, pw, ph = w / 2 - 280, 70, 560, 470
-  caja(px, py, pw, ph, "Montura e inventario de carga")
+  local px, py, pw, ph = w / 2 - 330, 36, 660, 570
+  caja(px, py, pw, ph, "Monturas")
   I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
-  local M = p.montado and Monturas.especies[p.montado]
-  love.graphics.setColor(0.10, 0.13, 0.25)
-  love.graphics.rectangle("fill", px + 14, py + 44, pw - 28, 84, 6, 6)
-  local def = p.montado and Personajes.monturaDe(p.montado, p.faccion)
-  if def and def.hoja then Personajes.dibujar(def, 1, false, love.timer.getTime(), px + 56, py + 112) end
-  if def and def.vehiculo then
-    local img = Arte.img("Characters/Vehicle.png")
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.draw(img, Arte.quad(img, 128, 128, 32, 32), px + 56, py + 112, 0, 1.6, 1.6, 16, 28)
+  local estado = p.monturasEstado or {}
+  local function grupo(id)
+    local d = Monturas.especies[id]
+    if d.requiereOficio then return 3 end
+    return d.mall and 2 or 1
   end
-  love.graphics.setColor(0.95, 0.9, 0.75)
-  if M then
-    love.graphics.print(M.nombre .. "  (montado, O para bajar)", px + 100, py + 54)
+  local lista = {}
+  for _, id in ipairs(p.monturas or {}) do if Monturas.especies[id] then lista[#lista + 1] = id end end
+  table.sort(lista, function(a, b)
+    if grupo(a) ~= grupo(b) then return grupo(a) < grupo(b) end
+    return Monturas.especies[a].nombre < Monturas.especies[b].nombre
+  end)
+
+  -- ¿Se puede montar ahora? Devuelve el motivo si no.
+  local function motivoNo(id)
+    local d = Monturas.especies[id]
+    local e = estado[id] or {}
+    if e.caida then return "Herida: se recupera en " .. e.caida .. " s." end
+    if d.requiereOficio and not p.job then return "Las monturas de transporte piden el oficio activo (Y)." end
+    if d.oficio and p.job ~= d.oficio then return "Solo para el oficio de comerciante." end
+    if p.modo ~= "mundo" then return "Aquí no se puede montar." end
+    return nil
+  end
+
+  local function dibujarMontura(id, x, y, escala)
+    local def = Personajes.monturaDe(id, p.faccion)
+    if def and def.hoja then
+      love.graphics.push()
+      love.graphics.translate(x, y)
+      love.graphics.scale(escala, escala)
+      Personajes.dibujar(def, 1, false, love.timer.getTime(), 0, 0)
+      love.graphics.pop()
+    elseif def and def.vehiculo then
+      local img = Arte.img("Characters/Vehicle.png")
+      love.graphics.setColor(1, 1, 1)
+      love.graphics.draw(img, Arte.quad(img, 128, 128, 32, 32), x, y, 0, 1.4 * escala, 1.4 * escala, 16, 28)
+    end
+  end
+
+  -- la que llevas puesta
+  love.graphics.setColor(0.10, 0.13, 0.25)
+  love.graphics.rectangle("fill", px + 14, py + 42, pw - 28, 68, 6, 6)
+  local actual = p.montado and Monturas.especies[p.montado]
+  if actual then
+    dibujarMontura(p.montado, px + 56, py + 98, 1.25)
+    love.graphics.setColor(0.95, 0.9, 0.75)
+    love.graphics.print(actual.nombre .. "  (montado)", px + 100, py + 50)
     love.graphics.setColor(0.6, 0.85, 1)
-    love.graphics.print("Velocidad +" .. math.floor(M.vel * 100) .. "%    Carga extra +" .. M.carga, px + 100, py + 78)
+    love.graphics.print("Velocidad +" .. math.floor(actual.vel * 100) .. "%    Carga extra +" .. actual.carga, px + 100, py + 72)
     if p.monturaHpMax then
       love.graphics.setColor(0.95, 0.6, 0.2)
-      love.graphics.print("Vida de la montura: " .. (p.monturaHp or 0) .. " / " .. p.monturaHpMax, px + 330, py + 54)
+      love.graphics.print("Vida: " .. (p.monturaHp or 0) .. " / " .. p.monturaHpMax, px + 100, py + 90)
     end
-    love.graphics.setColor(1, 0.75, 0.5)
-    love.graphics.print("Montado no puedes combatir.", px + 100, py + 100)
+    I.boton(px + pw - 28 - 130, py + 62, 130, 34, "Bajar", "mt_alt_" .. p.montado)
   else
-    love.graphics.print("No vas montado", px + 100, py + 54)
-    love.graphics.setColor(0.72, 0.78, 0.68)
-    local n = p.monturas and #p.monturas or 0
-    love.graphics.print(n > 0 and ("Tienes " .. n .. " montura(s): pulsa O para montar.") or "Compra una montura en la cuadra.", px + 100, py + 78)
+    love.graphics.setColor(0.9, 0.86, 0.72)
+    love.graphics.print(#lista > 0 and "No vas montado: elige una de tu colección." or "Aún no tienes monturas.", px + 28, py + 56)
+    love.graphics.setColor(0.7, 0.75, 0.66)
+    love.graphics.print(#lista > 0 and "La tecla O monta la última que usaste (o la primera que puedas)."
+      or "Se compran en las cuadras de las ciudades o en el Item Mall (L).", px + 28, py + 80)
   end
-  local cap, peso = math.floor(p.capacidadCarga or 0), math.floor(p.pesoCarga or 0)
+
+  -- colección, por páginas
+  local paginas = math.max(1, math.ceil(#lista / PAGINA_MONTURAS))
+  I.monturaPag = math.max(1, math.min(paginas, I.monturaPag or 1))
   love.graphics.setColor(0.85, 0.82, 0.7)
-  love.graphics.print("Carga " .. peso .. " / " .. cap .. (p.job and "" or "   (la carga es del oficio de comerciante o ladrón)"), px + 14, py + 140)
-  barra(px + 14, py + 162, pw - 28, 12, cap > 0 and math.min(1, peso / cap) or 0, 0.8, 0.65, 0.25)
-  local y = py + 190
-  local hay = false
-  local function fila(titulo, mapa, color)
-    local ids = {}
-    for _, id in ipairs(Oficios.ORDEN_BIENES) do if (mapa[id] or 0) > 0 then ids[#ids + 1] = id end end
-    if #ids == 0 then return end
-    hay = true
-    love.graphics.setColor(color[1], color[2], color[3])
-    love.graphics.print(titulo, px + 14, y)
-    y = y + 22
-    for _, id in ipairs(ids) do
-      love.graphics.setColor(0.10, 0.13, 0.25)
-      love.graphics.rectangle("fill", px + 14, y, pw - 28, 26, 4, 4)
-      love.graphics.setColor(0.95, 0.9, 0.78)
-      love.graphics.print(Oficios.BIENES[id].nombre, px + 26, y + 5)
-      love.graphics.print("x " .. mapa[id], px + 260, y + 5)
-      love.graphics.setColor(0.7, 0.8, 0.6)
-      love.graphics.print("~" .. (Oficios.BIENES[id].base * mapa[id]) .. " oro", px + 380, y + 5)
-      y = y + 30
+  love.graphics.print("Tu colección: " .. #lista .. " / " .. Monturas.MAX, px + 14, py + 120)
+  if paginas > 1 then
+    I.boton(px + pw - 190, py + 116, 34, 26, "<", "mon_pag_ant", I.monturaPag > 1)
+    love.graphics.setColor(0.85, 0.82, 0.7)
+    love.graphics.printf(I.monturaPag .. " / " .. paginas, px + pw - 154, py + 120, 80, "center")
+    I.boton(px + pw - 72, py + 116, 34, 26, ">", "mon_pag_sig", I.monturaPag < paginas)
+  end
+  local etiquetas = {
+    { "Normal", { 0.6, 0.9, 0.6 } }, { "Item Mall", { 1, 0.78, 0.35 } }, { "Transporte (oficio)", { 0.55, 0.78, 1 } },
+  }
+  for i = 1, PAGINA_MONTURAS do
+    local id = lista[(I.monturaPag - 1) * PAGINA_MONTURAS + i]
+    if not id then break end
+    local d = Monturas.especies[id]
+    local y = py + 148 + (i - 1) * 78
+    local puesta = p.montado == id
+    love.graphics.setColor(puesta and 0.14 or 0.10, puesta and 0.22 or 0.13, puesta and 0.22 or 0.25)
+    love.graphics.rectangle("fill", px + 14, y, pw - 28, 74, 6, 6)
+    if puesta then
+      love.graphics.setColor(0.4, 0.9, 0.5, 0.8)
+      love.graphics.rectangle("line", px + 14.5, y + 0.5, pw - 29, 73, 6, 6)
+    end
+    dibujarMontura(id, px + 58, y + 64, 1.2)
+    local et = etiquetas[grupo(id)]
+    love.graphics.setColor(0.97, 0.92, 0.78)
+    love.graphics.print(d.nombre, px + 110, y + 6)
+    love.graphics.setColor(et[2][1], et[2][2], et[2][3])
+    love.graphics.print(et[1], px + 110 + I.fuente:getWidth(d.nombre) + 12, y + 6)
+    love.graphics.setColor(0.72, 0.78, 0.68)
+    local fd = I.fuente
+    love.graphics.setFont(pequena())
+    love.graphics.printf(d.desc or "", px + 110, y + 25, 380, "left")
+    love.graphics.setFont(fd)
+    love.graphics.setColor(0.6, 0.85, 1)
+    love.graphics.print("Vel +" .. math.floor(d.vel * 100) .. "%" .. (d.carga > 0 and ("   Carga +" .. d.carga) or ""), px + 110, y + 52)
+    local e = estado[id] or {}
+    if e.hp then
+      love.graphics.setColor(0.95, 0.6, 0.2)
+      love.graphics.print("Vida " .. e.hp .. " / " .. e.max, px + 300, y + 52)
+    end
+    local motivo = (not puesta) and motivoNo(id) or nil
+    I.boton(px + pw - 28 - 130, y + 17, 130, 34, puesta and "Bajar" or "Montar", "mt_alt_" .. id, puesta or not motivo, motivo)
+  end
+
+  -- alforjas
+  local cap, peso = math.floor(p.capacidadCarga or 0), math.floor(p.pesoCarga or 0)
+  local y = py + ph - 108
+  love.graphics.setColor(0.85, 0.82, 0.7)
+  love.graphics.print("Carga " .. peso .. " / " .. cap .. (p.job and "" or "   (la carga es del oficio de comerciante o ladrón)"), px + 14, y)
+  barra(px + 14, y + 22, pw - 28, 10, cap > 0 and math.min(1, peso / cap) or 0, 0.8, 0.65, 0.25)
+  local partes = {}
+  for _, bid in ipairs(Oficios.ORDEN_BIENES) do
+    local n = (p.carga and p.carga[bid] or 0) + (p.cargaRobada and p.cargaRobada[bid] or 0)
+    if n > 0 then partes[#partes + 1] = Oficios.BIENES[bid].nombre .. " ×" .. n end
+  end
+  love.graphics.setColor(0.7, 0.8, 0.6)
+  love.graphics.printf(#partes > 0 and table.concat(partes, ", ") or "Las alforjas están vacías.", px + 14, y + 40, pw - 28, "left")
+  love.graphics.setColor(0.7, 0.68, 0.6)
+  love.graphics.printf("U abre y cierra este panel. Las monturas se bajan solas en las casas y en las guerras; las de transporte, al dejar el oficio.",
+    px + 14, py + ph - 36, pw - 28, "left")
+end
+
+-- Recompensas diarias: el ciclo de siete días, con el de hoy resaltado, lo que da y cuándo vuelve a estar listo.
+function I.panelDiaria(mundo, p, w, h)
+  local Diaria = require("compartido.dominio.diaria")
+  local px, py, pw, ph = w / 2 - 350, 70, 700, 440
+  caja(px, py, pw, ph, "Recompensa diaria")
+  I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
+  local d = p.diaria
+  if not d then
+    love.graphics.setColor(0.7, 0.68, 0.6)
+    love.graphics.print("Consultando...", px + 14, py + 50)
+    return
+  end
+  love.graphics.setColor(0.9, 0.86, 0.72)
+  love.graphics.printf("Entra cada día y reclama tu premio. Con días seguidos la racha sube y el día 7 el premio es el mayor. Si faltas un día, vuelves al día 1.",
+    px + 14, py + 40, pw - 28, "left")
+  love.graphics.setColor(1, 0.9, 0.5)
+  love.graphics.print("Racha: " .. (d.racha or 0) .. " día(s)", px + 14, py + 78)
+  -- siete tarjetas
+  local ancho, sep = 88, 8
+  for n = 1, Diaria.CICLO do
+    local x = px + 14 + (n - 1) * (ancho + sep)
+    local y = py + 104
+    local hecho = (n < d.dia) or (n == d.dia and d.reclamada)
+    local hoy = n == d.dia and not d.reclamada
+    local prem = Diaria.premio(n, p.nivel)
+    love.graphics.setColor(hoy and 0.2 or 0.1, hoy and 0.17 or 0.13, hoy and 0.06 or 0.25, 0.97)
+    love.graphics.rectangle("fill", x, y, ancho, 128, 6, 6)
+    if hoy then
+      local pulso = 0.6 + 0.4 * math.sin(love.timer.getTime() * 4)
+      love.graphics.setColor(1, 0.82, 0.3, pulso)
+      love.graphics.setLineWidth(2)
+    else
+      love.graphics.setColor(hecho and 0.4 or 0.35, hecho and 0.8 or 0.45, hecho and 0.45 or 0.75, 0.9)
+    end
+    love.graphics.rectangle("line", x + 0.5, y + 0.5, ancho - 1, 127, 6, 6)
+    love.graphics.setLineWidth(1)
+    love.graphics.setColor(0.95, 0.9, 0.75)
+    love.graphics.printf("Día " .. n, x, y + 6, ancho, "center")
+    -- iconos de los dos primeros objetos
+    for k, it in ipairs(prem.items) do
+      if k > 2 then break end
+      local def = Datos.item(it.id)
+      if def then
+        Atlas.dibujar(def.hoja, def.sprite, x + 24 + (k - 1) * 40, y + 44, 1, 16, 16, def.tinte)
+        love.graphics.setColor(1, 1, 1)
+        local c = "x" .. it.cant
+        love.graphics.print(c, x + 24 + (k - 1) * 40 - pequena():getWidth(c) / 2, y + 58)
+      end
+    end
+    love.graphics.setColor(1, 0.9, 0.4)
+    love.graphics.printf(Ayudas.num(prem.oro) .. " oro", x, y + 78, ancho, "center")
+    local extra = {}
+    if prem.monedas > 0 then extra[#extra + 1] = prem.monedas .. " Monedas" end
+    if prem.xp > 0 then extra[#extra + 1] = math.floor(prem.xp * 100) .. "% exp" end
+    love.graphics.setColor(0.6, 0.9, 1)
+    love.graphics.printf(table.concat(extra, "\n"), x, y + 94, ancho, "center")
+    if hecho then
+      love.graphics.setColor(0.4, 1, 0.5, 0.95)
+      love.graphics.printf("✔", x, y + 24, ancho, "center")
     end
   end
-  fila("Mercancía", p.carga or {}, { 0.7, 0.9, 0.6 })
-  fila("Mercancía robada", p.cargaRobada or {}, { 1, 0.5, 0.4 })
-  if not hay then
-    love.graphics.setColor(0.7, 0.68, 0.6)
-    love.graphics.print("Las alforjas están vacías. Compra mercancías en un mercader de caminos.", px + 14, y)
+  -- premio de hoy y botón
+  local prem = d.premio
+  love.graphics.setColor(0.95, 0.9, 0.75)
+  local partes = { Ayudas.num(prem.oro) .. " de oro" }
+  if prem.monedas > 0 then partes[#partes + 1] = prem.monedas .. " Monedas Corona" end
+  if prem.xp > 0 then partes[#partes + 1] = math.floor(prem.xp * 100) .. "% de la experiencia del nivel" end
+  for _, it in ipairs(prem.items) do
+    local def = Datos.item(it.id)
+    partes[#partes + 1] = it.cant .. " × " .. (def and def.nombre or it.id)
   end
+  love.graphics.printf((d.reclamada and "Premio de hoy (ya reclamado): " or "Premio de hoy: ") .. table.concat(partes, ", ") .. ".", px + 14, py + 250, pw - 28, "left")
+  local restaTxt = string.format("%02d:%02d:%02d", math.floor(d.resta / 3600), math.floor((d.resta % 3600) / 60), math.floor(d.resta % 60))
+  love.graphics.setColor(0.7, 0.75, 0.66)
+  love.graphics.print(d.reclamada and ("El siguiente premio estará listo en " .. restaTxt) or ("Se renueva en " .. restaTxt), px + 14, py + 300)
+  I.boton(px + pw / 2 - 110, py + 340, 220, 44, d.reclamada and "Ya reclamada" or "Reclamar", "diaria_reclamar", not d.reclamada,
+    "Vuelve mañana para el siguiente premio.")
   love.graphics.setColor(0.7, 0.68, 0.6)
-  love.graphics.printf("Pulsa U para abrir o cerrar este panel.", px + 14, py + ph - 28, pw - 28, "left")
+  love.graphics.printf("F2 abre y cierra este panel. La bolsa necesita espacio para los objetos del premio.", px + 14, py + ph - 28, pw - 28, "left")
 end
 
 -- Item Mall: tienda con monedas especiales (objetos de bonificación y addons).
@@ -1909,7 +2131,7 @@ function I.panelMall(mundo, p, w, h)
   I.boton(px + 386, py + 36, 82, 28, "Forja", "mall_tab_forja", I.mallTab ~= "forja")
   I.boton(px + 472, py + 36, 82, 28, "Addons", "mall_tab_add", I.mallTab ~= "addons")
   I.boton(px + 558, py + 36, 82, 28, "Monturas", "mall_tab_mont", I.mallTab ~= "monturas")
-  local y0 = py + 76
+  local y0 = py + 84
   if I.mallTab == "objetos" or I.mallTab == "forja" then
     -- los pergaminos de forja van en su pestana; el resto en "Objetos"
     local objetos = {}
@@ -1922,7 +2144,7 @@ function I.panelMall(mundo, p, w, h)
     I.mallScroll = math.max(0, math.min(I.mallScrollMax, I.mallScroll or 0))
     if I.mallScrollMax > 0 then
       love.graphics.setColor(0.65, 0.62, 0.55)
-      love.graphics.print("Rueda del ratón para ver más (" .. (I.mallScroll + 1) .. "-" .. (I.mallScroll + visibles) .. " de " .. #objetos .. ")", px + 14, py + 62)
+      love.graphics.print("Rueda del ratón para ver más (" .. (I.mallScroll + 1) .. "-" .. (I.mallScroll + visibles) .. " de " .. #objetos .. ")", px + 14, py + 60)
     end
     for i, o in ipairs(objetos) do
      if i > I.mallScroll and i <= I.mallScroll + visibles then
@@ -1948,13 +2170,30 @@ function I.panelMall(mundo, p, w, h)
   elseif I.mallTab == "monturas" then
     local tengoM = {}
     for _, id in ipairs(p.monturas or {}) do tengoM[id] = true end
+    local visiblesM = 3
+    I.mallScrollMax = math.max(0, #Mall.ORDEN_MONTURAS - visiblesM)
+    I.mallScroll = math.max(0, math.min(I.mallScrollMax, I.mallScroll or 0))
+    if I.mallScrollMax > 0 then
+      love.graphics.setColor(0.65, 0.62, 0.55)
+      love.graphics.print("Rueda del ratón para ver más (" .. (I.mallScroll + 1) .. "-" .. (I.mallScroll + visiblesM) .. " de " .. #Mall.ORDEN_MONTURAS .. ")", px + 14, py + 60)
+    end
     for i, id in ipairs(Mall.ORDEN_MONTURAS) do
+     if i > I.mallScroll and i <= I.mallScroll + visiblesM then
       local d = Mall.MONTURAS[id]
-      local y = y0 + (i - 1) * 118
+      local y = y0 + (i - 1 - I.mallScroll) * 118
       love.graphics.setColor(0.10, 0.13, 0.25)
       love.graphics.rectangle("fill", px + 14, y, pw - 28, 110, 8, 8)
       local def = Personajes.monturaDe(id, p.faccion)
-      if def then Personajes.dibujar(def, 1, true, love.timer.getTime(), px + 70, y + 90) end
+      -- vista previa con sus efectos (aura, alas y partículas), recortada a la tarjeta
+      love.graphics.setScissor((px + 14) * (I.escala or 1), y * (I.escala or 1), (pw - 28) * (I.escala or 1), 110 * (I.escala or 1))
+      love.graphics.push()
+      love.graphics.translate(px + 70, y + 100)
+      love.graphics.scale(1.7, 1.7)
+      MonturaFx.detras(id, 0, 0, 1, love.timer.getTime(), def and def.escala or 1)
+      if def then Personajes.dibujar(def, 1, true, love.timer.getTime(), 0, 0) end
+      MonturaFx.delante(id, 0, 0, 1, love.timer.getTime(), def and def.escala or 1, 0)
+      love.graphics.pop()
+      love.graphics.setScissor()
       love.graphics.setColor(0.98, 0.9, 0.7)
       love.graphics.print(d.nombre .. (p.montado == id and "   (montado)" or ""), px + 130, y + 8)
       love.graphics.setColor(0.72, 0.78, 0.68)
@@ -1965,13 +2204,15 @@ function I.panelMall(mundo, p, w, h)
         love.graphics.print("Velocidad +" .. math.floor(M2.vel * 100) .. "%    Sin oficio", px + 130, y + 86)
       end
       if tengoM[id] then
-        I.boton(px + 504, y + 38, 130, 32, "La tienes", "mall_mt_ya", false, "Ya es tuya: pulsa O para montar.")
+        I.boton(px + 504, y + 30, 130, 32, "La tienes", "mall_mt_ya", false, "Ya es tuya: pulsa O para montar.")
       else
+        -- el precio va bajo el botón (a la izquierda chocaba con las descripciones largas)
         love.graphics.setColor(1, 0.85, 0.3)
-        love.graphics.printf(Ayudas.num(d.precio) .. " mon.", px + 410, y + 46, 80, "right")
-        I.boton(px + 504, y + 38, 130, 32, "Comprar", "mall_mt_buy_" .. id, (m.monedas or 0) >= d.precio,
+        love.graphics.printf(Ayudas.num(d.precio) .. " mon.", px + 504, y + 76, 130, "center")
+        I.boton(px + 504, y + 30, 130, 32, "Comprar", "mall_mt_buy_" .. id, (m.monedas or 0) >= d.precio,
           "Te faltan " .. Ayudas.num(d.precio - (m.monedas or 0)) .. " Monedas Corona.")
       end
+     end
     end
   else
     local tengo = {}
@@ -1982,7 +2223,7 @@ function I.panelMall(mundo, p, w, h)
     I.mallScroll = math.max(0, math.min(I.mallScrollMax, I.mallScroll or 0))
     if I.mallScrollMax > 0 then
       love.graphics.setColor(0.65, 0.62, 0.55)
-      love.graphics.print("Rueda del ratón para ver más (" .. (I.mallScroll + 1) .. "-" .. (I.mallScroll + visibles) .. " de " .. #Mall.ORDEN_ADDONS .. ")", px + 14, py + 62)
+      love.graphics.print("Rueda del ratón para ver más (" .. (I.mallScroll + 1) .. "-" .. (I.mallScroll + visibles) .. " de " .. #Mall.ORDEN_ADDONS .. ")", px + 14, py + 60)
     end
     for i, id in ipairs(Mall.ORDEN_ADDONS) do
      if i > I.mallScroll and i <= I.mallScroll + visibles then
@@ -2109,7 +2350,7 @@ end
 
 function I.panelEstablo(mundo, p, w, h)
   local px, py, pw, ph = w / 2 - 340, 60, 680, 470
-  caja(px, py, pw, ph, "Cuadra")
+  caja(px, py, pw, ph, "Establo")
   I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
   local d = I.datosPanel.establo
   if not d then
@@ -2138,8 +2379,20 @@ function I.panelEstablo(mundo, p, w, h)
   for _, m in ipairs(d.catalogo) do
     if (m.requiereOficio and true or false) == (I.establoTab == "transporte") then lista[#lista + 1] = m end
   end
-  for i, m in ipairs(lista) do
-    local y = py + 102 + (i - 1) * 62
+  -- hay muchas: se muestran de cinco en cinco
+  local PAG_ESTABLO = 5
+  local paginasE = math.max(1, math.ceil(#lista / PAG_ESTABLO))
+  I.establoPag = math.max(1, math.min(paginasE, I.establoPag or 1))
+  if paginasE > 1 then
+    I.boton(px + pw - 150, py + 64, 34, 28, "<", "est_pag_ant", I.establoPag > 1)
+    love.graphics.setColor(0.85, 0.82, 0.7)
+    love.graphics.printf(I.establoPag .. " / " .. paginasE, px + pw - 116, py + 70, 50, "center")
+    I.boton(px + pw - 62, py + 64, 34, 28, ">", "est_pag_sig", I.establoPag < paginasE)
+  end
+  for k = 1, PAG_ESTABLO do
+    local m = lista[(I.establoPag - 1) * PAG_ESTABLO + k]
+    if not m then break end
+    local y = py + 102 + (k - 1) * 62
     love.graphics.setColor(0.10, 0.13, 0.25)
     love.graphics.rectangle("fill", px + 14, y, pw - 28, 56, 6, 6)
     local def = Personajes.monturaDe(m.id, p.faccion)
@@ -2773,15 +3026,17 @@ function I.statsTexto(it, enc)
   return pre .. table.concat(partes, "  ")
 end
 
--- Categorías del mercado: una pestaña por tipo de objeto.
-local CATEGORIAS_MERCADO = {
-  { id = "pociones", nombre = "Pociones" },
-  { id = "armas", nombre = "Armas", huecos = { arma = true } },
-  { id = "armadura", nombre = "Armadura", huecos = { cabeza = true, pecho = true, piernas = true, pies = true } },
-  { id = "escudos", nombre = "Escudos", huecos = { escudo = true } },
-  { id = "accesorios", nombre = "Accesorios", huecos = { anillo = true, amuleto = true } },
-  { id = "mochilas", nombre = "Mochilas", huecos = { mochila = true } },
-  { id = "vender", nombre = "Vender" },
+-- La clériga vende solo pociones. El armero, armaduras y armas.
+local CAT_POCIONES = { id = "pociones", nombre = "Pociones" }
+local CAT_ARMAS = { id = "armas", nombre = "Armas", huecos = { arma = true } }
+local CAT_ARMADURA = { id = "armadura", nombre = "Armadura", huecos = { cabeza = true, pecho = true, piernas = true, pies = true } }
+local CAT_ESCUDOS = { id = "escudos", nombre = "Escudos", huecos = { escudo = true } }
+local CAT_ACCESORIOS = { id = "accesorios", nombre = "Accesorios", huecos = { anillo = true, amuleto = true } }
+local CAT_MOCHILAS = { id = "mochilas", nombre = "Mochilas", huecos = { mochila = true } }
+local CAT_VENDER = { id = "vender", nombre = "Vender" }
+local TIENDAS = {
+  mercado = { titulo = "Pociones", cats = { CAT_POCIONES, CAT_VENDER } },
+  armero = { titulo = "Armaduras y armas", cats = { CAT_ARMAS, CAT_ARMADURA, CAT_ESCUDOS, CAT_ACCESORIOS, CAT_MOCHILAS, CAT_VENDER } },
 }
 
 -- Lo que vende el mercado en una categoría, para tu clase y tu nivel.
@@ -2804,7 +3059,9 @@ function I.listaItemsClase(p, cat)
     return lista
   end
   local def
-  for _, c in ipairs(CATEGORIAS_MERCADO) do if c.id == cat then def = c end end
+  for _, tienda in pairs(TIENDAS) do
+    for _, c in ipairs(tienda.cats) do if c.id == cat then def = c end end
+  end
   if not def or not def.huecos then return {} end
   local lista = {}
   for id, it in pairs(Datos.items) do
@@ -2823,15 +3080,19 @@ function I.listaItemsClase(p, cat)
 end
 
 function I.panelMercado(p, w, h)
+  local tienda = TIENDAS[I.tienda] or TIENDAS.mercado
+  local cats = tienda.cats
   local px, py, pw, ph = w / 2 - 330, 60, 660, 560
-  caja(px, py, pw, ph, "Mercado")
+  caja(px, py, pw, ph, tienda.titulo)
   I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
   local f = pequena()
   love.graphics.setFont(f)
-  I.mercadoTab = I.mercadoTab or "pociones"
+  local tabOk = false
+  for _, c in ipairs(cats) do if c.id == I.mercadoTab then tabOk = true end end
+  if not tabOk then I.mercadoTab = cats[1].id end
   -- pestañas arriba
-  local tw = (pw - 20 - (#CATEGORIAS_MERCADO - 1) * 4) / #CATEGORIAS_MERCADO
-  for i, c in ipairs(CATEGORIAS_MERCADO) do
+  local tw = (pw - 20 - (#cats - 1) * 4) / #cats
+  for i, c in ipairs(cats) do
     local tx = px + 10 + (i - 1) * (tw + 4)
     local ty = py + 42
     local activa = I.mercadoTab == c.id

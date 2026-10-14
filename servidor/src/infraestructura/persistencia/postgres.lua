@@ -5,6 +5,7 @@ local Datos = require("compartido.dominio.datos")
 local Config = require("src.infraestructura.config")
 local Credenciales = require("src.aplicacion.credenciales")
 local aleatorio = require("src.infraestructura.aleatorio")
+local Sanciones = require("compartido.dominio.sanciones")
 
 local M = { nombre = "postgres" }
 
@@ -62,6 +63,8 @@ local function sentenciasDe(pid, ex, hp, mp)
     "vinculo_modo=" .. (v.x and Pg.literal(v.modo or "mundo") or "NULL"),
     "vinculo_x=" .. (v.x and real(v.x) or "NULL"), "vinculo_y=" .. (v.y and real(v.y) or "NULL"),
     "guardado=TRUE",
+    "diaria_ultimo=" .. ((type(ex.diaria) == "table" and ex.diaria.ultimo) and Pg.literal(ex.diaria.ultimo) or "NULL"),
+    "diaria_racha=" .. entero(type(ex.diaria) == "table" and ex.diaria.racha or 0),
     "autopocion=" .. Pg.literal(ex.autoPocion and true or false),
     "autopocion_umbral=" .. entero((tonumber(ex.autoPocionUmbral) or 0.5) * 100 + 0.5),
     "automana=" .. Pg.literal(ex.autoMana and true or false),
@@ -226,6 +229,13 @@ function M.abrir()
       datos TEXT NOT NULL DEFAULT '{}',
       creada TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS rol TEXT;
+    ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS ban_desde BIGINT;
+    ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS ban_hasta BIGINT;
+    ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS ban_motivo TEXT;
+    ALTER TABLE cuentas ADD COLUMN IF NOT EXISTS ban_por TEXT;
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS diaria_ultimo TEXT;
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS diaria_racha INT NOT NULL DEFAULT 0;
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS guardado BOOLEAN NOT NULL DEFAULT FALSE;
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS modo TEXT NOT NULL DEFAULT 'mundo';
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS z INT NOT NULL DEFAULT 0;
@@ -404,9 +414,9 @@ end
 local function con(fn)
   local conn, err = M.abrir()
   if not conn then return nil, err end
-  local a, b = fn(conn)
+  local a, b, c = fn(conn)
   conn:cerrar()
-  return a, b
+  return a, b, c
 end
 
 local function tokenNuevo()
@@ -452,7 +462,7 @@ function M.entrar(usuario, clave)
     )
     if not bloque then return nil, "No se pudo comprobar la cuenta." end
     if bloque[1] then return nil, "Demasiados intentos. Espera un minuto." end
-    local filas, err = conn:consulta("SELECT id, sal, clave FROM cuentas WHERE usuario = " .. Pg.literal(usuario))
+    local filas, err = conn:consulta("SELECT id, sal, clave, ban_desde, ban_hasta, ban_motivo, ban_por FROM cuentas WHERE usuario = " .. Pg.literal(usuario))
     if not filas then return nil, err end
     local row = filas[1]
     local acepta, migrar = false, false
@@ -470,6 +480,11 @@ function M.entrar(usuario, clave)
       "INSERT INTO intento_login (usuario, fallos, hasta) VALUES (" .. Pg.literal(usuario) ..
       ", 0, NULL) ON CONFLICT (usuario) DO UPDATE SET fallos = 0, hasta = NULL"
     )
+    if row.ban_desde and row.ban_desde ~= "" then
+      local ban = { hasta = tonumber(row.ban_hasta) or 0, motivo = row.ban_motivo, por = row.ban_por }
+      if Sanciones.vigente(ban) then return nil, Sanciones.mensaje(ban) end
+      conn:consulta("UPDATE cuentas SET ban_desde = NULL, ban_hasta = NULL, ban_motivo = NULL, ban_por = NULL WHERE id = " .. tonumber(row.id))
+    end
     if migrar then
       conn:consulta("UPDATE cuentas SET clave = " .. Pg.literal(Credenciales.cifrar(clave, row.sal)) .. " WHERE id = " .. tonumber(row.id))
     end
@@ -502,8 +517,8 @@ function M.crearPersonaje(cuentaId, nombre, faccion, clase)
     return nil, "El nombre del personaje usa 3 a 16 letras."
   end
   if faccion ~= "albor" and faccion ~= "umbra" then return nil, "Elige una facción." end
-  if clase ~= "guerrero" and clase ~= "mago" and clase ~= "cazador" and clase ~= "clerigo" then
-    return nil, "Elige un oficio."
+  if not Datos.claseValida(clase, faccion) then
+    return nil, "Elige un oficio de tu facción."
   end
   return con(function(conn)
     local cuenta = tonumber(cuentaId)
@@ -526,7 +541,7 @@ end
 function M.cargar(personajeId)
   return con(function(conn)
     local filas, err = conn:consulta(
-      "SELECT id, nombre, faccion, clase, nivel, xp, oro, monedas, regalo_mall, autopocion, autopocion_umbral, automana, automana_umbral, x, y, z, modo, hp, mp, guardado, " ..
+      "SELECT id, nombre, faccion, clase, nivel, xp, oro, monedas, regalo_mall, autopocion, autopocion_umbral, automana, automana_umbral, x, y, z, modo, hp, mp, guardado, diaria_ultimo, diaria_racha, " ..
       "vinculo_modo, vinculo_x, vinculo_y FROM personajes WHERE id = " .. tonumber(personajeId)
     )
     if not filas or not filas[1] then return nil, err or "No está ese personaje." end
@@ -540,6 +555,9 @@ function M.cargar(personajeId)
       x = tonumber(row.x), y = tonumber(row.y),
       hp = tonumber(row.hp), mp = tonumber(row.mp), dbId = pid,
     }
+    if row.diaria_ultimo and row.diaria_ultimo ~= "" then
+      datos.diaria = { ultimo = row.diaria_ultimo, racha = tonumber(row.diaria_racha) or 0 }
+    end
     -- Un personaje recién creado aún no se guardó: conserva el equipo inicial del mundo.
     if row.guardado == "t" then
       datos.guardado = true
@@ -640,12 +658,18 @@ function M.cuentaDeToken(token)
   if type(token) ~= "string" or #token < 16 then return nil, "Falta la sesión." end
   return con(function(conn)
     local ses, e = conn:consulta(
-      "SELECT s.cuenta_id, c.usuario FROM sesion_juego s JOIN cuentas c ON c.id = s.cuenta_id " ..
-      "WHERE s.token = " .. Pg.literal(token) .. " AND s.expira > now()"
+      "SELECT s.cuenta_id, c.usuario, c.rol, c.ban_desde, c.ban_hasta, c.ban_motivo, c.ban_por FROM sesion_juego s " ..
+      "JOIN cuentas c ON c.id = s.cuenta_id WHERE s.token = " .. Pg.literal(token) .. " AND s.expira > now()"
     )
     if not ses then return nil, e end
     if not ses[1] then return nil, "La sesión caducó. Entra de nuevo." end
-    return tonumber(ses[1].cuenta_id), ses[1].usuario
+    local f = ses[1]
+    if f.ban_desde and f.ban_desde ~= "" then
+      local ban = { hasta = tonumber(f.ban_hasta) or 0, motivo = f.ban_motivo, por = f.ban_por }
+      if Sanciones.vigente(ban) then return nil, Sanciones.mensaje(ban) end
+    end
+    local rol = (f.rol and f.rol ~= "") and f.rol or nil
+    return tonumber(f.cuenta_id), f.usuario, rol
   end)
 end
 
@@ -821,6 +845,87 @@ function M.guardarBuzon(dbId, lista)
     local _, err = conn:consulta(table.concat(q, ";\n"))
     if err then return nil, err end
     return true
+  end)
+end
+
+-- Roles (GM y CM) y baneos por cuenta. El usuario se busca sin distinguir mayúsculas.
+function M.rolDeCuenta(cuentaId)
+  return con(function(conn)
+    local f = conn:consulta("SELECT rol FROM cuentas WHERE id = " .. tonumber(cuentaId))
+    if not f or not f[1] or not f[1].rol or f[1].rol == "" then return nil end
+    return f[1].rol
+  end)
+end
+
+function M.fijarRol(usuario, rol)
+  if not Sanciones.rolValido(rol) then return nil, "Rol desconocido: usa gm, cm o ninguno." end
+  return con(function(conn)
+    local f, err = conn:consulta(
+      "UPDATE cuentas SET rol = " .. (rol and Pg.literal(rol) or "NULL") ..
+      " WHERE lower(usuario) = lower(" .. Pg.literal(tostring(usuario or "")) .. ") RETURNING usuario"
+    )
+    if not f then return nil, err end
+    if not f[1] then return nil, "No existe esa cuenta." end
+    return f[1].usuario
+  end)
+end
+
+function M.listarRoles()
+  return con(function(conn)
+    local f, err = conn:consulta("SELECT usuario, rol FROM cuentas WHERE rol IS NOT NULL AND rol <> '' ORDER BY usuario")
+    if not f then return nil, err end
+    local lista = {}
+    for _, r in ipairs(f) do lista[#lista + 1] = { usuario = r.usuario, rol = r.rol } end
+    return lista
+  end)
+end
+
+function M.banear(usuario, hasta, motivo, por)
+  return con(function(conn)
+    local f, err = conn:consulta(
+      "UPDATE cuentas SET ban_desde = " .. os.time() .. ", ban_hasta = " .. math.floor(tonumber(hasta) or 0) ..
+      ", ban_motivo = " .. Pg.literal(tostring(motivo or "")) .. ", ban_por = " .. Pg.literal(tostring(por or "")) ..
+      " WHERE lower(usuario) = lower(" .. Pg.literal(tostring(usuario or "")) .. ") RETURNING id, usuario"
+    )
+    if not f then return nil, err end
+    if not f[1] then return nil, "No existe esa cuenta." end
+    conn:consulta("DELETE FROM sesion_juego WHERE cuenta_id = " .. tonumber(f[1].id))
+    return f[1].usuario
+  end)
+end
+
+function M.desbanear(usuario)
+  return con(function(conn)
+    local f, err = conn:consulta(
+      "UPDATE cuentas SET ban_desde = NULL, ban_hasta = NULL, ban_motivo = NULL, ban_por = NULL " ..
+      "WHERE lower(usuario) = lower(" .. Pg.literal(tostring(usuario or "")) .. ") AND ban_desde IS NOT NULL RETURNING usuario"
+    )
+    if not f then return nil, err end
+    if not f[1] then return nil, "Esa cuenta no existe o no está baneada." end
+    return f[1].usuario
+  end)
+end
+
+function M.estadoBan(cuentaId)
+  return con(function(conn)
+    local f = conn:consulta("SELECT ban_hasta, ban_motivo, ban_por FROM cuentas WHERE id = " .. tonumber(cuentaId) .. " AND ban_desde IS NOT NULL")
+    if not f or not f[1] then return nil end
+    local ban = { hasta = tonumber(f[1].ban_hasta) or 0, motivo = f[1].ban_motivo, por = f[1].ban_por }
+    if not Sanciones.vigente(ban) then return nil end
+    return ban
+  end)
+end
+
+function M.listarBaneos()
+  return con(function(conn)
+    local f, err = conn:consulta("SELECT usuario, ban_hasta, ban_motivo, ban_por FROM cuentas WHERE ban_desde IS NOT NULL ORDER BY usuario")
+    if not f then return nil, err end
+    local lista = {}
+    for _, r in ipairs(f) do
+      local ban = { hasta = tonumber(r.ban_hasta) or 0 }
+      if Sanciones.vigente(ban) then lista[#lista + 1] = { usuario = r.usuario, hasta = ban.hasta, motivo = r.ban_motivo, por = r.ban_por } end
+    end
+    return lista
   end)
 end
 

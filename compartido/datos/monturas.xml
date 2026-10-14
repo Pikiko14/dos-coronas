@@ -11,5 +11,15 @@
   <montura id="lobo_guerra" nombre="Lobo de guerra" nivel="16" carga="0" desc="Pelaje de escarcha o de sombra. El más veloz entre árboles y caminos." precio="3600" vel="0.45" vida="380"/>
   <montura id="bisonte_guerra" nombre="Bisonte acorazado" nivel="20" carga="0" desc="Lento pero casi imposible de derribar: su vida es la más alta." precio="4800" vel="0.28" vida="1000"/>
   <montura id="corcel_fuego" nombre="Corcel de fuego" nivel="25" carga="0" desc="Dorado como el sol del Alba o rojo como el ascua del Ocaso. El más rápido." precio="7000" vel="0.5" vida="520"/>
+  <montura id="unicornio" nombre="Unicornio" nivel="14" carga="0" desc="Un unicornio de pelaje claro y cuerno dorado: deja un rastro de estrellas a su paso." precio="5200" vel="0.42" vida="420"/>
+  <montura id="lobo_ascua" nombre="Lobo de ascuas" nivel="18" carga="0" desc="Un lobo de pelaje al rojo vivo: arde sin quemar y deja llamas por el camino." precio="6800" vel="0.46" vida="400"/>
+  <montura id="lobo_escarcha" nombre="Lobo de escarcha" nivel="21" carga="0" desc="Un lobo de hielo: a su paso cae una nevada de cristales." precio="8800" vel="0.47" vida="420"/>
+  <montura id="toro_trueno" nombre="Toro del trueno" nivel="24" carga="0" desc="Un toro de pelaje de tormenta envuelto en rayos azules." precio="11000" vel="0.4" vida="900"/>
+  <montura id="pegaso" nombre="Pegaso" nivel="28" carga="0" desc="Un caballo alado de plumas blancas y azules: la montura más elegante de las cuadras." precio="15000" vel="0.52" vida="540"/>
+  <montura id="fenix" nombre="Fénix" nivel="1" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="800"/>
+  <montura id="corcel_astral" nombre="Corcel astral" nivel="1" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.52" vida="700"/>
+  <montura id="dragon_hielo" nombre="Dragón de hielo" nivel="1" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="1100"/>
+  <montura id="dragon_sombra" nombre="Dragón de sombra" nivel="1" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="1100"/>
+  <montura id="gargola_oro" nombre="Gárgola de oro" nivel="1" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.5" vida="900"/>
   <montura id="dragon" nombre="Dragón" nivel="1" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.55" vida="1200"/>
 </monturas>

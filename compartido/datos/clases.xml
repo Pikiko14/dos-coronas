@@ -1,27 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Las cuatro clases base: vida, maná, ataque, defensa y lo que crece por nivel (xxxN).
+  Las clases del juego: vida, maná, ataque, defensa y lo que crece por nivel (xxxN). orden = el de las tarjetas
+  de creación; faccion = clase exclusiva de esa facción (sin ella, la pueden elegir las dos).
   recorte/mano: partes del sprite antiguo; rango: alcance del ataque básico.
 -->
 <clases>
-  <clase id="guerrero" nombre="Guerrero" arma="espada" atk="15" atkN="2.3" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="fisico" danoMul="1" def="9" defN="1.5" desc="Aguanta el frente, parte a los enemigos en área y se lanza contra las líneas." hoja="humanos" hp="160" hpN="24" matk="4" matkN="0.5" mdef="3" mdefN="0.6" mp="50" mpN="4" porDir="1" rango="1.35" rol="Tanque y daño cuerpo a cuerpo" spd="4.4">
+  <clase id="guerrero" orden="1" nombre="Guerrero" arma="espada" atk="15" atkN="2.3" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="fisico" danoMul="1" def="9" defN="1.7" desc="Aguanta el frente, parte a los enemigos en área y se lanza contra las líneas." hoja="humanos" hp="160" hpN="24" matk="4" matkN="0.5" mdef="3" mdefN="0.6" mp="50" mpN="4" porDir="1" rango="1.35" rol="Tanque y daño cuerpo a cuerpo" spd="4.4">
     <recorte h="84" w="68" x="52" y="124">
       <mano x="14" y="34"/>
     </recorte>
   </clase>
-  <clase id="mago" nombre="Mago" arma="baston" atk="5" atkN="0.7" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="magico" danoMul="0.75" def="3" defN="0.5" desc="Quema y hiela desde lejos. Frágil, y devastador si lo dejan lanzar." hoja="humanos" hp="100" hpN="13" matk="17" matkN="2.7" mdef="8" mdefN="1.3" mp="150" mpN="18" porDir="1" rango="6.6" rol="Daño mágico a distancia" spd="4.5">
+  <clase id="mago" orden="2" nombre="Mago" arma="baston" atk="5" atkN="0.7" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="magico" danoMul="1" def="3" defN="0.6" desc="Quema y hiela desde lejos. Frágil, y devastador si lo dejan lanzar." hoja="humanos" hp="100" hpN="10" matk="17" matkN="2.7" mdef="8" mdefN="1.5" mp="160" mpN="24" porDir="1" rango="6.6" rol="Daño mágico a distancia" spd="4.5">
     <recorte h="84" w="68" x="340" y="20">
       <mano x="50" y="40"/>
     </recorte>
   </clase>
-  <clase id="cazador" nombre="Cazador" arma="arco" atk="16" atkN="2.5" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="fisico" danoMul="0.8" def="5" defN="0.8" desc="Dispara, coloca trampas y hace llover flechas sobre el campo." hoja="humanos" hp="118" hpN="15" matk="5" matkN="0.6" mdef="4" mdefN="0.7" mp="90" mpN="8" porDir="1" rango="6.8" rol="Daño físico a distancia" spd="4.9">
+  <clase id="cazador" orden="3" nombre="Cazador" arma="arco" atk="16" atkN="2.5" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="fisico" danoMul="0.8" def="5" defN="0.9" desc="Dispara, coloca trampas y hace llover flechas sobre el campo." hoja="humanos" hp="118" hpN="15" matk="5" matkN="0.6" mdef="4" mdefN="0.7" mp="90" mpN="8" porDir="1" rango="6.8" rol="Daño físico a distancia" spd="4.9">
     <recorte h="84" w="96" x="228" y="24">
       <mano x="52" y="50"/>
     </recorte>
   </clase>
-  <clase id="clerigo" nombre="Clérigo" arma="maza" atk="5" atkN="0.6" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="magico" danoMul="1" def="6" defN="1.2" desc="Cura y bendice a los suyos, y castiga con luz a quien se acerque." hoja="humanos" hp="128" hpN="17" matk="11" matkN="1.8" mdef="8" mdefN="1.4" mp="140" mpN="15" porDir="1" proyectil="true" rango="5.8" rol="Curación, apoyo y castigo" spd="4.55">
+  <clase id="clerigo" orden="4" nombre="Clérigo" arma="maza" atk="5" atkN="0.6" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="magico" danoMul="1" def="3" defN="0.6" desc="Cura y bendice a los suyos, y castiga con luz a quien se acerque." hoja="humanos" hp="128" hpN="10" matk="11" matkN="1.6" mdef="8" mdefN="1.5" mp="155" mpN="22" porDir="1" proyectil="true" rango="5.8" rol="Curación, apoyo y castigo" spd="4.55">
     <recorte h="88" w="68" x="56" y="220">
       <mano x="58" y="56"/>
+    </recorte>
+  </clase>
+  <clase id="lancero" orden="5" faccion="albor" nombre="Lancero" arma="lanza" atk="16" atkN="2.45" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="fisico" danoMul="1" def="8" defN="1.7" desc="Combate con la lanza: alcance largo, estocadas, embestidas y una lluvia de lanzas." hoja="humanos" hp="150" hpN="21" matk="4" matkN="0.5" mdef="3" mdefN="0.6" mp="70" mpN="5" porDir="1" rango="2.4" rol="Daño físico con alcance" spd="4.6">
+    <recorte h="84" w="68" x="52" y="124">
+      <mano x="14" y="34"/>
+    </recorte>
+  </clase>
+  <clase id="nigromante" orden="6" faccion="umbra" nombre="Nigromante" arma="baculo" atk="5" atkN="0.7" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="magico" danoMul="1" def="3" defN="0.6" desc="Maldice, drena la vida y alza esqueletos y espectros que luchan a su lado." hoja="humanos" hp="104" hpN="10" matk="16" matkN="2.6" mdef="8" mdefN="1.5" mp="175" mpN="26" porDir="1" proyectil="true" rango="6.6" rol="Maná, maldiciones y esbirros" spd="4.5">
+    <recorte h="84" w="68" x="340" y="20">
+      <mano x="50" y="40"/>
     </recorte>
   </clase>
 </clases>

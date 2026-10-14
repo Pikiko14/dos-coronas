@@ -1,4 +1,4 @@
--- Monturas de transporte: se compran en las cuadras (y en las posadas del camino), se montan con
+-- Monturas de transporte: se compran en las cuadras de las ciudades, se montan con
 -- una tecla y dan velocidad y/o capacidad de carga para las mercancías de los comerciantes.
 --   vel:   fracción extra de velocidad al ir montado.
 --   carga: unidades de mercancía extra que se pueden llevar.
@@ -121,7 +121,24 @@ function Mundo:comprarMontura(p, especie)
       self:recalcularCarga(p)
       return nil
     end
-    especie = especie or p.monturaPreferida or lista[1]
+    -- sin elegir una: la última usada si se puede usar ahora; si no, la primera que se pueda (las normales no piden oficio)
+    if not especie then
+      local function usable(id)
+        local de = M.especies[id]
+        if not de then return false end
+        if de.requiereOficio and not p.job then return false end
+        if de.oficio and p.job ~= de.oficio then return false end
+        local h = p.monturaCaida and p.monturaCaida[id]
+        return not (h and h > self.tiempo)
+      end
+      if p.monturaPreferida and usable(p.monturaPreferida) then especie = p.monturaPreferida
+      else
+        for _, id in ipairs(lista) do if usable(id) then especie = id break end end
+      end
+      if not especie and #lista > 0 then
+        return "Ahora no puedes montar ninguna: las de transporte piden el oficio activo y las heridas necesitan descansar."
+      end
+    end
     local d = M.especies[especie]
     local tiene = false
     for _, t in ipairs(lista) do if t == especie then tiene = true end end
@@ -147,6 +164,26 @@ function Mundo:comprarMontura(p, especie)
       self:recalcularCarga(p)
       self:mensaje("sistema", "", "Bajas de la montura de carga: solo se usa con el oficio activo.", p)
     end
+  end
+
+  -- Estado de cada montura que tienes, para la colección del cliente: lo que tardan en recuperarse y, en las de
+  -- transporte, su vida.
+  function Mundo:estadoMonturas(p)
+    local lista = {}
+    for _, id in ipairs(p.monturas or {}) do
+      local d = M.especies[id]
+      if d then
+        local e = {}
+        local hasta = p.monturaCaida and p.monturaCaida[id]
+        if hasta and hasta > self.tiempo then e.caida = math.ceil(hasta - self.tiempo) end
+        if d.requiereOficio then
+          local hp, max = self:vidaMontura(p, id)
+          e.hp, e.max = math.floor(hp), max
+        end
+        lista[id] = e
+      end
+    end
+    return lista
   end
 
   -- Bonos de la montura puesta.

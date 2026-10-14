@@ -39,6 +39,20 @@ E.def = {
   consagrar = { "Hechizo_consagrar", 1.15, 6, "add" },
   sanacion = { "Hechizo_sanacion", 1.15, 8, "add" },
   juicio = { "Hechizo_juicio", 0.8, 12, "add" },
+  -- lancero
+  estocada = { "Hechizo_estocada", 0.7, 20, "add" },
+  barrido = { "Hechizo_barrido", 0.95, 14, "add" },
+  muro_lanzas = { "Hechizo_muro_lanzas", 0.95, 8 },
+  embestida = { "Hechizo_embestida", 0.8, 20, "add" },
+  jabalina = { "Hechizo_jabalina", 0.7, 16, "add" },
+  tormenta_lanzas = { "Hechizo_tormenta_lanzas", 1.1, 6 },
+  -- nigromante (las hojas Necro_* son las del pack de efectos; el toque necrótico es propio)
+  toque_necro = { "Hechizo_toque_necro", 0.6, 20, "add" },
+  espinas = { "Necro_huesos", 0.95, 12 },
+  maldecir = { "Necro_maldicion", 0.7, 12 },
+  alzar_esqueletos = { "Necro_invocar", 0.85, 6 },
+  drenar = { "Necro_drenar", 0.8, 18, "add" },
+  espectro = { "Necro_alma", 0.7, 20, "add" },
   -- impactos de proyectiles y varios
   sagrado = { "Hechizo_castigo", 0.5, 20, "add" },
   flecha = { "Hechizo_disparo", 0.45, 20, "add" },
@@ -59,6 +73,12 @@ E.def = {
   aliento = { "Fire3", 0.6, 10, "add" },
   pisoton = { "Earth3", 0.35, 4 },
   -- poderes nuevos de cada oficio
+  -- nigromante: hojas de 5x3 cuadros de 192, igual que los hechizos
+  necro_huesos = { "Necro_huesos", 0.72, 16 },
+  necro_alma = { "Necro_alma", 0.62, 20, "add" },
+  necro_drenar = { "Necro_drenar", 0.7, 18, "add" },
+  necro_maldicion = { "Necro_maldicion", 0.7, 12 },
+  necro_invocar = { "Necro_invocar", 0.85, 6 },
 }
 
 local hojas = {}

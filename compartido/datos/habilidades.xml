@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
   Poderes de cada clase.
-  tipo: enemigo | alrededor | propio | punto | suelo | aliado | aliados | mixto | buff_alrededor.
+  tipo: enemigo | alrededor | propio | punto | suelo | aliado | aliados | mixto | buff_alrededor | invocar.
+  invocar: esbirro = id de esbirros.xml, cantidad y dur (segundos); lo que pegan sale del ataque mágico de quien invoca.
   cd = enfriamiento (s); mana; coef = potencia; rango y aoe en casillas; proyectil: misil, fuego, flecha, sagrado, sombra.
   estado: lo que aplica al golpear (tipo, prob, dur, pct).
 -->
@@ -22,18 +23,18 @@
     <efecto atk="0.3"/>
   </habilidad>
   <!-- ---- mago ---- -->
-  <habilidad id="misil" nombre="Misil arcano" clase="mago" tipo="enemigo" cd="1" coef="1.25" dano="magico" desc="Un dardo de energía." mana="8" proyectil="misil" rango="7.2">
-    <estado tipo="lentitud" dur="2" pct="0.3" prob="0.12"/>
+  <habilidad id="misil" nombre="Misil arcano" clase="mago" tipo="enemigo" cd="2" coef="1.25" dano="magico" desc="Un dardo de energía." mana="8" proyectil="misil" rango="7.2">
+    <estado tipo="lentitud" dur="3" pct="0.3" prob="0.15"/>
   </habilidad>
   <habilidad id="fuego" nombre="Bola de fuego" clase="mago" tipo="enemigo" aoe="1.8" cd="3" coef="1.55" dano="magico" desc="Estalla al impactar." mana="24" proyectil="fuego" rango="7.2">
-    <estado tipo="quemar" prob="0.3"/>
+    <estado tipo="quemar" prob="0.4"/>
   </habilidad>
-  <habilidad id="escudo" nombre="Escudo arcano" clase="mago" tipo="propio" buff="escudo" cd="14" desc="Absorbe parte del daño." dur="8" mana="20"/>
-  <habilidad id="nova" nombre="Nova de hielo" clase="mago" tipo="alrededor" cd="10" coef="1.4" dano="magico" desc="Hiela y ralentiza alrededor." lentitud="0.45" mana="50" rango="3.8"/>
-  <habilidad id="sombra" nombre="Descarga de sombras" clase="mago" tipo="enemigo" cd="6" coef="1.2" dano="magico" desc="Una descarga oscura que drena vida." mana="26" proyectil="sombra" rango="7">
-    <estado tipo="drenar_vida" prob="0.9"/>
+  <habilidad id="escudo" nombre="Escudo arcano" clase="mago" tipo="propio" buff="escudo" cd="15" desc="Absorbe parte del daño." dur="9" mana="50"/>
+  <habilidad id="nova" nombre="Nova de hielo" clase="mago" tipo="alrededor" cd="8" coef="1.5" dano="magico" desc="Hiela y ralentiza alrededor." lentitud="0.45" mana="50" rango="40"/>
+  <habilidad id="sombra" nombre="Descarga de sombras" clase="mago" tipo="enemigo" cd="5" coef="1.3" dano="magico" desc="Una descarga oscura que drena vida." mana="40" proyectil="sombra" rango="7">
+    <estado tipo="drenar_vida" prob="0.5"/>
   </habilidad>
-  <habilidad id="meteoro" nombre="Meteoro" clase="mago" tipo="punto" aoe="2.6" cd="22" coef="2.3" dano="magico" desc="Una roca en llamas cae sobre la zona." mana="45" rango="8">
+  <habilidad id="meteoro" nombre="Meteoro" clase="mago" tipo="punto" aoe="2.6" cd="22" coef="2.5" dano="magico" desc="Una roca en llamas cae sobre la zona." mana="45" rango="8">
     <estado tipo="quemar" dur="5" prob="0.6"/>
   </habilidad>
   <!-- ---- cazador ---- -->
@@ -64,11 +65,41 @@
   </habilidad>
   <habilidad id="sanacion" nombre="Luz sanadora" clase="clerigo" tipo="aliados" cd="15" cura="22" curaN="4" desc="Cura a todos los aliados cercanos." mana="38" rango="4.5"/>
   <habilidad id="juicio" nombre="Juicio divino" clase="clerigo" tipo="enemigo" aturde="1.2" cd="16" coef="2.3" dano="magico" desc="Un haz de luz que hiere y aturde." mana="34" proyectil="sagrado" rango="6.4"/>
+  <!-- ---- lancero ---- -->
+  <habilidad id="estocada" nombre="Estocada" clase="lancero" tipo="enemigo" cd="1.3" coef="1.12" desc="Una estocada larga con la lanza." mana="9" rango="2.5">
+    <estado tipo="sangrar" prob="0.1"/>
+  </habilidad>
+  <habilidad id="barrido" nombre="Barrido" clase="lancero" tipo="alrededor" cd="8" coef="1.6" lentitud="0.3" desc="Barres con el asta a todos los enemigos cercanos y los frenas." mana="16" rango="3.1"/>
+  <habilidad id="muro_lanzas" nombre="Muro de lanzas" clase="lancero" tipo="propio" buff="escudo" cd="18" desc="Levantas un muro de lanzas que absorbe parte del daño." dur="9" mana="22"/>
+  <habilidad id="embestida" nombre="Embestida" clase="lancero" tipo="enemigo" aturde="0.7" cd="11" coef="0.85" dash="true" desc="Cargas con la lanza por delante y aturdes un instante." mana="14" rango="6"/>
+  <habilidad id="jabalina" nombre="Jabalina" clase="lancero" tipo="enemigo" cd="6" coef="1.55" desc="Lanzas una jabalina a distancia que deja una herida." mana="18" proyectil="lanza" rango="7.2">
+    <estado tipo="sangrar" dur="5" prob="0.5"/>
+  </habilidad>
+  <habilidad id="tormenta_lanzas" nombre="Tormenta de lanzas" clase="lancero" tipo="punto" aoe="2.6" cd="22" coef="2.2" desc="Una lluvia de lanzas cae sobre la zona." mana="40" rango="7.5">
+    <estado tipo="sangrar" dur="5" prob="0.5"/>
+  </habilidad>
+  <!-- ---- nigromante ---- -->
+  <habilidad id="toque_necro" nombre="Toque necrótico" clase="nigromante" tipo="enemigo" cd="2" coef="1.2" dano="magico" desc="Una bola de energía muerta que hiere y a veces drena vida." mana="7" proyectil="necro" rango="7.2">
+    <estado tipo="drenar_vida" prob="0.1"/>
+  </habilidad>
+  <habilidad id="espinas" nombre="Espinas de hueso" clase="nigromante" tipo="punto" aoe="2.2" cd="8" coef="1.5" dano="magico" desc="Brotan huesos afilados del suelo y desgarran la zona." mana="22" rango="7.5">
+    <estado tipo="sangrar" dur="5" prob="0.5"/>
+  </habilidad>
+  <habilidad id="maldecir" nombre="Maldición" clase="nigromante" tipo="enemigo" cd="12" coef="0.7" dano="magico" desc="Un sello maldito frena y debilita al objetivo." mana="20" rango="7">
+    <estado tipo="lentitud" dur="6" pct="0.5" prob="1"/>
+  </habilidad>
+  <habilidad id="alzar_esqueletos" nombre="Alzar esqueletos" clase="nigromante" tipo="invocar" esbirro="esqueleto" cantidad="2" dur="32" cd="20" desc="Dos esqueletos salen de la tierra y luchan a tu lado un buen rato." mana="38"/>
+  <habilidad id="drenar" nombre="Drenar vida" clase="nigromante" tipo="enemigo" cd="8" coef="1.4" dano="magico" desc="Un torbellino que roba la vida del objetivo." mana="26" rango="7">
+    <estado tipo="drenar_vida" dur="4" prob="1"/>
+  </habilidad>
+  <habilidad id="espectro" nombre="Alma en pena" clase="nigromante" tipo="invocar" esbirro="espectro" cantidad="1" dur="38" cd="34" desc="Un espectro fiel dispara descargas de sombra a tus enemigos." mana="60"/>
   <!-- ---- orden de los poderes en la barra (teclas 1 a 6) ---- -->
   <barra>
     <cazador lista="disparo,lluvia,trampa,preciso,flecha_veneno,paso_agil"/>
     <clerigo lista="curar,bendicion,castigo,consagrar,sanacion,juicio"/>
     <guerrero lista="golpe,tajo,grito,carga,desgarro,furia"/>
     <mago lista="misil,fuego,escudo,nova,sombra,meteoro"/>
+    <lancero lista="estocada,barrido,muro_lanzas,embestida,jabalina,tormenta_lanzas"/>
+    <nigromante lista="toque_necro,espinas,maldecir,alzar_esqueletos,drenar,espectro"/>
   </barra>
 </habilidades>

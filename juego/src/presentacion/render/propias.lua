@@ -266,6 +266,30 @@ local function montura(idx, extra)
   return d
 end
 
+-- Cuerno dorado del unicornio: en el centro de la frente de frente, hacia delante y arriba de lado.
+local function cuernoUnicornio(fila, col)
+  if fila == 3 then return end
+  local function X(x) return fila == 2 and (31 - x) or x end
+  love.graphics.setLineWidth(1)
+  if fila == 0 then
+    local cuerpo = { 14.4, 6.4, 17.6, 6.4, 16, 0 }
+    poli(cuerpo, 1, 0.84, 0.28)
+    poli({ 15.2, 6, 16, 1, 16.4, 6 }, 1, 0.97, 0.72, 0.9)
+    contorno(cuerpo, 0.5, 0.3, 0.05)
+    love.graphics.setColor(0.8, 0.52, 0.1, 1)
+    love.graphics.line(14.9, 4.8, 17.1, 3.8)
+    love.graphics.line(15.4, 3, 16.7, 2.3)
+  else
+    local cuerpo = { X(6.5), 6.6, X(9.8), 4.4, X(1.2), 0.2 }
+    poli(cuerpo, 1, 0.84, 0.28)
+    poli({ X(7), 6, X(2.4), 1, X(8.2), 4.8 }, 1, 0.97, 0.72, 0.9)
+    contorno(cuerpo, 0.5, 0.3, 0.05)
+    love.graphics.setColor(0.8, 0.52, 0.1, 1)
+    love.graphics.line(X(6.6), 5.2, X(8.2), 6.2)
+    love.graphics.line(X(4.8), 3.6, X(6.2), 4.8)
+  end
+end
+
 local DISENOS = {
   hada_cristal = { hoja = "Characters/Spiritual.png", idx = 1, modo = 0, detras = { alasHada }, delante = { tiaraHada, brillosHada } },
   caballero_solar = { hoja = "Characters/People4.png", idx = 6, modo = 1, detras = { auraSol }, delante = { emblemaSol, penacho, brillosSol } },
@@ -293,6 +317,28 @@ local DISENOS = {
   montura_fuego_umbra = montura(5, { ra = { 0.03, 0.16, -0.075, 1.3 }, va = 0.75, rb = { 0.9, 0.03, -0.2, 1.0 }, vb = 1.1 }),
 }
 
+-- Monturas vistosas nuevas (la cuadra y el Item Mall): cada una parte de un animal del pack recoloreado con el
+-- sombreador y es igual para las dos facciones. Sus efectos (alas, aura y partículas) los pone
+-- render/monturas_fx.lua. Parámetros como en las demás: ra/rb = reglas de tono, va/vb = brillo, neutro = color de
+-- grises y blancos.
+local function nueva(id, idx, extra)
+  DISENOS["montura_" .. id .. "_albor"] = montura(idx, extra)
+  DISENOS["montura_" .. id .. "_umbra"] = montura(idx, extra)
+end
+-- caballo (Animal 5): pelaje pardo (tonos 0.03-0.16) y silla roja (0.9-0.03)
+nueva("unicornio", 5, { ra = { 0.03, 0.16, 0.0, 0.1 }, va = 1.8, rb = { 0.9, 0.03, 0.11, 1.1 }, vb = 1.25, neutro = { 1.1, 1.1, 1.25 }, plus = 0.05, delante = { cuernoUnicornio } })
+nueva("pegaso", 5, { ra = { 0.03, 0.16, 0.5, 0.22 }, va = 1.75, rb = { 0.9, 0.03, 0.11, 1.0 }, vb = 1.2, neutro = { 1.0, 1.1, 1.3 }, plus = 0.05 })
+nueva("fenix", 5, { ra = { 0.03, 0.16, -0.02, 2.4 }, va = 1.45, rb = { 0.9, 0.03, 0.14, 1.3 }, vb = 1.5, neutro = { 1.4, 0.9, 0.5 }, plus = 0.04 })
+nueva("corcel_astral", 5, { ra = { 0.03, 0.16, 0.72, 1.2 }, va = 0.55, rb = { 0.9, 0.03, 0.55, 1.2 }, vb = 1.6, neutro = { 0.55, 0.5, 0.95 }, plus = 0.03 })
+-- lobo (Animal 6) y toro (Animal 4): casi todo grises, se tiñen con el multiplicador de neutros
+nueva("lobo_ascua", 6, { neutro = { 1.7, 0.78, 0.45 }, plus = 0.04 })
+nueva("lobo_escarcha", 6, { neutro = { 0.85, 1.2, 1.5 }, plus = 0.14 })
+nueva("toro_trueno", 4, { neutro = { 0.5, 0.58, 1.2 }, plus = 0.02, ra = { 0.03, 0.16, 0.55, 1.2 }, va = 0.9 })
+-- dragones (Monster2: 5 rojo, 1 verde) y gárgola (Monster1 3): grandes, como el dragón del mall
+nueva("dragon_hielo", 5, { hoja = "Characters/Monster2.png", ra = { 0.9, 0.16, 0.5, 0.9 }, va = 1.25, rb = { 0.5, 0.75, 0.0, 1.0 }, vb = 1.1, neutro = { 0.9, 1.1, 1.3 }, plus = 0.08 })
+nueva("dragon_sombra", 1, { hoja = "Characters/Monster2.png", ra = { 0.18, 0.5, 0.55, 0.85 }, va = 0.55, rb = { 0.5, 0.75, 0.0, 1.0 }, vb = 0.8, neutro = { 0.5, 0.45, 0.7 } })
+nueva("gargola_oro", 3, { hoja = "Characters/Monster1.png", ra = { 0.4, 0.62, -0.33, 1.3 }, va = 1.25, rb = { 0.7, 0.99, 0.0, 1.0 }, vb = 1.0, neutro = { 1.3, 1.1, 0.6 }, plus = 0.03 })
+
 -- Hoja de 96 x 128 del personaje (imagen lista para dibujar con quads de 32 x 32).
 function P.hoja(id)
   if cache[id] then return cache[id] end
@@ -302,6 +348,8 @@ function P.hoja(id)
   local cv = love.graphics.newCanvas(96, 128)
   local anterior = love.graphics.getCanvas()
   love.graphics.push("all")
+  -- sin el recorte de pantalla de quien nos llama (si no, la hoja se genera recortada y queda vacía)
+  love.graphics.setScissor()
   love.graphics.setCanvas(cv)
   love.graphics.clear(0, 0, 0, 0)
   love.graphics.origin()

@@ -57,6 +57,7 @@ end
 local DIVISOR_PRESION = 300 -- segundos en recuperar buena parte de la presión de oferta/demanda
 
 function M.instalar(Mundo)
+  local SOLO_CIUDADES = "Aquí no se comercia: las mercancías solo se compran y se entregan en las ciudades."
   -- ------------------------------------------------------------------ sitios de comercio
   function Mundo:sitiosComercio()
     if self._sitios then return self._sitios end
@@ -64,14 +65,6 @@ function M.instalar(Mundo)
     local lista = {}
     for _, c in ipairs(mapa.ciudades) do
       lista[#lista + 1] = { id = c.id, nombre = c.nombre, x = c.x + c.w / 2, y = c.y + c.h / 2, tipo = "ciudad" }
-    end
-    for _, pu in ipairs(mapa.puestos or {}) do
-      for _, n in ipairs(pu.npcs) do
-        if n.rol == "comercio" then
-          lista[#lista + 1] = { id = "puesto" .. pu.id, nombre = pu.nombre, x = pu.x, y = pu.y, tipo = "puesto" }
-          break
-        end
-      end
     end
     for _, s in ipairs(lista) do s.perfil = M.perfilDe(s.id) end
     self._sitios = lista
@@ -95,10 +88,13 @@ function M.instalar(Mundo)
       end
     end
     if not mejor then return nil end
-    local s, sd = nil, 60
+    -- el sitio del mercader: la ciudad cuyas murallas lo rodean o el puesto donde está (un puesto cercano a una
+    -- ciudad no cuenta como ella)
+    local s, sd = nil, 1e9
     for _, sitio in ipairs(self:sitiosComercio()) do
       local d = Util.dist(mejor.x, mejor.y, sitio.x, sitio.y)
-      if d < sd then s, sd = sitio, d end
+      local limite = sitio.tipo == "ciudad" and 40 or 10
+      if d < limite and d < sd then s, sd = sitio, d end
     end
     return s
   end
@@ -278,6 +274,7 @@ function M.instalar(Mundo)
     if p.job ~= "trader" then return self:avisoOficio(p, "trader", "Solo los comerciantes compran mercancías.") end
     local sitio = self:sitioCerca(p)
     if not sitio then return "Acércate a un mercader mayor." end
+    if sitio.tipo ~= "ciudad" then return SOLO_CIUDADES end
     if not M.BIENES[bien] then return "Esa mercancía no existe." end
     cant = math.floor(tonumber(cant) or 0)
     if cant < 1 then return nil end
@@ -317,13 +314,15 @@ function M.instalar(Mundo)
   -- Distancia entre dos sitios: premia los trayectos largos.
   local function bonoDistancia(a, b)
     if not a or not b then return 0 end
-    return math.min(0.5, Util.dist(a.x, a.y, b.x, b.y) / 1500)
+    return math.min(M.DIST_BONO_MAX, Util.dist(a.x, a.y, b.x, b.y) * M.DIST_BONO)
   end
+
 
   function Mundo:venderBien(p, bien, cant)
     if p.job ~= "trader" then return self:avisoOficio(p, "trader", "Solo los comerciantes venden mercancías.") end
     local sitio = self:sitioCerca(p)
     if not sitio then return "Acércate a un mercader mayor." end
+    if sitio.tipo ~= "ciudad" then return SOLO_CIUDADES end
     local tengo = p.carga and p.carga[bien] or 0
     cant = math.min(math.floor(tonumber(cant) or 0), tengo)
     if cant < 1 then return "No llevas eso." end
@@ -361,6 +360,7 @@ function M.instalar(Mundo)
   function Mundo:infoMercancias(p)
     local sitio = self:sitioCerca(p)
     if not sitio then return { lejos = true } end
+    if sitio.tipo ~= "ciudad" then return { soloCiudades = true, sitio = sitio.nombre } end
     local bienes = {}
     for _, id in ipairs(M.ORDEN_BIENES) do
       local etiqueta
@@ -369,6 +369,9 @@ function M.instalar(Mundo)
       bienes[#bienes + 1] = {
         id = id, nombre = M.BIENES[id].nombre, compra = self:precioBien(sitio, id, true),
         venta = self:precioBien(sitio, id, false), tengo = p.carga and p.carga[id] or 0, etiqueta = etiqueta,
+        -- lo que suma a la entrega la distancia desde donde se compró (en %)
+        bono = (p.carga and (p.carga[id] or 0) > 0 and p.origenCarga and p.origenCarga[id])
+          and math.floor(bonoDistancia(self:sitioPorId(p.origenCarga[id]), sitio) * 100 + 0.5) or nil,
       }
     end
     self:recalcularCarga(p)

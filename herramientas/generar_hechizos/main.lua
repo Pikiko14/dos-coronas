@@ -799,6 +799,191 @@ EF.juicio = function(t)
   end
 end
 
+local abs = math.abs
+-- Lancero (Alba) y Nigromante (Ocaso) ---------------------------------------------------------
+local NECRO1, NECRO2 = { 0.15, 0.85, 0.4 }, { 0.8, 1, 0.75 }
+local HUESO = { 0.95, 0.93, 0.8 }
+local AZUL1, AZUL2 = { 0.35, 0.6, 1 }, { 0.85, 0.95, 1 }
+local MADERA = { 0.72, 0.5, 0.26 }
+
+-- Lanza dibujada con la punta en (x, y) y el asta hacia atrás (ang = hacia donde apunta).
+local function lanzaDib(x, y, ang, largo, a, c2)
+  if a <= 0 then return end
+  local ca, sa = cos(ang), sin(ang)
+  local px, py = -sa, ca
+  linea(x - ca * largo, y - sa * largo, x - ca * 8, y - sa * 8, 3.2, MADERA, a)
+  linea(x - ca * largo, y - sa * largo, x - ca * (largo - 7), y - sa * (largo - 7), 3.6, { 0.55, 0.6, 0.7 }, a)
+  color(ACERO, a)
+  love.graphics.polygon("fill", x, y, x - ca * 9 + px * 4.5, y - sa * 9 + py * 4.5, x - ca * 7, y - sa * 7, x - ca * 9 - px * 4.5, y - sa * 9 - py * 4.5)
+  color({ 1, 1, 1 }, a * 0.95)
+  love.graphics.polygon("fill", x, y, x - ca * 6 + px * 1.6, y - sa * 6 + py * 1.6, x - ca * 6 - px * 1.6, y - sa * 6 - py * 1.6)
+  linea(x - ca * 8, y - sa * 8, x - ca * 11 + px * 5, y - sa * 11 + py * 5, 2, ORO, a)
+  linea(x - ca * 8, y - sa * 8, x - ca * 11 - px * 5, y - sa * 11 - py * 5, 2, ORO, a)
+  glow(x, y, 11, c2 or AZUL1, a * 0.5)
+end
+
+EF.estocada = function(t)
+  local a = t < 0.65 and 1 or (1 - t) / 0.35
+  local prog = ease(min(1, t / 0.32))
+  local x, y = 24 + 72 * prog, 24 + 72 * prog
+  for k = 1, 7 do
+    local g = k / 7
+    glow(x - 18 * g * 3.2, y - 18 * g * 3.2, 14 * (1 - g * 0.6), AZUL1, 0.5 * (1 - g) * (t < 0.5 and 1 or (1 - t) * 2))
+  end
+  lanzaDib(x, y, pi / 4, 70, a * (t < 0.5 and 1 or 1 - (t - 0.5) / 0.5 * 0.6))
+  if t > 0.28 then
+    local u = (t - 0.28) / 0.72
+    local e = ease(u)
+    glow(96, 96, 16 + 40 * e, AZUL2, 0.7 * (1 - u))
+    anillo(96, 96, 8 + 44 * e, 4 * (1 - u) + 0.8, AZUL2, 1 - u)
+    for i = 0, 7 do
+      local ang = i * pi / 4 + 0.3
+      linea(96 + cos(ang) * (10 + 26 * e), 96 + sin(ang) * (10 + 26 * e), 96 + cos(ang) * (18 + 46 * e), 96 + sin(ang) * (18 + 46 * e), 3 * (1 - u) + 0.6, { 1, 1, 1 }, 1 - u)
+    end
+    destello(96, 96, 14 + 30 * (1 - u), 0.5, AZUL1, 1 - u)
+  end
+end
+
+EF.barrido = function(t)
+  local a = t < 0.6 and 1 or (1 - t) / 0.4
+  local prog = ease(min(1, t / 0.5))
+  local a0, a1 = -2.3, -2.3 + 4.6 * prog
+  glow(96, 96, 70, AZUL1, 0.18 * a)
+  for capa = 0, 3 do
+    local r = 58 + capa * 6
+    local n = 36
+    for i = 0, n - 1 do
+      local g0, g1 = i / n, (i + 1) / n
+      local an0, an1 = a0 + (a1 - a0) * g0, a0 + (a1 - a0) * g1
+      local w = (4 + 12 * sin(pi * g0) ^ 0.8) * (1 - capa * 0.22) * (0.25 + 0.75 * g0)
+      linea(96 + cos(an0) * r, 96 + sin(an0) * r * 0.7, 96 + cos(an1) * r, 96 + sin(an1) * r * 0.7, w,
+        capa == 0 and { 1, 1, 1 } or (capa == 1 and AZUL2 or AZUL1), a * (0.35 + 0.65 * g0) * (1 - capa * 0.2))
+    end
+  end
+  local tx, ty = 96 + cos(a1) * 58, 96 + sin(a1) * 58 * 0.7
+  lanzaDib(tx, ty, a1 + pi / 2, 54, a)
+  chispas(8, 96, 96, 20, 80, t, AZUL2, 21, 6, 1)
+end
+
+EF.muro_lanzas = function(t)
+  local a = t < 0.75 and 1 or (1 - t) / 0.25
+  local h = 52 * ease(min(1, t / 0.35))
+  glow(96, 134, 76, AZUL1, 0.35 * a)
+  elipseAnillo(96, 134, 66, 24, 3, AZUL2, 0.7 * a)
+  local n = 12
+  for pasada = 0, 1 do
+    for i = 0, n - 1 do
+      local ang = i * 2 * pi / n
+      local atras = sin(ang) < 0
+      if (pasada == 0) == atras then
+        local x, y = 96 + cos(ang) * 64, 134 + sin(ang) * 22
+        lanzaDib(x, y - h, -pi / 2, 40 + h * 0.5, a)
+      end
+    end
+  end
+  if t > 0.3 then
+    local u = (t - 0.3) / 0.7
+    elipseAnillo(96, 96, 62, 70, 2, AZUL2, 0.3 * (1 - u) * a)
+    destello(96, 60, 12 + 6 * sin(t * 18), t * 3, AZUL2, a * 0.8)
+  end
+end
+
+EF.embestida = function(t)
+  local a = t < 0.7 and 1 or (1 - t) / 0.3
+  local prog = ease(min(1, t / 0.4))
+  local x = 20 + 120 * prog
+  -- estelas de velocidad
+  for i = 0, 8 do
+    local y = 96 + (i - 4) * 9
+    local l = 40 + azar(i, 61) * 60
+    linea(x - l - 20, y, x - 12 - azar(i, 62) * 12, y, 2.5 * (1 - abs(i - 4) / 6), i % 2 == 0 and { 1, 1, 1 } or AZUL2, a * (0.4 + 0.5 * (1 - abs(i - 4) / 5)))
+  end
+  glow(x, 96, 30, AZUL1, 0.5 * a)
+  lanzaDib(x + 16, 96, 0, 64, a)
+  -- onda de choque cónica
+  for k = 0, 2 do
+    local u = clamp((t - 0.25 - k * 0.07) / 0.5, 0, 1)
+    if u > 0 then
+      local px = 20 + 120 * ease(min(1, 0.25 / 0.4)) + 20
+      anillo(px + 22 * u, 96, 8 + 40 * ease(u), 4 * (1 - u) + 0.8, AZUL2, (1 - u) * a)
+    end
+  end
+  chispas(7, x + 14, 96, 6, 44, clamp((t - 0.2) / 0.8, 0, 1), AZUL2, 77, 6, 1)
+end
+
+EF.jabalina = function(t)
+  local a = t < 0.7 and 1 or (1 - t) / 0.3
+  local prog = ease(min(1, t / 0.3))
+  local x, y = 40 + 56 * prog, 56 + 40 * prog
+  if t < 0.45 then lanzaDib(x, y, 0.65, 60, 1) end
+  if t >= 0.25 then
+    local u = (t - 0.25) / 0.75
+    local e = ease(u)
+    lanzaDib(96, 98, 0.65, 54, a)
+    glow(96, 98, 14 + 44 * e, ORO, 0.7 * (1 - u))
+    anillo(96, 100, 6 + 52 * e, 4 * (1 - u) + 0.8, { 1, 0.95, 0.6 }, 1 - u)
+    elipseAnillo(96, 104, 10 + 60 * e, 4 + 20 * e, 2, AZUL2, (1 - u) * 0.8)
+    destello(96, 98, 12 + 30 * (1 - u), 0.5, ORO, 1 - u)
+    chispas(8, 96, 98, 8, 62, u, ORO, 83, 5, 1)
+  end
+end
+
+EF.tormenta_lanzas = function(t)
+  local n = 14
+  glow(96, 120, 78, AZUL1, 0.22 * (t < 0.8 and 1 or (1 - t) / 0.2))
+  elipseAnillo(96, 120, 70, 34, 2, AZUL2, 0.5 * (t < 0.8 and 1 or (1 - t) / 0.2))
+  for i = 1, n do
+    local ang = azar(i, 91) * pi * 2
+    local r = sqrt(azar(i, 92)) * 68
+    local tx, ty = 96 + cos(ang) * r, 122 + sin(ang) * r * 0.45
+    local salida = 0.04 + azar(i, 93) * 0.5
+    local u = (t - salida) / 0.22
+    if u > 0 then
+      local caida = ease(min(1, u))
+      local y = ty - 130 * (1 - caida)
+      local a = t < 0.78 and 1 or (1 - t) / 0.22
+      if u < 1 then
+        linea(tx - 1, y - 60, tx - 1, y - 20, 2, AZUL2, 0.35 * a)
+      else
+        local w = clamp((u - 1) / 0.6, 0, 1)
+        anillo(tx, ty, 3 + 16 * w, 2.4 * (1 - w) + 0.5, AZUL2, (1 - w) * a)
+        glow(tx, ty, 6 + 12 * w, AZUL1, 0.6 * (1 - w) * a)
+      end
+      lanzaDib(tx, y, pi / 2 + 0.05, 46, a)
+    end
+  end
+end
+
+-- Nigromante ----------------------------------------------------------------------------------
+local function calavera(x, y, r, a, c)
+  if a <= 0 then return end
+  color(c or HUESO, a)
+  love.graphics.circle("fill", x, y, r)
+  love.graphics.rectangle("fill", x - r * 0.55, y + r * 0.4, r * 1.1, r * 0.9, 2, 2)
+  color({ 0.04, 0.02, 0.06 }, a)
+  love.graphics.circle("fill", x - r * 0.38, y - r * 0.05, r * 0.28)
+  love.graphics.circle("fill", x + r * 0.38, y - r * 0.05, r * 0.28)
+  love.graphics.polygon("fill", x, y + r * 0.2, x - r * 0.12, y + r * 0.5, x + r * 0.12, y + r * 0.5)
+  color(NECRO2, a)
+  love.graphics.circle("fill", x - r * 0.38, y - r * 0.05, r * 0.11)
+  love.graphics.circle("fill", x + r * 0.38, y - r * 0.05, r * 0.11)
+end
+
+EF.toque_necro = function(t)
+  local a = 1 - t
+  local e = ease(t)
+  glow(96, 100, 20 + 60 * e, NECRO1, 0.7 * a)
+  glow(96, 100, 10 + 24 * (1 - t), NECRO2, a)
+  anillo(96, 100, 8 + 52 * e, 4 * (1 - t) + 1, NECRO2, a)
+  calavera(96, 96 - 26 * e, 10 + 14 * sin(pi * t), sin(pi * min(1, t * 1.2)) * 0.95)
+  for i = 0, 6 do
+    local ang = i * pi * 2 / 7 + t * 4
+    local r = 14 + 46 * e
+    glow(96 + cos(ang) * r, 100 + sin(ang) * r * 0.7 - 20 * e, 7 * (1 - t * 0.5), NECRO1, 0.8 * a)
+  end
+  chispas(8, 96, 100, 16, 70, t, NECRO2, 101, 5, 1)
+end
+
 -- ----------------------------------------------------------------------------- proyectiles
 -- Cuadros de 64x64, el proyectil mira a la derecha y su centro es (40, 32).
 local PR = {}
@@ -869,6 +1054,32 @@ PR.sombra = function(f)
   for k = 0, 2 do
     local ang = -t * pi * 2 + k * 2.1
     glow(42 + cos(ang) * 11, 32 + sin(ang) * 11, 3, { 0.9, 0.6, 1 }, 0.9)
+  end
+end
+
+
+PR.lanza = function(f)
+  local t = f / 4
+  for k = 1, 6 do
+    local g = k / 6
+    glow(34 - 24 * g, 32, 9 * (1 - g * 0.6), AZUL1, 0.55 * (1 - g))
+  end
+  for k = 1, 3 do linea(30 - k * 6, 32 + (k - 2) * 3, 12 - k * 3, 32 + (k - 2) * 3, 1.4, { 1, 1, 1 }, 0.35 / k) end
+  lanzaDib(56, 32, 0, 46, 1)
+  glow(56, 32, 8, AZUL2, 0.5 + 0.2 * sin(t * 6.28))
+end
+
+PR.necro = function(f)
+  local t = f / 4
+  for k = 1, 9 do
+    local g = k / 9
+    glow(40 - 30 * g, 32 + sin(g * 8 + t * 6.28) * 4, 8 * (1 - g * 0.5), NECRO1, 0.6 * (1 - g))
+  end
+  glow(42, 32, 16, NECRO1, 0.8)
+  calavera(43, 32, 7.5, 1)
+  for k = 0, 2 do
+    local ang = -t * pi * 2 + k * 2.1
+    glow(43 + cos(ang) * 11, 32 + sin(ang) * 11, 3, NECRO2, 0.9)
   end
 end
 

@@ -203,6 +203,18 @@ function Red.escuchar(puerto)
       end
     end
   end
+  -- Manda un último mensaje a una conexión y la cierra en cuanto se vacía su cola (o tras unos intentos).
+  function srv:desconectar(id, tabla)
+    for _, c in ipairs(self.clientes) do
+      if c.id == id then
+        if tabla then
+          c.cola = c.cola or {}
+          enviarRaw(c.sock, Util.jsonEnc(tabla) .. "\n", c.cola)
+        end
+        c.cerrar = 0
+      end
+    end
+  end
   function srv:actualizar()
     local eventos = {}
     while true do
@@ -218,6 +230,10 @@ function Red.escuchar(puerto)
     local vivos = {}
     for _, c in ipairs(self.clientes) do
       local bien, cod = bombear(c.sock, c)
+      if bien and c.cerrar then
+        c.cerrar = c.cerrar + 1
+        if #(c.cola or {}) == 0 or c.cerrar > 20 then bien, cod = false, "expulsado" end
+      end
       if not bien then
         ws2.closesocket(c.sock)
         eventos[#eventos + 1] = { tipo = "cierra", id = c.id, codigo = cod }

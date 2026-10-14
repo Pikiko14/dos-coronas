@@ -11,6 +11,12 @@
 --   /admin anuncio <texto>               aviso a todo el mundo
 --   /admin dios                          invulnerable (activar/desactivar)
 --   /admin jugadores                     quién está conectado
+--   /admin kick <jugador> [motivo]       expulsa a un jugador
+--   /admin silenciar <jugador> <minutos> silencia el chat (0 lo quita)
+--   /admin ban <usuario|jugador> <30m|2h|3d|perm> <motivo>   banea la cuenta  (/admin desban <usuario> | baneos)
+--   /admin rol <usuario> <gm|cm|ninguno> asigna el rol de la cuenta            (/admin roles)
+-- Roles: GM puede todo; CM (gestor de comunidad) puede moderar y ayudar (ver CM_PUEDE) pero no repartir objetos,
+-- oro ni experiencia, ni invocar criaturas, ni cambiar roles; sus baneos duran 72 horas como máximo.
 local Datos = require("compartido.dominio.datos")
 local Util = require("compartido.dominio.util")
 
@@ -26,7 +32,17 @@ local AYUDA = {
   "/admin tp <x> <y> | tp <jugador> | traer <jugador> | ciudad <id>",
   "/admin limpiar [radio] | anuncio <texto> | dios | jugadores",
   "/admin evento <estandarte|batalla> <iniciar|fin|estado> [todos]",
+  "/admin kick <jugador> [motivo] | silenciar <jugador> <min> | ban <usuario> <30m|2h|3d|perm> <motivo> | desban <usuario> | baneos",
+  "/admin rol <usuario> <gm|cm|ninguno> | roles   (solo GM)",
 }
+
+-- Comandos que solo puede usar un GM; el resto también los puede usar un CM.
+local SOLO_GM = {
+  mob = true, mobs = true, item = true, items = true, oro = true, xp = true, nivel = true, monedas = true,
+  dios = true, rol = true,
+}
+M.SOLO_GM = SOLO_GM
+M.MAX_BAN_CM = 72 * 3600
 
 function M.instalar(Mundo)
   local function jugadorPorNombre(self, nombre)
@@ -231,6 +247,7 @@ function M.instalar(Mundo)
   function comandos.anuncio(self, p, a, resto)
     if resto == "" then return decir(self, p, "Uso: /admin anuncio <texto>") end
     self:mensaje("mundo", "[Admin]", resto, p)
+    self.mensajes[#self.mensajes].marquesina = true
   end
 
   function comandos.dios(self, p)
@@ -287,9 +304,161 @@ function M.instalar(Mundo)
     decir(self, p, "Evento iniciado con " .. n .. " jugador(es)." .. (n == 0 and " Nadie en cola: usa «todos» para meter a todos." or ""))
   end
 
+  -- ---------------------------------------------------------------------------- moderación y roles
+  local Sanciones = require("compartido.dominio.sanciones")
+
+  -- Rol efectivo de un jugador conectado: el de su cuenta o, para las cuentas del .env, GM.
+  local function rolDe(p)
+    return p.staff or (p.admin and "gm") or nil
+  end
+
+  local function hooks(self, p)
+    if not self.hooks then
+      decir(self, p, "Esto solo está disponible en el servidor.")
+      return nil
+    end
+    return self.hooks
+  end
+
+  -- Usuario de cuenta al que apunta un nombre: el del jugador conectado con ese nombre o el propio texto.
+  local function usuarioDe(self, nombre)
+    local e = jugadorPorNombre(self, nombre)
+    if e and e.cuentaUsuario then return e.cuentaUsuario, e end
+    return nombre, e
+  end
+
+  -- Rol de una cuenta por su usuario (consulta el almacén; las cuentas del .env cuentan como GM).
+  local function rolDeUsuario(self, usuario)
+    if self.admins and self.admins[tostring(usuario):lower()] then return "gm" end
+    local h = self.hooks
+    for _, r in ipairs((h and h.listarRoles and h.listarRoles()) or {}) do
+      if r.usuario:lower() == tostring(usuario):lower() then return r.rol end
+    end
+  end
+
+  -- ¿Puede quien manda sancionar a esa cuenta? Un CM no toca al personal; un GM no toca a otros GM.
+  local function puedeSancionar(self, p, usuario)
+    local mio, suyo = rolDe(p), rolDeUsuario(self, usuario)
+    if not suyo then return true end
+    if mio == "gm" and suyo ~= "gm" then return true end
+    return false
+  end
+
+  function comandos.kick(self, p, a, resto)
+    local h = hooks(self, p)
+    if not h then return end
+    local e = a[1] and jugadorPorNombre(self, a[1])
+    if not e then return decir(self, p, "Uso: /admin kick <jugador> [motivo]  (el jugador debe estar conectado).") end
+    if e == p then return decir(self, p, "No puedes expulsarte a ti mismo.") end
+    if e.cuentaUsuario and not puedeSancionar(self, p, e.cuentaUsuario) then
+      return decir(self, p, "No puedes sancionar a alguien del personal.")
+    end
+    local motivo = resto:match("^%S+%s+(.+)$") or "sin motivo indicado"
+    if h.expulsar then h.expulsar(e, "Te han expulsado del servidor. Motivo: " .. motivo) end
+    decir(self, p, e.nombre .. " expulsado.")
+  end
+
+  function comandos.silenciar(self, p, a)
+    local e = a[1] and jugadorPorNombre(self, a[1])
+    local min = tonumber(a[2])
+    if not e or not min or min < 0 then return decir(self, p, "Uso: /admin silenciar <jugador> <minutos>  (0 quita el silencio).") end
+    if e.cuentaUsuario and not puedeSancionar(self, p, e.cuentaUsuario) then
+      return decir(self, p, "No puedes sancionar a alguien del personal.")
+    end
+    if min == 0 then
+      e.silenciadoHasta = nil
+      decir(self, e, "Ya puedes hablar de nuevo.")
+      return decir(self, p, e.nombre .. " ya no está silenciado.")
+    end
+    e.silenciadoHasta = os.time() + math.floor(min * 60)
+    decir(self, e, "Un moderador te ha silenciado durante " .. math.floor(min) .. " minuto(s).")
+    decir(self, p, e.nombre .. " silenciado " .. math.floor(min) .. " minuto(s).")
+  end
+
+  function comandos.ban(self, p, a, resto)
+    local h = hooks(self, p)
+    if not h then return end
+    local dur = Sanciones.duracion(a[2])
+    if not a[1] or not dur then
+      return decir(self, p, "Uso: /admin ban <usuario|jugador> <30m|2h|3d|perm> <motivo>")
+    end
+    local usuario, enLinea = usuarioDe(self, a[1])
+    if rolDe(p) ~= "gm" and (dur == 0 or dur > M.MAX_BAN_CM) then
+      return decir(self, p, "Un CM puede banear como mucho 72 horas.")
+    end
+    if not puedeSancionar(self, p, usuario) then return decir(self, p, "No puedes sancionar a alguien del personal.") end
+    local motivo = resto:match("^%S+%s+%S+%s+(.+)$") or "sin motivo indicado"
+    local hasta = dur == 0 and 0 or (os.time() + dur)
+    local ok, err = h.banear(usuario, hasta, motivo, p.nombre)
+    if not ok then return decir(self, p, tostring(err or "No se pudo banear.")) end
+    -- los personajes de esa cuenta que estén conectados salen al momento
+    local fuera = 0
+    for _, e in pairs(self.entidades) do
+      if e.kind == "jugador" and not e.borrar and e.cuentaUsuario and e.cuentaUsuario:lower() == ok:lower() then
+        if h.expulsar then h.expulsar(e, Sanciones.mensaje({ hasta = hasta, motivo = motivo })) end
+        fuera = fuera + 1
+      end
+    end
+    decir(self, p, "Cuenta " .. ok .. " baneada (" .. Sanciones.textoDuracion(dur) .. "). Motivo: " .. motivo ..
+      (fuera > 0 and (" Expulsado(s): " .. fuera .. ".") or ""))
+  end
+
+  function comandos.desban(self, p, a)
+    local h = hooks(self, p)
+    if not h then return end
+    if not a[1] then return decir(self, p, "Uso: /admin desban <usuario>") end
+    local ok, err = h.desbanear(a[1])
+    if not ok then return decir(self, p, tostring(err or "No se pudo quitar el baneo.")) end
+    decir(self, p, "Baneo de " .. ok .. " retirado.")
+  end
+
+  function comandos.baneos(self, p)
+    local h = hooks(self, p)
+    if not h then return end
+    local lista = h.listarBaneos() or {}
+    if #lista == 0 then return decir(self, p, "No hay cuentas baneadas.") end
+    for _, b in ipairs(lista) do
+      decir(self, p, b.usuario .. ": " .. ((tonumber(b.hasta) or 0) == 0 and "permanente" or ("hasta " .. os.date("%Y-%m-%d %H:%M", b.hasta))) ..
+        " — " .. tostring(b.motivo or "") .. " (por " .. tostring(b.por or "?") .. ")")
+    end
+  end
+
+  function comandos.rol(self, p, a)
+    local h = hooks(self, p)
+    if not h then return end
+    local rol = a[2] and a[2]:lower()
+    if rol == "ninguno" or rol == "nada" or rol == "jugador" then rol = nil
+    elseif rol ~= "gm" and rol ~= "cm" then rol = false end
+    if not a[1] or rol == false then return decir(self, p, "Uso: /admin rol <usuario> <gm|cm|ninguno>") end
+    if self.admins and self.admins[a[1]:lower()] then
+      return decir(self, p, "Esa cuenta es GM por la configuración del servidor (.env): no se cambia aquí.")
+    end
+    local ok, err = h.fijarRol(a[1], rol)
+    if not ok then return decir(self, p, tostring(err or "No se pudo cambiar el rol.")) end
+    -- si está conectada, el cambio vale al instante
+    for _, e in pairs(self.entidades) do
+      if e.kind == "jugador" and not e.borrar and e.cuentaUsuario and e.cuentaUsuario:lower() == ok:lower() then
+        e.staff = rol
+        e.admin = rol and true or nil
+        decir(self, e, rol and ("Ahora eres " .. rol:upper() .. ".") or "Ya no tienes permisos de personal.")
+      end
+    end
+    decir(self, p, ok .. ": " .. (rol and rol:upper() or "sin rol") .. ".")
+  end
+
+  function comandos.roles(self, p)
+    local h = hooks(self, p)
+    if not h then return end
+    local lista = h.listarRoles() or {}
+    for usuario in pairs(self.admins or {}) do lista[#lista + 1] = { usuario = usuario, rol = "gm (.env)" } end
+    if #lista == 0 then return decir(self, p, "Nadie tiene rol de personal.") end
+    for _, r in ipairs(lista) do decir(self, p, r.usuario .. ": " .. r.rol:upper()) end
+  end
+
   -- Punto de entrada: texto completo escrito en el chat (empieza por /admin).
   function Mundo:comandoAdmin(p, texto)
-    if not p.admin then
+    local rol = rolDe(p)
+    if not rol then
       decir(self, p, "No tienes permiso para usar comandos de administrador.")
       return
     end
@@ -298,6 +467,9 @@ function M.instalar(Mundo)
     nombre = (nombre or "ayuda"):lower()
     local f = comandos[nombre]
     if not f then return decir(self, p, "Comando desconocido: " .. nombre .. ". Prueba /admin ayuda.") end
+    if rol ~= "gm" and SOLO_GM[nombre] then
+      return decir(self, p, "El comando " .. nombre .. " es solo para GM.")
+    end
     local a = {}
     for t in (params or ""):gmatch("%S+") do a[#a + 1] = t end
     local ok, err = pcall(f, self, p, a, params or "")
