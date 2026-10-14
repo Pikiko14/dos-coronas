@@ -130,6 +130,55 @@ function O.cofre(sx, sy)
   love.graphics.draw(img, Arte.quad(img, 0, 128, 32, 32), sx, sy, 0, 1, 1, 16, 30)
 end
 
+O.personalizados = O.personalizados or {}
+
+-- Mobiliario de la plaza, dibujado con rectángulos (no hay láminas de bancos ni macetas en el pack).
+-- La madera es oscura en las ciudades de Umbra y clara en las de Albor (p.fac).
+O.personalizados.banco = function(p, sx, sy)
+  local umbra = p.fac == "umbra"
+  local madera = umbra and { 0.3, 0.22, 0.34 } or { 0.62, 0.42, 0.22 }
+  local claro = umbra and { 0.42, 0.32, 0.46 } or { 0.78, 0.55, 0.3 }
+  local hierro = umbra and { 0.16, 0.14, 0.2 } or { 0.25, 0.22, 0.2 }
+  love.graphics.setColor(0, 0, 0, 0.22)
+  love.graphics.ellipse("fill", sx, sy - 3, 15, 4, 16)
+  -- patas y respaldo
+  love.graphics.setColor(hierro[1], hierro[2], hierro[3], 1)
+  love.graphics.rectangle("fill", sx - 13, sy - 9, 2, 8)
+  love.graphics.rectangle("fill", sx + 11, sy - 9, 2, 8)
+  love.graphics.rectangle("fill", sx - 13, sy - 19, 2, 11)
+  love.graphics.rectangle("fill", sx + 11, sy - 19, 2, 11)
+  love.graphics.setColor(madera[1], madera[2], madera[3], 1)
+  love.graphics.rectangle("fill", sx - 14, sy - 19, 28, 3)
+  love.graphics.rectangle("fill", sx - 14, sy - 14, 28, 3)
+  love.graphics.setColor(claro[1], claro[2], claro[3], 1)
+  love.graphics.rectangle("fill", sx - 15, sy - 9, 30, 4)
+  love.graphics.setColor(madera[1] * 0.7, madera[2] * 0.7, madera[3] * 0.7, 1)
+  love.graphics.rectangle("fill", sx - 15, sy - 5, 30, 1)
+  love.graphics.setColor(1, 1, 1, 0.18)
+  love.graphics.rectangle("fill", sx - 14, sy - 19, 28, 1)
+end
+
+O.personalizados.maceta = function(p, sx, sy)
+  local umbra = p.fac == "umbra"
+  love.graphics.setColor(0, 0, 0, 0.2)
+  love.graphics.ellipse("fill", sx, sy - 2, 9, 3, 12)
+  love.graphics.setColor(umbra and 0.28 or 0.72, umbra and 0.24 or 0.4, umbra and 0.34 or 0.28, 1)
+  love.graphics.polygon("fill", sx - 7, sy - 11, sx + 7, sy - 11, sx + 5, sy - 1, sx - 5, sy - 1)
+  love.graphics.setColor(umbra and 0.4 or 0.86, umbra and 0.34 or 0.52, umbra and 0.46 or 0.36, 1)
+  love.graphics.rectangle("fill", sx - 8, sy - 13, 16, 3)
+  love.graphics.setColor(0.2, 0.5, 0.25, 1)
+  love.graphics.circle("fill", sx - 4, sy - 17, 5)
+  love.graphics.circle("fill", sx + 4, sy - 17, 5)
+  love.graphics.circle("fill", sx, sy - 20, 5)
+  local flor = umbra and { { 0.7, 0.45, 0.95 }, { 0.95, 0.4, 0.6 } } or { { 1, 0.85, 0.3 }, { 1, 0.45, 0.5 } }
+  love.graphics.setColor(flor[1][1], flor[1][2], flor[1][3], 1)
+  love.graphics.circle("fill", sx - 3, sy - 19, 1.8)
+  love.graphics.circle("fill", sx + 5, sy - 16, 1.8)
+  love.graphics.setColor(flor[2][1], flor[2][2], flor[2][3], 1)
+  love.graphics.circle("fill", sx + 1, sy - 22, 1.8)
+  love.graphics.circle("fill", sx - 5, sy - 15, 1.8)
+end
+
 -- Puerta de mazmorra: un portón de piedra con un resplandor y el nombre encima. Es un prop del mapa
 -- (tipo "puerta_mazmorra"; salida = true la pinta como la puerta de salida de dentro).
 O.personalizados = O.personalizados or {}

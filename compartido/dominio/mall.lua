@@ -102,10 +102,11 @@ function M.instalar(Mundo)
     local o = M.objeto(id)
     if not o then return "Ese objeto no está en el mall." end
     if (p.monedas or 0) < o.precio then return "Te faltan monedas: cuesta " .. o.precio .. "." end
-    if not self:darItem(p, o.id, 1) then return "Tu bolsa está llena." end
+    -- los paquetes de la Forja entregan polvo arcano directamente (no hay un objeto "paquete" en la bolsa)
+    if not self:darItem(p, o.polvo and "polvo_arcano" or o.id, o.polvo or 1) then return "Tu bolsa está llena." end
     p.monedas = p.monedas - o.precio
     self:marcarProgreso(p)
-    self:mensaje("sistema", "", "Compras " .. o.nombre .. " por " .. o.precio .. " " .. M.MONEDA .. ". Úsala desde la bolsa.", p)
+    self:mensaje("sistema", "", "Compras " .. o.nombre .. " por " .. o.precio .. " " .. M.MONEDA .. (o.polvo and "." or ". Úsala desde la bolsa."), p)
     return nil
   end
 

@@ -231,6 +231,39 @@ local function estamparCiudad(mapa, ciudad)
     setBloque(mapa, px, y0 + medioY - pry + 1, true)
     mapa.props[#mapa.props + 1] = { x = px, y = y0 + medioY - pry + 1, tipo = (sx < 0) and "pozo" or "barril" }
   end
+  -- mobiliario de la plaza: en los cuatro cuadrantes (las avenidas que la cruzan quedan libres), bancos mirando a la
+  -- estatua, macetas con flores, setos, jarrones y un cartel; flores sueltas en el suelo
+  do
+    local ocupado = {}
+    for _, p in ipairs(mapa.props) do ocupado[p.x .. "," .. p.y] = true end
+    local fac = ciudad.faccion
+    local function mueble(dx, dy, tipo, solido)
+      local tx, ty = x0 + medio + dx, y0 + medioY + dy
+      if not enPlaza(tx - x0, ty - y0) or avenida(tx - x0, ty - y0) or ocupado[tx .. "," .. ty] then return end
+      ocupado[tx .. "," .. ty] = true
+      if solido ~= false then setBloque(mapa, tx, ty, true) end
+      mapa.props[#mapa.props + 1] = { x = tx, y = ty, tipo = tipo, fac = fac }
+    end
+    for _, sx in ipairs({ -1, 1 }) do
+      for _, sy in ipairs({ -1, 1 }) do
+        mueble(sx * 4, sy * 3, "banco")
+        mueble(sx * 5, sy * 3, "banco")
+        mueble(sx * 4, sy * 4, "maceta")
+        mueble(sx * 3, sy * 4, "flores_mixtas", false)
+        mueble(sx * 5, sy * 4, "arbusto")
+        if grande then
+          mueble(sx * 7, sy * 3, "banco")
+          mueble(sx * 6, sy * 3, "banco")
+          mueble(sx * 6, sy * 4, "jarron")
+          mueble(sx * 7, sy * 5, "maceta")
+          mueble(sx * 8, sy * 4, "arbusto")
+          mueble(sx * 5, sy * 5, "flor_roja", false)
+          mueble(sx * 4, sy * 6, "flor_blanca", false)
+          mueble(sx * 8, sy * 6, "arbusto")
+        end
+      end
+    end
+  end
   -- banderas colgadas del muro norte
   for bx = 6, w - 7, 7 do
     if math.abs(bx - medio) > 3 then

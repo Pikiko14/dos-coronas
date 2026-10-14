@@ -15,7 +15,7 @@ if (-not $SinConstruir) {
   & (Join-Path $raiz "construir.ps1")
 }
 $love = Join-Path $raiz "dist\servidor.love"
-if (-not (Test-Path $love)) { throw "No existe $love: ejecuta construir.ps1 primero." }
+if (-not (Test-Path $love)) { throw "No existe ${love}: ejecuta construir.ps1 primero." }
 
 $destino = "$Usuario@$Servidor"
 "Subiendo servidor.love a $destino ..."

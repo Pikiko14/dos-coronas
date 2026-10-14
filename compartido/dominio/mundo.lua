@@ -1084,7 +1084,7 @@ end
 Mundo.CUERPO_SEG = 300
 Mundo.PUNTOS_CRISTAL = 300      -- lo que vale entregar el cristal del núcleo enemigo
 Mundo.DISTANCIA_DESPIERTA = 45    -- casillas: lejos de todo jugador, las criaturas se actualizan 1 vez por segundo
-Mundo.POCION_CD = 3          -- segundos entre una poción y la siguiente
+Mundo.POCION_CD = 3          -- segundos hasta poder repetir ESA poción (cada poción tiene su propio enfriamiento)
 Mundo.AUTOPOCION_UMBRAL = 0.5 -- con la autopoción encendida, bebe vida al bajar de esta fracción
 function Mundo:dejarCuerpo(e)
   local id = self:idNuevo()
@@ -2280,7 +2280,7 @@ function Mundo:encantar(p, donde, ref, pergamino)
 end
 
 function Mundo:usarPocionId(p, id)
-  if (p.cdPocion or 0) > self.tiempo then return "La poción aún no." end
+  if ((p.cdPociones or {})[id] or 0) > self.tiempo then return "La poción aún no." end
   local it = Datos.item(id)
   if not it or not (it.cura or it.mana) then return "No tienes esa poción." end
   if it.nivel and (p.nivel or 1) < it.nivel then return "Necesitas nivel " .. it.nivel .. "." end
@@ -2298,15 +2298,15 @@ function Mundo:usarPocionId(p, id)
   if it.mana then p.mp = math.min(p.mpMax, p.mp + tirada(it.mana, it.manaMax)) end
   p.bolsa[idx].cant = p.bolsa[idx].cant - 1
   if p.bolsa[idx].cant <= 0 then table.remove(p.bolsa, idx) end
-  p.cdPocion = self.tiempo + Mundo.POCION_CD
+  p.cdPociones = p.cdPociones or {}
+  p.cdPociones[id] = self.tiempo + Mundo.POCION_CD
   return nil
 end
 
 -- Bebe la poción de vida o la de maná si el jugador la dejó encendida y está por debajo de su umbral.
--- Comparten enfriamiento: si las dos hacen falta a la vez, primero va la vida.
+-- Cada poción tiene su enfriamiento: la de vida y la de maná pueden beberse a la vez.
 -- Si no hay poción o aún está el enfriamiento, no dice nada: se reintenta en el siguiente paso.
 function Mundo:beberAutopocion(p)
-  if (p.cdPocion or 0) > self.tiempo then return end
   local function intentar(id, on, umbral, campo, color)
     if not on then return false end
     local maximo = p[campo .. "Max"]
@@ -2320,9 +2320,8 @@ function Mundo:beberAutopocion(p)
   end
   local idVida = Datos.elegirPocion(p.bolsa, p.nivel, "vida")
   local idMana = Datos.elegirPocion(p.bolsa, p.nivel, "mana")
-  if not idVida or not intentar(idVida, p.autoPocion, p.autoPocionUmbral, "hp", { 0.45, 1, 0.5 }) then
-    if idMana then intentar(idMana, p.autoMana, p.autoManaUmbral, "mp", { 0.55, 0.75, 1 }) end
-  end
+  if idVida then intentar(idVida, p.autoPocion, p.autoPocionUmbral, "hp", { 0.45, 1, 0.5 }) end
+  if idMana then intentar(idMana, p.autoMana, p.autoManaUmbral, "mp", { 0.55, 0.75, 1 }) end
 end
 
 function Mundo:configurarAutopocion(p, datos)
@@ -3151,7 +3150,7 @@ function Mundo:foto(pid)
     if p.gremioId and self.gremios[p.gremioId] then tu.gremioNombre = self.gremios[p.gremioId].nombre end
     tu.grupo = self:resumenGrupo(p)
     tu.mall = self:resumenMall(p)
-    tu.cdPocion = p.cdPocion
+    tu.cdPociones = p.cdPociones
     tu.autoPocion = p.autoPocion and true or false
     tu.autoPocionUmbral = p.autoPocionUmbral or Mundo.AUTOPOCION_UMBRAL
     tu.autoMana = p.autoMana and true or false

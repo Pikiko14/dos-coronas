@@ -1834,7 +1834,9 @@ mundo.tiempo = 100
     fallar(errores, "a los 2,9 s aún no", mundo:usarPocionId(a, "pocion_vida") ~= nil)
     mundo.tiempo = mundo.tiempo + 0.2
     fallar(errores, "a los 3 s sí", mundo:usarPocionId(a, "pocion_vida") == nil)
-    fallar(errores, "la foto trae el enfriamiento", mundo:foto(a.id).tu.cdPocion == a.cdPocion)
+    mundo:darItem(a, "pocion_mana", 2)
+    fallar(errores, "otra poción distinta no espera a la primera", mundo:usarPocionId(a, "pocion_mana") == nil)
+    fallar(errores, "la foto trae el enfriamiento", mundo:foto(a.id).tu.cdPociones.pocion_vida == a.cdPociones.pocion_vida)
   end)
   paso("autopoción: umbral configurable y curación", function()
     local Autoridad = require("src.dominio.autoridad")
@@ -1856,7 +1858,7 @@ mundo.tiempo = 100
     a.hp = math.floor(a.hpMax * 0.2)
     mundo:actualizarJugador(a, 0.05)
     fallar(errores, "respeta el enfriamiento", a.hp == math.floor(a.hpMax * 0.2) and mundo:contarItem(a, "pocion_vida") == tenia - 1)
-    a.hp, a.cdPocion = a.hpMax, 0
+    a.hp, a.cdPociones = a.hpMax, {}
     mundo:actualizarJugador(a, 0.05)
     fallar(errores, "con la vida alta no bebe", mundo:contarItem(a, "pocion_vida") == tenia - 1)
     a.hp = math.floor(a.hpMax * 0.6)
@@ -1874,7 +1876,7 @@ mundo.tiempo = 100
     fallar(errores, "al 60% sí bebe si subes el umbral a 70", a.hp > antes and mundo:contarItem(a, "pocion_vida") == tenia - 2)
     local manaAntes = mundo:contarItem(a, "pocion_mana")
     a.mp = math.floor(a.mpMax * 0.3)
-    a.cdPocion = 0
+    a.cdPociones = {}
     a.ultimoGolpe = mundo.tiempo
     local mpBaja = a.mp
     mundo:actualizarJugador(a, 0.05)
@@ -1886,17 +1888,17 @@ mundo.tiempo = 100
     fallar(errores, "bebe maná por debajo de su umbral", a.mp > mpBaja + 5 and mundo:contarItem(a, "pocion_mana") == manaAntes - 1)
     a.hp = math.floor(a.hpMax * 0.2)
     a.mp = math.floor(a.mpMax * 0.2)
-    a.cdPocion = 0
+    a.cdPociones = {}
     local vidas = mundo:contarItem(a, "pocion_vida")
     mundo:actualizarJugador(a, 0.05)
-    fallar(errores, "si faltan las dos, primero bebe vida", mundo:contarItem(a, "pocion_vida") == vidas - 1 and mundo:contarItem(a, "pocion_mana") == manaAntes - 1)
+    fallar(errores, "si faltan las dos, beben a la vez (enfriamiento individual)", mundo:contarItem(a, "pocion_vida") == vidas - 1 and mundo:contarItem(a, "pocion_mana") == manaAntes - 2)
     local ex2 = mundo:exportar(a)
     fallar(errores, "el guardado lleva también el maná", ex2.autoMana == true and math.abs(ex2.autoManaUmbral - 0.5) < 0.001)
     local foto = mundo:foto(a.id).tu
     fallar(errores, "la foto lleva la configuración", foto.autoPocion == true and foto.autoPocionUmbral == a.autoPocionUmbral
       and foto.autoMana == true and foto.autoManaUmbral == a.autoManaUmbral)
     a.nivel = 8
-    a.cdPocion = 0
+    a.cdPociones = {}
     a.autoPocion = true
     a.autoPocionUmbral = 0.9
     a.ultimoGolpe = mundo.tiempo
@@ -1910,11 +1912,11 @@ mundo.tiempo = 100
     fallar(errores, "con nivel bajo bebe la pequeña", peq > 0 and mundo:contarItem(a, "pocion_vida") == peq - 1
       and mundo:contarItem(a, "pocion_vida_mediana") == med and mundo:contarItem(a, "pocion_vida_grande") == gra)
     a.nivel = 1
-    a.cdPocion = 0
+    a.cdPociones = {}
     fallar(errores, "la mediana no se bebe antes del nivel 12", mundo:usarPocionId(a, "pocion_vida_mediana") ~= nil
       and mundo:contarItem(a, "pocion_vida_mediana") == med)
     a.nivel = 22
-    a.cdPocion = 0
+    a.cdPociones = {}
     a.hp = math.floor(a.hpMax * 0.2)
     local antesP = mundo:contarItem(a, "pocion_vida")
     mundo:actualizarJugador(a, 0.05)
@@ -2567,6 +2569,11 @@ mundo.tiempo = 100
     p.oro, p.monedas = 0, 1000
     fallar(errores, "los pergaminos de forja están en el mall", Mall.objeto("pergamino_forja") and Mall.objeto("pergamino_forja_sagrado")
       and Datos.item("pergamino_forja").forja == 6 and Datos.item("pergamino_forja_sagrado").forja == 10)
+    local polvoAntes = mundo:contarItem(p, "polvo_arcano")
+    p.monedas = 1000
+    fallar(errores, "el paquete de polvos entrega polvo arcano", mundo:comprarMall(p, "polvos_10") == nil
+      and mundo:contarItem(p, "polvo_arcano") == polvoAntes + 10 and p.monedas == 1000 - Mall.objeto("polvos_10").precio)
+
     fallar(errores, "se compran con monedas", mundo:comprarMall(p, "pergamino_forja") == nil and mundo:comprarMall(p, "pergamino_forja_sagrado") == nil
       and mundo:contarItem(p, "pergamino_forja") == 1)
     local arma = p.equipo.arma
@@ -3710,9 +3717,9 @@ mundo.tiempo = 100
     fallar(errores, "queda centrado en la casilla", math.abs((j.x % 1) - 0.5) < 0.001 and math.abs(j.y - (cy + 2.5)) < 0.001, tostring(j.x) .. "," .. tostring(j.y))
     poner(cx - 6, cy + 2)
     local t0 = j.x
-    j.deseoX, j.deseoY = 1, 1
+    j.deseoX, j.deseoY = 1, -1   -- hacia arriba: los bancos y macetas de la plaza están fuera de las avenidas, hacia abajo chocaría
     correr(1.0)
-    local dx, dy = j.x - t0, j.y - (cy + 2.5)
+    local dx, dy = j.x - t0, (cy + 2.5) - j.y
     fallar(errores, "diagonal avanza igual en x e y", math.abs(dx - dy) < 0.01 and dx > 2, dx .. "," .. dy)
     poner(cx - 6, cy + 2)
     local otro = mundo:crearPersonaje({ kind = "bot", nombre = "Estorbo", faccion = "albor", clase = "guerrero" })

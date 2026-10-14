@@ -839,8 +839,8 @@ function I.hud(mundo, p, w, h)
     local n = Datos.contarPociones(p.bolsa, tipo)
     love.graphics.setColor(1, 1, 1, n > 0 and 1 or 0.35)
     if it then Atlas.dibujar(it.hoja, it.sprite, x + lado_c / 2, by0 + lado_c / 2 + 8, 1.2, 16, 16) end
-    -- enfriamiento compartido de las pociones (3 s)
-    local queda = (p.cdPocion or 0) - mundo.tiempo
+    -- cada poción tiene su enfriamiento (3 s)
+    local queda = ((p.cdPociones or {})[id] or 0) - mundo.tiempo
     if queda > 0 then
       local frac = math.min(1, queda / 3)
       love.graphics.setColor(0, 0, 0, 0.6)
@@ -2191,10 +2191,10 @@ function I.panelMall(mundo, p, w, h)
   I.boton(px + 558, py + 36, 82, 28, "Monturas", "mall_tab_mont", I.mallTab ~= "monturas")
   local y0 = py + 84
   if I.mallTab == "objetos" or I.mallTab == "forja" then
-    -- los pergaminos de forja van en su pestana; el resto en "Objetos"
+    -- la pestaña Forja vende solo paquetes de polvo de encantamiento; el resto va en "Objetos"
     local objetos = {}
     for _, o in ipairs(Mall.OBJETOS) do
-      if (o.forja ~= nil) == (I.mallTab == "forja") then objetos[#objetos + 1] = o end
+      if (o.polvo ~= nil) == (I.mallTab == "forja") then objetos[#objetos + 1] = o end
     end
     -- caben 7 filas; el resto se recorre con la rueda del ratón
     local visibles = 5

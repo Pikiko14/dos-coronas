@@ -28,7 +28,11 @@
   <bono id="mvel" nombre="Velocidad mágica" etiqueta="MSPD" pct="0.2">
     <color lista="0.5,0.9,0.5"/>
   </bono>
-  <!-- ---- objetos (pestanas Objetos y Forja): precio en Monedas Corona; bono = el bono que dan; forja = hasta que +n sube ---- -->
+  <!-- ---- objetos (pestanas Objetos y Forja): precio en Monedas Corona; bono = el bono que dan; forja = hasta que +n sube;
+       polvo = cuantos Polvos arcanos entrega (la pestana Forja vende solo estos paquetes) ---- -->
+  <objeto id="polvos_10" nombre="Polvos de encantamiento x10" polvo="10" precio="20" sprite="699" texto="10 Polvos arcanos para encantar el equipo."/>
+  <objeto id="polvos_50" nombre="Polvos de encantamiento x50" polvo="50" precio="85" sprite="699" texto="50 Polvos arcanos para encantar el equipo."/>
+  <objeto id="polvos_150" nombre="Polvos de encantamiento x150" polvo="150" precio="240" sprite="699" texto="150 Polvos arcanos para encantar el equipo."/>
   <objeto id="pergamino_forja" nombre="Pergamino de forja" forja="6" precio="60" sprite="697" texto="Forja una pieza +1 sin fallar ni gastar oro ni polvo (hasta +6). Se usa en el Maestro de encantos.">
     <color lista="1,0.62,0.2"/>
   </objeto>

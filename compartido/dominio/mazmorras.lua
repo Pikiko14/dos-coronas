@@ -402,7 +402,7 @@ function M.instalar(Mundo)
       if r < M.PROB_ADDON + M.PROB_MALL then
         local lista = {}
         for _, o in ipairs(Mall.OBJETOS) do
-          if Datos.item(o.id) then lista[#lista + 1] = o end
+          if Datos.item(o.id) and not o.polvo then lista[#lista + 1] = o end
         end
         id = lista[math.random(#lista)].id
       else

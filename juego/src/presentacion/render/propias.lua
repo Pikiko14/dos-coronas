@@ -303,7 +303,7 @@ end
 -- el asta, así parece que la lleva en la mano y no que flota a un lado.
 local function puñoArma(fila)
   if fila == 0 then return 8 end
-  if fila == 3 then return 19 end    -- de espaldas el arma cruza por delante del cuerpo, sobre la capa
+  if fila == 3 then return 28 end    -- de espaldas el arma va delante del personaje: detrás en pantalla, asomando al costado
   if fila == 1 then return 10 end
   return 21
 end
@@ -315,7 +315,7 @@ local function manoSobre(x, y)
   love.graphics.rectangle("fill", x - 1, y + 2.4, 3.6, 0.8)
 end
 
-local function lanzaLateral(fila, col)
+local function lanzaLateral0(fila, col)
   local x = puñoArma(fila)
   love.graphics.setColor(0.12, 0.07, 0.04, 0.9)
   love.graphics.rectangle("fill", x - 1, 5, 3.6, 26)
@@ -329,7 +329,7 @@ local function lanzaLateral(fila, col)
   if fila ~= 3 then manoSobre(x, 20) end   -- de espaldas no se ve la mano
 end
 
-local function bastonCalavera(fila, col)
+local function bastonCalavera0(fila, col)
   local x = puñoArma(fila)
   love.graphics.setColor(0.08, 0.05, 0.1, 0.9)
   love.graphics.rectangle("fill", x - 1, 6, 3.6, 25)
@@ -346,6 +346,13 @@ local function bastonCalavera(fila, col)
   destello(x - 2, 2 - d * 0.3, 0.75, 0.4, 1)
   destello(x + 4, 1 + d * 0.3, 0.65, 0.35, 0.95)
 end
+
+-- De frente y de lado el arma va sobre el cuerpo; de espaldas el personaje la lleva DELANTE de él, o sea al otro lado
+-- del cuerpo respecto a la cámara: se dibuja detrás y el cuerpo la tapa, asomando por el costado y por arriba.
+local function delanteDe(f) return function(fila, col) if fila ~= 3 then f(fila, col) end end end
+local function detrasDe(f) return function(fila, col) if fila == 3 then f(fila, col) end end end
+local lanzaLateral, lanzaAtras = delanteDe(lanzaLateral0), detrasDe(lanzaLateral0)
+local bastonCalavera, bastonAtras = delanteDe(bastonCalavera0), detrasDe(bastonCalavera0)
 
 local function coronaLich(fila, col)
   if fila == 3 then
@@ -471,8 +478,8 @@ local DISENOS = {
   montaraz = clase("m", "Characters/Actor4.png", 6, { ra = { 0.4, 0.62, -0.08, 1.25 }, va = 0.9, neutro = { 0.95, 1.05, 0.9 }, delante = { sombreroPluma } }),
   arquero_elfico = clase("e", "Characters/Actor3.png", 5, { neutro = { 0.95, 1.1, 1.05 }, delante = { diademaElfico } }),
   sacerdotisa_alba = clase("s", "Characters/People2.png", 5, { neutro = { 1.1, 1.08, 0.96 }, plus = 0.05, delante = { aureola } }),
-  hoplita = clase("o", "Characters/People4.png", 6, { neutro = { 1.25, 0.86, 0.5 }, plus = 0.04, delante = { penacho, lanzaLateral } }),
-  senor_huesos = clase("z", "Characters/Actor1.png", 7, { ra = { 0.05, 0.2, 0.7, 0.7 }, va = 0.7, neutro = { 0.75, 0.7, 0.9 }, delante = { bastonCalavera } }),
+  hoplita = clase("o", "Characters/People4.png", 6, { neutro = { 1.25, 0.86, 0.5 }, plus = 0.04, detras = { lanzaAtras }, delante = { penacho, lanzaLateral } }),
+  senor_huesos = clase("z", "Characters/Actor1.png", 7, { ra = { 0.05, 0.2, 0.7, 0.7 }, va = 0.7, neutro = { 0.75, 0.7, 0.9 }, detras = { bastonAtras }, delante = { bastonCalavera } }),
   dama_lich = clase("l", "Characters/Actor4.png", 7, { ra = { 0.9, 1.0, 0.65, 1.1 }, va = 0.9, rb = { 0.0, 0.1, 0.5, 1.1 }, vb = 0.85, neutro = { 0.75, 1.1, 0.95 }, delante = { coronaLich, brillosHueso } }),
 
   clase_guerrero_albor = clase("g", "Characters/Actor3.png", 6, { neutro = { 0.92, 1.0, 1.2 }, delante = { escudoPecho("guerrero", "albor") } }),

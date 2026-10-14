@@ -330,7 +330,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     fallar(errores, "el HUD sin avisos se dibuja", ok, tostring(err))
     -- un aviso nuevo entra en la marquesina y avanza hacia la izquierda
     mundo:anunciar("Prueba se anota a Captura del estandarte. Albor 1/3 · Umbra 0/3.")
-    pj.cdPocion = mundo.tiempo + 2
+    pj.cdPociones = { pocion_vida = mundo.tiempo + 2 }
     local xs = {}
     for i = 1, 3 do
       ok, err = pcall(function()
@@ -747,16 +747,19 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "el mall muestra la forja", ok, tostring(err))
     local x1 = nil
-    for y = 100, 400, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "mall_buy_pergamino_forja" then x1 = x end end end
-    fallar(errores, "se puede comprar el pergamino de forja", x1 ~= nil)
+    for y = 100, 400, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "mall_buy_polvos_10" then x1 = x end end end
+    fallar(errores, "la forja vende polvos de encantamiento", x1 ~= nil)
     local x2 = nil
     for y = 100, 600, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "mall_buy_pergamino_atk" then x2 = x end end end
     fallar(errores, "los pergaminos de atributos no están en la forja", x2 == nil)
+    local xf = nil
+    for y = 100, 600, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "mall_buy_pergamino_forja" then xf = x end end end
+    fallar(errores, "la forja solo vende polvos", xf == nil)
     Entrada.manejar(app, "mall_tab_obj")
     pcall(Interfaz.hud, mundo, pj, 1280, 720)
     local x3 = nil
     for y = 100, 600, 4 do for x = 300, 1000, 4 do if Interfaz.consumir(x, y) == "mall_buy_pergamino_forja" then x3 = x end end end
-    fallar(errores, "ni los de forja en Objetos", x3 == nil)
+    fallar(errores, "los pergaminos de forja se compran en Objetos", x3 ~= nil)
     -- Maestro de encantos: aparece el botón con el pergamino en la bolsa
     pj.bolsa = { { id = "pergamino_forja", cant = 2 } }
     Interfaz.panel, Interfaz.encSel = "encantar", "equipo_arma"
@@ -1596,6 +1599,10 @@ local function avanzarFoto(app)
     foto.paso = "ciudad"
     app.estado = "juego"
     Interfaz.panel = nil
+    -- la foto de la ciudad se toma en la plaza de su capital, para ver el mobiliario
+    for _, c in ipairs(app.mundo.mapas.mundo.ciudades) do
+      if c.id == "auroria" then app.jugador.x, app.jugador.y = c.x + c.w / 2 - 3.5, c.y + c.h / 2 + 5.5 end
+    end
   elseif foto.paso == "ciudad" then
     foto.paso = "costa"
     local mapa = app.mundo.mapas.mundo
