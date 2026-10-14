@@ -324,7 +324,7 @@ local function lanzaLateral(fila, col)
   poli({ x + 0.8, 0, x + 3.2, 4.6, x + 0.8, 6, x - 1.6, 4.6 }, 0.85, 0.9, 1)
   poli({ x + 0.8, 0.6, x + 1.5, 4, x + 0.8, 5, x - 0.2, 4 }, 1, 1, 1, 0.9)
   poli({ x - 0.5, 6, x + 2.2, 6, x + 3 + (col - 1), 9.5, x - 1 + (col - 1), 9.5 }, 0.86, 0.14, 0.16)
-  manoSobre(x, 20)
+  if fila ~= 3 then manoSobre(x, 20) end   -- de espaldas no se ve la mano
 end
 
 local function bastonCalavera(fila, col)
@@ -336,7 +336,7 @@ local function bastonCalavera(fila, col)
   love.graphics.rectangle("fill", x - 0.8, 6, 3.2, 2)
   love.graphics.setColor(0.2, 0.1, 0.3, 1)
   love.graphics.points(x - 0.5, 3.5, x - 0.5, 4.5, x + 2, 3.5, x + 2, 4.5, x + 0.8, 6.5)
-  manoSobre(x, 20)
+  if fila ~= 3 then manoSobre(x, 20) end   -- de espaldas no se ve la mano
   -- ascuas violeta que suben del cráneo
   local d = (col * 2) % 4
   destello(x - 2, 2 - d * 0.3, 0.75, 0.4, 1)
