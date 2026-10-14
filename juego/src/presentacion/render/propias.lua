@@ -303,7 +303,7 @@ end
 -- el asta, así parece que la lleva en la mano y no que flota a un lado.
 local function puñoArma(fila)
   if fila == 0 then return 8 end
-  if fila == 3 then return 24 end
+  if fila == 3 then return 19 end    -- de espaldas el arma cruza por delante del cuerpo, sobre la capa
   if fila == 1 then return 10 end
   return 21
 end
@@ -317,6 +317,8 @@ end
 
 local function lanzaLateral(fila, col)
   local x = puñoArma(fila)
+  love.graphics.setColor(0.12, 0.07, 0.04, 0.9)
+  love.graphics.rectangle("fill", x - 1, 5, 3.6, 26)
   love.graphics.setColor(0.6, 0.38, 0.18, 1)
   love.graphics.rectangle("fill", x, 5, 1.6, 26)
   love.graphics.setColor(0.4, 0.24, 0.1, 1)
@@ -329,7 +331,9 @@ end
 
 local function bastonCalavera(fila, col)
   local x = puñoArma(fila)
-  love.graphics.setColor(0.32, 0.22, 0.18, 1)
+  love.graphics.setColor(0.08, 0.05, 0.1, 0.9)
+  love.graphics.rectangle("fill", x - 1, 6, 3.6, 25)
+  love.graphics.setColor(0.42, 0.3, 0.22, 1)
   love.graphics.rectangle("fill", x, 6, 1.6, 25)
   love.graphics.setColor(0.93, 0.92, 0.84, 1)
   love.graphics.ellipse("fill", x + 0.8, 4, 3.3, 3.5, 16)
