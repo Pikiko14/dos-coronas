@@ -1,8 +1,11 @@
--- Actualizaciones del juego sin volver a descargarlo: al arrancar pregunta al servidor si hay un parche más nuevo
--- (<url>/version.txt: build, nombre, archivo, sha256) y, si lo hay, lo baja a la carpeta de datos del juego
--- (actualizacion_<build>.zip + actualizacion.txt) y reinicia. main.lua lo monta en el siguiente arranque.
--- La descarga va en un hilo (HTTP con luasocket, que viene con LÖVE) para no congelar el menú.
--- Estados: "inactivo" (sin servidor de actualizaciones), "buscando", "descargando", "listo", "al_dia", "error".
+-- Actualizaciones del juego sin volver a descargarlo a mano. Al arrancar pregunta a <url>/version.txt y hace lo que toque:
+--   * PARCHE (lo normal, ~0,3 MB): baja actualizacion_<build>.zip (código y arte nuevo o cambiado), lo guarda en la carpeta de
+--     datos (actualizacion_<build>.zip + actualizacion.txt) y reinicia; main.lua lo monta encima del juego instalado.
+--   * PAQUETE COMPLETO (cuando el parche no basta: .exe, DLL, main.lua, archivos que borrar...): si el build instalado es menor
+--     que "minimo" baja completo_<build>.zip entero (~85 MB, con barra de progreso), cierra el juego, un script lo instala encima y
+--     lo vuelve a abrir. Solo en Windows y con el juego instalado.
+-- Todo va en un hilo (HTTP con luasocket, que viene con LÖVE) para no congelar el menú, y se comprueba el sha256 de lo bajado.
+-- Estados: "inactivo" (sin servidor de actualizaciones), "buscando", "descargando", "completo", "listo", "aplicando", "al_dia", "error".
 local Config = require("src.infraestructura.config")
 local Log = require("compartido.infraestructura.log")
 
@@ -11,6 +14,8 @@ local A = {
   nombre = "",
   version = { build = 0, nombre = "" },
   espera = 0,
+  recibido = 0,
+  total = 0,
 }
 
 local HILO = [[
@@ -20,7 +25,7 @@ local http = require("socket.http")
 local ltn12 = require("ltn12")
 local url, build, nombreCanal = ...
 local canal = love.thread.getChannel(nombreCanal)
-http.TIMEOUT = 8
+http.TIMEOUT = 15
 
 local function pedir(ruta)
   local partes = {}
@@ -29,24 +34,97 @@ local function pedir(ruta)
   return table.concat(partes)
 end
 
+-- Baja un archivo grande directamente a disco (sin tenerlo entero en memoria mientras llega), avisando del avance.
+local function bajarAArchivo(ruta, destino, total)
+  local f = love.filesystem.newFile(destino, "w")
+  if not f then return nil, "no se pudo crear el archivo" end
+  local recibido, aviso = 0, 0
+  local function sumidero(trozo)
+    if trozo and #trozo > 0 then
+      f:write(trozo)
+      recibido = recibido + #trozo
+      if recibido - aviso >= 524288 then
+        aviso = recibido
+        canal:push({ estado = "progreso", recibido = recibido, total = total })
+      end
+    end
+    return 1
+  end
+  local ok, codigo = http.request({ url = url .. ruta, sink = sumidero })
+  f:close()
+  if not ok or codigo ~= 200 then love.filesystem.remove(destino) return nil, tostring(codigo) end
+  return recibido
+end
+
+local function sha256Archivo(ruta)
+  return love.data.encode("string", "hex", love.data.hash("sha256", love.filesystem.newFileData(ruta)))
+end
+
 local texto, err = pedir("version.txt")
 if not texto then canal:push({ estado = "error", texto = "sin respuesta (" .. tostring(err) .. ")" }) return end
 local d = {}
 for k, v in texto:gmatch("(%w+)=([^\r\n]*)") do d[k] = v end
 local remoto = tonumber(d.build) or 0
+local minimo = tonumber(d.minimo) or 0
 if remoto <= build then canal:push({ estado = "al_dia" }) return end
+local nombre = d.nombre or ("build " .. remoto)
+
+if build < minimo then
+  -- hace falta el paquete completo
+  if not (d.completo and d.completo:match("^completo_%d+%.zip$") and d.shacompleto and #d.shacompleto == 64) then
+    canal:push({ estado = "error", texto = "falta el paquete completo en el servidor" })
+    return
+  end
+  local total = tonumber(d.tamanocompleto) or 0
+  canal:push({ estado = "completo", nombre = nombre, total = total })
+  local bytes, err2 = bajarAArchivo(d.completo, d.completo, total)
+  if not bytes then canal:push({ estado = "error", texto = "descarga fallida (" .. tostring(err2) .. ")" }) return end
+  if sha256Archivo(d.completo) ~= d.shacompleto then
+    love.filesystem.remove(d.completo)
+    canal:push({ estado = "error", texto = "el paquete bajado no coincide con su sha256" })
+    return
+  end
+  canal:push({ estado = "completo_listo", nombre = nombre, archivo = d.completo })
+  return
+end
+
 if not (d.archivo and d.archivo:match("^actualizacion_%d+%.zip$") and d.sha256 and #d.sha256 == 64) then
   canal:push({ estado = "error", texto = "manifiesto no válido" })
   return
 end
-canal:push({ estado = "descargando", nombre = d.nombre or ("build " .. remoto) })
-local zip, err2 = pedir(d.archivo)
-if not zip then canal:push({ estado = "error", texto = "descarga fallida (" .. tostring(err2) .. ")" }) return end
+canal:push({ estado = "descargando", nombre = nombre })
+local zip, err3 = pedir(d.archivo)
+if not zip then canal:push({ estado = "error", texto = "descarga fallida (" .. tostring(err3) .. ")" }) return end
 local hash = love.data.encode("string", "hex", love.data.hash("sha256", zip))
 if hash ~= d.sha256 then canal:push({ estado = "error", texto = "la descarga no coincide con su sha256" }) return end
 if not love.filesystem.write(d.archivo, zip) then canal:push({ estado = "error", texto = "no se pudo guardar" }) return end
-love.filesystem.write("actualizacion.txt", "build=" .. remoto .. "\narchivo=" .. d.archivo .. "\nsha256=" .. d.sha256 .. "\nnombre=" .. (d.nombre or "") .. "\n")
-canal:push({ estado = "listo", nombre = d.nombre or ("build " .. remoto) })
+love.filesystem.write("actualizacion.txt", "build=" .. remoto .. "\narchivo=" .. d.archivo .. "\nsha256=" .. d.sha256 .. "\nnombre=" .. nombre .. "\n")
+canal:push({ estado = "listo", nombre = nombre })
+]]
+
+-- Script que instala el paquete completo: espera a que el juego se cierre, descomprime el zip encima de la carpeta del juego,
+-- borra el zip y los parches viejos, y vuelve a abrir el juego. Si algo falla deja el motivo en actualizar_log.txt.
+local SCRIPT = [[
+param([string]$Zip, [string]$Destino, [string]$Exe, [string]$Datos)
+$ErrorActionPreference = "Stop"
+$log = Join-Path $Datos "actualizar_log.txt"
+try {
+  for ($i = 0; $i -lt 120; $i++) {
+    try { $f = [System.IO.File]::Open($Exe, "Open", "ReadWrite", "None"); $f.Close(); break } catch { Start-Sleep -Milliseconds 500 }
+  }
+  $tmp = Join-Path $env:TEMP ("doscoronas_" + [guid]::NewGuid().ToString("N"))
+  Expand-Archive -LiteralPath $Zip -DestinationPath $tmp -Force
+  if (-not (Test-Path (Join-Path $tmp "DosCoronas.exe"))) { throw "El paquete no trae DosCoronas.exe" }
+  & robocopy $tmp $Destino /E /R:5 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+  if ($LASTEXITCODE -ge 8) { throw "robocopy falló ($LASTEXITCODE)" }
+  Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
+  Remove-Item $Zip -Force -ErrorAction SilentlyContinue
+  Get-ChildItem $Datos -Filter "actualizacion*" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+  if (Test-Path $log) { Remove-Item $log -Force }
+} catch {
+  ("{0} {1}" -f (Get-Date -Format s), $_.Exception.Message) | Out-File $log -Encoding utf8
+}
+Start-Process -FilePath $Exe
 ]]
 
 local function versionActual()
@@ -85,18 +163,56 @@ function A.iniciar()
   Log.info("actualización: comprobando " .. url .. " (build " .. tostring(A.version.build) .. ")")
 end
 
+-- Instala el paquete completo ya descargado: lanza el script oculto y cierra el juego (el script lo vuelve a abrir).
+local function aplicarCompleto()
+  local fs = love.filesystem
+  local okFFI, ffi = pcall(require, "ffi")
+  if not okFFI or not fs.isFused() or package.config:sub(1, 1) ~= "\\" then
+    A.estado, A.error = "error", "el paquete completo solo se instala en el juego de Windows (descárgalo de la web)"
+    return
+  end
+  local datos = fs.getSaveDirectory():gsub("/", "\\")
+  local exe = fs.getSource():gsub("/", "\\")
+  local destino = fs.getSourceBaseDirectory():gsub("/", "\\")
+  local zip = datos .. "\\" .. A.archivoCompleto
+  local script = datos .. "\\actualizar_completo.ps1"
+  if not fs.write("actualizar_completo.ps1", "\239\187\191" .. SCRIPT) then
+    A.estado, A.error = "error", "no se pudo escribir el instalador"
+    return
+  end
+  ffi.cdef([[
+    void* ShellExecuteA(void* hwnd, const char* op, const char* archivo, const char* args, const char* dir, int mostrar);
+  ]])
+  local args = string.format('-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%s" -Zip "%s" -Destino "%s" -Exe "%s" -Datos "%s"',
+    script, zip, destino, exe, datos)
+  local r = ffi.load("shell32").ShellExecuteA(nil, "open", "powershell.exe", args, nil, 0)
+  if tonumber(ffi.cast("intptr_t", r)) <= 32 then
+    A.estado, A.error = "error", "no se pudo lanzar el instalador"
+    return
+  end
+  A.estado = "aplicando"
+  Log.info("actualización: instalando el paquete completo y cerrando")
+  love.event.quit()
+end
+
 function A.actualizar(dt)
   if A.canal then
     local canal = love.thread.getChannel(A.canal)
     local m = canal:pop()
     while m do
-      A.estado = m.estado
-      if m.nombre then A.nombre = m.nombre end
-      if m.estado == "error" then
-        A.error = m.texto
-        Log.error("actualización: " .. tostring(m.texto))
+      if m.estado == "progreso" then
+        A.recibido, A.total = m.recibido, m.total
       else
-        Log.info("actualización: " .. m.estado .. (m.nombre and (" " .. m.nombre) or ""))
+        A.estado = m.estado
+        if m.nombre then A.nombre = m.nombre end
+        if m.total then A.total = m.total end
+        if m.archivo then A.archivoCompleto = m.archivo end
+        if m.estado == "error" then
+          A.error = m.texto
+          Log.error("actualización: " .. tostring(m.texto))
+        else
+          Log.info("actualización: " .. m.estado .. (m.nombre and (" " .. m.nombre) or ""))
+        end
       end
       m = canal:pop()
     end
@@ -105,6 +221,11 @@ function A.actualizar(dt)
       Log.error("actualización: " .. tostring(A.error))
       A.hilo = nil
     end
+  end
+  if A.estado == "completo_listo" and not A.aplicado then
+    A.aplicado = true
+    if A.modoPrueba then return end
+    aplicarCompleto()
   end
   if A.estado == "listo" then
     A.espera = A.espera + (dt or 0)
@@ -115,9 +236,10 @@ function A.actualizar(dt)
   end
 end
 
--- Mientras baja o aplica un parche el menú no responde (son unos segundos).
+-- Mientras baja o aplica una actualización el menú no responde.
 function A.bloquea()
-  return A.estado == "descargando" or A.estado == "listo"
+  local e = A.estado
+  return e == "descargando" or e == "listo" or e == "completo" or e == "completo_listo" or e == "aplicando"
 end
 
 function A.dibujar(w, h)
@@ -129,14 +251,35 @@ function A.dibujar(w, h)
     love.graphics.setColor(0.7, 0.75, 0.85, 0.8)
     love.graphics.printf("Buscando actualizaciones...", 0, h - 28, w - 12, "right")
   elseif A.bloquea() then
-    love.graphics.setColor(0, 0, 0, 0.78)
+    love.graphics.setColor(0, 0, 0, 0.8)
     love.graphics.rectangle("fill", 0, 0, w, h)
     local f = love.graphics.getFont()
+    local e = A.estado
+    local titulo = (e == "listo") and "Actualización lista"
+      or (e == "completo" and "Descargando la versión nueva")
+      or ((e == "completo_listo" or e == "aplicando") and "Instalando la versión nueva")
+      or "Descargando actualización"
     love.graphics.setColor(1, 0.9, 0.55, 1)
-    local titulo = A.estado == "listo" and "Actualización lista" or "Descargando actualización"
-    love.graphics.printf(titulo .. (A.nombre ~= "" and (": " .. A.nombre) or ""), 0, h / 2 - f:getHeight() * 1.5, w, "center")
+    love.graphics.printf(titulo .. (A.nombre ~= "" and (": " .. A.nombre) or ""), 0, h / 2 - f:getHeight() * 2.2, w, "center")
     love.graphics.setColor(0.85, 0.88, 0.95, 1)
-    love.graphics.printf(A.estado == "listo" and "Reiniciando el juego..." or "Un momento, no cierres el juego.", 0, h / 2 + f:getHeight() * 0.2, w, "center")
+    local sub = (e == "listo") and "Reiniciando el juego..."
+      or ((e == "completo_listo" or e == "aplicando") and "El juego se cerrará y volverá a abrirse solo.")
+      or "Un momento, no cierres el juego."
+    love.graphics.printf(sub, 0, h / 2 - f:getHeight() * 0.8, w, "center")
+    if e == "completo" and A.total > 0 then
+      local frac = math.max(0, math.min(1, A.recibido / A.total))
+      local bw = math.min(420, w - 80)
+      local bx, by = (w - bw) / 2, h / 2 + f:getHeight() * 1.0
+      love.graphics.setColor(0.12, 0.15, 0.28, 1)
+      love.graphics.rectangle("fill", bx, by, bw, 16, 6, 6)
+      love.graphics.setColor(0.95, 0.75, 0.2, 1)
+      love.graphics.rectangle("fill", bx, by, bw * frac, 16, 6, 6)
+      love.graphics.setColor(0.85, 0.88, 0.95, 1)
+      love.graphics.printf(string.format("%d%%  (%.1f de %.1f MB)", math.floor(frac * 100), A.recibido / 1048576, A.total / 1048576), 0, by + 22, w, "center")
+    end
+  elseif A.estado == "error" and A.error and (A.version.build or 0) > 0 then
+    love.graphics.setColor(0.95, 0.6, 0.5, 0.85)
+    love.graphics.printf("No se pudo actualizar: " .. tostring(A.error), 12, h - 28, w - 24, "right")
   end
   love.graphics.setColor(1, 1, 1, 1)
 end

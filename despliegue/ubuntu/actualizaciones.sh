@@ -27,7 +27,7 @@ server {
         default_type text/plain;
         add_header Cache-Control "no-cache";
     }
-    location ~ ^/actualizacion/actualizacion_[0-9]+\.zip$ {
+    location ~ ^/actualizacion/(actualizacion|completo)_[0-9]+\.zip$ {
         root /var/www/doscoronas;
         default_type application/zip;
     }

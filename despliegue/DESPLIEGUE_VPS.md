@@ -185,19 +185,31 @@ Las copias diarias (03:30, 14 días) están **en el mismo VPS**: copia `/var/bac
 `despliegue/ubuntu/`: `instalar.sh`, `doscoronas.service`, `respaldo.sh`, `desplegar.ps1`, `env.beta.example`,
 `prueba_red/`, `LEEME.md` (resumen corto).
 
-## 7. Actualizaciones del cliente (sin volver a descargar el juego)
+## 7. Actualizaciones del cliente (sin volver a descargar el juego a mano)
 
-El juego lleva dentro la dirección `http://IP/actualizacion/`. Al abrirlo pregunta por `version.txt` (build, nombre, archivo, sha256);
-si hay un build más nuevo baja `actualizacion_<build>.zip` (solo código: `juego/src`, `compartido/`, `version.lua`; ~0,3 MB), comprueba el sha256,
-lo guarda en su carpeta de datos (`%APPDATA%\doscoronas`) y se reinicia. `main.lua` monta ese zip encima del paquete instalado antes de cargar nada.
-Si un parche hace que el juego no llegue a dibujar la primera pantalla, el siguiente arranque lo descarta y vuelve al código instalado.
+El juego lleva dentro la dirección `http://IP/actualizacion/`. Al abrirlo pregunta por `version.txt` (build, nombre, minimo, archivos y sha256) y hace lo que toque.
+Todo se puede actualizar; solo cambia **cuánto se descarga**:
+
+| Qué cambió | Cómo se publica | Qué baja el jugador |
+| --- | --- | --- |
+| Código Lua (`juego/src`, `compartido/`), datos XML, sprites/sonidos nuevos o cambiados en `juego/arte` | `publicar_parche.ps1` (**parche**) | ~0,3 MB + lo nuevo del arte. Se aplica y el juego se reinicia solo |
+| `main.lua`, `conf.lua`, el `.exe`/DLL de LÖVE, archivos que haya que **borrar**, o «reiniciar» la base de parches | `publicar_parche.ps1 -Completo` (**paquete completo**) | ~85 MB con barra de progreso; el juego se cierra, se instala encima y se vuelve a abrir solo |
+
+**Parche:** `actualizacion_<build>.zip` se guarda en la carpeta de datos (`%APPDATA%\doscoronas`) y `main.lua` lo monta encima del paquete instalado antes de
+cargar nada. Lleva todo el código y solo el arte nuevo o cambiado respecto al último paquete completo (se compara con `despliegue/arte_base.txt`, que escribe
+`web/publicar.ps1` en cada paquete completo; haz commit de ese archivo). Cada parche es acumulativo: un cliente viejo recibe solo el último.
+Si el juego no llega a dibujar la primera pantalla con un parche, el siguiente arranque lo descarta y vuelve al código instalado.
+
+**Paquete completo:** `version.txt` lleva `minimo=<build>`; un cliente con build menor baja `completo_<build>.zip`, verifica el sha256, lanza un script oculto
+(`actualizar_completo.ps1`, en la carpeta de datos) y se cierra. El script espera a que el `.exe` quede libre, descomprime el zip encima de la carpeta del juego,
+limpia parches viejos y lo abre. Si algo falla, deja el motivo en `actualizar_log.txt` y abre el juego igualmente. Solo funciona con el juego instalado en Windows.
+Después de un `-Completo` sube también `web/descargas/` al repo `dos-coronas-web` para que la descarga de la web sea la versión nueva.
 
 - **Una sola vez en el VPS:** `cat despliegue/ubuntu/actualizaciones.sh | ssh root@IP "bash -s"` (instala nginx, sirve solo `/actualizacion/` y abre el 80/tcp).
-- **Cada vez que cambies código:** `publicar_parche.ps1` sube en 1 el build de `juego/version.lua`, genera el zip y lo sube (primero el zip, al final `version.txt`).
-  Conserva los 3 últimos parches. Haz commit de `juego/version.lua` para que los paquetes nuevos nazcan con ese build.
-- **No viajan en el parche:** `juego/arte` (imágenes y sonidos, ~80 MB), `main.lua`, `conf.lua` y el destino del servidor. Si cambias arte usa `-ConArte`
-  (parche de ~80 MB) o publica un paquete nuevo en la web. Un cambio en `main.lua` o `conf.lua` también exige paquete nuevo (por eso `main.lua` es mínimo).
-- **Probar en local:** `publicar_parche.ps1 -SinSubir` deja el parche en `dist/parche/`; sírvelo con `python -m http.server 8099` y abre el juego con
-  `DOSCORONAS_ACTUALIZACIONES=http://127.0.0.1:8099/`. En desarrollo (`love juego`) el parche no se monta salvo con `DOSCORONAS_PARCHE=1`.
+- **Cada vez:** el script sube en 1 el build de `juego/version.lua`, genera lo que corresponda y lo sube (primero el zip, al final `version.txt`). Conserva los
+  últimos parches/completos. Haz commit de `juego/version.lua`.
+- **Probar en local:** `-SinSubir` deja el resultado en `dist/parche/`; sírvelo con `python -m http.server 8099` (copiando ahí el `completo_N.zip` si es completo) y abre el
+  juego con `DOSCORONAS_ACTUALIZACIONES=http://127.0.0.1:8099/`. En desarrollo (`love juego`) el parche no se monta salvo con `DOSCORONAS_PARCHE=1`.
+  `lovec juego --actualizar` solo comprueba/descarga y escribe el resultado en `prueba_actualizar.txt`.
 - **Limitación:** va por HTTP sin cifrar (LÖVE no trae HTTPS). El sha256 protege de descargas corruptas, no de alguien que intercepte la conexión y
   cambie a la vez el manifiesto y el zip.

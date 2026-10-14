@@ -102,7 +102,7 @@ function App.actualizar(dt)
     if App.modoBot then Pruebas.bot() return end
     if App.modoWeb then require("src.pruebas.exportar_web").correr() return end
     if App.modoFoto then Pruebas.prepararFoto(App) App.fase = 2 return end
-    if App.modoActualizar then Actualizacion.iniciar() App.estado = "actualizando" App.fase = 2 return end
+    if App.modoActualizar then Actualizacion.modoPrueba = true Actualizacion.iniciar() App.estado = "actualizando" App.fase = 2 return end
     App.estado = "menu"
     App.fase = 2
     if not App.modoTest and not App.modoFoto and not App.modoBot and not App.modoAuto then Actualizacion.iniciar() end
@@ -110,7 +110,7 @@ function App.actualizar(dt)
   end
   Actualizacion.actualizar(dt)
   if App.modoActualizar then
-    if Actualizacion.estado ~= "buscando" and Actualizacion.estado ~= "descargando" and not Actualizacion.reiniciando then
+    if Actualizacion.estado ~= "buscando" and Actualizacion.estado ~= "descargando" and Actualizacion.estado ~= "completo" and not Actualizacion.reiniciando then
       Log.volcar("prueba_actualizar.txt", Actualizacion.estado .. " build=" .. tostring(Actualizacion.version.build) .. " " .. tostring(Actualizacion.error or ""))
       love.event.quit(0)
     elseif Actualizacion.reiniciando then

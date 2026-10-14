@@ -25,6 +25,15 @@ if ($Construir) {
 }
 if (-not (Test-Path (Join-Path $dist "DosCoronas.exe"))) { throw "No existe $dist\DosCoronas.exe: ejecuta construir.ps1 primero (o usa -Construir)." }
 
+# huellas del arte de ESTE paquete: los parches de actualización (despliegue\ubuntu\publicar_parche.ps1) solo llevan el arte que cambie respecto a esto
+$arteDir = Join-Path $raiz "juego\arte"
+if (-not $Origen -and (Test-Path $arteDir)) {
+  $baseArte = (Resolve-Path $arteDir).Path.TrimEnd("\") + "\"
+  $lineas = foreach ($f in Get-ChildItem $arteDir -Recurse -File) { "arte/" + $f.FullName.Substring($baseArte.Length).Replace("\", "/") + "`t" + (Get-FileHash $f.FullName -Algorithm SHA256).Hash.ToLower() }
+  [System.IO.File]::WriteAllText((Join-Path $raiz "despliegue\arte_base.txt"), (($lineas -join "`n") + "`n"), (New-Object System.Text.UTF8Encoding $false))
+  "Huellas del arte guardadas en despliegue\arte_base.txt ($(@($lineas).Count) archivos)"
+}
+
 $zip = Join-Path $salida "DosCoronas-Windows.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 "Comprimiendo $dist ..."

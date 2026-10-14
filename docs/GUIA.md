@@ -169,14 +169,16 @@ Cada zip nuevo pesa ~84 MB en el historial de git; si crece demasiado conviene p
 Reiniciar guarda a los jugadores conectados, pero los desconecta unos segundos: hazlo cuando haya pocos.
 
 ### 7.4 Actualizar a los jugadores (sin descargar de nuevo)
-Ver `despliegue/DESPLIEGUE_VPS.md`, sección 7. Resumen: `despliegue\ubuntu\publicar_parche.ps1 -Servidor IP -Version "beta X.Y.Z"` sube un parche de
-~0,3 MB con el código nuevo (`juego/src`, `compartido/`) a nginx; el cliente lo baja al abrir, verifica el sha256 y se reinicia. Si cambias arte,
-`main.lua` o `conf.lua`, hay que publicar un paquete completo nuevo.
+Ver `despliegue/DESPLIEGUE_VPS.md`, sección 7. **Todo se puede actualizar**; cambia cuánto baja el jugador:
+
+- `publicar_parche.ps1 -Servidor IP -Version "beta X.Y.Z"` → **parche** de ~0,3 MB: todo el código y los datos XML, más los sprites/sonidos nuevos o cambiados de `juego/arte`.
+- `publicar_parche.ps1 -Servidor IP -Version "beta X.Y.Z" -Completo` → **paquete completo** (~85 MB): para `main.lua`, `conf.lua`, el `.exe`/DLL o archivos que haya que borrar.
+  El juego lo baja con barra de progreso, se cierra, se instala encima y se vuelve a abrir solo. Luego sube `web/descargas/` al repo de la web.
 
 **Receta típica de un cambio de código:**
 1. Editar, `lovec servidor --test` y `lovec juego --test`.
 2. `desplegar.ps1` (si cambió el servidor o `compartido/`).
-3. `publicar_parche.ps1` (si cambió el cliente o `compartido/`) y commit de `juego/version.lua`.
+3. `publicar_parche.ps1` (si cambió el cliente, el arte o `compartido/`; con `-Completo` si cambió algo que un parche no puede) y commit de `juego/version.lua`.
 4. Commit y push. El paquete de la web solo se rehace cuando hace falta un cliente completo.
 
 ---
@@ -208,5 +210,5 @@ La IP del VPS no está en el repositorio: se pasa por parámetro (`-Servidor`) a
 - Cierra `lovec.exe` y `DosCoronas.exe` antes de `construir.ps1`/pruebas; si el `.exe` está en uso el empaquetado se detiene sin borrar nada.
 - El juego instalado guarda sus datos en `%APPDATA%\doscoronas` (el de desarrollo, en `%APPDATA%\LOVE\doscoronas`).
 - Las contraseñas y claves **nunca** al repo ni al chat. `.env` está en `.gitignore`.
-- Un parche solo se aplica si su `build` es mayor que el del paquete instalado; el `build` sube solo con `publicar_parche.ps1`.
+- Un parche solo se aplica si su `build` es mayor que el del paquete instalado; el `build` sube solo con `publicar_parche.ps1`. Haz commit de `despliegue/arte_base.txt` tras cada paquete completo.
 - `compartido/` es de los dos proyectos: un cambio ahí exige desplegar servidor **y** publicar parche, o clientes y servidor discrepan (p. ej. en el mapa generado).
