@@ -4385,6 +4385,41 @@ mundo.tiempo = 100
     fallar(errores, "un miembro sale", mundo:salirGrupo(c) == nil and c.grupoId == nil)
     fallar(errores, "con uno solo el grupo se disuelve", mundo:grupoDe(a) == nil)
   end)
+  paso("inactividad: avisa y desconecta tras el límite", function()
+    local Servicio = require("src.aplicacion.servicio_servidor")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Dormilon", faccion = "albor", clase = "guerrero", nivel = 3 })
+    local srv = { vinculo = { c1 = pj.id }, tasa = {} }
+    local expulsados = {}
+    mundo.hooks = { expulsar = function(e, motivo) expulsados[#expulsados + 1] = { e = e, motivo = motivo } end }
+    local t0 = 1000
+    -- entra: la cuenta empieza a contar desde la primera revisión
+    fallar(errores, "al entrar no se desconecta a nadie", #Servicio.revisarInactividad(srv, mundo, t0, 60) == 0)
+    -- soltar las teclas (deseo 0,0) no cuenta como actividad
+    Servicio.marcarActividad(srv, "c1", { t = "act", a = "deseo", p = { x = 0, y = 0 } }, t0 + 30)
+    fallar(errores, "soltar las teclas no es actividad", srv.actividad.c1 == t0)
+    -- a los 52 s se avisa una sola vez
+    Servicio.revisarInactividad(srv, mundo, t0 + 52, 60)
+    Servicio.revisarInactividad(srv, mundo, t0 + 53, 60)
+    local avisos = 0
+    for _, m in ipairs(mundo.mensajes) do if m.texto and m.texto:find("sin actuar", 1, true) then avisos = avisos + 1 end end
+    fallar(errores, "se avisa una vez antes del límite", avisos == 1, tostring(avisos))
+    fallar(errores, "aún no se ha desconectado", #expulsados == 0)
+    -- moverse reinicia la cuenta (y el aviso)
+    Servicio.marcarActividad(srv, "c1", { t = "act", a = "deseo", p = { x = 1, y = 0 } }, t0 + 55)
+    fallar(errores, "moverse cuenta como actividad", srv.actividad.c1 == t0 + 55)
+    Servicio.revisarInactividad(srv, mundo, t0 + 100, 60)
+    fallar(errores, "tras actuar tiene otro minuto", #expulsados == 0)
+    -- sin hacer nada hasta el límite: se desconecta
+    local fuera = Servicio.revisarInactividad(srv, mundo, t0 + 55 + 60, 60)
+    fallar(errores, "al minuto sin actuar se desconecta", #fuera == 1 and #expulsados == 1 and expulsados[1].e == pj)
+    fallar(errores, "con un motivo claro", expulsados[1] and expulsados[1].motivo:find("inactividad", 1, true) ~= nil)
+    -- chatear y lanzar poderes cuentan; con el límite en 0 nunca se desconecta
+    Servicio.marcarActividad(srv, "c1", { t = "act", a = "chat", p = { texto = "hola" } }, t0 + 500)
+    fallar(errores, "chatear es actividad", srv.actividad.c1 == t0 + 500)
+    expulsados = {}
+    fallar(errores, "con 0 está desactivado", #Servicio.revisarInactividad(srv, mundo, t0 + 99999, 0) == 0 and #expulsados == 0)
+  end)
   paso("red y paneles", function()
     local Servidor = require("src.aplicacion.servicio_servidor")
     local mundo = Mundo.nuevo()

@@ -92,6 +92,55 @@ function Servicio.permite(srv, id, tiempo, limite)
   return t.n <= (limite or TASA_POR_DEFECTO)
 end
 
+-- ---------------------------------------------------------------------------------------------------- inactividad
+-- Un mensaje cuenta como actividad si es una acción del jugador (moverse, elegir objetivo, lanzar un poder, chatear...)
+-- o su entrada al mundo. Soltar las teclas (deseo 0,0) no cuenta: es lo último que se envía antes de quedarse quieto.
+local AVISO_INACTIVIDAD = 10   -- segundos antes del límite en que se avisa al jugador
+
+function Servicio.marcarActividad(srv, id, msg, tiempo)
+  if type(msg) ~= "table" then return end
+  if msg.t == "act" then
+    local p = msg.p
+    if msg.a == "deseo" and type(p) == "table" and (tonumber(p.x) or 0) == 0 and (tonumber(p.y) or 0) == 0 then return end
+  elseif msg.t ~= "hola" then
+    return
+  end
+  srv.actividad = srv.actividad or {}
+  srv.actividad[id] = tiempo
+  if srv.avisadoInactivo then srv.avisadoInactivo[id] = nil end
+end
+
+-- Revisa a los jugadores conectados: avisa al que lleva casi el límite sin actuar y desconecta (guardando antes su
+-- progreso) al que lo supera. limite = segundos (0 o nil: desactivado). Devuelve la lista de personajes desconectados.
+function Servicio.revisarInactividad(srv, mundo, tiempo, limite)
+  local fuera = {}
+  if not limite or limite <= 0 then return fuera end
+  srv.actividad = srv.actividad or {}
+  srv.avisadoInactivo = srv.avisadoInactivo or {}
+  for idCon, pid in pairs(srv.vinculo or {}) do
+    local pj = mundo.entidades[pid]
+    if pj then
+      -- quien aún no ha actuado cuenta desde ahora: no se le desconecta nada más entrar
+      local ultima = srv.actividad[idCon]
+      if not ultima then
+        srv.actividad[idCon] = tiempo
+        ultima = tiempo
+      end
+      local quieto = tiempo - ultima
+      if quieto >= limite then
+        srv.actividad[idCon], srv.avisadoInactivo[idCon] = nil, nil
+        fuera[#fuera + 1] = pj
+        local motivo = "Te hemos desconectado por inactividad (" .. math.floor(limite) .. " s sin actuar). Tu personaje está guardado: vuelve a entrar."
+        if mundo.hooks and mundo.hooks.expulsar then mundo.hooks.expulsar(pj, motivo) end
+      elseif quieto >= limite - AVISO_INACTIVIDAD and limite > AVISO_INACTIVIDAD and not srv.avisadoInactivo[idCon] then
+        srv.avisadoInactivo[idCon] = true
+        mundo:mensaje("sistema", "", "Llevas un rato sin actuar: muévete o haz algo en los próximos " .. AVISO_INACTIVIDAD .. " s o se cerrará tu sesión.", pj)
+      end
+    end
+  end
+  return fuera
+end
+
 function Servicio.guardarUno(mundo, pj)
   if not pj or not pj.dbId or pj.kind ~= "jugador" then return true end
   local ok, err = Cuentas.guardar(pj, mundo:exportar(pj))
@@ -238,11 +287,14 @@ function Servicio.actualizar(ctx, dt)
       end
       servidor.vinculo[ev.id] = nil
       servidor.tasa[ev.id] = nil
+      if servidor.actividad then servidor.actividad[ev.id] = nil end
+      if servidor.avisadoInactivo then servidor.avisadoInactivo[ev.id] = nil end
       local aviso = "Se fue " .. ev.id .. (ev.codigo and (" (" .. ev.codigo .. ")") or "")
       nota(aviso)
       Log.warn(aviso)
     elseif ev.tipo == "msg" then
       if Servicio.permite(servidor, ev.id, mundo.tiempo, cfg.tasa_mensajes) then
+        Servicio.marcarActividad(servidor, ev.id, ev.msg, mundo.tiempo)
         Servicio.tratar(servidor, mundo, ev.id, ev.msg)
         if ev.msg and ev.msg.t == "cuenta" then
           local u = ev.msg.usuario
@@ -257,6 +309,15 @@ function Servicio.actualizar(ctx, dt)
           end
         end
       end
+    end
+  end
+  -- jugadores inactivos (se revisa una vez por segundo)
+  servidor._inactivo = (servidor._inactivo or 0) + dt
+  if servidor._inactivo >= 1 then
+    servidor._inactivo = 0
+    for _, pj in ipairs(Servicio.revisarInactividad(servidor, mundo, mundo.tiempo, cfg.inactividad_segundos)) do
+      nota(pj.nombre .. " desconectado por inactividad")
+      Log.info(pj.nombre .. " desconectado por inactividad")
     end
   end
   servidor._acum = (servidor._acum or 0) + dt
