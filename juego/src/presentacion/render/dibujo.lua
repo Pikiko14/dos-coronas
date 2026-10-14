@@ -303,7 +303,7 @@ function D.escena(mundo, jugador, cam, mx, my)
       end
       local px0, py0 = (p.x + ancho / 2) * TILE - cam.x, (p.y + alto) * TILE - cam.y
       if Objetos.personalizados and Objetos.personalizados[p.tipo] then Objetos.personalizados[p.tipo](p, px0, py0)
-      else Objetos.dibujar(p.tipo, variante, px0, py0, tint, alfa) end
+      else Objetos.dibujar(p.tipo, variante, px0, py0, tint, alfa, hash(p.x, p.y) * 6.283) end
     elseif item.tipo == "mueble" then
       D.mueble(item.nombre, sx, sy, item.rot, item.elegido)
     else
@@ -526,6 +526,144 @@ function D.zonaApuntada(ap, jugador, cam, mx, my, t)
   love.graphics.line(px, py, sx, sy)
 end
 
+-- ---------------------------------------------------------------------------------------------------------------------------
+-- Animación de ataque. Los sprites solo traen cuadros de caminar, así que el ataque se anima por código y vale para toda
+-- criatura y todo addon: anticipación (se encoge y echa atrás), embestida (se estira y se lanza hacia el objetivo), tajo
+-- y recuperación con un pequeño rebote. Los que atacan de lejos (disparos y conjuros) cargan con un pulso de luz y sueltan.
+-- El servidor solo dice "atacó" (atqN sube con cada ataque, atqX/atqY = hacia dónde, atqL = de lejos): el movimiento lo
+-- calcula cada cliente con su reloj, a toda velocidad de cuadros, así que no depende de cuántas fotos lleguen.
+-- ---------------------------------------------------------------------------------------------------------------------------
+local ATQ = {}
+local atqLimpieza = 0
+local DUR_CERCA, DUR_LEJOS = 0.46, 0.52
+
+local function suave(t) return t * t * (3 - 2 * t) end
+local function salida(t) return 1 - (1 - t) * (1 - t) end
+local function rebote(t)   -- sale y se pasa un poco antes de asentarse
+  local c1, c3 = 1.2, 2.2
+  return 1 + c3 * (t - 1) ^ 3 + c1 * (t - 1) ^ 2
+end
+
+-- Dirección del ataque en pantalla: hacia el objetivo si el servidor la dio; si no, hacia donde mira.
+local DIR_PANTALLA = { [1] = { 0, 1 }, [2] = { 0, -1 }, [3] = { 1, 0 }, [4] = { -1, 0 } }
+
+local function estadoAtaque(e)
+  local ahora = (D.relojAtaque or love.timer.getTime)()
+  if ahora - atqLimpieza > 10 then
+    atqLimpieza = ahora
+    for id, st in pairs(ATQ) do if ahora - st.visto > 10 then ATQ[id] = nil end end
+  end
+  local st = ATQ[e.id]
+  if e.atqN and (not st or st.n ~= e.atqN) then
+    st = { n = e.atqN, t0 = ahora, ax = e.atqX, ay = e.atqY, lejos = e.atqL and true or false }
+    if not st.ax then
+      local d = DIR_PANTALLA[e.dir or 1] or DIR_PANTALLA[1]
+      st.ax, st.ay = d[1], d[2]
+    end
+    ATQ[e.id] = st
+  end
+  if not st then return nil end
+  st.visto = ahora
+  local u = (ahora - st.t0) / (st.lejos and DUR_LEJOS or DUR_CERCA)
+  if u >= 1 then return nil end
+  return st, u
+end
+
+D.estadoAtaque = estadoAtaque   -- (las pruebas lo usan con D.relojAtaque para congelar el tiempo)
+
+-- Calcula la pose de este cuadro: desplazamiento, giro, escala y cuánto "golpe" hay (s) para los efectos.
+local function poseAtaque(st, u, k)
+  local ax, ay = st.ax, st.ay
+  local pos, s, esx, esy, alz = 0, 0, 1, 1, 0
+  if st.lejos then
+    -- conjuro / disparo: carga (se estira hacia arriba) y suelta con un retroceso corto
+    if u < 0.38 then
+      local c = suave(u / 0.38)
+      esy, esx, alz = 1 + 0.06 * c, 1 - 0.03 * c, 2.2 * c
+      pos = -1.2 * c
+      s = c
+    else
+      local r = (u - 0.38) / 0.62
+      local b = rebote(r)
+      esy, esx = 1 + 0.06 * (1 - b), 1 - 0.03 * (1 - b)
+      alz = 2.2 * (1 - b)
+      pos = -1.2 + 1.2 * b - 2.4 * math.sin(math.pi * math.min(1, r * 1.6)) * (1 - r)
+      s = math.max(0, 1 - r * 2.2)
+    end
+  else
+    local ATRAS, ADELANTE = 3.5 * k, 9 * k
+    if u < 0.28 then
+      local c = salida(u / 0.28)
+      pos = -ATRAS * c
+      esy, esx = 1 - 0.05 * c, 1 + 0.04 * c
+    elseif u < 0.46 then
+      local g = suave((u - 0.28) / 0.18)
+      pos = -ATRAS + (ATRAS + ADELANTE) * g
+      s = math.sin(math.pi * (u - 0.28) / 0.18)
+      esy, esx = 0.95 + 0.10 * g, 1.04 - 0.07 * g
+      alz = 1.5 * s
+    else
+      local r = (u - 0.46) / 0.54
+      pos = ADELANTE * (1 - rebote(r))
+      esy, esx = 1.05 - 0.05 * rebote(r), 0.97 + 0.03 * rebote(r)
+    end
+  end
+  return {
+    dx = ax * pos, dy = ay * pos * 0.6 - alz,
+    rot = st.lejos and 0 or ax * 0.11 * (pos / (9 * k)),
+    esx = esx, esy = esy, s = s,
+  }
+end
+
+-- Efectos que acompañan al ataque (tajo, pulso de luz): se dibujan sin la deformación de la criatura.
+local function efectoAtaque(e, st, u, sx, pies, k, def)
+  local monstruo = e.kind == "monstruo"
+  local c = monstruo and { 1, 0.42, 0.32 } or { 1, 0.95, 0.72 }
+  local alto = (def and def.fila and 14 or 12) * k
+  if st.lejos then
+    local cm = monstruo and { 0.85, 0.4, 1 } or { 0.62, 0.86, 1 }
+    -- anillo que se abre en el suelo mientras carga y destello en el pecho al soltar
+    local a = math.sin(math.pi * math.min(1, u / 0.8)) * 0.8
+    if a > 0 then
+      love.graphics.setColor(cm[1], cm[2], cm[3], a * 0.55)
+      love.graphics.ellipse("line", sx, pies - 1, (9 + 15 * u) * k, (4 + 6 * u) * k)
+      love.graphics.setColor(cm[1], cm[2], cm[3], a * 0.22)
+      love.graphics.ellipse("fill", sx, pies - 1, (8 + 12 * u) * k, (3 + 5 * u) * k)
+    end
+    local f = 1 - math.abs(u - 0.38) / 0.22
+    if f > 0 then
+      love.graphics.setColor(cm[1], cm[2], cm[3], 0.55 * f)
+      love.graphics.circle("fill", sx + st.ax * 6 * k, pies - alto - st.ay * 2, (5 + 6 * f) * k)
+      love.graphics.setColor(1, 1, 1, 0.7 * f)
+      love.graphics.circle("fill", sx + st.ax * 6 * k, pies - alto - st.ay * 2, (2 + 3 * f) * k)
+    end
+    return
+  end
+  -- tajo: un arco que barre de un lado al otro delante de quien ataca, con estela que se apaga
+  local u0, u1 = 0.26, 0.54
+  if u < u0 or u > u1 + 0.18 then return end
+  local prog = math.min(1, (u - u0) / (u1 - u0))
+  local a0 = math.atan2(st.ay * 0.7, st.ax)
+  local cx, cy = sx + st.ax * 8 * k, pies - alto + st.ay * 5 * k
+  local R = 19 * k
+  local cabeza = a0 - 1.15 + 2.3 * prog
+  local desv = u > u1 and (1 - (u - u1) / 0.18) or 1
+  local n = 10
+  local px, py
+  for i = 0, n do
+    local ang = cabeza - i * 0.11
+    local fx = (1 - i / n) * desv
+    local x, y = cx + math.cos(ang) * R, cy + math.sin(ang) * R * 0.75
+    if px then
+      love.graphics.setColor(c[1], c[2], c[3], 0.95 * fx)
+      love.graphics.setLineWidth(1 + 5 * fx)
+      love.graphics.line(px, py, x, y)
+    end
+    px, py = x, y
+  end
+  love.graphics.setLineWidth(1)
+end
+
 -- Dibuja una criatura u objeto vivo. Devuelve su altura en píxeles (para la placa).
 function D.entidad(e, sx, sy, mundo, jugador)
   local pies = sy + 12
@@ -533,6 +671,20 @@ function D.entidad(e, sx, sy, mundo, jugador)
   local def = Personajes.de(e)
   love.graphics.setColor(0, 0, 0, 0.3)
   love.graphics.ellipse("fill", sx, pies - 1, def and def.fila and ((def.celda or 64) > 64 and 26 or 20) or 11, def and def.fila and 7 or 4)
+  -- animación de ataque: la criatura (y su montura) se deforma y se mueve; la sombra se queda en el suelo
+  local atq, atqU, atqPose, atqK
+  if def and e.kind ~= "caravana" and e.kind ~= "cuerpo" and e.vivo ~= false then
+    atq, atqU = estadoAtaque(e)
+    if atq then
+      atqK = math.max(1, math.min(2.4, def.fila and ((def.celda or 64) / 40) or (def.escala or 1)))
+      atqPose = poseAtaque(atq, atqU, atqK)
+      love.graphics.push()
+      love.graphics.translate(sx + atqPose.dx, pies + atqPose.dy)
+      love.graphics.rotate(atqPose.rot)
+      love.graphics.scale(atqPose.esx, atqPose.esy)
+      love.graphics.translate(-sx, -pies)
+    end
+  end
   if e.kind == "caravana" then
     -- carreta cubierta de las hojas de vehículos
     local img = Arte.img("Characters/Vehicle.png")
@@ -546,7 +698,7 @@ function D.entidad(e, sx, sy, mundo, jugador)
   elseif def then
     def = Personajes.jineteDe(e, def)
     local reloj = (e.anim or 0) / 8
-    local rojo = (e.flash or 0) > 0
+    local rojo = (e.flash or 0) > 0 or (e.flashHasta or 0) > ((mundo and mundo.tiempo) or 0)
     local anda = e.mov or (math.abs(e.velx or 0) + math.abs(e.vely or 0) > 0.08)
     local piesJinete = pies
     local montaFrente
@@ -665,6 +817,10 @@ function D.entidad(e, sx, sy, mundo, jugador)
     local img = Arte.img("Characters/!Hexagram.png")
     love.graphics.setColor(1, 1, 1, 0.9)
     love.graphics.draw(img, Arte.quad(img, 0, 0, 32, 32), sx, pies, 0, 1, 1, 16, 20)
+  end
+  if atq then
+    love.graphics.pop()
+    efectoAtaque(e, atq, atqU, sx + atqPose.dx * 0.6, pies, atqK, def)
   end
   if e.est then
     -- estados alterados: su animación se repite sobre la criatura

@@ -820,8 +820,27 @@ end
 -- ataque de origen (ver Balance.tirarDano). tipo es "fisico" (ataque contra defensa)
 -- o "magico" (ataque mágico contra defensa mágica). coef es el poder del golpe y
 -- mult un factor extra (por ejemplo 0.85 en daño en área).
-function Mundo:golpear(origen, objetivo, coef, mult, tipo)
+-- Anota que una criatura acaba de atacar (el cliente anima el ataque a partir de atqN, que sube con cada uno). Un mismo
+-- ataque que golpea a varios (área) o que llama dos veces solo cuenta una vez. lejos: es un disparo o un conjuro, no un golpe.
+function Mundo:marcarAtaque(e, objetivo, lejos)
+  if not e or e.kind == "proyectil" then return end
+  if self.tiempo - (e.atqT or -9) < 0.25 then return end
+  e.atqT = self.tiempo
+  e.atqN = (e.atqN or 0) + 1
+  e.atqLejos = lejos and true or nil
+  if objetivo and objetivo.x and e.x then
+    local dx, dy = objetivo.x - e.x, objetivo.y - e.y
+    local d = math.max(0.01, math.sqrt(dx * dx + dy * dy))
+    e.atqX, e.atqY = math.floor(dx / d * 100 + 0.5) / 100, math.floor(dy / d * 100 + 0.5) / 100
+  else
+    e.atqX, e.atqY = nil, nil
+  end
+end
+
+-- sinAnim: el golpe es el impacto de algo ya lanzado (proyectil, trampa, aura); no es un ataque nuevo de quien lo lanzó.
+function Mundo:golpear(origen, objetivo, coef, mult, tipo, sinAnim)
   if not origen or not objetivo then return end
+  if not sinAnim then self:marcarAtaque(origen, objetivo, false) end
   tipo = tipo or self:tipoDanoBasico(origen)
   local atk, def
   if tipo == "magico" then
@@ -858,7 +877,7 @@ function Mundo:danar(objetivo, cantidad, origen, critico, color)
   end
   objetivo.hp = objetivo.hp - cantidad
   objetivo.ultimoGolpe = self.tiempo
-  objetivo.flash = 0.12
+  objetivo.flashHasta = self.tiempo + 0.12   -- destello rojo de daño: dura un instante y se apaga solo
   if origen then objetivo.amenaza = origen.id end
   if critico then
     self:numero(objetivo, "-" .. cantidad .. "!", { 1, 0.85, 0.2 })
@@ -1222,6 +1241,7 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
   p.gcd = self.tiempo + 0.35
   p.swing = 0.2
   p.ultimoGolpe = self.tiempo
+  self:marcarAtaque(p, objetivo ~= p and objetivo or nil, (h.rango or 0) > 3 or objetivo == nil or objetivo == p)
   if h.dash and objetivo then
     local dx, dy = objetivo.x - p.x, objetivo.y - p.y
     local d = math.max(0.1, math.sqrt(dx * dx + dy * dy))
@@ -1373,6 +1393,7 @@ function Mundo:potenciaCura(p, h)
 end
 
 function Mundo:proyectil(origen, objetivo, h)
+  self:marcarAtaque(origen, objetivo, true)
   local id = self:idNuevo()
   self.entidades[id] = {
     id = id, kind = "proyectil",
@@ -1770,12 +1791,12 @@ function Mundo:actualizarProyectil(p, dt)
       if p.aoe then
         for _, o in pairs(self.entidades) do
           if o.vivo and self:mismoLugar(obj, o) and Util.dist(obj.x, obj.y, o.x, o.y) <= p.aoe and self:puedeDanar(dueno, o) then
-            self:golpear(dueno, o, p.coef or 1, 0.85, p.dano or "fisico")
+            self:golpear(dueno, o, p.coef or 1, 0.85, p.dano or "fisico", true)
             if o.vivo then self:probarEstado(dueno, o, p.estado) end
           end
         end
       else
-        self:golpear(dueno, obj, p.coef or 1, nil, p.dano or "fisico")
+        self:golpear(dueno, obj, p.coef or 1, nil, p.dano or "fisico", true)
         if obj.vivo then self:probarEstado(dueno, obj, p.estado) end
       end
     end
@@ -1794,7 +1815,7 @@ function Mundo:actualizarTrampa(t, dt)
       if o.kind == "jugador" or o.kind == "bot" or o.kind == "monstruo" then
         self:aplicarEstado(o, "aturdir", 1.6, nil, nil)
         local dueno = self.entidades[t.dueno]
-        if dueno then self:golpear(dueno, o, 0.6, nil, "fisico") end
+        if dueno then self:golpear(dueno, o, 0.6, nil, "fisico", true) end
         t.borrar = true
         return
       end
@@ -3104,7 +3125,8 @@ function Mundo:compactar(e)
     rol = e.rol, staff = e.staff, casaId = e.casaId, casaTamano = e.casaTamano, anim = e.anim, portador = e.portador,
     mov = e.mov and true or nil, objetivo = (e.kind == "monstruo") and e.objetivo or nil,
     respawn = (e.kind == "monstruo" or e.kind == "puerta") and e.respawn or nil,
-    flash = (e.flash or 0) > 0 and e.flash or nil,
+    flash = (e.flashHasta or 0) > self.tiempo and 0.1 or nil,
+    atqN = (e.atqN and self.tiempo - (e.atqT or -9) < 1.2) and e.atqN or nil, atqX = (e.atqN and self.tiempo - (e.atqT or -9) < 1.2) and e.atqX or nil, atqY = (e.atqN and self.tiempo - (e.atqT or -9) < 1.2) and e.atqY or nil, atqL = (e.atqN and self.tiempo - (e.atqT or -9) < 1.2) and e.atqLejos or nil,
     burbuja = e.burbuja,
     est = self:estadosVisibles(e), especie = e.especie, gremio = e.gremioEtiqueta,
     montado = e.montado, monturaFrac = (e.montado and e.job and require("compartido.dominio.monturas").especies[e.montado] and require("compartido.dominio.monturas").especies[e.montado].requiereOficio) and (function() local hp, mx = self:vidaMontura(e, e.montado) return hp / mx end)() or nil, job = e.job, addon = e.kind == "jugador" and e.addonActivo or nil,

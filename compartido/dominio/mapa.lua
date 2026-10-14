@@ -231,35 +231,60 @@ local function estamparCiudad(mapa, ciudad)
     setBloque(mapa, px, y0 + medioY - pry + 1, true)
     mapa.props[#mapa.props + 1] = { x = px, y = y0 + medioY - pry + 1, tipo = (sx < 0) and "pozo" or "barril" }
   end
-  -- mobiliario de la plaza: en los cuatro cuadrantes (las avenidas que la cruzan quedan libres), bancos mirando a la
-  -- estatua, macetas con flores, setos, jarrones y un cartel; flores sueltas en el suelo
+  -- mobiliario de la plaza: cada cuadrante (las avenidas que la cruzan quedan libres) se amuebla distinto, con una semilla
+  -- propia de la ciudad y del cuadrante: filas de bancos de 1 a 3 en sitios distintos, macetas, jarrones, setos, barriles,
+  -- cajas, algún pino en las plazas grandes y flores sueltas en el suelo
   do
     local ocupado = {}
     for _, p in ipairs(mapa.props) do ocupado[p.x .. "," .. p.y] = true end
     local fac = ciudad.faccion
+    local base = 17
+    for i = 1, #ciudad.id do base = (base * 131 + ciudad.id:byte(i)) % 1000003 end
     local function mueble(dx, dy, tipo, solido)
       local tx, ty = x0 + medio + dx, y0 + medioY + dy
-      if not enPlaza(tx - x0, ty - y0) or avenida(tx - x0, ty - y0) or ocupado[tx .. "," .. ty] then return end
+      if not enPlaza(tx - x0, ty - y0) or avenida(tx - x0, ty - y0) or ocupado[tx .. "," .. ty] then return false end
       ocupado[tx .. "," .. ty] = true
       if solido ~= false then setBloque(mapa, tx, ty, true) end
       mapa.props[#mapa.props + 1] = { x = tx, y = ty, tipo = tipo, fac = fac }
+      return true
     end
-    for _, sx in ipairs({ -1, 1 }) do
-      for _, sy in ipairs({ -1, 1 }) do
-        mueble(sx * 4, sy * 3, "banco")
-        mueble(sx * 5, sy * 3, "banco")
-        mueble(sx * 4, sy * 4, "maceta")
-        mueble(sx * 3, sy * 4, "flores_mixtas", false)
-        mueble(sx * 5, sy * 4, "arbusto")
-        if grande then
-          mueble(sx * 7, sy * 3, "banco")
-          mueble(sx * 6, sy * 3, "banco")
-          mueble(sx * 6, sy * 4, "jarron")
-          mueble(sx * 7, sy * 5, "maceta")
-          mueble(sx * 8, sy * 4, "arbusto")
-          mueble(sx * 5, sy * 5, "flor_roja", false)
-          mueble(sx * 4, sy * 6, "flor_blanca", false)
-          mueble(sx * 8, sy * 6, "arbusto")
+    local PIEZAS = {
+      { "maceta", 3 }, { "jarron", 2 }, { "arbusto", 2 }, { "barril", 1 }, { "caja", 1 }, { "cubo", 1 },
+    }
+    if grande then PIEZAS[#PIEZAS + 1] = { "arbol_pino", 1 } end
+    local totalPiezas = 0
+    for _, pz in ipairs(PIEZAS) do totalPiezas = totalPiezas + pz[2] end
+    local SUELO = { "flores_mixtas", "flor_roja", "flor_blanca", "flor_amarilla", "matas", "hierba_alta" }
+    for qi, par in ipairs({ { -1, -1 }, { 1, -1 }, { -1, 1 }, { 1, 1 } }) do
+      local sx, sy = par[1], par[2]
+      local semillaQ = (base * 7919 + qi * 104729) % 2147483647
+      local function azar()
+        semillaQ = (semillaQ * 1103515245 + 12345) % 2147483648
+        return semillaQ / 2147483648
+      end
+      local anchoQ, altoQ = prx - 2, pry - 2     -- dx = 3..prx, dy = 3..pry
+      -- filas de bancos
+      for _ = 1, 1 + math.floor(azar() * 2.4) do
+        local largo = 1 + math.floor(azar() * 3)
+        local ax = 3 + math.floor(azar() * math.max(1, anchoQ - largo + 1))
+        local ay = 3 + math.floor(azar() * altoQ)
+        local libre = true
+        for k = 0, largo - 1 do if ocupado[(x0 + medio + sx * (ax + k)) .. "," .. (y0 + medioY + sy * ay)] then libre = false end end
+        if libre then for k = 0, largo - 1 do mueble(sx * (ax + k), sy * ay, "banco") end end
+      end
+      -- piezas sueltas y flores en lo que queda
+      for ay = 3, pry do
+        for ax = 3, prx do
+          local r = azar()
+          if r < 0.30 then
+            local pick = azar() * totalPiezas
+            for _, pz in ipairs(PIEZAS) do
+              pick = pick - pz[2]
+              if pick <= 0 then mueble(sx * ax, sy * ay, pz[1]) break end
+            end
+          elseif r < 0.52 then
+            mueble(sx * ax, sy * ay, SUELO[1 + math.floor(azar() * #SUELO)], false)
+          end
         end
       end
     end

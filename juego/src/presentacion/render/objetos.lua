@@ -63,6 +63,8 @@ local DEF = {
   matas = { { B, 1, 11, 1, 1 }, { B, 3, 11, 1, 1 } },
   arbusto = { { B, 2, 11, 1, 1 } },
   madera_apilada = { { B, 2, 13, 1, 1 } },
+  flores_naranja = { { B, 10, 7, 1, 1 } },
+  arbusto_rosa = { { B, 13, 6, 1, 1 } },
 }
 
 local cache = {}
@@ -93,13 +95,32 @@ function O.catalogo()
   return lista
 end
 
--- Dibuja con la base en (sx, sy) (centro de abajo de la casilla).
-function O.dibujar(nombre, variante, sx, sy, tinte, alfa)
+-- Plantas vivas: se mecen con el viento (los árboles secos, las rocas y lo demás no). amp = cuánto se inclina la copa
+-- (cizalla horizontal anclada en la base), vel = rapidez. Cada una lleva su fase para que no se muevan todas a la vez.
+local VIVAS = {
+  arbol = { 0.030, 1.1 }, arbol_pino = { 0.026, 1.3 }, palma = { 0.050, 1.5 },
+  arbusto = { 0.018, 1.7 }, matorral = { 0.016, 1.8 }, matas = { 0.020, 2.0 }, helecho = { 0.030, 1.9 },
+  hierba_alta = { 0.035, 2.2 }, hierba_seca = { 0.03, 2.1 }, flor_amarilla = { 0.04, 2.0 }, flor_blanca = { 0.04, 2.0 },
+  flor_roja = { 0.04, 2.0 }, flores_mixtas = { 0.04, 2.0 }, flores_naranja = { 0.03, 2.0 }, arbusto_rosa = { 0.02, 1.7 },
+  cultivo = { 0.03, 1.9 },
+}
+
+-- Dibuja con la base en (sx, sy) (centro de abajo de la casilla). fase: desfase del vaivén de las plantas vivas.
+function O.dibujar(nombre, variante, sx, sy, tinte, alfa, fase)
   local t = trozo(nombre, variante)
   if not t then return false end
   if tinte then love.graphics.setColor(tinte[1], tinte[2], tinte[3], alfa or 1)
   else love.graphics.setColor(1, 1, 1, alfa or 1) end
-  love.graphics.draw(t.img, t.quad, sx, sy, 0, 1, 1, t.w / 2, t.h)
+  local viva = VIVAS[nombre]
+  local kx = 0
+  if viva then
+    local ahora = love.timer.getTime()
+    local f = fase or 0
+    -- ráfagas lentas que suben y bajan la fuerza del viento, y un vaivén propio de cada planta
+    local rafaga = 0.75 + 0.25 * math.sin(ahora * 0.35 + f * 0.1)
+    kx = viva[1] * rafaga * (math.sin(ahora * viva[2] + f) + 0.35 * math.sin(ahora * viva[2] * 2.3 + f * 1.7))
+  end
+  love.graphics.draw(t.img, t.quad, sx, sy, 0, 1, 1, t.w / 2, t.h, kx, 0)
   return true
 end
 
@@ -158,25 +179,13 @@ O.personalizados.banco = function(p, sx, sy)
   love.graphics.rectangle("fill", sx - 14, sy - 19, 28, 1)
 end
 
+-- Maceta de la plaza: un cubo de madera del pack con una mata florida encima (naranja o rosa según la casilla).
 O.personalizados.maceta = function(p, sx, sy)
-  local umbra = p.fac == "umbra"
+  local v = (p.x * 7 + p.y * 13) % 2
   love.graphics.setColor(0, 0, 0, 0.2)
-  love.graphics.ellipse("fill", sx, sy - 2, 9, 3, 12)
-  love.graphics.setColor(umbra and 0.28 or 0.72, umbra and 0.24 or 0.4, umbra and 0.34 or 0.28, 1)
-  love.graphics.polygon("fill", sx - 7, sy - 11, sx + 7, sy - 11, sx + 5, sy - 1, sx - 5, sy - 1)
-  love.graphics.setColor(umbra and 0.4 or 0.86, umbra and 0.34 or 0.52, umbra and 0.46 or 0.36, 1)
-  love.graphics.rectangle("fill", sx - 8, sy - 13, 16, 3)
-  love.graphics.setColor(0.2, 0.5, 0.25, 1)
-  love.graphics.circle("fill", sx - 4, sy - 17, 5)
-  love.graphics.circle("fill", sx + 4, sy - 17, 5)
-  love.graphics.circle("fill", sx, sy - 20, 5)
-  local flor = umbra and { { 0.7, 0.45, 0.95 }, { 0.95, 0.4, 0.6 } } or { { 1, 0.85, 0.3 }, { 1, 0.45, 0.5 } }
-  love.graphics.setColor(flor[1][1], flor[1][2], flor[1][3], 1)
-  love.graphics.circle("fill", sx - 3, sy - 19, 1.8)
-  love.graphics.circle("fill", sx + 5, sy - 16, 1.8)
-  love.graphics.setColor(flor[2][1], flor[2][2], flor[2][3], 1)
-  love.graphics.circle("fill", sx + 1, sy - 22, 1.8)
-  love.graphics.circle("fill", sx - 5, sy - 15, 1.8)
+  love.graphics.ellipse("fill", sx, sy - 2, 11, 4, 14)
+  O.dibujar("cubo", v, sx, sy)
+  O.dibujar(v == 0 and "flores_naranja" or "arbusto_rosa", 0, sx, sy - 9)
 end
 
 -- Puerta de mazmorra: un portón de piedra con un resplandor y el nombre encima. Es un prop del mapa

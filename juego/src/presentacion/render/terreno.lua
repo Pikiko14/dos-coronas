@@ -227,7 +227,7 @@ local function decorar(mapa, x, y, px, py, tipo, fam)
   end
   local adorno = mapa.adorno and mapa.adorno[x] and mapa.adorno[x][y]
   if adorno then
-    Objetos.dibujar(adorno, 0, px + 16, py + 31, nil)
+    Objetos.dibujar(adorno, 0, px + 16, py + 31, nil, nil, x * 0.9 + y * 1.7)
     return
   end
   if mapa.bloque[x] and mapa.bloque[x][y] then return end
@@ -246,7 +246,7 @@ local function decorar(mapa, x, y, px, py, tipo, fam)
     if not nombre then return end
     variante = math.floor(hash(x, y, 8) * 4)
   end
-  Objetos.dibujar(nombre, variante, px + 16, py + 31, (not SIN_TINTE[nombre]) and tinte(mapa, x, y, fam) or nil)
+  Objetos.dibujar(nombre, variante, px + 16, py + 31, (not SIN_TINTE[nombre]) and tinte(mapa, x, y, fam) or nil, nil, x * 0.9 + y * 1.7)
 end
 
 -- Mar: autotile A1 tipo 10 (agua con su orilla de arena), tres cuadros de oleaje.

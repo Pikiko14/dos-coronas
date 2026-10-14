@@ -103,6 +103,51 @@ function E.correr()
     local f = io.open(Log.carpeta() .. "/capturas/web/addons_vista.png", "wb")
     if f then f:write(datos:encode("png"):getString()) f:close() end
   end
+  -- hoja de revisión de las animaciones de ataque: una fila por criatura, 8 instantes del ataque (cerca y de lejos)
+  do
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local filas = {
+      { kind = "monstruo", monstruo = "gato", dir = 3 },
+      { kind = "monstruo", monstruo = "jabali", dir = 1 },
+      { kind = "monstruo", monstruo = "gargola", dir = 4 },
+      { kind = "jugador", clase = "guerrero", faccion = "albor", dir = 3 },
+      { kind = "jugador", clase = "guerrero", faccion = "albor", addon = "skin_hoplita", dir = 1 },
+      { kind = "jugador", clase = "mago", faccion = "umbra", addon = "skin_archimago", dir = 3, lejos = true },
+      { kind = "jugador", clase = "cazador", faccion = "albor", dir = 4, lejos = true },
+    }
+    local E2, W, H = 3, 8, #filas
+    local cv = love.graphics.newCanvas(W * 40 * E2, H * 44 * E2)
+    love.graphics.push("all")
+    love.graphics.setCanvas({ cv, stencil = true })
+    love.graphics.clear(0.3, 0.42, 0.55, 1)
+    for r, base in ipairs(filas) do
+      for c = 1, W do
+        local u = (c - 1) / (W - 1) * 0.92
+        local e = {}
+        for k, v in pairs(base) do e[k] = v end
+        e.id = "atq" .. r .. "_" .. c
+        e.vivo = true
+        e.hp, e.hpMax = 10, 10
+        e.nivel = 5
+        e.atqN, e.atqX, e.atqY, e.atqL = 1, (base.dir == 3 and 1) or (base.dir == 4 and -1) or 0, (base.dir == 1 and 1) or 0, base.lejos
+        local t0 = 100
+        Dibujo.relojAtaque = function() return t0 end
+        Dibujo.estadoAtaque(e)
+        t0 = 100 + u * (base.lejos and 0.52 or 0.46)
+        love.graphics.push()
+        love.graphics.translate((c - 1) * 40 * E2, (r - 1) * 44 * E2)
+        love.graphics.scale(E2, E2)
+        love.graphics.setColor(1, 1, 1, 1)
+        Dibujo.entidad(e, 20, 20, { tiempo = 0, entidades = {} }, nil)
+        love.graphics.pop()
+      end
+    end
+    Dibujo.relojAtaque = nil
+    love.graphics.pop()
+    local datos = cv:newImageData()
+    local f = io.open(Log.carpeta() .. "/capturas/web/ataques_vista.png", "wb")
+    if f then f:write(datos:encode("png"):getString()) f:close() end
+  end
   Log.info("exportar_web: " .. n .. " sprites en " .. Log.carpeta() .. "/capturas/web")
   print("exportar_web: " .. n .. " sprites")
   love.event.quit(0)

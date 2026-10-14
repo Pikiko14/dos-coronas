@@ -321,6 +321,36 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       montado = "caballo", monturaFrac = 0.4, hp = 50, hpMax = 100 }, 100, 100, mundo, pj)
     fallar(errores, "el jinete con montura herida se dibuja", ok, tostring(err))
   end)
+  paso("animación de ataque: criaturas y addons se mueven y vuelven a su sitio", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local reloj = 50
+    Dibujo.relojAtaque = function() return reloj end
+    local ok, err = pcall(function()
+      for _, base in ipairs({
+        { kind = "monstruo", monstruo = "gato", dir = 3 },
+        { kind = "jugador", clase = "guerrero", faccion = "albor", addon = "skin_hoplita", dir = 1 },
+        { kind = "jugador", clase = "mago", faccion = "umbra", dir = 4, atqL = true },
+      }) do
+        local e = { id = "t_" .. tostring(base.kind) .. tostring(base.addon or base.clase or base.monstruo), vivo = true, hp = 10, hpMax = 10, atqN = 1, atqX = 1, atqY = 0 }
+        for k, v in pairs(base) do e[k] = v end
+        reloj = 50
+        local st = Dibujo.estadoAtaque(e)
+        fallar(errores, "el ataque arranca al ver atqN nuevo", st ~= nil)
+        reloj = 50.2
+        fallar(errores, "sigue en marcha a mitad del ataque", Dibujo.estadoAtaque(e) ~= nil)
+        pcall(love.graphics.push)
+        Dibujo.entidad(e, 100, 100, { tiempo = 0, entidades = {} }, nil)
+        pcall(love.graphics.pop)
+        reloj = 51
+        fallar(errores, "el ataque termina", Dibujo.estadoAtaque(e) == nil)
+        e.atqN = 2
+        reloj = 52
+        fallar(errores, "un atqN nuevo vuelve a animar", Dibujo.estadoAtaque(e) ~= nil)
+      end
+    end)
+    Dibujo.relojAtaque = nil
+    fallar(errores, "la animación de ataque se dibuja sin errores", ok, tostring(err))
+  end)
   paso("interfaz: marquesina y enfriamiento de pociones", function()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Marq", faccion = "albor", clase = "guerrero", nivel = 10 })

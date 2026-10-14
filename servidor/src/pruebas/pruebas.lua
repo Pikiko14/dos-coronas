@@ -1838,6 +1838,33 @@ mundo.tiempo = 100
     fallar(errores, "otra poción distinta no espera a la primera", mundo:usarPocionId(a, "pocion_mana") == nil)
     fallar(errores, "la foto trae el enfriamiento", mundo:foto(a.id).tu.cdPociones.pocion_vida == a.cdPociones.pocion_vida)
   end)
+  paso("animación de ataque: el servidor marca cada ataque de criaturas y jugadores", function()
+    local mundo = Mundo.nuevo()
+    local a = mundo:crearPersonaje({ nombre = "Atq", faccion = "albor", clase = "guerrero" })
+    local m = mundo:spawnMonstruo("gato", a.x + 1, a.y, { x = a.x, y = a.y })
+    mundo.tiempo = 100
+    mundo:golpear(a, m, 1)
+    fallar(errores, "golpear anota el ataque con su dirección", a.atqN == 1 and a.atqX ~= nil and a.atqLejos == nil)
+    mundo:golpear(a, m, 1)
+    fallar(errores, "dos golpes del mismo ataque cuentan uno", a.atqN == 1)
+    mundo.tiempo = 100.5
+    mundo:golpear(a, m, 1, nil, nil, true)
+    fallar(errores, "el impacto de algo lanzado no es un ataque nuevo", a.atqN == 1)
+    mundo:golpear(m, a, 1)
+    fallar(errores, "las criaturas también atacan", m.atqN == 1)
+    mundo.tiempo = 101
+    mundo:proyectil(a, m, { coef = 1, dano = "fisico", proyectil = "flecha" })
+    fallar(errores, "un disparo es un ataque de lejos", a.atqN == 2 and a.atqLejos == true)
+    local foto = mundo:compactar(a)
+    fallar(errores, "la foto lleva el ataque reciente", foto.atqN == 2 and foto.atqL == true)
+    mundo.tiempo = 110
+    fallar(errores, "pasado un rato la foto ya no lo lleva", mundo:compactar(a).atqN == nil)
+    -- el destello rojo de daño dura un instante y se apaga (antes se quedaba para siempre)
+    m.hp = m.hpMax; mundo:danar(m, 1, a)
+    fallar(errores, "al recibir daño la foto lleva el destello", mundo:compactar(m).flash ~= nil)
+    mundo.tiempo = mundo.tiempo + 0.5
+    fallar(errores, "el destello rojo se apaga solo", mundo:compactar(m).flash == nil)
+  end)
   paso("autopoción: umbral configurable y curación", function()
     local Autoridad = require("src.dominio.autoridad")
     local mundo = Mundo.nuevo()

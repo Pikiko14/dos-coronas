@@ -139,7 +139,7 @@ function E.instalar(Mundo)
           self:efecto(pw.anim, o.x, o.y, 0.6)
           for _, v in pairs(self.entidades) do
             if v.vivo and self:mismoLugar(o, v) and Util.dist(o.x, o.y, v.x, v.y) <= pw.area and self:puedeDanar(e, v) then
-              if pw.coef then self:golpear(e, v, pw.coef, 0.85) end
+              if pw.coef then self:golpear(e, v, pw.coef, 0.85, nil, true) end
               self:probarEstado(e, v, pw.estado)
             end
           end

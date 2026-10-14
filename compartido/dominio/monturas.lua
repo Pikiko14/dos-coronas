@@ -41,7 +41,7 @@ function Mundo:danarMontura(p, cantidad, origen)
   p.monturaVida[p.montado] = math.max(0, hp)
   p.monturaGolpe = self.tiempo
   p.ultimoGolpe = self.tiempo
-  p.flash = 0.12
+  p.flashHasta = self.tiempo + 0.12
   if origen then p.amenaza = origen.id end
   self:numero(p, tostring(-cantidad), { 0.9, 0.65, 0.3 })
   -- quien ataca a un comerciante montado comete un delito y abre pelea
