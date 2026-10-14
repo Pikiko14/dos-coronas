@@ -159,9 +159,11 @@ function I.boton(x, y, w, h, texto, id, activo, motivo)
 end
 
 -- Retrato de un oficio: (x, y) son los pies; zoom 1 equivale a un personaje de 32 px por 2,4.
-function I.persona(claseId, x, y, zoom, faccion)
+-- addon (opcional): el aspecto del addon activo del personaje en lugar del de su clase.
+function I.persona(claseId, x, y, zoom, faccion, addon)
   local c = Personajes.clases[claseId or "guerrero"] or Personajes.clases.guerrero
   local def = c[faccion or "albor"] or c.albor
+  if addon then def = Personajes.de({ kind = "jugador", clase = claseId, faccion = faccion, addon = addon }) or def end
   local s = (zoom or 1) * 2.4
   love.graphics.push()
   love.graphics.translate(x, y)
@@ -878,11 +880,11 @@ function I.hud(mundo, p, w, h)
     local x = bx0 + total + sep + 6
     casilla(x, by0, lado_c)
     local especie = p.montado or p.monturas[1]
-    if not p.job and not p.montado then
-      -- sin oficio activo solo valen las monturas de viaje
+    if not p.montado then
+      -- sin oficio activo solo valen las monturas de viaje; con él, solo las de transporte
       for _, id in ipairs(p.monturas) do
         local dm = Monturas.especies[id]
-        if dm and not dm.requiereOficio then especie = id break end
+        if dm and (dm.requiereOficio == true) == (p.job ~= nil) then especie = id break end
       end
     end
     local def = Personajes.monturaDe(especie, p.faccion)
@@ -1353,7 +1355,8 @@ function I.dibujarMenuJugador(mundo, p, w, h)
     { "Tratar (comerciar)", "ctx_trato", true },
     { "Invitar al gremio", "ctx_gremio", p.gremioNombre ~= nil and misma,
       p.gremioNombre == nil and "No tienes gremio." or "Solo puedes invitar a tu corona." },
-    { "Invitar al grupo", "ctx_grupo", misma, "Solo puedes agrupar con tu corona." },
+    { "Invitar al grupo", "ctx_grupo", misma and (not p.grupo or p.grupo.lider == p.id) and not o.enGrupo,
+      not misma and "Solo puedes agrupar con tu corona." or (p.grupo and p.grupo.lider ~= p.id) and "Solo el líder del grupo invita." or "Ya está en un grupo." },
     { "Mirar", "ctx_mirar", true },
   }
   local ancho, alto = 220, 46 + #opciones * 34
@@ -1926,6 +1929,7 @@ function I.panelMontura(mundo, p, w, h)
     local e = estado[id] or {}
     if e.caida then return "Herida: se recupera en " .. e.caida .. " s." end
     if d.requiereOficio and not p.job then return "Las monturas de transporte piden el oficio activo (Y)." end
+    if p.job and not d.requiereOficio then return "Con el oficio activo solo valen las monturas de transporte." end
     if d.oficio and p.job ~= d.oficio then return "Solo para el oficio de comerciante." end
     if p.modo ~= "mundo" then return "Aquí no se puede montar." end
     return nil
@@ -2932,7 +2936,8 @@ function I.panelEquipo(mundo, p, w, h)
   -- retrato y datos
   love.graphics.setColor(0.10, 0.13, 0.25)
   love.graphics.rectangle("fill", px + 14, py + 44, 200, 150, 6, 6)
-  I.persona(p.clase, px + 114, py + 160, 1.7, p.faccion)
+  local addonAct = (p.mall and p.mall.addonActivo) or p.addon
+  I.persona(p.clase, px + 114, py + 160, 1.7, p.faccion, addonAct)
   love.graphics.setFont(I.fuente)
   love.graphics.setColor(0.98, 0.93, 0.78)
   love.graphics.printf(p.nombre or "", px + 14, py + 198, 200, "center")
@@ -2949,6 +2954,8 @@ function I.panelEquipo(mundo, p, w, h)
   dato("Oro", Ayudas.num(p.oro), { 1, 0.9, 0.35 })
   dato("Monedas Corona", Ayudas.num(p.mall and p.mall.monedas), { 1, 0.85, 0.3 })
   dato("Oficio", p.oficioElegido and (NOMBRES_OFICIO[p.oficioElegido] or p.oficioElegido) or "ninguno")
+  local ad = addonAct and require("compartido.dominio.mall").ADDONS[addonAct]
+  dato("Addon", ad and ad.nombre or "ninguno")
   dato("Gremio", p.gremioNombre or "ninguno")
   dato("Grupo", (p.grupo and p.grupo.miembros and (#p.grupo.miembros .. " miembros")) or "ninguno")
   dato("Zona", p.zona or "—")

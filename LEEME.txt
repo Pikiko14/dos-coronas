@@ -483,7 +483,7 @@ CRIATURAS CADA DOS NIVELES, CAMPAMENTOS Y MONEDAS
 == Mazmorras ==
 - Tres mazmorras (Cripta del Olvido nv 10+, Foso de las Brasas nv 18+, Santuario del Eclipse nv 25+), cada una con su puerta de piedra en un punto distinto del mapa (se ven como rombos violeta en el mapa del mundo).
 - Con E junto a la puerta entras (hace falta el nivel minimo y no estar en combate). Dentro hay salas con criaturas y un jefe al fondo; la puerta de salida esta en la sala de entrada (E). Si mueres dentro reapareces en el mundo.
-- Al caer el jefe sale un cofre durante 150 s: cada jugador puede abrirlo una vez con E y recibe 600 de oro y un premio: un objeto o addon del Item Mall, o una pieza de equipo del escalon maximo (nivel 30). El jefe vuelve a los 5 minutos.
+- Al caer el jefe sale un cofre durante 150 s. Al abrirlo con E el premio de cada jugador que esta en la mazmorra cae al suelo junto al cofre (600 de oro y un objeto del Item Mall o una pieza de equipo del escalon maximo de cualquier oficio, 180 s para recogerlo; los addons y monedas se entregan al momento) y el cofre desaparece. Las criaturas de la mazmorra no reaparecen solas: vuelven todas cuando reaparece el jefe, a los 5 minutos. El botin de las criaturas y de los cofres puede ser equipo de cualquier oficio, no solo del que usa quien lo recoge.
 - Codigo: compartido/dominio/mazmorras.lua (mapas y logica) y Datos.mazmorras (datos de cada una).
 
 == Sprites de clase y monturas nuevas ==

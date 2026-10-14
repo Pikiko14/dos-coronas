@@ -223,6 +223,7 @@ function M.instalar(Mundo)
     if not p.oficioElegido then return "Aún no tienes oficio: aprende uno con un maestro de oficios." end
     if p.modo ~= "mundo" or not self:ciudadEn(p.x, p.y) then return "El oficio solo se activa dentro de una ciudad." end
     p.job = p.oficioElegido
+    self:revisarMontura(p)   -- una montura normal se baja: con el oficio solo valen las de transporte
     self:recalcularCarga(p)
     self:marcarProgreso(p)
     self:mensaje("sistema", "", "Oficio activado: " .. M.OFICIOS[p.job].nombre .. ". Pulsa Y para desactivarlo.", p)

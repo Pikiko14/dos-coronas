@@ -791,8 +791,13 @@ function Mundo:puedeDanar(origen, objetivo)
     return origen.faccion and origen.faccion ~= objetivo.faccion
   end
   if kind == "monstruo" or origen.kind == "monstruo" then return true end
-  if origen.faccion and objetivo.faccion and origen.faccion == objetivo.faccion then return false end
   if self:enSantuario(objetivo) then return false end
+  -- con un oficio activo (comerciante, ladrón, cazarrecompensas) la facción no cuenta: se puede atacar y ser
+  -- atacado aunque sea de la misma (fuera de las ciudades)
+  if (origen.kind == "jugador" or origen.kind == "bot") and (kind == "jugador" or kind == "bot") and (origen.job or objetivo.job) then
+    return true
+  end
+  if origen.faccion and objetivo.faccion and origen.faccion == objetivo.faccion then return false end
   return true
 end
 
@@ -933,14 +938,14 @@ function Mundo:soltarBotin(m, asesino)
       loot.items[#loot.items + 1] = { id = "polvo_arcano", cant = math.random(2, 4) }
     end
     if m.categoria == "gigante" and math.random() < 0.5 then
-      loot.items[#loot.items + 1] = { id = Items.aleatorio(Datos, asesino.clase or "guerrero", math.min(8, Items.tierPara(m.nivel) + 1)), cant = 1 }
+      loot.items[#loot.items + 1] = { id = Items.aleatorioCualquiera(Datos, math.min(8, Items.tierPara(m.nivel) + 1)), cant = 1 }
     end
   end
   if math.random() < (m.categoria == "gigante" and 1 or m.categoria == "party" and 0.6 or 0.12) then
     local tier = Items.tierPara(m.nivel)
     if m.categoria then tier = math.min(8, tier + 1)
     elseif tier > 1 and math.random() < 0.35 then tier = tier - 1 end
-    local id = Items.aleatorio(Datos, asesino.clase or "guerrero", tier)
+    local id = Items.aleatorioCualquiera(Datos, tier)
     if Datos.item(id) then loot.items[#loot.items + 1] = { id = id, cant = 1 } end
   end
   -- polvo arcano para encantar: difícil de conseguir y solo de criaturas por encima del nivel 10
@@ -1001,6 +1006,8 @@ function Mundo:morir(e, origen)
       if origen.kind == "jugador" then self:soltarBotin(e, origen) end
     end
     e.respawn = self.tiempo + (e.elite and Datos.RESPAWN_ELITE or Datos.RESPAWN_MONSTRUO)
+    -- en las mazmorras las criaturas no reaparecen una a una: todas vuelven cuando reaparece el jefe
+    if e.mz and not e.jefeMz then e.respawn = 1e12 end
     if e.efimero then e.borrar = true end
     if e.jefeMz then self:jefeMazmorraCae(e, origen) end
     if e.elite and not e.jefeMz then
@@ -1111,6 +1118,7 @@ function Mundo:revivir(e)
   if e.kind == "monstruo" then
     e.x, e.y = e.hogarx, e.hogary
     e.hp = e.hpMax
+    if e.jefeMz then self:reiniciarMazmorra(e.mz) end
   elseif e.kind == "jugador" or e.kind == "bot" then
     local v = e.vinculo or { x = e.x, y = e.y, modo = "mundo" }
     if e.modo == "batalla" or e.modo == "estandarte" then

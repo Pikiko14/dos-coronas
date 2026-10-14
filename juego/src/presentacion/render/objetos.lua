@@ -133,6 +133,26 @@ end
 -- Puerta de mazmorra: un portón de piedra con un resplandor y el nombre encima. Es un prop del mapa
 -- (tipo "puerta_mazmorra"; salida = true la pinta como la puerta de salida de dentro).
 O.personalizados = O.personalizados or {}
+
+-- Barcos de los muelles (hoja Vehicle: columnas 0-2 el bote, 3-5 el navío; filas abajo, izquierda, derecha, arriba).
+-- Van amarrados mirando a lo largo del muelle y se mecen suavemente con las olas.
+local FILA_RUMBO = function(rx, ry)
+  if rx > 0 then return 2 elseif rx < 0 then return 1 elseif ry > 0 then return 0 end
+  return 3
+end
+local function embarcacion(p, sx, sy, col0, escala, ancla)
+  local img = Arte.img("Characters/Vehicle.png")
+  local t = love.timer.getTime()
+  local mece = math.sin(t * 1.4 + (p.x * 3 + p.y) * 0.7)
+  love.graphics.setColor(0, 0, 0, 0.18)
+  love.graphics.ellipse("fill", sx, sy - 2, 18 * escala, 6 * escala)
+  love.graphics.setColor(1, 1, 1, 1)
+  local fila = FILA_RUMBO(p.rx or 0, p.ry or 1)
+  love.graphics.draw(img, Arte.quad(img, (col0 + 1) * 32, fila * 32, 32, 32), sx, sy + mece * 1.6, mece * 0.012, escala, escala, 16, ancla)
+end
+O.personalizados.barco = function(p, sx, sy) embarcacion(p, sx, sy, 3, 2.4, 28) end
+O.personalizados.bote = function(p, sx, sy) embarcacion(p, sx, sy, 0, 1.4, 28) end
+
 O.personalizados.puerta_mazmorra = function(p, sx, sy)
   local def = require("compartido.dominio.datos").mazmorra(p.mz)
   local t = love.timer.getTime()

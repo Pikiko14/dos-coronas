@@ -359,10 +359,30 @@ function M.instalar(Mundo)
     end
   end
 
-  -- Elige y entrega el premio. Devuelve true y el texto, o false si la bolsa está llena.
-  function Mundo:premioMazmorra(p)
+  -- Cuando reaparece el jefe, la mazmorra se reinicia: vuelven todas las criaturas caídas.
+  function Mundo:reiniciarMazmorra(id)
+    for _, e in pairs(self.entidades) do
+      if e.kind == "monstruo" and e.mz == id and not e.vivo and not e.jefeMz then self:revivir(e) end
+    end
+    for _, e in pairs(self.entidades) do
+      if e.kind == "jugador" and e.modo == id and e.vivo then
+        self:mensaje("sistema", "", "La mazmorra se ha reiniciado: las criaturas han vuelto.", e)
+      end
+    end
+  end
+
+  -- Reparte el premio de p: lo que toca cae al suelo junto al cofre (solo p puede recogerlo un buen rato). Los
+  -- addons y las monedas del mall se entregan al momento. Devuelve true y el texto de lo que cae.
+  function Mundo:premioMazmorra(p, x, y)
     local r = math.random()
     local texto
+    local base = { dueno = p.id, grupo = p.grupoId, hasta = self.tiempo + M.DURA_BOTIN }
+    local function suelo(extra)
+      local t = {}
+      for k, v in pairs(base) do t[k] = v end
+      for k, v in pairs(extra) do t[k] = v end
+      self:dejarEnSuelo(t, x or p.x, y or p.y, p.modo, p.z)
+    end
     if r < M.PROB_ADDON then
       local libres = {}
       for _, id in ipairs(Mall.ORDEN_ADDONS) do
@@ -377,38 +397,39 @@ function M.instalar(Mundo)
         p.monedas = (p.monedas or 0) + 150
         texto = "150 " .. Mall.MONEDA .. " (ya tenías todos los addons)"
       end
-    elseif r < M.PROB_ADDON + M.PROB_MALL then
-      local lista = {}
-      for _, o in ipairs(Mall.OBJETOS) do
-        if Datos.item(o.id) then lista[#lista + 1] = o end
-      end
-      local o = lista[math.random(#lista)]
-      if not self:darItem(p, o.id, 1) then return false end
-      texto = o.nombre
     else
-      local id = Items.aleatorio(Datos, p.clase, #Items.TIER, math.random)
-      if not self:darItem(p, id, 1) then return false end
-      local it = Datos.item(id)
-      texto = (it and it.nombre or id) .. " (escalón máximo)"
+      local id
+      if r < M.PROB_ADDON + M.PROB_MALL then
+        local lista = {}
+        for _, o in ipairs(Mall.OBJETOS) do
+          if Datos.item(o.id) then lista[#lista + 1] = o end
+        end
+        id = lista[math.random(#lista)].id
+      else
+        -- equipo del escalón máximo de cualquier oficio
+        id = Items.aleatorioCualquiera(Datos, #Items.TIER, math.random)
+      end
+      local def = Datos.item(id)
+      suelo({ oro = 0, items = { { id = id, cant = 1 } }, item = id, nombre = def and def.nombre or "Objeto" })
+      texto = (def and def.nombre or id)
     end
-    p.oro = (p.oro or 0) + M.ORO_COFRE
+    suelo({ oro = M.ORO_COFRE, items = {}, nombre = "Oro" })
     return true, texto
   end
 
+  -- Abrir el cofre: el premio de cada jugador que está en la mazmorra cae al suelo junto a él y el cofre desaparece.
   function Mundo:reclamarCofre(p, cofre)
-    if cofre.reclamado[p.id] then
-      self:mensaje("sistema", "", "Ya abriste este cofre.", p)
-      return
+    if not p.vivo or cofre.borrar then return end
+    for _, e in pairs(self.entidades) do
+      if e.kind == "jugador" and e.modo == cofre.modo and e.vivo then
+        local ok, texto = self:premioMazmorra(e, cofre.x, cofre.y)
+        if ok then
+          self:marcarProgreso(e)
+          self:mensaje("sistema", "", "¡El cofre se abre! Cae al suelo: " .. texto .. " y " .. M.ORO_COFRE .. " de oro. Recógelos antes de que se pierdan.", e)
+        end
+      end
     end
-    if not p.vivo then return end
-    local ok, texto = self:premioMazmorra(p)
-    if not ok then
-      self:mensaje("sistema", "", "Tu bolsa está llena: haz sitio y vuelve a abrir el cofre.", p)
-      return
-    end
-    cofre.reclamado[p.id] = true
-    self:marcarProgreso(p)
-    self:mensaje("sistema", "", "¡Abres el cofre! Recibes " .. texto .. " y " .. M.ORO_COFRE .. " de oro.", p)
+    cofre.vivo, cofre.borrar = false, true
     self:sonar("cura")
   end
 

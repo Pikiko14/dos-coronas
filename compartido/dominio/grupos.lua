@@ -51,7 +51,16 @@ function M.instalar(Mundo)
       self.grupos[g.id] = nil
       return
     end
-    if g.lider == id then g.lider = g.miembros[1] end
+    if g.lider == id then
+      -- si se va el líder, el mando pasa al siguiente y el grupo lo sabe
+      g.lider = g.miembros[1]
+      local nuevo = self.entidades[g.lider]
+      if nuevo then
+        for _, m in ipairs(self:miembrosGrupo(g)) do
+          self:mensaje("grupo", "Grupo", nuevo.nombre .. " es el nuevo líder.", m)
+        end
+      end
+    end
   end
 
   -- ------------------------------------------------------------------ invitar y responder
@@ -102,6 +111,11 @@ function M.instalar(Mundo)
     local g = self:grupoDe(p)
     if not g then return "No estás en un grupo." end
     quitar(self, g, p.id)
+    -- el resto del grupo (si sigue existiendo) se entera de quién se va
+    local resto = self.grupos[g.id] and self:miembrosGrupo(g) or {}
+    for _, m in ipairs(resto) do
+      self:mensaje("grupo", "Grupo", p.nombre .. " sale del grupo.", m)
+    end
     self:mensaje("sistema", "", "Sales del grupo.", p)
     return nil
   end

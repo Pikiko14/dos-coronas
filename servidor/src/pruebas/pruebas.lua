@@ -1751,7 +1751,7 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     -- sin montura, un ladrón no puede atacar a un comerciante de su corona
     local suelo = jug("Peaton", "albor", "trader")
     suelo.x = t.x + 2
-    fallar(errores, "a pie no se le ataca", not mundo:puedeDanar(ladron, suelo))
+    fallar(errores, "con el oficio activo se le puede atacar también a pie", mundo:puedeDanar(ladron, suelo))
     fallar(errores, "montado sí se le ataca", mundo:puedeDanar(ladron, t))
     -- el golpe baja la vida de la montura, no la del jinete
     local vida = t.hp
@@ -3405,45 +3405,72 @@ mundo.tiempo = 100
     for _, e in pairs(mundo.entidades) do if e.kind == "cofre_mz" and e.modo == def.id then cofre = e end end
     fallar(errores, "al caer el jefe sale un cofre", cofre ~= nil)
     fallar(errores, "el jefe tarda en volver", jefe.respawn - mundo.tiempo > 200)
-    local n0 = #p.bolsa
+    local function suelo(dueno)
+      local lista = {}
+      for _, e in pairs(mundo.entidades) do
+        if e.kind == "loot" and e.modo == def.id and e.dueno == dueno then lista[#lista + 1] = e end
+      end
+      return lista
+    end
+    local oroAntes = p.oro
     mundo:interactuar(p)
-    fallar(errores, "abrir el cofre da premio y oro", (#p.bolsa > n0 or p.oro >= 600) and p.oro >= 600, tostring(p.oro))
-    local oro1, bolsa1 = p.oro, #p.bolsa
-    mundo:interactuar(p)
-    fallar(errores, "el cofre solo se abre una vez por jugador", p.oro == oro1 and #p.bolsa == bolsa1)
-    -- reparto de premios: equipo del escalón máximo, objetos del mall y addons
-    local tiers, objetos, addons = 0, 0, 0
+    local caido = suelo(p.id)
+    local oroSuelo, objetosSuelo = 0, 0
+    for _, e in ipairs(caido) do oroSuelo = oroSuelo + (e.oro or 0) objetosSuelo = objetosSuelo + (#(e.items or {})) end
+    fallar(errores, "abrir el cofre deja el oro y un objeto en el suelo", oroSuelo >= 600 and objetosSuelo >= 1, oroSuelo .. "/" .. objetosSuelo)
+    fallar(errores, "no se entrega al momento", p.oro == oroAntes)
+    fallar(errores, "el cofre desaparece al abrirlo", cofre.borrar == true and cofre.vivo == false)
+    -- los premios: equipo del escalón máximo de cualquier oficio, objetos del mall y addons
+    local tiers, objetos, addons, clases = 0, 0, 0, {}
     local g = mundo:crearPersonaje({ nombre = "Suerte", faccion = "albor", clase = "mago", nivel = 30 })
+    g.modo, g.x, g.y = def.id, cofre.x, cofre.y
     for _ = 1, 400 do
-      g.bolsa, g.equipo.mochila, g.addons = {}, "mochila_4", {}
-      local ok = mundo:premioMazmorra(g)
-      fallar(errores, "el premio siempre se entrega", ok == true)
-      local s = g.bolsa[1]
+      g.addons = {}
+      for id, e in pairs(mundo.entidades) do if e.kind == "loot" and e.dueno == g.id then mundo.entidades[id] = nil end end
+      local ok = mundo:premioMazmorra(g, cofre.x, cofre.y)
+      fallar(errores, "el premio siempre se reparte", ok == true)
       if next(g.addons) then
         addons = addons + 1
         fallar(errores, "el addon existe en el mall", Mall.ADDONS[next(g.addons)] ~= nil)
-      elseif s then
-        local it = Datos.item(s.id)
-        if it and it.tier == #Items.TIER then tiers = tiers + 1 end
-        if Mall.objeto(s.id) then objetos = objetos + 1 end
+      else
+        for _, e in pairs(mundo.entidades) do
+          if e.kind == "loot" and e.dueno == g.id and e.item then
+            local it = Datos.item(e.item)
+            if it and it.tier == #Items.TIER then tiers = tiers + 1 if it.clase then clases[it.clase] = true end end
+            if Mall.objeto(e.item) then objetos = objetos + 1 end
+          end
+        end
       end
     end
     fallar(errores, "salen piezas de equipo del escalón máximo", tiers > 100, tostring(tiers))
+    local nclases = 0
+    for _ in pairs(clases) do nclases = nclases + 1 end
+    fallar(errores, "el equipo es de cualquier oficio, no solo el del jugador", nclases >= 4, tostring(nclases))
     fallar(errores, "salen objetos del mall", objetos > 60, tostring(objetos))
     fallar(errores, "salen addons del mall", addons > 20, tostring(addons))
-    -- bolsa llena: no se pierde el cofre
-    local llena = mundo:crearPersonaje({ nombre = "Lleno", faccion = "albor", clase = "guerrero", nivel = 30 })
-    llena.modo, llena.x, llena.y = def.id, cofre.x, cofre.y
-    llena.equipo.mochila, llena.bolsa = nil, {}
-    for i = 1, 60 do llena.bolsa[i] = { id = "pocion_vida", cant = 1 } end
-    local antes = llena.oro
-    cofre.reclamado = {}
-    local huboAviso = false
-    for _ = 1, 30 do
-      mundo:reclamarCofre(llena, cofre)
-      if not cofre.reclamado[llena.id] then huboAviso = true break end
+    -- los monstruos no reaparecen uno a uno en la mazmorra: vuelven todos al reaparecer el jefe
+    local m1
+    for _, e in pairs(mundo.entidades) do if e.kind == "monstruo" and e.mz == def.id and not e.jefeMz then m1 = e break end end
+    mundo:morir(m1, p)
+    mundo.tiempo = mundo.tiempo + 100
+    mundo:actualizarMonstruo(m1, 0.1)
+    fallar(errores, "la criatura de la mazmorra no reaparece sola", not m1.vivo)
+    jefe.respawn = mundo.tiempo - 1
+    mundo:actualizarMonstruo(jefe, 0.1)
+    fallar(errores, "al volver el jefe vuelven las criaturas", jefe.vivo and m1.vivo)
+  end)
+  paso("botín de criaturas: de cualquier oficio", function()
+    local Items = require("compartido.dominio.items")
+    local clases = {}
+    for _ = 1, 600 do
+      local id = Items.aleatorioCualquiera(Datos, 5)
+      local it = Datos.item(id)
+      fallar(errores, "el objeto existe", it ~= nil, id)
+      if it and it.clase then clases[it.clase] = true end
     end
-    fallar(errores, "con la bolsa llena el cofre sigue sin reclamar (salvo addon/monedas)", huboAviso or llena.oro > antes)
+    local n = 0
+    for _ in pairs(clases) do n = n + 1 end
+    fallar(errores, "salen piezas de varios oficios", n >= 5, tostring(n))
   end)
   paso("campamentos: el nivel de cada criatura encaja con su zona", function()
     local Mapa = require("compartido.dominio.mapa")
@@ -4290,6 +4317,67 @@ mundo.tiempo = 100
     mundo.tiempo = tActiva
     mundo:trampasMazmorra(p)
     fallar(errores, "el modo dios ignora las trampas", p.hp == p.hpMax)
+  end)
+  paso("oficio activo: la facción no protege", function()
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.mundo
+    local a = mundo:crearPersonaje({ nombre = "AlfaUno", faccion = "umbra", clase = "guerrero", nivel = 10 })
+    local b = mundo:crearPersonaje({ nombre = "AlfaDos", faccion = "umbra", clase = "guerrero", nivel = 10 })
+    -- un sitio abierto fuera de las ciudades
+    local x, y
+    for xx = 100, 400, 7 do
+      for yy = 100, 400, 7 do
+        if not x and Mapa_ok == nil and mapa.suelo[xx] and mapa.suelo[xx][yy] == "hierba_osc" and not mundo:ciudadEn(xx, yy) then x, y = xx, yy end
+      end
+    end
+    x, y = x or 300, y or 300
+    for _, e in ipairs({ a, b }) do e.modo, e.z, e.x, e.y = "mundo", 0, x + 0.5, y + 0.5 end
+    fallar(errores, "sin oficio, los de la misma facción no se pegan", not mundo:puedeDanar(a, b) and not mundo:puedeDanar(b, a))
+    b.job = "trader"
+    fallar(errores, "con el oficio activo se puede atacar aunque sea de tu facción", mundo:puedeDanar(a, b))
+    fallar(errores, "y el del oficio también puede atacar", mundo:puedeDanar(b, a))
+    -- en una ciudad sigue siendo zona segura
+    local c = mapa.ciudades[1]
+    for _, e in ipairs({ a, b }) do e.x, e.y = c.x + c.w / 2, c.y + c.h / 2 end
+    fallar(errores, "en la ciudad no", not mundo:puedeDanar(a, b))
+  end)
+  paso("oficio activo: solo monturas de transporte", function()
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.mundo
+    local c = mapa.ciudades[1]
+    local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "albor", clase = "guerrero", nivel = 20 })
+    p.modo, p.z, p.x, p.y = "mundo", 0, c.x + c.w / 2, c.y + c.h / 2
+    p.monturas, p.oficioElegido, p.oficios = { "corcel_real", "carreta" }, "trader", { trader = { nivel = 1, xp = 0 } }
+    fallar(errores, "sin oficio monta la normal", mundo:alternarMontura(p, "corcel_real") == nil and p.montado == "corcel_real")
+    -- al activar el oficio se baja de la normal
+    fallar(errores, "activa el oficio", mundo:alternarOficio(p) == nil and p.job == "trader")
+    fallar(errores, "se baja de la montura normal", p.montado == nil)
+    fallar(errores, "con oficio no monta la normal", mundo:alternarMontura(p, "corcel_real") ~= nil and p.montado == nil)
+    fallar(errores, "tampoco sin elegir (elige la de transporte)", mundo:alternarMontura(p) == nil and p.montado == "carreta")
+  end)
+  paso("grupo: salir, pasar el mando y solo el líder invita", function()
+    local mundo = Mundo.nuevo()
+    local function jug(n)
+      local e = mundo:crearPersonaje({ nombre = n, faccion = "albor", clase = "guerrero", nivel = 10 })
+      e.modo, e.z, e.x, e.y = "mundo", 0, 300, 300
+      return e
+    end
+    local a, b, c, d = jug("GrupoA"), jug("GrupoB"), jug("GrupoC"), jug("GrupoD")
+    for _, e in ipairs({ b, c, d }) do e.x = 301 end
+    fallar(errores, "A invita a B", mundo:invitarGrupo(a, b.id) == nil)
+    fallar(errores, "B acepta", mundo:responderInvitacionGrupo(b, true) == nil and b.grupoId ~= nil)
+    fallar(errores, "A (líder) invita a C", mundo:invitarGrupo(a, c.id) == nil)
+    mundo:responderInvitacionGrupo(c, true)
+    fallar(errores, "un miembro no puede invitar", mundo:invitarGrupo(b, d.id) == "Solo el líder invita.")
+    fallar(errores, "un miembro no pasa el mando", mundo:ascenderGrupo(b, c.id) ~= nil)
+    fallar(errores, "el líder pasa el mando", mundo:ascenderGrupo(a, b.id) == nil and mundo:grupoDe(a).lider == b.id)
+    fallar(errores, "ahora A ya no puede invitar", mundo:invitarGrupo(a, d.id) == "Solo el líder invita.")
+    fallar(errores, "y B sí", mundo:invitarGrupo(b, d.id) == nil)
+    fallar(errores, "el líder se va", mundo:salirGrupo(b) == nil and b.grupoId == nil)
+    local g = mundo:grupoDe(a)
+    fallar(errores, "el mando pasa a otro miembro", g and g.lider ~= b.id and (g.lider == a.id or g.lider == c.id))
+    fallar(errores, "un miembro sale", mundo:salirGrupo(c) == nil and c.grupoId == nil)
+    fallar(errores, "con uno solo el grupo se disuelve", mundo:grupoDe(a) == nil)
   end)
   paso("red y paneles", function()
     local Servidor = require("src.aplicacion.servicio_servidor")

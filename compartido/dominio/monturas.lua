@@ -127,6 +127,7 @@ function Mundo:comprarMontura(p, especie)
         local de = M.especies[id]
         if not de then return false end
         if de.requiereOficio and not p.job then return false end
+        if p.job and not de.requiereOficio then return false end   -- con el oficio activo solo valen las de transporte
         if de.oficio and p.job ~= de.oficio then return false end
         local h = p.monturaCaida and p.monturaCaida[id]
         return not (h and h > self.tiempo)
@@ -136,7 +137,7 @@ function Mundo:comprarMontura(p, especie)
         for _, id in ipairs(lista) do if usable(id) then especie = id break end end
       end
       if not especie and #lista > 0 then
-        return "Ahora no puedes montar ninguna: las de transporte piden el oficio activo y las heridas necesitan descansar."
+        return "Ahora no puedes montar ninguna: las de transporte piden el oficio activo, con el oficio activo solo valen las de transporte y las heridas necesitan descansar."
       end
     end
     local d = M.especies[especie]
@@ -147,6 +148,7 @@ function Mundo:comprarMontura(p, especie)
     if (p.z or 0) > 0 then return "No se monta en las alturas." end
     if d.oficio and p.job ~= d.oficio then return "Solo para el oficio de comerciante." end
     if d.requiereOficio and not p.job then return "Las monturas solo se usan con el oficio activo (activa tu oficio en el menú o con Y)." end
+    if p.job and not d.requiereOficio then return "Con el oficio activo solo puedes montar las monturas de transporte." end
     local hasta = p.monturaCaida and p.monturaCaida[especie]
     if hasta and hasta > self.tiempo then
       return "Tu " .. d.nombre .. " está herida: se recupera en " .. math.ceil(hasta - self.tiempo) .. " s."
@@ -163,6 +165,10 @@ function Mundo:comprarMontura(p, especie)
       p.montado = nil
       self:recalcularCarga(p)
       self:mensaje("sistema", "", "Bajas de la montura de carga: solo se usa con el oficio activo.", p)
+    elseif d and p.job and not d.requiereOficio then
+      p.montado = nil
+      self:recalcularCarga(p)
+      self:mensaje("sistema", "", "Bajas de la montura: con el oficio activo solo valen las de transporte.", p)
     end
   end
 

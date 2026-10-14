@@ -594,7 +594,6 @@ local function estamparCiudad(mapa, ciudad)
   npcEn(-17, 0, "gremio", "Escribano del gremio")
   npcEn(17, 0, "oficios", "Maestro de oficios")
   npcEn(-14, 2, "subastas", "Subastador")
-  if ciudad.puerto then npcEn(0, -6, "barquero", "Barquero de " .. ciudad.nombre) end
   local gy = (ciudad.acceso == "norte" and not grande) and 2 or (h - 3)
   npc(medio - 2, gy, "guardia", "Guardia de " .. ciudad.nombre)
   npc(medio + 2, gy, "guardia", "Guardia de " .. ciudad.nombre)
@@ -822,17 +821,8 @@ local function generarMundo(rng)
     end
   end
   mapa.portal = { x = cx + 0.5, y = cy + 0.5 }
-  -- 5) puertos: ciudades con barquero (el embarcadero de la isla se añade con los puestos)
+  -- 5) puertos: cada puerto es un muelle en la costa con su barco y su barquero (se construyen al final, con los puestos)
   mapa.puertos = {}
-  for _, c in ipairs(mapa.ciudades) do
-    for _, n in ipairs(c.npcs) do
-      if n.rol == "barquero" then
-        mapa.puertos[#mapa.puertos + 1] = {
-          id = c.id, nombre = c.nombre, x = n.x, y = n.y + 1.6, cont = c.cont, faccion = c.faccion,
-        }
-      end
-    end
-  end
   -- 6) escala de niveles: la distancia a la ciudad más cercana fija el nivel de cada zona. Se ajusta
   -- para que el nivel máximo se alcance en el interior de los continentes (nivel 30 hacia el 93% de
   -- la distancia máxima), así hay zonas de todos los niveles aunque cada continente sea pequeño.
@@ -1089,13 +1079,73 @@ local function generarMundo(rng)
     { { "encantador", "Maestro de encantos" } }, 40)
   repartir(2, { "trigal", "senda", "cienaga" }, "ermita", "Ermita del criador",
     { { "criador", "Criador de mascotas" } }, 40)
-  -- Embarcadero de la isla de la Cicatriz: el barquero que la une con los puertos de los continentes.
+  -- Muelles: cada puerto (Puerto del Sol, Puerto Sombra y el embarcadero de la Cicatriz) tiene un embarcadero de
+  -- madera que se adentra en el mar desde la orilla más cercana, con un barco amarrado, un bote y su barquero.
+  local DIRS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
+  local function orilla(x0, y0, cont)
+    local mejor, md
+    for y = math.max(14, y0 - 150), math.min(mapa.h - 15, y0 + 150) do
+      for x = math.max(14, x0 - 150), math.min(mapa.w - 15, x0 + 150) do
+        if mapa.cont[x][y] == cont and M.transitable(mapa, x, y) and M.get(mapa, x, y) ~= "agua" and mapa.bioma[x][y] ~= "ciudad" then
+          local d = (x - x0) ^ 2 + (y - y0) ^ 2
+          if not md or d < md then
+            for _, dir in ipairs(DIRS) do
+              local ok = true
+              for i = 1, 14 do
+                for w = -4, 4 do
+                  if M.get(mapa, x + dir[1] * i - dir[2] * w, y + dir[2] * i + dir[1] * w) ~= "agua" then ok = false break end
+                end
+                if not ok then break end
+              end
+              -- y el arranque en tierra firme, sin ciudad ni camino cortado
+              if ok and M.transitable(mapa, x - dir[1], y - dir[2]) then mejor, md = { x = x, y = y, dx = dir[1], dy = dir[2] }, d break end
+            end
+          end
+        end
+      end
+    end
+    return mejor
+  end
+  local function muelle(id, nombre, x0, y0, cont, faccion)
+    local o = orilla(x0, y0, cont)
+    if not o then return end
+    local px, py = -o.dy, o.dx
+    limpiar(o.x, o.y, 3)
+    for i = 0, 12 do
+      local ancho = i >= 10 and 3 or 1
+      for w = -ancho, ancho do
+        local x, y = o.x + o.dx * i + px * w, o.y + o.dy * i + py * w
+        setSuelo(mapa, x, y, "madera", "muelle", nil)
+        mapa.cont[x][y] = cont
+        setBloque(mapa, x, y, false)
+      end
+    end
+    -- farolas en las esquinas del final, un cartel y cajas en el arranque
+    for _, w in ipairs({ -3, 3 }) do
+      local x, y = o.x + o.dx * 12 + px * w, o.y + o.dy * 12 + py * w
+      mapa.props[#mapa.props + 1] = { x = x, y = y, tipo = "farol" }
+      setBloque(mapa, x, y, true)
+    end
+    mapa.props[#mapa.props + 1] = { x = o.x - o.dx + px * 2, y = o.y - o.dy + py * 2, tipo = "cartel" }
+    mapa.props[#mapa.props + 1] = { x = o.x + o.dx * 2 - px * 2, y = o.y + o.dy * 2 - py * 2, tipo = "caja" }
+    -- el barco, amarrado junto al final del muelle, y un bote más cerca de tierra
+    mapa.props[#mapa.props + 1] = { x = o.x + o.dx * 9 + px * 5, y = o.y + o.dy * 9 + py * 5, tipo = "barco", rx = o.dx, ry = o.dy }
+    mapa.props[#mapa.props + 1] = { x = o.x + o.dx * 4 - px * 3, y = o.y + o.dy * 4 - py * 3, tipo = "bote", rx = o.dx, ry = o.dy }
+    local npc = { x = o.x + o.dx * 4 + 0.5, y = o.y + o.dy * 4 + 0.5, rol = "barquero", nombre = "Barquero de " .. nombre, faccion = faccion }
+    local pu = { id = #mapa.puestos + 1, tipo = "muelle", nombre = "Muelle de " .. nombre, x = o.x, y = o.y, npcs = { npc } }
+    mapa.puestos[#mapa.puestos + 1] = pu
+    mapa.puertos[#mapa.puertos + 1] = {
+      id = id, nombre = "Muelle de " .. nombre, x = o.x + o.dx * 6 + 0.5, y = o.y + o.dy * 6 + 0.5, cont = cont, faccion = faccion,
+    }
+    return o
+  end
+  for _, c in ipairs(mapa.ciudades) do
+    if c.puerto then muelle(c.id, c.nombre, c.x + math.floor(c.w / 2), c.y + math.floor(c.h / 2), c.cont, c.faccion) end
+  end
+  -- el de la isla de la Cicatriz, al sur de su centro
   if mapa.cont[math.floor(cx)][math.floor(cy)] == 3 then
-    local pu = nuevoPuesto("embarcadero", "Embarcadero de la Cicatriz", math.floor(cx), math.floor(cy) + 26,
-      { { "barquero", "Barquero de la Cicatriz" } })
-    pu.npcs[1].faccion = nil
-    mapa.puertos[#mapa.puertos + 1] = { id = "cicatriz", nombre = "Embarcadero de la Cicatriz", x = pu.npcs[1].x, y = pu.npcs[1].y + 1.6, cont = 3 }
-    linea(math.floor(cx), math.floor(cy) + 10, math.floor(cx), math.floor(cy) + 25)
+    local o = muelle("cicatriz", "la Cicatriz", math.floor(cx), math.floor(cy) + 26, 3, nil)
+    if o then linea(math.floor(cx), math.floor(cy) + 10, o.x, o.y) end
   end
   -- 3) lista de todos los PNJ para los iconos del mapa
   mapa.npcsMapa = {}

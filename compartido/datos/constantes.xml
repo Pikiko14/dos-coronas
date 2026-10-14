@@ -75,9 +75,10 @@
     <!-- DURACION_EXP_SEG: tarjeta de experiencia doble -->
   </mall>
   <mascotas DESCANSO_SEG="30" MAX_MASCOTAS="6" NIVEL_MAX="30"/>
-  <mazmorras DURA_COFRE="150" ORO_COFRE="600" PROB_ADDON="0.14" PROB_MALL="0.3" RESPAWN_JEFE="300">
+  <mazmorras DURA_BOTIN="180" DURA_COFRE="150" ORO_COFRE="600" PROB_ADDON="0.14" PROB_MALL="0.3" RESPAWN_JEFE="300">
     <!-- RESPAWN_JEFE: segundos hasta que el jefe vuelve -->
-    <!-- DURA_COFRE: segundos que el cofre queda abierto a todos -->
+    <!-- DURA_COFRE: segundos que el cofre aguarda a que alguien lo abra -->
+    <!-- DURA_BOTIN: segundos que el premio del cofre queda en el suelo antes de perderse -->
     <!-- PROB_MALL: el resto del premio es equipo del escalón más alto -->
   </mazmorras>
   <monturas MAX="20" RECUPERA_SEG="300" REGEN_ESPERA="15" REGEN_FRAC="0.02" VIDA_MULT="1">

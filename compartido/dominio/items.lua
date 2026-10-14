@@ -147,4 +147,14 @@ function M.aleatorio(D, clase, tier, azar)
   if D.items[id] then return id end
   return clase .. "_arma_" .. tier
 end
+
+-- Una pieza al azar de cualquier oficio (el botín de las criaturas y de los cofres no depende de la clase de quien
+-- lo recoge). Las clases se recorren en orden fijo para que el azar sea repetible con una misma semilla.
+local CLASES_BOTIN = {}
+for clase in pairs(ARMAS) do CLASES_BOTIN[#CLASES_BOTIN + 1] = clase end
+table.sort(CLASES_BOTIN)
+function M.aleatorioCualquiera(D, tier, azar)
+  azar = azar or math.random
+  return M.aleatorio(D, CLASES_BOTIN[azar(#CLASES_BOTIN)], tier, azar)
+end
 return M
