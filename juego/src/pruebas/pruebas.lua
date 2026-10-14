@@ -1057,6 +1057,32 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     end
     fallar(errores, "se probaron los 24 poderes", n == 24 * 5, tostring(n))
   end)
+  paso("chat: barra de desplazamiento y rueda", function()
+    local Entrada = require("src.presentacion.entrada")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Lector", faccion = "albor", clase = "mago" })
+    for k = 1, 60 do mundo:mensaje("mundo", "Alguien", "mensaje numero " .. k, nil) end
+    Interfaz.escala = 1
+    Interfaz.panel = nil
+    Interfaz.chatScroll = 0
+    Interfaz.hud(mundo, pj, 1280, 720)
+    fallar(errores, "con muchos mensajes hay barra", Interfaz.chatBarra ~= nil and (Interfaz.chatMax or 0) > 20, tostring(Interfaz.chatMax))
+    local b = Interfaz.chatBarra
+    fallar(errores, "se puede pulsar", Interfaz.consumir(b.x + 9, b.y + b.h / 2) == "chat_barra")
+    Interfaz.chatDesdeRaton(b.y)
+    fallar(errores, "arriba del todo es lo más antiguo", Interfaz.chatScroll == Interfaz.chatMax, tostring(Interfaz.chatScroll))
+    Interfaz.chatDesdeRaton(b.y + b.h)
+    fallar(errores, "abajo del todo es lo último", Interfaz.chatScroll == 0)
+    -- la rueda sobre el chat sube y baja
+    local lado, consola = Interfaz.medidas()
+    love.mouse.setPosition(300, 720 - consola / 2)
+    Entrada.rueda({ estado = "juego" }, 1)
+    fallar(errores, "la rueda sube el chat", (Interfaz.chatScroll or 0) > 0, tostring(Interfaz.chatScroll))
+    Entrada.tecla({ estado = "juego" }, "pagedown")
+    Entrada.tecla({ estado = "juego" }, "pagedown")
+    fallar(errores, "AvPág baja", (Interfaz.chatScroll or 0) == 0)
+    Interfaz.hud(mundo, pj, 1280, 720)
+  end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Clic", faccion = "albor", clase = "mago" })

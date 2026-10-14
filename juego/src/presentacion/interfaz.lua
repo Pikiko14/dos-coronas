@@ -1033,6 +1033,16 @@ local COLOR_CANAL = {
   ["local"] = { 0.95, 0.95, 0.9 }, gremio = { 0.45, 0.95, 0.55 }, grupo = { 0.55, 0.8, 1 },
 }
 
+-- Fija el desplazamiento del chat según la altura del ratón sobre la barra (arriba = lo más antiguo).
+function I.chatDesdeRaton(my)
+  local b = I.chatBarra
+  if not b or not I.chatMax or I.chatMax <= 0 then return end
+  local esc = I.escala or 1
+  local f = (my / esc - b.y - b.th / 2) / math.max(1, b.h - b.th)
+  f = math.max(0, math.min(1, f))
+  I.chatScroll = math.floor((1 - f) * I.chatMax + 0.5)
+end
+
 function I.consola(mundo, p, x, y, w, h)
   local f = pequena()
   love.graphics.setFont(f)
@@ -1079,6 +1089,8 @@ function I.consola(mundo, p, x, y, w, h)
   -- la rueda del ratón sobre el chat recorre lo escrito desde que entraste (I.chatScroll = mensajes por encima del último)
   I.consolaRect = { x = x, y = cy, w = w, h = ch }
   I.chatScroll = math.max(0, math.min(I.chatScroll or 0, math.max(0, #lineas - 1)))
+  if I.chatMax and I.chatScroll > I.chatMax and I.chatMax > 0 then I.chatScroll = I.chatMax end
+  local dibujadas = 0
   for i = #lineas - I.chatScroll, 1, -1 do
     local m = lineas[i]
     local c = COLOR_CANAL[m.canal] or COLOR_CANAL["local"]
@@ -1090,6 +1102,24 @@ function I.consola(mundo, p, x, y, w, h)
     if ly < cy + 2 then break end
     love.graphics.setColor(c[1], c[2], c[3])
     love.graphics.printf(etiqueta .. pref .. m.texto, x + 8, ly, w - 16, "left")
+    dibujadas = dibujadas + 1
+  end
+  -- barra de desplazamiento: aparece cuando hay más mensajes de los que caben; se arrastra o se pulsa en la pista
+  I.chatMax = math.max(0, #lineas - math.max(1, dibujadas))
+  local barra = nil
+  if I.chatMax > 0 then
+    local bx, by, bh = x + w - 10, cy + 3, areaH - 2
+    local th = math.max(18, bh * math.max(1, dibujadas) / #lineas)
+    local ty = by + (bh - th) * (1 - math.min(I.chatScroll, I.chatMax) / I.chatMax)
+    love.graphics.setColor(1, 1, 1, 0.07)
+    love.graphics.rectangle("fill", bx, by, 6, bh, 3, 3)
+    local activo = I.chatArrastre or sobre(bx - 4, by, 14, bh)
+    love.graphics.setColor(0.45, 0.6, 0.95, activo and 0.95 or 0.6)
+    love.graphics.rectangle("fill", bx, ty, 6, th, 3, 3)
+    I.chatBarra = { x = bx - 6, y = by, w = 18, h = bh, th = th }
+    I.registrar(bx - 6, by, 18, bh, "chat_barra")
+  else
+    I.chatBarra = nil
   end
   if I.chatScroll > 0 then
     love.graphics.setColor(1, 0.85, 0.4, 0.9)

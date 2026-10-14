@@ -551,6 +551,11 @@ function Entrada.raton(app, mx, my, boton)
       Interfaz.menuJugador = nil
       if id == nil or id == "panel" then return end
     end
+    if id == "chat_barra" then
+      Interfaz.chatArrastre = true
+      Interfaz.chatDesdeRaton(my)
+      return
+    end
     if id == "mapa_area" then
       -- puede ser el inicio de un arrastre o un clic para viajar: se decide al soltar
       Interfaz.mapaArrastre = true
@@ -590,6 +595,7 @@ function Entrada.fijarOroComercio(app)
 end
 
 function Entrada.moverRaton(app, x, y, dx, dy)
+  if Interfaz.chatArrastre then Interfaz.chatDesdeRaton(y) return end
   local g = Interfaz.mapaGeom
   if Interfaz.panel == "mapa" and Interfaz.mapaArrastre and g and Interfaz.mapaCx then
     local esc = Interfaz.escala or 1
@@ -631,6 +637,7 @@ function Entrada.viajarPorMapa(app, mx, my)
 end
 
 function Entrada.soltarRaton(app, mx, my)
+  Interfaz.chatArrastre = false
   local pres = Interfaz.mapaPresion
   Interfaz.mapaArrastre = false
   Interfaz.mapaPresion = nil
@@ -714,6 +721,12 @@ function Entrada.texto(app, t)
 end
 
 function Entrada.tecla(app, tecla)
+  -- RePág / AvPág recorren el chat; Fin vuelve a lo último
+  if app.estado == "juego" then
+    if tecla == "pageup" then Interfaz.chatScroll = (Interfaz.chatScroll or 0) + 4 return end
+    if tecla == "pagedown" then Interfaz.chatScroll = math.max(0, (Interfaz.chatScroll or 0) - 4) return end
+    if tecla == "end" and Interfaz.foco ~= "chat" then Interfaz.chatScroll = 0 return end
+  end
   if tecla == "escape" and app.apuntando then app.apuntando = nil return end
   -- en el formulario de cuenta, Tab salta entre usuario y clave (Mayús + Tab, al revés)
   if tecla == "tab" and (app.estado == "cuenta" or app.estado == "menu") then
