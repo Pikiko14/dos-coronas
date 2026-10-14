@@ -6,6 +6,8 @@ casilla, hay lista de batalla, panel lateral y consola. Dos facciones, Albor y
 Umbra, en un continente abierto con diez ciudades, casas, comercio, encargos y
 dos eventos de guerra.
 
+Guía completa de cómo funciona todo (arquitectura, datos, build, VPS, actualizaciones): docs/GUIA.md
+
 Tres proyectos en un repositorio
 --------------------------------
   servidor/     Servidor de consola (sin ventana): cuentas, mundo, reglas y guardado.
