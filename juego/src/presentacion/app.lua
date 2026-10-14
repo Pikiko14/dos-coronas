@@ -12,6 +12,7 @@ local Juego = require("src.presentacion.estados.juego")
 local Pruebas = require("src.pruebas.pruebas")
 local Ajustes = require("src.presentacion.ajustes")
 local Config = require("src.infraestructura.config")
+local Actualizacion = require("src.infraestructura.actualizacion")
 
 local App = {
   estado = "cargando",
@@ -45,6 +46,7 @@ App.modoFoto = bandera("--foto")
 App.modoBot = bandera("--bot")
 App.modoAuto = bandera("--auto")
 App.modoWeb = bandera("--web")
+App.modoActualizar = bandera("--actualizar")   -- prueba: busca un parche, lo baja y escribe el resultado
 
 App.modulos = {
   menu = Menu,
@@ -100,8 +102,20 @@ function App.actualizar(dt)
     if App.modoBot then Pruebas.bot() return end
     if App.modoWeb then require("src.pruebas.exportar_web").correr() return end
     if App.modoFoto then Pruebas.prepararFoto(App) App.fase = 2 return end
+    if App.modoActualizar then Actualizacion.iniciar() App.estado = "actualizando" App.fase = 2 return end
     App.estado = "menu"
     App.fase = 2
+    if not App.modoTest and not App.modoFoto and not App.modoBot and not App.modoAuto then Actualizacion.iniciar() end
+    return
+  end
+  Actualizacion.actualizar(dt)
+  if App.modoActualizar then
+    if Actualizacion.estado ~= "buscando" and Actualizacion.estado ~= "descargando" and not Actualizacion.reiniciando then
+      Log.volcar("prueba_actualizar.txt", Actualizacion.estado .. " build=" .. tostring(Actualizacion.version.build) .. " " .. tostring(Actualizacion.error or ""))
+      love.event.quit(0)
+    elseif Actualizacion.reiniciando then
+      Log.volcar("prueba_actualizar.txt", "listo build=" .. tostring(Actualizacion.version.build))
+    end
     return
   end
   local mod = App.modulos[App.estado]
@@ -127,6 +141,7 @@ function App.dibujar()
   end
   local mod = App.modulos[App.estado]
   if mod and mod.dibujar then mod.dibujar(App, w, h) end
+  if App.estado == "menu" then Actualizacion.dibujar(w, h) end
   require("src.presentacion.ayudas").cursor(Interfaz)
 end
 

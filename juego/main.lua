@@ -20,49 +20,55 @@ do
   end)
 end
 
-local App = require("src.presentacion.app")
-local Entrada = require("src.presentacion.entrada")
 
-function love.load()
-  App.cargar()
+-- Parche de actualización: el juego descarga el código nuevo (actualizacion_<build>.zip) a la carpeta de datos y aquí se
+-- monta ANTES de cargar nada de src/, de modo que sus archivos tapan a los del paquete instalado. Solo se aplica si es más
+-- nuevo que el paquete, si su sha256 coincide y si el arranque anterior con él llegó a dibujar (si no, se descarta).
+-- En desarrollo (love juego) no se monta, salvo con DOSCORONAS_PARCHE=1.
+do
+  local fs = love.filesystem
+  local base = 0
+  local okV, fV = pcall(fs.load, "version.lua")
+  if okV and fV then
+    local ok2, t = pcall(fV)
+    if ok2 and type(t) == "table" then base = tonumber(t.build) or 0 end
+  end
+  local aplicar = fs.isFused() or os.getenv("DOSCORONAS_PARCHE") == "1"
+  local info = fs.getInfo("actualizacion.txt")
+  if aplicar and info then
+    local datos = {}
+    for k, v in (fs.read("actualizacion.txt") or ""):gmatch("(%w+)=([^\r\n]*)") do datos[k] = v end
+    local n, zip = tonumber(datos.build) or 0, datos.archivo
+    local function descartar()
+      fs.remove("actualizacion.txt")
+      fs.remove("actualizacion_intento")
+      if zip and zip:match("^actualizacion_%d+%.zip$") then fs.remove(zip) end
+    end
+    if fs.getInfo("actualizacion_intento") then
+      descartar()   -- el arranque anterior con este parche no llegó a dibujar nada
+    elseif n > base and zip and zip:match("^actualizacion_%d+%.zip$") and fs.getInfo(zip) then
+      local okH, hash = pcall(function()
+        return love.data.encode("string", "hex", love.data.hash("sha256", fs.newFileData(zip)))
+      end)
+      if okH and hash == datos.sha256 then
+        fs.write("actualizacion_intento", tostring(n))
+        if not fs.mount(zip, "", false) then fs.remove("actualizacion_intento") end
+      else
+        descartar()
+      end
+    else
+      descartar()   -- parche igual o más viejo que el paquete (se instaló uno nuevo)
+    end
+  end
 end
 
-function love.update(dt)
-  App.actualizar(dt)
-end
+require("src.principal")
 
-function love.draw()
-  App.dibujar()
-end
-
-function love.mousepressed(x, y, boton)
-  Entrada.raton(App, x, y, boton)
-end
-
-function love.mousemoved(x, y, dx, dy)
-  Entrada.moverRaton(App, x, y, dx, dy)
-end
-
-function love.mousereleased(x, y)
-  Entrada.soltarRaton(App, x, y)
-end
-
-function love.wheelmoved(_, dy)
-  Entrada.rueda(App, dy)
-end
-
-function love.textinput(t)
-  Entrada.texto(App, t)
-end
-
-function love.keypressed(tecla)
-  Entrada.tecla(App, tecla)
-end
-
-function love.quit()
-  App.salir()
-end
-
-function love.errorhandler(msg)
-  return App.fallo(msg)
+-- el arranque se da por bueno cuando llega a dibujar un cuadro: se borra la marca del parche
+do
+  local dibujar = love.draw
+  love.draw = function()
+    dibujar()
+    if love.filesystem.getInfo("actualizacion_intento") then love.filesystem.remove("actualizacion_intento") end
+  end
 end

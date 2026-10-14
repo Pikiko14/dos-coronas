@@ -6,6 +6,7 @@
 param(
   [string]$Servidor = "",
   [int]$Puerto = 0,
+  [string]$Actualizaciones = "",      # dirección de los parches (por defecto http://<Servidor>/actualizacion/)
   [string]$Love = ""
 )
 $ErrorActionPreference = "Stop"
@@ -26,7 +27,9 @@ function Empaquetar($nombre) {
   robocopy (Join-Path $raiz "compartido") (Join-Path $stage "compartido") /E /NFL /NDL /NJH /NJS /NP | Out-Null
   if ($nombre -eq "juego" -and ($Servidor -or $Puerto -gt 0)) {
     # el servidor de destino va DENTRO del paquete (no en un .env suelto junto al .exe)
-    $lua = "-- Generado por construir.ps1: servidor al que se conecta este juego.`r`nreturn { host = `"$Servidor`", puerto = $Puerto }`r`n"
+    $urlAct = $Actualizaciones
+    if (-not $urlAct -and $Servidor -and $Servidor -ne "127.0.0.1") { $urlAct = "http://$Servidor/actualizacion/" }
+    $lua = "-- Generado por construir.ps1: servidor al que se conecta este juego y de dónde baja las actualizaciones.`r`nreturn { host = `"$Servidor`", puerto = $Puerto, actualizaciones = `"$urlAct`" }`r`n"
     [System.IO.File]::WriteAllText((Join-Path $stage "src\infraestructura\destino.lua"), $lua, (New-Object System.Text.UTF8Encoding $false))
   }
   $zip = Join-Path $dist ($nombre + ".zip")

@@ -29,6 +29,8 @@ if not okDestino or type(destino) ~= "table" then destino = {} end
 
 return {
   origen = ruta,
+  -- Dirección de los parches de actualización (http://servidor/actualizacion/); sin ella el juego no busca actualizaciones.
+  actualizaciones = texto("DOSCORONAS_ACTUALIZACIONES", destino.actualizaciones),
   red = {
     -- Servidor al que se conecta el juego.
     host = texto("DOSCORONAS_SERVIDOR_HOST", destino.host or "127.0.0.1"),
