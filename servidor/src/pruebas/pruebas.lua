@@ -1640,6 +1640,29 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     fallar(errores, "los demás ven el addon", ve and ve.addon == p.addonActivo)
     fallar(errores, "tu resumen trae las monedas", mundo:foto(p.id).tu.mall.monedas == p.monedas)
   end)
+  paso("la estatua de la ciudad guarda dónde renacer", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local p = mundo:crearPersonaje({ nombre = "Ancla", faccion = "albor", clase = "guerrero", nivel = 12 })
+    local ciudad
+    for _, c in ipairs(mundo.mapas.mundo.ciudades) do
+      if c.faccion == "albor" and c.id ~= "auroria" and not ciudad then ciudad = c end
+    end
+    local est
+    for _, pr in ipairs(mundo.mapas.mundo.props) do
+      if pr.tipo == "estatua_albor" and mundo:ciudadEn(pr.x, pr.y) == ciudad then est = pr end
+    end
+    fallar(errores, "hay estatua en la ciudad", est ~= nil)
+    if not est then return end
+    p.x, p.y, p.z, p.modo = est.x + 0.5, est.y + 1.5, 0, "mundo"
+    mundo:interactuar(p)
+    fallar(errores, "queda ligado a la ciudad", p.vinculo and p.vinculo.ciudad == ciudad.id)
+    local otra = mundo.mapas.mundo.ciudades[1]
+    p.x, p.y = otra.spawn.x, otra.spawn.y
+    mundo:revivir(p)
+    fallar(errores, "renace en la ciudad guardada", mundo:ciudadEn(p.x, p.y) == ciudad)
+  end)
+
   paso("al morir queda el cuerpo y reaparece en la ciudad", function()
     local mundo = Mundo.nuevo()
     mundo.entidades = {}
@@ -4019,6 +4042,26 @@ mundo.tiempo = 100
       end
     end
     fallar(errores, "los " .. #ids .. " poderes pasan la validación", #fallos == 0, table.concat(fallos, " | "))
+  end)
+  paso("recompensa diaria: con la bolsa llena explica el motivo en el panel y se reclama al hacer sitio", function()
+    local Diaria = require("compartido.dominio.diaria")
+    local mundo = Mundo.nuevo()
+    local p = mundo:crearPersonaje({ nombre = "Diario", faccion = "albor", clase = "guerrero", nivel = 10 })
+    local hoy, ayer = Diaria.hoy(), Diaria.ayer()
+    p.diaria = { ultimo = ayer, racha = 1 }       -- ayer reclamó el día 1: hoy toca el día 2 (5 pociones de maná)
+    p.equipo.mochila = "mochila_1"
+    p.bolsa = {}
+    for i = 1, Datos.capacidadBolsa(p.equipo) do p.bolsa[i] = { id = "guerrero_arma_2", cant = 1 } end
+    fallar(errores, "hoy toca el día 2", mundo:estadoDiaria(p).dia == 2 and not mundo:estadoDiaria(p).reclamada)
+    mundo.tiempo = 100
+    mundo:accion(p.id, "diaria_reclamar", {})
+    local foto = mundo:foto(p.id)
+    fallar(errores, "con la bolsa llena no se entrega", p.diaria.ultimo == ayer)
+    fallar(errores, "la foto explica el motivo para el panel", foto.tu.diariaError and foto.tu.diariaError:find("espacio", 1, true) ~= nil, tostring(foto.tu.diariaError))
+    p.bolsa = {}
+    mundo:accion(p.id, "diaria_reclamar", {})
+    fallar(errores, "con sitio se reclama el día 2 y la racha sube", p.diaria.ultimo == hoy and p.diaria.racha == 2)
+    fallar(errores, "y el aviso desaparece", mundo:foto(p.id).tu.diariaError == nil)
   end)
   paso("movimiento", function()
     local mundo = Mundo.nuevo()

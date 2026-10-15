@@ -2193,6 +2193,11 @@ function I.panelDiaria(mundo, p, w, h)
   love.graphics.print(d.reclamada and ("El siguiente premio estará listo en " .. restaTxt) or ("Se renueva en " .. restaTxt), px + 14, py + 300)
   I.boton(px + pw / 2 - 110, py + 340, 220, 44, d.reclamada and "Ya reclamada" or "Reclamar", "diaria_reclamar", not d.reclamada,
     "Vuelve mañana para el siguiente premio.")
+  -- por qué no se pudo reclamar (bolsa llena, etc.): se ve aquí mismo, no solo en el chat
+  if p.diariaError and not d.reclamada then
+    love.graphics.setColor(1, 0.5, 0.42)
+    love.graphics.printf(p.diariaError, px + 14, py + 392, pw - 28, "center")
+  end
   love.graphics.setColor(0.7, 0.68, 0.6)
   love.graphics.printf("F2 abre y cierra este panel. La bolsa necesita espacio para los objetos del premio.", px + 14, py + ph - 28, pw - 28, "left")
 end
@@ -3211,7 +3216,7 @@ function I.panelMercado(p, w, h)
           love.graphics.print(I.nombreItem(it, fila.slot.enc) .. (cant > 1 and ("  x" .. cant) or ""), x0 + 50, y + 3)
           love.graphics.setColor(0.7, 0.75, 0.65)
           love.graphics.print(I.statsTexto(it, fila.slot.enc), x0 + 50, y + 21)
-          local vendible = not (it.quest or it.mall)
+          local vendible = not ((it.quest and not it.vendible) or it.mall)
           love.graphics.setColor(1, 0.9, 0.4)
           love.graphics.printf(vendible and (Ayudas.num(math.floor((it.precio or 1) * Datos.FACTOR_VENTA) * cant) .. " oro") or "—", x0 + ancho - 190, y + 12, 90, "right")
           I.boton(x0 + ancho - 90, y + 5, 80, 30, "Vender", "bolsa_" .. fila.vender, vendible, "Este objeto no se puede vender.")

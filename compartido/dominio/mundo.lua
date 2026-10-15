@@ -1196,6 +1196,11 @@ function Mundo:revivir(e)
       e.x, e.y = v.x, v.y
     else
       local c = self:ciudadPropiaCerca(e, e.x, e.y)
+      if v.ciudad then
+        for _, cc in ipairs(self.mapas.mundo.ciudades) do
+          if cc.id == v.ciudad and cc.faccion == e.faccion and cc.spawn then c = cc break end
+        end
+      end
       if c then
         e.modo, e.z = "mundo", 0
         e.x, e.y = c.spawn.x, c.spawn.y
@@ -2423,7 +2428,7 @@ function Mundo:vender(p, index)
   local slot = p.bolsa[index]
   if not slot then return end
   local it = Datos.item(slot.id)
-  if not it or it.quest or it.mall then return "No se puede vender." end
+  if not it or (it.quest and not it.vendible) or it.mall then return "No se puede vender." end
   local cant = slot.cant or 1
   p.oro = p.oro + math.floor((it.precio or 1) * Datos.FACTOR_VENTA) * cant
   table.remove(p.bolsa, index)
@@ -2840,6 +2845,25 @@ function Mundo:interactuar(p)
         self:mensaje("sistema", "", e.nombre .. " va a " .. e.nombreDestino .. ". Solo los cazarrecompensas la escoltan.", p)
       end
       return { panel = nil }
+    end
+  end
+  -- la estatua de la plaza de la ciudad propia: ahí se guarda dónde renacer
+  if p.modo == "mundo" then
+    for _, c in ipairs(self.mapas.mundo.ciudades) do
+      for _, pr in ipairs(self.mapas.mundo.props) do
+        if pr.tipo == "estatua_" .. c.faccion and self:ciudadEn(pr.x, pr.y) == c and Util.dist(p.x, p.y, pr.x + 0.5, pr.y + 0.5) <= 2.2 then
+          if c.faccion ~= p.faccion then
+            self:mensaje("sistema", "", "Esta estatua no es la de tu reino.", p)
+          elseif p.vinculo and p.vinculo.ciudad == c.id then
+            self:mensaje("sistema", "", "Ya renaces en " .. c.nombre .. ".", p)
+          else
+            p.vinculo = { x = c.spawn.x, y = c.spawn.y, modo = "mundo", ciudad = c.id }
+            self:marcarProgreso(p)
+            self:mensaje("sistema", "", "Tu alma queda ligada a la estatua de " .. c.nombre .. ": aquí renacerás.", p)
+          end
+          return { panel = nil }
+        end
+      end
     end
   end
   local mejor, md = nil, 1.8
@@ -3309,6 +3333,7 @@ function Mundo:foto(pid)
     end
     tu.monturasEstado = self:estadoMonturas(p)
     tu.diaria = self:estadoDiaria(p)
+    tu.diariaError = (p.diariaError and p.diariaError.hasta > self.tiempo) and p.diariaError.texto or nil
     if p.invitacionGrupo and p.invitacionGrupo.hasta > self.tiempo then
       tu.invGrupo = { nombre = p.invitacionGrupo.nombre }
     end
@@ -3470,7 +3495,13 @@ function Mundo:accion(pid, nombre, datos)
   end
   if nombre == "diaria_reclamar" then
     local err = self:reclamarDiaria(p)
-    if err then self:mensaje("sistema", "", err, p) end
+    if err then
+      self:mensaje("sistema", "", err, p)
+      -- el motivo también sale en el propio panel (antes solo iba al chat y parecía que el botón no hacía nada)
+      p.diariaError = { texto = err, hasta = self.tiempo + 10 }
+    else
+      p.diariaError = nil
+    end
   end
   if nombre == "mascota_invocar" then
     local err = self:invocarMascota(p, datos.idx)

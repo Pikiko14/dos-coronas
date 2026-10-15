@@ -60,7 +60,7 @@ local function sentenciasDe(pid, ex, hp, mp)
     "nivel=" .. entero(ex.nivel or 1), "xp=" .. entero(ex.xp), "oro=" .. entero(ex.oro), "monedas=" .. entero(ex.monedas), "regalo_mall=" .. Pg.literal(ex.regaloMall and true or false),
     "x=" .. real(ex.x), "y=" .. real(ex.y), "z=" .. entero(ex.z),
     "modo=" .. Pg.literal(ex.modo or "mundo"),
-    "vinculo_modo=" .. (v.x and Pg.literal(v.modo or "mundo") or "NULL"),
+    "vinculo_modo=" .. (v.x and Pg.literal(v.ciudad and ("ciudad:" .. v.ciudad) or v.modo or "mundo") or "NULL"),
     "vinculo_x=" .. (v.x and real(v.x) or "NULL"), "vinculo_y=" .. (v.y and real(v.y) or "NULL"),
     "guardado=TRUE",
     "diaria_ultimo=" .. ((type(ex.diaria) == "table" and ex.diaria.ultimo) and Pg.literal(ex.diaria.ultimo) or "NULL"),
@@ -566,7 +566,9 @@ function M.cargar(personajeId)
       datos.z = tonumber(row.z) or 0
       datos.modo = row.modo or "mundo"
       if row.vinculo_x and row.vinculo_y then
-        datos.vinculo = { x = tonumber(row.vinculo_x), y = tonumber(row.vinculo_y), modo = row.vinculo_modo or "mundo" }
+        local vm = row.vinculo_modo or "mundo"
+        local cid = vm:match("^ciudad:(.+)$")
+        datos.vinculo = { x = tonumber(row.vinculo_x), y = tonumber(row.vinculo_y), modo = cid and "mundo" or vm, ciudad = cid }
       end
       local function lista(sql)
         local r = conn:consulta(sql)

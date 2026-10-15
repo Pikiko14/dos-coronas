@@ -189,7 +189,7 @@ function M.preparar(mapa)
     if q.destino == nil and q.paquete == nil then q.destino = q.npc end
     if q.tipo == "entregar" and not q.item then
       q.item = "paq_" .. q.id
-      Datos.agregarItem({ id = q.item, nombre = q.paquete or "Paquete", apila = 1, hoja = "equipment", sprite = 699, quest = true, precio = 1,
+      Datos.agregarItem({ id = q.item, nombre = q.paquete or "Paquete", apila = 1, hoja = "equipment", sprite = 699, quest = true, vendible = true, precio = 10,
         texto = "Llévalo a " .. tostring(q.destino) .. "." })
     end
     if q.tipo == "recolectar" and not q.item and q.de then q.item = "mat_" .. q.de end
@@ -288,9 +288,9 @@ function M.preparar(mapa)
         local esfuerzo = math.max(3, math.floor(mejor / 25))
         local idA, idB = "e1_" .. qid, "e2_" .. qid
         local paq, carta = "paq_" .. idA, "carta_" .. idB
-        Datos.agregarItem({ id = paq, nombre = "Suministros para " .. n.lugar, apila = 1, hoja = "equipment", sprite = 699, quest = true, precio = 1,
+        Datos.agregarItem({ id = paq, nombre = "Suministros para " .. n.lugar, apila = 1, hoja = "equipment", sprite = 699, quest = true, vendible = true, precio = 10,
           texto = "Llévalos a " .. n.nombre .. " (" .. n.lugar .. ")." })
-        Datos.agregarItem({ id = carta, nombre = "Carta de " .. n.nombre, apila = 1, hoja = "equipment", sprite = 697, quest = true, precio = 1,
+        Datos.agregarItem({ id = carta, nombre = "Carta de " .. n.nombre, apila = 1, hoja = "equipment", sprite = 697, quest = true, vendible = true, precio = 10,
           texto = "Llévala a " .. M.npcs[ciudad].nombre .. "." })
         agregar({
           id = idA, tipo = "entregar", npc = ciudad, destino = qid, item = paq, cantidad = 1, nivel = nivel, dif = "normal", esfuerzo = esfuerzo,
