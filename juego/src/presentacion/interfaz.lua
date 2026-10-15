@@ -1358,11 +1358,33 @@ function I.flotantes(mundo, p, vw, vh)
     texto(txt[1], mx0 - ancho + 1, 13, { 0.92, 0.95, 1 })
     texto(txt[2], mx0 - ancho + 1, 28, { 0.92, 0.95, 1 })
     if sobre(mx0 - ancho - 6, 10, ancho, 38) then I.pista = "Tus coordenadas en el mapa (X hacia la derecha, Y hacia abajo)." end
+    -- diario de misiones (Q): icono dorado bajo las coordenadas; late si hay una misión lista para entregar
+    local lista = false
+    for _, q in ipairs(Misiones.lista) do if Misiones.estado(p, q) == "lista" then lista = true break end end
+    local ix, iy, il = mx0 - ancho - 6, 54, ancho
+    local hover = sobre(ix, iy, il, 30)
+    local pulso = lista and (0.5 + 0.5 * math.sin(love.timer.getTime() * 5)) or 0
+    love.graphics.setColor(0.42 + 0.3 * pulso + (hover and 0.1 or 0), 0.3 + 0.2 * pulso, 0.05, 0.95)
+    love.graphics.rectangle("fill", ix, iy, il, 30, 7, 7)
+    love.graphics.setColor(1, 0.82, 0.3, 1)
+    love.graphics.rectangle("line", ix + 0.5, iy + 0.5, il - 1, 29, 7, 7)
+    -- pergamino dorado con una marca de admiración
+    local mx, my = ix + il / 2, iy + 15
+    love.graphics.setColor(0.98, 0.86, 0.45, 1)
+    love.graphics.rectangle("fill", mx - 7, my - 9, 14, 18, 3, 3)
+    love.graphics.setColor(0.75, 0.55, 0.15, 1)
+    love.graphics.rectangle("fill", mx - 9, my - 10, 18, 3, 1.5, 1.5)
+    love.graphics.rectangle("fill", mx - 9, my + 7, 18, 3, 1.5, 1.5)
+    love.graphics.setColor(0.3, 0.17, 0.02, 1)
+    love.graphics.rectangle("fill", mx - 1, my - 6, 2.4, 8, 1, 1)
+    love.graphics.rectangle("fill", mx - 1, my + 3, 2.4, 2.4, 1, 1)
+    I.registrar(ix, iy, il, 30, "hud_misiones")
+    if hover then I.pista = AYUDA_BOTONES.hud_misiones end
   end
   -- botones del minimapa, como iconos del juego: mapa (pergamino), ayuda (signo de interrogación), menú (engranaje) y la
   -- recompensa diaria (regalo, que brilla mientras haya premio sin reclamar). El nombre sale al pasar el ratón.
   local botones = {
-    { "hud_mapa", "hud", 0 }, { "hud_misiones", "hud", 0 }, { "hud_ayuda", "hud", 1 }, { "hud_menu", "hud", 2 }, { "hud_diaria", "hud", 3 },
+    { "hud_mapa", "hud", 0 }, { "hud_ayuda", "hud", 1 }, { "hud_menu", "hud", 2 }, { "hud_diaria", "hud", 3 },
   }
   local bww, bhh = (lado - (#botones - 1) * 4) / #botones, 30
   local cy = 10 + lado + 6
@@ -1381,17 +1403,7 @@ function I.flotantes(mundo, p, vw, vh)
     if libre then love.graphics.setColor(1, 0.82, 0.3) else love.graphics.setColor(0.45, 0.6, 0.95) end
     love.graphics.rectangle("line", x + 0.5, cy + 0.5, bww - 1, bhh - 1, 6, 6)
     love.graphics.setColor(1, 1, 1, 1)
-    if b[1] == "hud_misiones" then
-      -- sin icono en la lámina: un "!" dorado (pulsa si hay algo que entregar)
-      local f2 = love.graphics.getFont()
-      local lista = false
-      for _, q in ipairs(Misiones.lista) do if Misiones.estado(p, q) == "lista" then lista = true break end end
-      love.graphics.setColor(1, lista and (0.7 + 0.3 * math.sin(love.timer.getTime() * 5)) or 0.85, lista and 0.3 or 0.3, 1)
-      love.graphics.print("!", x + bww / 2 - f2:getWidth("!") / 2, cy + bhh / 2 - f2:getHeight() / 2)
-      love.graphics.setColor(1, 1, 1, 1)
-    else
-      Atlas.dibujar(b[2], b[3], x + bww / 2, cy + bhh / 2, 0.85, 16, 16)
-    end
+    Atlas.dibujar(b[2], b[3], x + bww / 2, cy + bhh / 2, 0.85, 16, 16)
     if b[1] == "hud_diaria" and p.diaria and p.diaria.reclamada then
       love.graphics.setColor(0.4, 1, 0.5, 1)
       love.graphics.setFont(f)

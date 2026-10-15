@@ -9,7 +9,7 @@ local T = {}
 
 local TILE = 32
 local BLOQUE = 16
-local LIMITE_BLOQUES = 70
+local LIMITE_BLOQUES = 120   -- (cada bloque son 1 MB de memoria de vídeo)
 local TINTE_UMBRA = { 0.66, 0.58, 0.92 }
 local TINTE_CICATRIZ = { 0.62, 0.42, 0.40 }
 
@@ -688,6 +688,26 @@ function T.precargar(mapa, camX, camY, vw, vh)
     end
   end
 end
+
+-- Bloques que faltan por construir alrededor del bloque (bx, by) en un radio dado, con sus variantes de agua. soloBase: solo la
+-- variante 0 (lo imprescindible para ver el suelo).
+function T.faltantes(mapa, bx, by, radio, soloBase)
+  mapa._bloques = mapa._bloques or { mapa = {}, n = 0, orden = 0 }
+  local c = mapa._bloques
+  local maxX, maxY = math.floor((mapa.w - 1) / BLOQUE), math.floor((mapa.h - 1) / BLOQUE)
+  local lista = {}
+  for cy = math.max(0, by - radio), math.min(maxY, by + radio) do
+    for cx = math.max(0, bx - radio), math.min(maxX, bx + radio) do
+      for _, f in ipairs((not soloBase and tieneAgua(mapa, cx, cy)) and { 0, 1, 2 } or { 0 }) do
+        if not c.mapa[clave(cx, cy, f)] then lista[#lista + 1] = { cx, cy, f } end
+      end
+    end
+  end
+  return lista
+end
+
+function T.construirYa(mapa, cx, cy, f) bloque(mapa, cx, cy, f) end
+T.BLOQUE_PX = BLOQUE * TILE
 
 function T.olvidar(mapa)
   if mapa._bloques then

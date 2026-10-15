@@ -129,6 +129,24 @@ function Pruebas.correr()
     collectgarbage("restart")
     Log.info(string.format("rendimiento marcaNpc: %.2f KB por llamada", kb2))
   end)
+  paso("carga previa del mundo: se construye el terreno de alrededor antes de jugar", function()
+    local Juego = require("src.presentacion.estados.juego")
+    local Terreno = require("src.presentacion.render.terreno")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Cargador", faccion = "albor", clase = "guerrero" })
+    local app = { mundo = mundo, jugador = pj }
+    local mapa = mundo.mapas.mundo
+    local bx, by = math.floor(pj.x / 16), math.floor(pj.y / 16)
+    fallar(errores, "al principio falta el suelo bajo los pies", #Terreno.faltantes(mapa, bx, by, 1, true) > 0)
+    local cv = love.graphics.newCanvas(1280, 720)
+    love.graphics.setCanvas({ cv, stencil = true })
+    local cuadros = 0
+    while Juego.precargarMundo(app, 1280, 720) and cuadros < 400 do cuadros = cuadros + 1 end
+    love.graphics.setCanvas()
+    fallar(errores, "la carga termina", cuadros < 400 and app.cargandoMundo == nil, tostring(cuadros))
+    fallar(errores, "tras la carga hay suelo en 5 x 5 bloques", #Terreno.faltantes(mapa, bx, by, 2) == 0)
+    fallar(errores, "con el terreno hecho no vuelve a abrirse la carga", Juego.precargarMundo(app, 1280, 720) == false)
+  end)
   paso("objetos y terreno", function()
     local Objetos = require("src.presentacion.render.objetos")
     for _, nombre in ipairs({ "arbol", "arbol_pino", "arbol_seco", "farol", "pozo", "estatua_albor",

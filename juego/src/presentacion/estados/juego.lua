@@ -203,11 +203,55 @@ function Juego.actualizar(app, dt)
   end
 end
 
+-- Al entrar al mundo (o al aparecer lejos: viaje, barco...) se construyen de golpe los bloques de terreno de alrededor, con una
+-- barra de progreso, para que los primeros pasos no tengan tirones. Devuelve true mientras dura la carga.
+local Terreno = require("src.presentacion.render.terreno")
+local RADIO_CARGA = 2
+function Juego.precargarMundo(app, w, h)
+  local j, mundo = app.jugador, app.mundo
+  if not j or not mundo or j.modo ~= "mundo" or (j.z or 0) ~= 0 then app.cargandoMundo = nil return false end
+  local mapa = mundo.mapas.mundo
+  local bx, by = math.floor((j.x or 0) / 16), math.floor((j.y or 0) / 16)
+  local c = app.cargandoMundo
+  if not c then
+    -- solo se abre la pantalla de carga si falta suelo bajo los pies (entrada o salto lejano), no al caminar
+    if #Terreno.faltantes(mapa, bx, by, 1, true) == 0 then return false end
+    c = { total = #Terreno.faltantes(mapa, bx, by, RADIO_CARGA), t0 = love.timer.getTime() }
+    app.cargandoMundo = c
+  end
+  local lista = Terreno.faltantes(mapa, bx, by, RADIO_CARGA)
+  if #lista == 0 then
+    Log.info(string.format("mundo: terreno preparado en %.2f s (%d bloques)", love.timer.getTime() - c.t0, c.total))
+    app.cargandoMundo = nil
+    return false
+  end
+  local t0 = love.timer.getTime()
+  for _, b in ipairs(lista) do
+    Terreno.construirYa(mapa, b[1], b[2], b[3])
+    if love.timer.getTime() - t0 > 0.03 then break end
+  end
+  c.total = math.max(c.total, #lista)
+  local hecho = math.max(0, c.total - #lista + 1)
+  love.graphics.setColor(0.03, 0.04, 0.09, 1)
+  love.graphics.rectangle("fill", 0, 0, w, h)
+  local f = love.graphics.getFont()
+  love.graphics.setColor(1, 0.9, 0.55)
+  local t = "Preparando el mundo..."
+  love.graphics.print(t, w / 2 - f:getWidth(t) / 2, h / 2 - 34)
+  local bw = math.min(360, w - 80)
+  love.graphics.setColor(0.12, 0.15, 0.28)
+  love.graphics.rectangle("fill", w / 2 - bw / 2, h / 2, bw, 14, 6, 6)
+  love.graphics.setColor(0.95, 0.75, 0.2)
+  love.graphics.rectangle("fill", w / 2 - bw / 2, h / 2, bw * math.min(1, hecho / math.max(1, c.total)), 14, 6, 6)
+  return true
+end
+
 function Juego.dibujar(app, w, h)
   if app.foto and app.foto.paso == "menu" then
     Interfaz.menu(false, w, h)
     return
   end
+  if app.mundo and app.jugador and not app.foto and Juego.precargarMundo(app, w, h) then return end
   if app.mundo and app.jugador then
     local mx, my = love.mouse.getPosition()
     local s = math.max(1, math.min(1.6, h / 720))
