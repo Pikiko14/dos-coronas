@@ -336,12 +336,12 @@ function Entrada.manejar(app, id)
     local mid = id:sub(11)
     app.actuar("mision_aceptar", { id = mid })
     -- si no seguías ninguna, la nueva pasa a ser la que se marca en el mapa
-    if not Misiones.seguida then Misiones.seguida = mid end
+    if not Misiones.seguida then Misiones.seguida = mid Ajustes.guardar() end
     return
   end
   if id:sub(1, 11) == "mision_fin_" then
     app.actuar("mision_entregar", { id = id:sub(12) })
-    if Misiones.seguida == id:sub(12) then Misiones.seguida = nil end
+    if Misiones.seguida == id:sub(12) then Misiones.seguida = nil Ajustes.guardar() end
     return
   end
   if id:sub(1, 11) == "mision_sel_" then
@@ -349,8 +349,8 @@ function Entrada.manejar(app, id)
     Interfaz.misAband = nil
     return
   end
-  if id:sub(1, 14) == "mision_seguir_" then Misiones.seguida = id:sub(15) return end
-  if id == "mision_noseguir" then Misiones.seguida = nil return end
+  if id:sub(1, 14) == "mision_seguir_" then Misiones.seguida = id:sub(15) Ajustes.guardar() return end
+  if id == "mision_noseguir" then Misiones.seguida = nil Ajustes.guardar() return end
   if id:sub(1, 12) == "mision_mapa_" then
     local q = Misiones.por_id[id:sub(13)]
     local pj = app.jugador

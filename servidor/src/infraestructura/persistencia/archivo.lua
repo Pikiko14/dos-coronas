@@ -104,7 +104,8 @@ function M.listar(cuentaId)
   local lista = {}
   for _, p in ipairs(leerAlmacen().personajes) do
     if p.cuenta == tonumber(cuentaId) then
-      lista[#lista + 1] = { id = p.id, nombre = p.nombre, faccion = p.faccion, clase = p.clase, nivel = p.nivel or 1 }
+      -- addon = el último que tenía puesto: la selección de personaje lo dibuja con su aspecto
+      lista[#lista + 1] = { id = p.id, nombre = p.nombre, faccion = p.faccion, clase = p.clase, nivel = p.nivel or 1, addon = p.datos and p.datos.addonActivo or nil }
     end
   end
   return lista

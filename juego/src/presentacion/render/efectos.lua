@@ -13,11 +13,11 @@ local COLUMNAS = 5
 E.def = {
   -- guerrero
   golpe = { "Hechizo_golpe", 0.55, 20, "add" },
-  tajo = { "Hechizo_tajo", 0.95, 14, "add" },
+  tajo = { "Hechizo_tajo", 0.95, 14, "add", base = math.pi / 6 },
   grito = { "Hechizo_grito", 0.9, 10, "add" },
-  desgarro = { "Hechizo_desgarro", 0.7, 18 },
+  desgarro = { "Hechizo_desgarro", 0.7, 18, base = -math.pi / 4 },
   furia = { "Hechizo_furia", 0.62, 8, "add" },
-  carga = { "Hechizo_carga", 0.7, 20, "add" },
+  carga = { "Hechizo_carga", 0.7, 20, "add", base = 0 },
   -- mago
   misil = { "Hechizo_misil", 0.55, 20, "add" },
   fuego = { "Hechizo_fuego", 0.8, 14, "add" },
@@ -40,10 +40,10 @@ E.def = {
   sanacion = { "Hechizo_sanacion", 1.15, 8, "add" },
   juicio = { "Hechizo_juicio", 0.8, 12, "add" },
   -- lancero
-  estocada = { "Hechizo_estocada", 0.7, 20, "add" },
-  barrido = { "Hechizo_barrido", 0.95, 14, "add" },
+  estocada = { "Hechizo_estocada", 0.7, 20, "add", base = math.pi / 4 },
+  barrido = { "Hechizo_barrido", 0.95, 14, "add", base = 0 },
   muro_lanzas = { "Hechizo_muro_lanzas", 0.95, 8 },
-  embestida = { "Hechizo_embestida", 0.8, 20, "add" },
+  embestida = { "Hechizo_embestida", 0.8, 20, "add", base = 0 },
   jabalina = { "Hechizo_jabalina", 0.7, 16, "add" },
   tormenta_lanzas = { "Hechizo_tormenta_lanzas", 1.1, 6 },
   -- nigromante (las hojas Necro_* son las del pack de efectos; el toque necrótico es propio)
@@ -54,15 +54,17 @@ E.def = {
   drenar = { "Necro_drenar", 0.8, 18, "add" },
   espectro = { "Necro_alma", 0.7, 20, "add" },
   -- impactos de proyectiles y varios
+  lanza = { "Hechizo_golpe", 0.5, 20, "add" },          -- impacto de la jabalina
+  necro = { "Necro_alma", 0.5, 20, "add" },            -- impacto del proyectil necrótico
   sagrado = { "Hechizo_castigo", 0.5, 20, "add" },
   flecha = { "Hechizo_disparo", 0.45, 20, "add" },
   impacto = { "Hechizo_golpe", 0.42, 20, "add" },
-  corte = { "Attack7", 0.5, 22 },
+  corte = { "Attack7", 0.5, 22, base = math.pi / 4 },
   hielo = { "Ice2", 0.65, 20 },
   nivel = { "Light2", 0.8, 4 },
   -- estados alterados (también se dibujan en bucle sobre quien los sufre)
   quemar = { "Fire2", 0.4, 14 },
-  sangrar = { "Attack12", 0.45, 18 },
+  sangrar = { "Attack12", 0.45, 18, base = math.pi / 4 },
   veneno = { "State1", 0.45, 10 },
   drenar_vida = { "Darkness1", 0.38, 14 },
   drenar_mana = { "State2", 0.38, 14 },
@@ -116,7 +118,8 @@ local function hoja(nombre)
 end
 
 -- Dibuja el cuadro que toca a los 't' segundos de una animación de 'dur'.
-function E.cuadro(tipo, t, dur, sx, sy, escalaExtra, alfa)
+-- rot: ángulo hacia donde debe apuntar (si el efecto tiene dirección: d.base es hacia dónde apunta el dibujo original).
+function E.cuadro(tipo, t, dur, sx, sy, escalaExtra, alfa, rot)
   local d = E.def[tipo] or E.def.misil
   local h = hoja(d[1])
   local n = #h.cuadros
@@ -125,7 +128,8 @@ function E.cuadro(tipo, t, dur, sx, sy, escalaExtra, alfa)
   local esc = d[2] * (escalaExtra or 1)
   if d[4] == "add" then love.graphics.setBlendMode("add") end
   love.graphics.setColor(1, 1, 1, alfa or 1)
-  love.graphics.draw(h.img, h.cuadros[k], sx, sy - d[3] * (escalaExtra or 1), 0, esc, esc, CELDA / 2, CELDA / 2)
+  local giro = (rot and d.base) and (rot - d.base) or 0
+  love.graphics.draw(h.img, h.cuadros[k], sx, sy - d[3] * (escalaExtra or 1), giro, esc, esc, CELDA / 2, CELDA / 2)
   if d[4] == "add" then love.graphics.setBlendMode("alpha") end
 end
 

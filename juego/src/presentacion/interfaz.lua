@@ -3842,7 +3842,7 @@ function I.personajes(lista, usuario, w, h, errorTxt)
       love.graphics.setColor(fac.color[1], fac.color[2], fac.color[3], 0.2)
       love.graphics.rectangle("fill", w / 2 - 324, y + 12, 72, 72, 4, 4)
     end
-    I.persona(pj.clase, w / 2 - 288, y + 84, 0.85, pj.faccion)
+    I.persona(pj.clase, w / 2 - 288, y + 84, 0.85, pj.faccion, (type(pj.addon) == "string" and Personajes.skins[pj.addon]) and pj.addon or nil)
     love.graphics.setColor(fac and fac.color or { 1, 1, 1 })
     love.graphics.print(pj.nombre .. "   nivel " .. pj.nivel, w / 2 - 220, y + 28)
     love.graphics.setColor(0.85, 0.82, 0.75)

@@ -320,7 +320,7 @@ function D.escena(mundo, jugador, cam, mx, my)
   end
   for _, fx in ipairs(mundo.efectos or {}) do
     if math.abs(fx.x - jugador.x) < radio and math.abs(fx.y - jugador.y) < radio then
-      Efectos.cuadro(fx.tipo, fx.t, fx.dur, fx.x * TILE - cam.x, fx.y * TILE - cam.y + 14)
+      Efectos.cuadro(fx.tipo, fx.t, fx.dur, fx.x * TILE - cam.x, fx.y * TILE - cam.y + 14, nil, nil, fx.rot)
     end
   end
   -- apuntando un poder de area: la zona habilitada (alcance) y el area de impacto bajo el cursor
@@ -353,7 +353,7 @@ function D.escena(mundo, jugador, cam, mx, my)
 end
 
 -- tipo de proyectil -> mezcla con que se dibuja
-local PROYECTILES = { misil = "add", fuego = "add", sagrado = "add", flecha = "alpha", sombra = "alpha" }
+local PROYECTILES = { misil = "add", fuego = "add", sagrado = "add", flecha = "alpha", sombra = "alpha", lanza = "alpha", necro = "alpha" }
 
 function D.proyectil(e, sx, sy)
   sy = sy - 8

@@ -497,8 +497,9 @@ end
 function M.listar(cuentaId)
   return con(function(conn)
     local filas, err = conn:consulta(
-      "SELECT id, nombre, faccion, clase, nivel FROM personajes WHERE cuenta_id = " ..
-      tonumber(cuentaId) .. " ORDER BY id"
+      "SELECT id, nombre, faccion, clase, nivel, " ..
+      "(SELECT addon FROM personaje_addon a WHERE a.personaje_id = personajes.id AND a.activo LIMIT 1) AS addon " ..
+      "FROM personajes WHERE cuenta_id = " .. tonumber(cuentaId) .. " ORDER BY id"
     )
     if not filas then return nil, err end
     local lista = {}
@@ -506,6 +507,7 @@ function M.listar(cuentaId)
       lista[#lista + 1] = {
         id = tonumber(row.id), nombre = row.nombre, faccion = row.faccion,
         clase = row.clase, nivel = tonumber(row.nivel) or 1,
+        addon = (row.addon and row.addon ~= "") and row.addon or nil,
       }
     end
     return lista

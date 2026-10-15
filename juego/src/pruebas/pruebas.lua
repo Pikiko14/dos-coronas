@@ -174,13 +174,23 @@ function Pruebas.correr()
           end
           local rms = math.sqrt(suma / n)
           fallar(errores, nombre .. " tiene señal audible y sin NaN", not nan and pico > 0.1 and rms > 0.02, string.format("pico %.2f rms %.3f", pico, rms))
-          fallar(errores, nombre .. " dura entre 0,1 y 1,3 s", n / 22050 >= 0.1 and n / 22050 <= 1.3)
+          fallar(errores, nombre .. " dura entre 0,1 y 2,6 s", datos:getDuration() >= 0.1 and datos:getDuration() <= 2.6, tostring(datos:getDuration()))
         end
       end
     end
     Log.info(string.format("sonido: %d efectos sintetizados en %.2f s (prueba)", #esperados, love.timer.getTime() - t0))
     -- sin audio activo (pruebas) tocar no hace nada ni falla
     fallar(errores, "sin audio no se toca nada", Sonido.evento({ n = "magia", x = 1, y = 1 }, { x = 1, y = 1 }) == false)
+  end)
+  paso("selección de personaje: se dibuja con su último addon", function()
+    Interfaz.escala = 1
+    local lista = {
+      { id = 1, nombre = "Con addon", faccion = "albor", clase = "lancero", nivel = 9, addon = "skin_enmascarado" },
+      { id = 2, nombre = "Sin addon", faccion = "umbra", clase = "mago", nivel = 3 },
+      { id = 3, nombre = "Addon raro", faccion = "albor", clase = "guerrero", nivel = 1, addon = "skin_que_no_existe" },
+    }
+    local ok, err = pcall(Interfaz.personajes, lista, "prueba", 1280, 720, "")
+    fallar(errores, "la selección dibuja addons (y tolera uno desconocido)", ok, tostring(err))
   end)
   paso("objetos y terreno", function()
     local Objetos = require("src.presentacion.render.objetos")

@@ -139,9 +139,14 @@ function Mundo:sonar(nombre, e)
   lista[#lista + 1] = { n = nombre, x = e and e.x, y = e and e.y, e = e }
 end
 
-function Mundo:efecto(tipo, x, y, dur)
+-- Ángulo de cada dirección de mirada (1 abajo, 2 arriba, 3 derecha, 4 izquierda), con 0 = derecha y positivo hacia abajo.
+Mundo.ANGULO_DIR = { [1] = math.pi / 2, [2] = -math.pi / 2, [3] = 0, [4] = math.pi }
+
+-- rot: hacia dónde apunta el efecto (ángulo en radianes, 0 = derecha, positivo = hacia abajo); lo usan los poderes con dirección
+-- (estocada, embestida): el cliente gira la animación para que vaya de quien ataca hacia su objetivo.
+function Mundo:efecto(tipo, x, y, dur, rot)
   self.efectos[#self.efectos + 1] = {
-    tipo = tipo, x = x, y = y, t = 0, dur = dur or 0.42,
+    tipo = tipo, x = x, y = y, t = 0, dur = dur or 0.42, rot = rot,
   }
 end
 
@@ -1284,6 +1289,8 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
   p.swing = 0.2
   p.ultimoGolpe = self.tiempo
   self:marcarAtaque(p, objetivo ~= p and objetivo or nil, (h.rango or 0) > 3 or objetivo == nil or objetivo == p, true)
+  -- el personaje se vuelve hacia su objetivo al lanzar el poder (si no, el efecto y el cuerpo mirarían a lados distintos)
+  if objetivo and objetivo ~= p and objetivo.x and not p.tramo then self:encarar(p, objetivo.x - p.x, objetivo.y - p.y) end
   if h.dash and objetivo then
     local dx, dy = objetivo.x - p.x, objetivo.y - p.y
     local d = math.max(0.1, math.sqrt(dx * dx + dy * dy))
@@ -1383,12 +1390,15 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
   local ex = objetivo and objetivo.x or p.x
   local ey = objetivo and objetivo.y or p.y
   if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" or h.tipo == "invocar" then
-    self:efecto(idh, p.x, p.y, 0.5)
+    -- los de alrededor (el barrido) se abren hacia donde mira el personaje
+    self:efecto(idh, p.x, p.y, 0.5, Mundo.ANGULO_DIR[p.dir or 1])
   elseif h.tipo == "punto" then
     self:efecto(idh, p.impactoX or tx or ex, p.impactoY or ty or ey, 0.55)
     p.impactoX, p.impactoY = nil, nil
   elseif not h.proyectil then
-    self:efecto(idh, ex, ey, 0.4)
+    -- con objetivo, el efecto mira de quien ataca hacia él (si estás debajo del enemigo, la estocada sube)
+    local rot = (objetivo and objetivo ~= p) and math.atan2(ey - p.y, ex - p.x) or nil
+    self:efecto(idh, ex, ey, 0.4, rot)
   end
   p.habilidadPendiente = nil
   return nil
@@ -3344,7 +3354,7 @@ function Mundo:foto(pid)
   if p then
     for _, fx in ipairs(self.efectos) do
       if Util.dist(p.x, p.y, fx.x, fx.y) < 30 then
-        efectos[#efectos + 1] = { tipo = fx.tipo, x = fx.x, y = fx.y, t = fx.t, dur = fx.dur }
+        efectos[#efectos + 1] = { tipo = fx.tipo, x = fx.x, y = fx.y, t = fx.t, dur = fx.dur, rot = fx.rot and math.floor(fx.rot * 100) / 100 or nil }
       end
     end
     for _, n in ipairs(self.numeros) do

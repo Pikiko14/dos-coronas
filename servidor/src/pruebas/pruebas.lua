@@ -3901,6 +3901,82 @@ mundo.tiempo = 100
     mundo:morir(a, m)
     fallar(errores, "al morir el personaje suena su muerte", nombres(mundo:foto(nigro.id)):find("muerte_jugador", 1, true) ~= nil)
   end)
+  paso("misiones: se conservan al salir y volver a entrar (cazar, recolectar y entregar)", function()
+    local Misiones = require("compartido.dominio.misiones")
+    local mundo = Mundo.nuevo()
+    local npcs = {}
+    for _, e in pairs(mundo.entidades) do if e.kind == "npc" and e.qid then npcs[e.qid] = e end end
+    local p = mundo:crearPersonaje({ nombre = "Guardado", faccion = "albor", clase = "guerrero", nivel = 12 })
+    p.bolsa, p.equipo.mochila = {}, "mochila_4"
+    local liria = npcs.c_liria
+    p.x, p.y, p.modo, p.z = liria.x + 1, liria.y, "mundo", 0
+    fallar(errores, "acepta recolectar y entregar", mundo:aceptarMision(p, "ca_1") == nil)
+    math.randomseed(3)
+    for _ = 1, 40 do mundo:avanzarMisiones(p, "jabali") end
+    local tenia = mundo:contarItem(p, "mat_jabali")
+    fallar(errores, "reúne trofeos", tenia >= 6)
+    mundo:entregarMision(p, "ca_1")
+    mundo:aceptarMision(p, "ca_2")
+    local ex = mundo:exportar(p)
+    -- un JSON de ida y vuelta, como el que guarda la base de datos
+    local Util = require("compartido.dominio.util")
+    local vuelta = Util.jsonDec(Util.jsonEnc(ex))
+    local b = mundo:crearPersonaje({ nombre = "Guardado2", faccion = "albor", clase = "guerrero", nivel = 12 })
+    mundo:aplicarGuardado(b, vuelta)
+    fallar(errores, "la misión entregada sigue entregada", b.misiones.ca_1 and b.misiones.ca_1.entregada == true)
+    fallar(errores, "la misión de entrega sigue aceptada", b.misiones.ca_2 and b.misiones.ca_2.aceptada == true and not b.misiones.ca_2.entregada)
+    fallar(errores, "el paquete de la entrega sigue en la bolsa", mundo:contarItem(b, "paq_ca_2") == 1)
+    -- cazar a medias
+    local t = mundo:crearPersonaje({ nombre = "Cazador3", faccion = "albor", clase = "guerrero", nivel = 12 })
+    t.misiones.h1_gato = { aceptada = true, entregada = false, progreso = 4 }
+    local v2 = Util.jsonDec(Util.jsonEnc(mundo:exportar(t)))
+    local c = mundo:crearPersonaje({ nombre = "Cazador4", faccion = "albor", clase = "guerrero", nivel = 12 })
+    mundo:aplicarGuardado(c, v2)
+    fallar(errores, "el avance de cazar se conserva", c.misiones.h1_gato and c.misiones.h1_gato.progreso == 4 and c.misiones.h1_gato.aceptada)
+  end)
+  paso("efectos de poderes: apuntan de quien ataca hacia su objetivo", function()
+    local mundo = Mundo.nuevo()
+    local l = mundo:crearPersonaje({ nombre = "Lancero", faccion = "albor", clase = "lancero", nivel = 20 })
+    l.mp, l.mpMax = 999, 999
+    mundo.tiempo = 300
+    -- el enemigo ENCIMA del lancero: la estocada va de abajo arriba
+    local m = mundo:spawnMonstruo("jabali", l.x, l.y - 2, { x = l.x, y = l.y })
+    m.hp, m.hpMax = 99999, 99999
+    mundo.efectos = {}
+    l.habilidades = l.habilidades or {}
+    local slot
+    for i, id in ipairs(Datos.barra.lancero or {}) do if id == "estocada" then slot = i end end
+    fallar(errores, "el lancero tiene estocada en su barra", slot ~= nil)
+    if slot then
+      l.objetivo = m.id
+      l.cds = {}
+      local err = mundo:usarHabilidad(l, slot)
+      local fx
+      for _, e in ipairs(mundo.efectos) do if e.tipo == "estocada" then fx = e end end
+      fallar(errores, "la estocada sale (" .. tostring(err) .. ")", fx ~= nil)
+      if fx then
+        fallar(errores, "con el enemigo arriba el efecto apunta hacia arriba", fx.rot and math.abs(fx.rot - (-math.pi / 2)) < 0.2, tostring(fx.rot))
+        fallar(errores, "y el lancero mira hacia arriba", l.dir == 2, tostring(l.dir))
+        local foto = mundo:foto(l.id)
+        local visto
+        for _, e in ipairs(foto.efectos) do if e.tipo == "estocada" then visto = e end end
+        fallar(errores, "la foto lleva la dirección", visto and visto.rot and math.abs(visto.rot + math.pi / 2) < 0.2)
+      end
+    end
+    -- el barrido se abre hacia donde mira
+    l.dir, l.objetivo = 4, nil
+    mundo.efectos = {}
+    local slotB
+    for i, id in ipairs(Datos.barra.lancero or {}) do if id == "barrido" then slotB = i end end
+    if slotB then
+      l.cds = {}
+      l.habilidades.barrido = 1
+      local errB = mundo:usarHabilidad(l, slotB)
+      local fx
+      for _, e in ipairs(mundo.efectos) do if e.tipo == "barrido" then fx = e end end
+      fallar(errores, "el barrido se abre hacia donde mira el personaje", fx and fx.rot and math.abs(fx.rot - math.pi) < 0.2, tostring(fx and fx.rot) .. " " .. tostring(errB))
+    end
+  end)
   paso("movimiento", function()
     local mundo = Mundo.nuevo()
     local c

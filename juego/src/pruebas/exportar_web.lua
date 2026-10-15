@@ -217,6 +217,58 @@ function E.correr()
     local fh = io.open(Log.carpeta() .. "/capturas/web/fenix_jinete.png", "wb")
     if fh then fh:write(cv:newImageData():encode("png"):getString()) fh:close() end
   end
+  -- revisión de los efectos con dirección del lancero: estocada y embestida hacia derecha, abajo, izquierda y arriba
+  do
+    local Efectos = require("src.presentacion.render.efectos")
+    local C, E2 = 150, 1
+    local TIPOS = { "estocada", "embestida", "tajo", "barrido", "corte", "desgarro", "carga" }
+    local cv = love.graphics.newCanvas(8 * C, #TIPOS * C)
+    love.graphics.push("all")
+    love.graphics.setCanvas({ cv, stencil = true })
+    love.graphics.clear(0.3, 0.42, 0.55, 1)
+    for fila, tipo in ipairs(TIPOS) do
+      for k, rot in ipairs({ 0, math.pi / 2, math.pi, -math.pi / 2 }) do
+        for j, t in ipairs({ 0.18, 0.28 }) do
+          local cx, cy = ((k - 1) * 2 + (j - 1)) * C + C / 2, (fila - 1) * C + C / 2
+          love.graphics.setColor(1, 1, 1, 0.25)
+          love.graphics.circle("fill", cx, cy, 5)
+          Efectos.cuadro(tipo, t, 0.4, cx, cy + 14, 1, 1, rot)
+        end
+      end
+    end
+    love.graphics.pop()
+    local fh = io.open(Log.carpeta() .. "/capturas/web/efectos_lancero.png", "wb")
+    if fh then fh:write(cv:newImageData():encode("png"):getString()) fh:close() end
+  end
+  -- contacto de TODOS los efectos de poderes (tres instantes de cada uno) para revisar hacia dónde apunta cada dibujo
+  do
+    local Efectos = require("src.presentacion.render.efectos")
+    local nombres = {}
+    for k in pairs(Efectos.def) do nombres[#nombres + 1] = k end
+    table.sort(nombres)
+    local C, COL = 128, 6
+    local filas = math.ceil(#nombres / COL)
+    local cv = love.graphics.newCanvas(COL * C * 3, filas * C)
+    love.graphics.push("all")
+    love.graphics.setCanvas({ cv, stencil = true })
+    love.graphics.clear(0.2, 0.28, 0.38, 1)
+    for i, tipo in ipairs(nombres) do
+      local cx0, cy0 = ((i - 1) % COL) * C * 3, math.floor((i - 1) / COL) * C
+      for j, t in ipairs({ 0.2, 0.45, 0.7 }) do
+        love.graphics.push()
+        love.graphics.translate(cx0 + (j - 1) * C + C / 2, cy0 + C / 2 + 10)
+        love.graphics.scale(0.62, 0.62)
+        Efectos.cuadro(tipo, t, 1, 0, 0, 1, 1)
+        love.graphics.pop()
+      end
+      love.graphics.setColor(1, 1, 0.5, 1)
+      love.graphics.print(tipo, cx0 + 4, cy0 + 2)
+    end
+    love.graphics.pop()
+    local fh = io.open(Log.carpeta() .. "/capturas/web/efectos_todos.png", "wb")
+    if fh then fh:write(cv:newImageData():encode("png"):getString()) fh:close() end
+    print("efectos: " .. table.concat(nombres, " "))
+  end
   Log.info("exportar_web: " .. n .. " sprites en " .. Log.carpeta() .. "/capturas/web")
   print("exportar_web: " .. n .. " sprites")
   love.event.quit(0)

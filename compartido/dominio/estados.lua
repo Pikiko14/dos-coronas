@@ -144,7 +144,7 @@ function E.instalar(Mundo)
             end
           end
         else
-          self:efecto(pw.anim, o.x, o.y, 0.5)
+          self:efecto(pw.anim, o.x, o.y, 0.5, math.atan2(o.y - e.y, o.x - e.x))
           self:probarEstado(e, o, pw.estado)
         end
         return true
