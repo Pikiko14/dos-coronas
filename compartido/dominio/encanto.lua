@@ -7,7 +7,7 @@ require("compartido.dominio.configuracion").aplicar(E, "encanto")
 
 
 -- Probabilidad de subir de +n a +(n+1), con n = 0..9.
-local PROB = { 1.0, 1.0, 1.0, 0.8, 0.65, 0.5, 0.4, 0.3, 0.2, 0.12 }
+local PROB = { 1.0, 1.0, 1.0, 0.8, 0.65, 0.5, 0.4, 0.3, 0.2, 0.10 }
 
 function E.mult(enc)
   return 1 + E.PCT * (enc or 0)

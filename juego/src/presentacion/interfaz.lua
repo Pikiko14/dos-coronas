@@ -3125,14 +3125,14 @@ function I.listaItemsClase(p, cat)
   if cat == "pociones" then
     local lista = {}
     for id, it in pairs(Datos.items) do
-      if (Datos.esTipoPocion(it, "vida") or Datos.esTipoPocion(it, "mana")) and (it.nivel or 1) <= (p.nivel or 1) + 4 then
+      if (Datos.esTipoPocion(it, "vida") or Datos.esTipoPocion(it, "mana") or it.teletransporte) and (it.nivel or 1) <= (p.nivel or 1) + 4 then
         lista[#lista + 1] = id
       end
     end
     table.sort(lista, function(a, b)
       local x, y = Datos.items[a], Datos.items[b]
       if (x.nivel or 1) ~= (y.nivel or 1) then return (x.nivel or 1) < (y.nivel or 1) end
-      local vx, vy = x.cura and 0 or 1, y.cura and 0 or 1
+      local vx, vy = x.teletransporte and 2 or (x.cura and 0 or 1), y.teletransporte and 2 or (y.cura and 0 or 1)
       if vx ~= vy then return vx < vy end
       return a < b
     end)
@@ -3926,8 +3926,10 @@ function I.panelAjustes(w, h)
   local espera = Ajustes.esperando
   I.boton(w / 2 - 180, h / 2 + 36, 340, 32, espera == "interactuar" and "Pulsa una tecla…" or ("Interactuar: " .. inter), "aj_tecla_interactuar")
   I.boton(w / 2 - 180, h / 2 + 78, 340, 32, espera == "bolsa" and "Pulsa una tecla…" or ("Bolsa: " .. bolsa), "aj_tecla_bolsa")
+  local NOMBRE_GRAFICOS = { alto = "Alto (luz, reflejos, clima)", medio = "Medio", bajo = "Bajo (solo luz)", apagado = "Apagado" }
+  I.boton(w / 2 - 180, h / 2 + 120, 340, 32, "Efectos gráficos: " .. (NOMBRE_GRAFICOS[Ajustes.graficos or "alto"] or "Alto"), "aj_graficos")
   love.graphics.setColor(0.75, 0.72, 0.64)
-  love.graphics.print("F11 cambia la pantalla. F3 muestra el medidor.", w / 2 - 180, h / 2 + 124)
+  love.graphics.print("F11 cambia la pantalla. F3 muestra el medidor.", w / 2 - 180, h / 2 + 160)
 end
 
 

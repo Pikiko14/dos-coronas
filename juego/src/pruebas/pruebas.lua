@@ -782,6 +782,34 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     ok, err = pcall(Dibujo.escena, mundo, dueno, camCasa, 200, 200)
     fallar(errores, "el interior dibuja la puerta y los muebles", ok and mundo:interior(dueno).puerta ~= nil, tostring(err))
     Dibujo.muebleElegido = nil
+    -- ambiente gráfico: cada nivel de calidad, hora y clima dibuja sin errores, también dentro de la casa y en la mazmorra
+    local Ambiente = require("src.presentacion.render.ambiente")
+    local Ajustes = require("src.presentacion.ajustes")
+    local previoGraficos, previoHora, previoClima = Ajustes.graficos, Ambiente.horaFija, Ambiente.climaFijo
+    for _, nivel in ipairs(Ambiente.NIVELES) do
+      for _, hora in ipairs({ 2, 7, 12, 19, 22 }) do
+        for _, clima in ipairs({ "despejado", "lluvia", "nieve", "tormenta", "niebla" }) do
+          Ajustes.graficos, Ambiente.horaFija, Ambiente.climaFijo = nivel, hora, clima
+          local camA = Dibujo.camara(pj, 1, mundo:mapaDe(pj))
+          local okA, errA = pcall(Dibujo.escena, mundo, pj, camA, 300, 300)
+          fallar(errores, "ambiente " .. nivel .. " " .. hora .. "h " .. clima, okA, tostring(errA))
+        end
+      end
+    end
+    Ajustes.graficos, Ambiente.horaFija, Ambiente.climaFijo = "alto", 21, "despejado"
+    camCasa = Dibujo.camara(dueno, 1, mundo:mapaDe(dueno))
+    local okC, errC = pcall(Dibujo.escena, mundo, dueno, camCasa, 200, 200)
+    fallar(errores, "ambiente dentro de la casa", okC, tostring(errC))
+    Ajustes.graficos, Ambiente.horaFija, Ambiente.climaFijo = previoGraficos, previoHora, previoClima
+    fallar(errores, "la calidad gráfica cambia de nivel en nivel", (function()
+      Ajustes.graficos = "alto"
+      local a = Ambiente.siguienteNivel()
+      local b = Ambiente.siguienteNivel()
+      local c = Ambiente.siguienteNivel()
+      local d = Ambiente.siguienteNivel()
+      Ajustes.graficos = previoGraficos
+      return a == "medio" and b == "bajo" and c == "apagado" and d == "alto"
+    end)())
     -- el punto de impacto nunca sale de la zona habilitada
     local ix, iy, fuera = Dibujo.puntoApuntado(app.apuntando, pj, cam, 5, 5)
     local d = math.sqrt((ix - pj.x) ^ 2 + (iy - pj.y) ^ 2)
@@ -1480,7 +1508,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local pociones = Interfaz.listaItemsClase(pj, "pociones")
     local bajas = Interfaz.listaItemsClase({ clase = "guerrero", nivel = 1 }, "pociones")
     local altas = Interfaz.listaItemsClase({ clase = "guerrero", nivel = 22 }, "pociones")
-    local solo = #armas > 0 and #armadura > 0 and #pociones == 4 and #bajas == 2 and #altas == 6
+    local solo = #armas > 0 and #armadura > 0 and #pociones == 5 and #bajas == 3 and #altas == 7
     for _, id in ipairs(armas) do solo = solo and Datos.item(id).hueco == "arma" end
     for _, id in ipairs(armadura) do local hh = Datos.item(id).hueco solo = solo and (hh == "cabeza" or hh == "pecho" or hh == "piernas" or hh == "pies") end
     fallar(errores, "cada pestaña lista solo lo suyo", solo, #bajas .. "/" .. #pociones .. "/" .. #altas)
@@ -1823,7 +1851,22 @@ local function fotoCasas(app)
   end
   app.estado = "juego"
   Interfaz.panel = nil
-  if foto.paso == "menu" then
+  if foto.paso == "menu" and os.getenv("DC_FOTO_FUEGO") then
+    foto.paso = "fuego"
+    local j = app.jugador
+    for _, c in ipairs(app.mundo.mapas.mundo.ciudades) do
+      if c.id == "auroria" then j.x, j.y = c.x + c.w / 2 - 3.5, c.y + c.h / 2 + 5.5 end
+    end
+    local m = app.mundo
+    m:efecto("fuego", j.x + 2.2, j.y, 5)
+    m:efecto("nova", j.x - 2.5, j.y + 0.8, 5)
+    m:efecto("curar", j.x - 1, j.y - 1.8, 5)
+    local id = m:idNuevo()
+    m.entidades[id] = { id = id, kind = "proyectil", x = j.x + 0.6, y = j.y - 0.5, modo = "mundo", tx = j.x + 60, ty = j.y - 0.5, tipo = "fuego", vivo = true, vida = 9, coef = 1 }
+  elseif foto.paso == "fuego" then
+    foto.paso = "fin"
+    love.event.quit(0)
+  elseif foto.paso == "menu" then
     foto.paso = "lago"
     for _, c in ipairs(app.mundo.mapas.mundo.ciudades) do
       if c.id == "auroria" then app.jugador.x, app.jugador.y = c.x + c.w / 2 - 17, c.y + c.h - 8.5 end

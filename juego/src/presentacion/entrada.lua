@@ -438,6 +438,7 @@ function Entrada.manejar(app, id)
   if id == "aj_1280" then Ajustes.ancho, Ajustes.alto, Ajustes.completo = 1280, 720, false Ajustes.aplicarVentana() Ajustes.guardar() return end
   if id == "aj_1600" then Ajustes.ancho, Ajustes.alto, Ajustes.completo = 1600, 900, false Ajustes.aplicarVentana() Ajustes.guardar() return end
   if id == "aj_completo" then Ajustes.completo = not Ajustes.completo Ajustes.aplicarVentana() Ajustes.guardar() return end
+  if id == "aj_graficos" then require("src.presentacion.render.ambiente").siguienteNivel() Ajustes.guardar() return end
   if id == "aj_tecla_interactuar" then Ajustes.esperando = "interactuar" return end
   if id == "aj_tecla_bolsa" then Ajustes.esperando = "bolsa" return end
   if id == "salir_menu" then

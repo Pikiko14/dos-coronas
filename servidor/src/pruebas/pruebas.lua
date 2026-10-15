@@ -1663,6 +1663,72 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     fallar(errores, "renace en la ciudad guardada", mundo:ciudadEn(p.x, p.y) == ciudad)
   end)
 
+  paso("el pergamino de teletransporte lleva a la estatua guardada", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local p = mundo:crearPersonaje({ nombre = "Viaja", faccion = "albor", clase = "guerrero", nivel = 5 })
+    local it = Datos.item("pergamino_teletransporte")
+    fallar(errores, "el pergamino existe y se vende", it ~= nil and it.teletransporte and mundo:puestoDe(it) == "mercado")
+    if not it then return end
+    local destino
+    for _, c in ipairs(mundo.mapas.mundo.ciudades) do
+      if c.faccion == "albor" and c.id ~= "auroria" and not destino then destino = c end
+    end
+    p.vinculo = { x = destino.spawn.x, y = destino.spawn.y, modo = "mundo", ciudad = destino.id }
+    p.bolsa = { { id = "pergamino_teletransporte", cant = 2 } }
+    p.x, p.y, p.z, p.modo = 200.5, 200.5, 0, "mundo"
+    p.ultimoGolpe = mundo.tiempo
+    fallar(errores, "no se usa en combate", mundo:equipar(p, 1) ~= nil and p.x == 200.5)
+    p.ultimoGolpe = -100
+    mundo.tiempo = 100
+    fallar(errores, "se usa fuera de combate", mundo:equipar(p, 1) == nil)
+    fallar(errores, "llega a la ciudad guardada", mundo:ciudadEn(p.x, p.y) == destino)
+    fallar(errores, "gasta uno", p.bolsa[1] and p.bolsa[1].cant == 1)
+    p.x, p.y = 200.5, 200.5
+    fallar(errores, "se enfría", mundo:equipar(p, 1) ~= nil and p.x == 200.5)
+    mundo.tiempo = 140
+    fallar(errores, "tras el enfriamiento vuelve a funcionar", mundo:equipar(p, 1) == nil and #p.bolsa == 0)
+  end)
+
+  paso("las paredes frenan los ataques", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local ed
+    for _, e in ipairs(mundo.mapas.mundo.edificios) do
+      if not ed and not e.cima and next(e.vacio or {}) == nil and e.w >= 3 then ed = e end
+    end
+    fallar(errores, "hay un edificio recto", ed ~= nil)
+    if not ed then return end
+    local y = ed.y + ed.h - 0.5
+    local p = mundo:crearPersonaje({ nombre = "Tras", faccion = "albor", clase = "mago", nivel = 20 })
+    p.x, p.y, p.z, p.modo = ed.x - 1.5, y, 0, "mundo"
+    local m = mundo:spawnMonstruo("jabali", ed.x + ed.w + 1.5, y, { x = ed.x + ed.w + 1.5, y = y })
+    m.x, m.y = ed.x + ed.w + 1.5, y
+    fallar(errores, "con la pared en medio no hay línea", not mundo:lineaLibre(p, m))
+    local hp = m.hp
+    mundo:golpear(p, m, 1)
+    fallar(errores, "el golpe no atraviesa la pared", m.hp == hp)
+    p.objetivo = m.id
+    p.mp = p.mpMax
+    local barra = Datos.barra[p.clase]
+    local msg
+    for slot = 1, #barra do
+      local h = require("compartido.dominio.arbol").efectiva(barra[slot], 1)
+      if h and h.tipo == "enemigo" then
+        p.habilidades = p.habilidades or {}
+        msg = mundo:usarHabilidad(p, slot)
+        break
+      end
+    end
+    fallar(errores, "el poder no se lanza a través de la pared", msg == nil or msg == "Hay una pared en medio." or msg == "Te acercas." or msg == "Aún no conoces ese poder: abre el árbol (K).")
+    fallar(errores, "el objetivo no recibió daño", m.hp == hp)
+    -- sin pared sí hay línea
+    local libre = mundo:crearPersonaje({ nombre = "Libre", faccion = "albor", clase = "mago", nivel = 20 })
+    libre.x, libre.y, libre.z, libre.modo = ed.x + ed.w + 1.5, y + 3, 0, "mundo"
+    local ok = not mundo.mapas.mundo.bloque[math.floor(libre.x)] or not mundo.mapas.mundo.bloque[math.floor(libre.x)][math.floor(libre.y)]
+    if ok then fallar(errores, "a cielo abierto sí hay línea", mundo:lineaLibre(libre, m)) end
+  end)
+
   paso("al morir queda el cuerpo y reaparece en la ciudad", function()
     local mundo = Mundo.nuevo()
     mundo.entidades = {}

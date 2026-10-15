@@ -8,6 +8,7 @@
   <item id="pocion_vida" nombre="Poción de vida" apila="99" cura="50" curaMax="110" hoja="equipment" nivel="1" precio="28" sprite="705" texto="Restaura de 50 a 110 de vida."/>
   <item id="pocion_vida_mediana" nombre="Poción de vida mediana" apila="99" cura="111" curaMax="190" hoja="pociones" nivel="12" precio="62" sprite="0" texto="Restaura de 111 a 190 de vida."/>
   <item id="pocion_vida_grande" nombre="Poción de vida grande" apila="99" cura="191" curaMax="300" hoja="pociones" nivel="22" precio="130" sprite="1" texto="Restaura de 191 a 300 de vida."/>
+  <item id="pergamino_teletransporte" nombre="Pergamino de teletransporte" apila="20" hoja="pergaminos" sprite="0" nivel="1" precio="150" teletransporte="1" texto="Te lleva a la estatua de tu reino donde renaces. No se usa en combate."/>
   <item id="pocion_mana" nombre="Poción de maná" apila="99" hoja="equipment" mana="50" manaMax="110" nivel="1" precio="24" sprite="704" texto="Restaura de 50 a 110 de maná."/>
   <item id="pocion_mana_mediana" nombre="Poción de maná mediana" apila="99" hoja="pociones" mana="111" manaMax="190" nivel="12" precio="54" sprite="2" texto="Restaura de 111 a 190 de maná."/>
   <item id="pocion_mana_grande" nombre="Poción de maná grande" apila="99" hoja="pociones" mana="191" manaMax="300" nivel="22" precio="114" sprite="3" texto="Restaura de 191 a 300 de maná."/>

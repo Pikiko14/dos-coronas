@@ -775,6 +775,38 @@ function Mundo:ponerBuff(e, id, dur, extra)
   e.buffs[#e.buffs + 1] = b
 end
 
+-- Todo lo sólido tapa la vista y frena los ataques: muros, casas, montañas, paredes de mazmorra, puertas cerradas del enemigo y también
+-- árboles y demás decorado macizo.
+
+function Mundo.casillaOpaca(mapa, x, y, faccion)
+  local tx, ty = math.floor(x), math.floor(y)
+  if not (mapa.bloque[tx] and mapa.bloque[tx][ty]) then return false end
+  return Mapa.bloqueado(mapa, x, y, faccion)
+end
+
+-- ¿Se puede ir en línea recta de a a b sin cruzar una pared? Ignora la casilla del que ataca y la del objetivo (una puerta o una
+-- estatua que se ataca está en una casilla bloqueada).
+function Mundo:lineaLibre(a, b)
+  if not a or not b or not a.x or not b.x then return true end
+  if (a.z or 0) > 0 or (b.z or 0) > 0 then return true end
+  local mapa = self:mapaDe(a)
+  if not mapa or not mapa.bloque then return true end
+  local dx, dy = b.x - a.x, b.y - a.y
+  local d = math.sqrt(dx * dx + dy * dy)
+  if d < 0.9 then return true end
+  local ax, ay = math.floor(a.x), math.floor(a.y)
+  local bx, by = math.floor(b.x), math.floor(b.y)
+  local pasos = math.ceil(d / 0.4)
+  for i = 1, pasos - 1 do
+    local x, y = a.x + dx * i / pasos, a.y + dy * i / pasos
+    local tx, ty = math.floor(x), math.floor(y)
+    if not (tx == ax and ty == ay) and not (tx == bx and ty == by) then
+      if Mundo.casillaOpaca(mapa, x, y, a.faccion) then return false end
+    end
+  end
+  return true
+end
+
 function Mundo:puedeDanar(origen, objetivo)
   if not origen or not objetivo or not objetivo.vivo then return false end
   local kind = objetivo.kind
@@ -860,6 +892,7 @@ end
 -- sinAnim: el golpe es el impacto de algo ya lanzado (proyectil, trampa, aura); no es un ataque nuevo de quien lo lanzó.
 function Mundo:golpear(origen, objetivo, coef, mult, tipo, sinAnim)
   if not origen or not objetivo then return end
+  if origen ~= objetivo and not self:lineaLibre(origen, objetivo) then return end
   if not sinAnim then self:marcarAtaque(origen, objetivo, false) end
   tipo = tipo or self:tipoDanoBasico(origen)
   local atk, def
@@ -1280,6 +1313,7 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
       p.habilidadPendiente = slot
       return "Te acercas."
     end
+    if not self:lineaLibre(p, objetivo) then return "Hay una pared en medio." end
   elseif h.tipo == "aliado" then
     if not objetivo or not self:aliado(p, objetivo) then objetivo = p end
     if not enRango(objetivo, h.rango) then
@@ -1467,6 +1501,7 @@ function Mundo:autoataque(p)
   if not self:mismoLugar(p, o) then return end
   local rango = self:alcance(p)
   if Util.dist(p.x, p.y, o.x, o.y) > rango then return end
+  if not self:lineaLibre(p, o) then return end
   if (p.cds.auto or 0) > self.tiempo then return end
   if (p.gcd or 0) > self.tiempo then return end
   p.cds.auto = self.tiempo + (rango > 3 and 1.35 or 1.15)
@@ -1861,8 +1896,16 @@ function Mundo:actualizarProyectil(p, dt)
     self:efecto(p.tipo or "misil", p.x, p.y, 0.32)
     return
   end
-  p.x = p.x + dx / d * 11 * dt
-  p.y = p.y + dy / d * 11 * dt
+  local nx, ny = p.x + dx / d * 11 * dt, p.y + dy / d * 11 * dt
+  local duenoP = p.dueno and self.entidades[p.dueno]
+  local mapaP = self:mapaDe(p)
+  if (p.z or 0) == 0 and mapaP and mapaP.bloque and Mundo.casillaOpaca(mapaP, nx, ny, duenoP and duenoP.faccion)
+    and not (obj and math.floor(nx) == math.floor(obj.x) and math.floor(ny) == math.floor(obj.y)) then
+    p.borrar = true
+    self:efecto(p.tipo or "misil", p.x, p.y, 0.32)
+    return
+  end
+  p.x, p.y = nx, ny
 end
 
 function Mundo:actualizarTrampa(t, dt)
@@ -2222,6 +2265,38 @@ function Mundo:salirGuerra(p)
   self:mensaje("sistema", "", "Abandonas el campo.", p)
 end
 
+-- Pergamino de teletransporte: te lleva al sitio donde renaces (la estatua que guardaste o, si no, la ciudad propia más cercana).
+function Mundo:usarPergamino(p, index)
+  local slot = p.bolsa[index]
+  if not slot then return "No hay objeto." end
+  if not p.vivo then return "No puedes actuar." end
+  if p.modo ~= "mundo" or (p.z or 0) > 0 then return "Aquí no funciona: sal primero al mundo." end
+  if self:enMazmorra(p) then return "Aquí no funciona: sal primero de la mazmorra." end
+  if (p.ultimoGolpe or 0) + 6 > self.tiempo then return "No se puede usar en combate." end
+  if (p.cds.pergamino or 0) > self.tiempo then return "El pergamino aún se enfría." end
+  local v = p.vinculo or {}
+  local c
+  if v.ciudad then
+    for _, cc in ipairs(self.mapas.mundo.ciudades) do
+      if cc.id == v.ciudad and cc.faccion == p.faccion and cc.spawn then c = cc end
+    end
+  end
+  c = c or self:ciudadPropiaCerca(p, p.x, p.y)
+  if not c or not c.spawn then return "No hay adónde ir." end
+  self:efecto("nova", p.x, p.y, 0.7)
+  self:sonar("cura", p)
+  p.x, p.y = c.spawn.x, c.spawn.y
+  p.camino, p.tramo, p.objetivo, p.persigue = nil, nil, nil, nil
+  p.cds.pergamino = self.tiempo + 30
+  slot.cant = (slot.cant or 1) - 1
+  if slot.cant <= 0 then table.remove(p.bolsa, index) end
+  self:efecto("nova", p.x, p.y, 0.7)
+  self:sonar("cura", p)
+  self:marcarProgreso(p)
+  self:mensaje("sistema", "", "El pergamino se deshace y apareces en " .. c.nombre .. ".", p)
+  return nil
+end
+
 function Mundo:equipar(p, index)
   self:marcarProgreso(p)
   local slot = p.bolsa[index]
@@ -2230,6 +2305,7 @@ function Mundo:equipar(p, index)
   if not it or not it.hueco then
     if it and it.bono then return self:usarBono(p, index) end
     if it and (it.cura or it.mana) then return self:usarPocionId(p, slot.id) end
+    if it and it.teletransporte then return self:usarPergamino(p, index) end
     return "No se puede equipar."
   end
   if it.clase and it.clase ~= p.clase then return "Esa pieza no es de tu clase." end
@@ -2406,7 +2482,7 @@ function Mundo:puestoDe(it)
     or it.hueco == "escudo" or it.hueco == "anillo" or it.hueco == "amuleto" or it.hueco == "mochila" then
     return "armero"
   end
-  if (it.cura or it.mana) and not it.hueco then return "mercado" end
+  if (it.cura or it.mana or it.teletransporte) and not it.hueco then return "mercado" end
 end
 
 function Mundo:comprar(p, itemId)

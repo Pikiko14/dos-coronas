@@ -224,6 +224,26 @@ function M.puerta(e, dx, dy)
   love.graphics.rectangle("fill", lx, dy + 11, 1, 3)
 end
 
+-- Dónde brillan las ventanas de un edificio (casillas del mundo) y dónde está su farol: lo usa el ambiente para la luz de noche.
+function M.ventanasPos(e)
+  local lista = {}
+  if e.estilo == "establo" then return lista end
+  local filasTecho = e.techo or 2
+  for _, fx in ipairs({ 1, e.w - 2 }) do
+    local fy = (e.cima and e.cima[fx + 1] or 0) + filasTecho
+    if fx ~= (e.puertaX - e.x) and fy < e.h and not (e.vacio and e.vacio[fx .. "," .. fy]) then
+      lista[#lista + 1] = { x = e.x + fx + 0.5, y = e.y + fy + 0.5 }
+    end
+  end
+  return lista
+end
+
+function M.farolPos(e)
+  if e.estilo == "establo" then return nil end
+  local lx = (hash(e.x, e.y, 9) < 0.5) and (e.puertaX * TILE + 31) or (e.puertaX * TILE - 3)
+  return (lx + 1) / TILE, e.puertaY + 13 / TILE
+end
+
 -- Chimenea: solo algunas casas (no las tiendas). Devuelve su casilla (fx, fy) dentro del edificio o nil.
 function M.chimenea(e)
   if e.tienda ~= nil or e.estilo == "establo" or e.techoSur or e.w < 4 then return nil end

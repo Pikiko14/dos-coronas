@@ -4,6 +4,7 @@ local Campo = require("src.presentacion.render.campo")
 
 local Terreno = require("src.presentacion.render.terreno")
 local Casas = require("src.presentacion.render.casas")
+local Ambiente = require("src.presentacion.render.ambiente")
 local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
 local Trampas = require("src.presentacion.render.trampas")
@@ -178,6 +179,7 @@ function D.escena(mundo, jugador, cam, mx, my)
   local mapa = mundo:mapaDe(jugador)
   local z = cam.zoom
   local vx, vy, vw, vh = cam.vx, cam.vy, cam.vw, cam.vh
+  local ambiente = Ambiente.empezar(vx, vy, vw, vh)
   love.graphics.setScissor(vx, vy, vw, vh)
   love.graphics.setColor(0.04, 0.05, 0.07, 1)
   love.graphics.rectangle("fill", vx, vy, vw, vh)
@@ -256,6 +258,10 @@ function D.escena(mundo, jugador, cam, mx, my)
     end
   end
 
+  if ambiente and pz == 0 then
+    Ambiente.sombrasSuelo(mundo, mapa, jugador, radio, cam)
+    Ambiente.dibujarAntorchas(mapa, cam, z, vw, vh)
+  end
   local cola = {}
   if pz == 0 then
     for _, prop in ipairs(mapa.props or {}) do
@@ -336,6 +342,7 @@ function D.escena(mundo, jugador, cam, mx, my)
   end
   love.graphics.pop()
   love.graphics.setScissor()
+  if ambiente then Ambiente.terminar(mundo, jugador, mapa, cam) end
 
   -- nombres, barras y números de daño: en pantalla, con letra pequeña y nítida
   love.graphics.setScissor(vx, vy, vw, vh)
