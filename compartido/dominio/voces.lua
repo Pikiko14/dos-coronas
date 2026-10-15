@@ -24,7 +24,7 @@ local VOZ = {
   automata = "constructo", golem = "constructo", titan = "constructo", coloso = "constructo", behemot = "constructo",
   gigante_guerra = "constructo",
   -- plantas
-  planta_roja = "planta", flor_sangrienta = "planta",
+  planta_roja = "planta", flor_sangrienta = "planta", calabaza = "planta", limo = "pequeno",
   -- humanoides
   troll = "humanoide", cultista = "humanoide", bruja = "humanoide", bandido = "humanoide", asaltante = "humanoide",
   saqueador = "humanoide", sectario_mayor = "humanoide",

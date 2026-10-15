@@ -782,6 +782,22 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     ok, err = pcall(Dibujo.escena, mundo, dueno, camCasa, 200, 200)
     fallar(errores, "el interior dibuja la puerta y los muebles", ok and mundo:interior(dueno).puerta ~= nil, tostring(err))
     Dibujo.muebleElegido = nil
+    -- vista isométrica: la proyección y su inversa coinciden, el ratón apunta a la casilla que se ve y las teclas van según la pantalla
+    local Iso = require("src.presentacion.render.iso")
+    local camI = Dibujo.camara(pj, 1.5, mundo:mapaDe(pj))
+    for _, par in ipairs({ { 10.5, 20.5 }, { 120.25, 7.75 }, { 0, 0 } }) do
+      local gx, gy = Iso.suelo(par[1], par[2])
+      local bx, by = Iso.inversa(gx, gy)
+      fallar(errores, "la proyección tiene inversa", math.abs(bx - par[1]) < 1e-6 and math.abs(by - par[2]) < 1e-6)
+      local sx, sy = Dibujo.mundoAPantalla(camI, par[1], par[2])
+      local wx, wy = Dibujo.pantallaAMundo(camI, sx, sy)
+      fallar(errores, "el ratón apunta a la casilla dibujada", math.abs(wx - par[1]) < 1e-6 and math.abs(wy - par[2]) < 1e-6)
+    end
+    if Iso.activo() then
+      fallar(errores, "x crece hacia abajo a la derecha", select(1, Iso.suelo(11, 10)) > select(1, Iso.suelo(10, 10)) and select(2, Iso.suelo(11, 10)) > select(2, Iso.suelo(10, 10)))
+      fallar(errores, "y crece hacia abajo a la izquierda", select(1, Iso.suelo(10, 11)) < select(1, Iso.suelo(10, 10)) and select(2, Iso.suelo(10, 11)) > select(2, Iso.suelo(10, 10)))
+      fallar(errores, "mirada según la pantalla", Iso.dirPantalla(1, 1) == 1 and Iso.dirPantalla(-1, -1) == 2 and Iso.dirPantalla(1, -1) == 3 and Iso.dirPantalla(-1, 1) == 4)
+    end
     -- ambiente gráfico: cada nivel de calidad, hora y clima dibuja sin errores, también dentro de la casa y en la mazmorra
     local Ambiente = require("src.presentacion.render.ambiente")
     local Ajustes = require("src.presentacion.ajustes")
@@ -1851,7 +1867,28 @@ local function fotoCasas(app)
   end
   app.estado = "juego"
   Interfaz.panel = nil
-  if foto.paso == "menu" and os.getenv("DC_FOTO_FUEGO") then
+  if os.getenv("DC_ZOOM") then app.zoom = tonumber(os.getenv("DC_ZOOM")) end
+  if foto.paso == "menu" and os.getenv("DC_FOTO_MOBS") then
+    foto.paso = "mobs"
+    local m, j = app.mundo, app.jugador
+    local cuenta = { calabaza = 0, limo = 0 }
+    for _, e in pairs(m.entidades) do if e.kind == "monstruo" and cuenta[e.monstruo] then cuenta[e.monstruo] = cuenta[e.monstruo] + 1 end end
+    require("compartido.infraestructura.log").info("MOBS en el mundo: calabaza=" .. cuenta.calabaza .. " limo=" .. cuenta.limo)
+    for _, c in ipairs(m.mapas.mundo.ciudades) do
+      if c.id == "auroria" then j.x, j.y = c.x + c.w / 2 - 3.5, c.y + c.h / 2 + 5.5 end
+    end
+    local a = m:spawnMonstruo("calabaza", j.x + 3, j.y - 1, { x = j.x + 3, y = j.y - 1 })
+    local b = m:spawnMonstruo("limo", j.x - 3, j.y - 1, { x = j.x - 3, y = j.y - 1 })
+    local c2 = m:spawnMonstruo("calabaza", j.x + 3, j.y + 2, { x = j.x + 3, y = j.y + 2 })
+    c2.mov, c2.dir = true, 3
+    local d2 = m:spawnMonstruo("limo", j.x - 3, j.y + 2, { x = j.x - 3, y = j.y + 2 })
+    d2.mov, d2.dir = true, 4
+    a.dir, b.dir = 1, 1
+    for _, e in ipairs({ a, b, c2, d2 }) do e.hp = e.hpMax end
+  elseif foto.paso == "mobs" then
+    foto.paso = "fin"
+    love.event.quit(0)
+  elseif foto.paso == "menu" and os.getenv("DC_FOTO_FUEGO") then
     foto.paso = "fuego"
     local j = app.jugador
     for _, c in ipairs(app.mundo.mapas.mundo.ciudades) do

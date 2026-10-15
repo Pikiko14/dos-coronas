@@ -311,23 +311,25 @@ local LUZ_PROYECTIL = {
 }
 
 local Casas = require("src.presentacion.render.casas")
+local CasasIso = require("src.presentacion.render.casas_iso")
+local Iso = require("src.presentacion.render.iso")
 local antorchasVisibles, dibujarRayos   -- (se definen más abajo)
 
 -- Recoge las luces visibles. Cada una: x, y (casillas), r (radio en casillas), color, intensidad, emisivo (círculo brillante opcional).
 local function recogerLuces(mundo, jugador, mapa, cam, radio, nocheV, dentroCasa, enMazmorra)
   local luces, emis = {}, {}
   local t = love.timer.getTime()
-  local function luz(x, y, r, cr, cg, cb, k) luces[#luces + 1] = { x, y, r, cr, cg, cb, k } end
+  local function luz(x, y, r, cr, cg, cb, k, alt) luces[#luces + 1] = { x, y, r, cr, cg, cb, k, alt or 0 } end
   local peso = 0.10 + 0.90 * nocheV
   if enMazmorra then peso = 1 end
   -- el jugador lleva una luz cálida: más fuerte donde hace falta
   local fuerza = dentroCasa and 0.35 or (enMazmorra and 1.15 or peso * 0.75)
   local alcance = enMazmorra and 6.5 or (dentroCasa and 4.0 or 4.8)
-  luz(jugador.x, jugador.y - 0.3, alcance, 1.0, 0.82, 0.5, fuerza)
+  luz(jugador.x, jugador.y, alcance, 1.0, 0.82, 0.5, fuerza, 10)
   if jugador.modo == "casa" then
     -- la casa tiene su lámpara sobre la mesa y la luz de sus ventanas del fondo
     local ms = mapa.muebles and mapa.muebles.mesa
-    if ms then luz(ms.x, ms.y - 0.4, 7.5, 1.0, 0.82, 0.55, 0.55) end
+    if ms then luz(ms.x, ms.y, 7.5, 1.0, 0.82, 0.55, 0.55, 13) end
     local w = mapa.w or 22
     for _, vxx in ipairs({ 5, w - 6 }) do luz(vxx + 0.5, 3.2, 5.5, 0.85, 0.92, 1.0, 0.45) end
   end
@@ -338,20 +340,20 @@ local function recogerLuces(mundo, jugador, mapa, cam, radio, nocheV, dentroCasa
         local tp = prop.tipo
         if tp == "farol" then
           local f = 0.93 + 0.07 * math.sin(t * 2.3 + prop.x)
-          luz(prop.x + 0.5, prop.y - 0.2, 6.0, 1.0, 0.82, 0.45, 0.95 * peso * f)
-          emis[#emis + 1] = { prop.x + 0.5, prop.y - 1.1, 0.16, 1.4 * nocheV + 0.15, 1.0, 0.8, 0.45 }
+          luz(prop.x + 0.5, prop.y + 0.5, 6.0, 1.0, 0.82, 0.45, 0.95 * peso * f, 38)
+          emis[#emis + 1] = { prop.x + 0.5, prop.y + 0.5, 0.16, 1.4 * nocheV + 0.15, 1.0, 0.8, 0.45, false, 38 }
         elseif tp == "antorcha" or tp == "brasero" or tp == "hoguera" then
           local f = 0.85 + 0.15 * math.sin(t * 9 + prop.x * 3)
-          luz(prop.x + 0.5, prop.y + 0.2, 5.5, 1.0, 0.6, 0.25, 1.1 * f)
-          emis[#emis + 1] = { prop.x + 0.5, prop.y, 0.2, 1.5, 1.0, 0.65, 0.25 }
+          luz(prop.x + 0.5, prop.y + 0.5, 5.5, 1.0, 0.6, 0.25, 1.1 * f, 8)
+          emis[#emis + 1] = { prop.x + 0.5, prop.y + 0.5, 0.2, 1.5, 1.0, 0.65, 0.25, false, 10 }
         elseif tp == "estatua_albor" then
-          luz(prop.x + 0.5, prop.y, 3.2, 1.0, 0.92, 0.6, 0.35 * peso)
+          luz(prop.x + 0.5, prop.y + 0.5, 3.2, 1.0, 0.92, 0.6, 0.35 * peso, 20)
         elseif tp == "estatua_umbra" then
-          luz(prop.x + 0.5, prop.y, 3.2, 0.7, 0.5, 1.0, 0.45 * peso)
+          luz(prop.x + 0.5, prop.y + 0.5, 3.2, 0.7, 0.5, 1.0, 0.45 * peso, 20)
         end
       end
     end
-    if jugador.modo == "mundo" and (jugador.z or 0) == 0 then
+    if jugador.modo == "mundo" and (jugador.z or 0) == 0 and not CasasIso.activo() then
       for _, e in ipairs(mapa.edificios or {}) do
         if math.abs(e.x + e.w / 2 - jugador.x) < radio + 3 and math.abs(e.y + e.h / 2 - jugador.y) < radio + 3 then
           if nocheV > 0.15 then
@@ -375,15 +377,15 @@ local function recogerLuces(mundo, jugador, mapa, cam, radio, nocheV, dentroCasa
     if e.vivo ~= false and mundo:mismoLugar(jugador, e) and math.abs(e.x - jugador.x) < radio and math.abs(e.y - jugador.y) < radio then
       if e.kind == "altar" then
         local c = e.faccion == "umbra" and { 0.65, 0.4, 1.0 } or { 1.0, 0.85, 0.45 }
-        luz(e.x, e.y, 3.6, c[1], c[2], c[3], 0.9)
+        luz(e.x, e.y, 3.6, c[1], c[2], c[3], 0.9, 14)
       elseif e.kind == "puerta" and e.tipo == "puerta_mazmorra" then
         luz(e.x, e.y, 3.2, 0.7, 0.45, 1.0, 0.9)
       elseif (e.kind == "jugador" or e.kind == "bot") and e.id ~= jugador.id and not dentroCasa then
-        luz(e.x, e.y - 0.2, 2.8, 1.0, 0.85, 0.55, 0.45 * peso)
+        luz(e.x, e.y, 2.8, 1.0, 0.85, 0.55, 0.45 * peso, 8)
       elseif e.kind == "monstruo" and (e.elite or e.jefe or e.jefeMz) then
-        luz(e.x, e.y - 0.3, 3.0, 1.0, 0.45, 0.35, 0.55)
+        luz(e.x, e.y, 3.0, 1.0, 0.45, 0.35, 0.55, 10)
       elseif e.kind == "cofre_mz" then
-        luz(e.x, e.y - 0.3, 3.2, 1.0, 0.85, 0.35, 0.9 + 0.1 * math.sin(t * 4))
+        luz(e.x, e.y, 3.2, 1.0, 0.85, 0.35, 0.9 + 0.1 * math.sin(t * 4), 10)
       end
     end
   end
@@ -392,13 +394,13 @@ local function recogerLuces(mundo, jugador, mapa, cam, radio, nocheV, dentroCasa
     local def = LUZ_EFECTO[fx.tipo]
     if def and math.abs(fx.x - jugador.x) < radio and math.abs(fx.y - jugador.y) < radio then
       local v = 1 - math.abs((fx.t or 0) / math.max(0.01, fx.dur or 0.4) * 2 - 1) * 0.6
-      luz(fx.x, fx.y - 0.3, 2.0, def[1], def[2], def[3], def[4] * v * 0.28 * (enMazmorra and 0.7 or (0.02 + 0.35 * nocheV)))
+      luz(fx.x, fx.y, 2.0, def[1], def[2], def[3], def[4] * v * 0.28 * (enMazmorra and 0.7 or (0.02 + 0.35 * nocheV)), 10)
     end
   end
   for _, e in pairs(mundo.entidades) do
     if e.kind == "proyectil" and mundo:mismoLugar(jugador, e) then
       local def = LUZ_PROYECTIL[e.tipo]
-      if def then luz(e.x, e.y - 0.3, 1.9, def[1], def[2], def[3], def[4] * 0.3 * (enMazmorra and 0.7 or (0.02 + 0.35 * nocheV))) end
+      if def then luz(e.x, e.y, 1.9, def[1], def[2], def[3], def[4] * 0.3 * (enMazmorra and 0.7 or (0.02 + 0.35 * nocheV)), 10) end
     end
   end
   -- chispas que salen de los hechizos y estelas de los proyectiles (brillan y entran al bloom)
@@ -409,8 +411,8 @@ local function recogerLuces(mundo, jugador, mapa, cam, radio, nocheV, dentroCasa
       for i = 1, 7 do
         local ang = hash(math.floor(fx.x * 13), math.floor(fx.y * 17), i) * math.pi * 2
         local dist = u * (0.35 + 0.8 * hash(i, 5, 9))
-        local px, py = fx.x + math.cos(ang) * dist, fx.y - 0.3 + math.sin(ang) * dist * 0.8 - u * 0.5
-        emis[#emis + 1] = { px, py, 0.035, (1 - u) * 0.7, def[1], def[2], def[3] }
+        local px, py = fx.x + math.cos(ang) * dist, fx.y + math.sin(ang) * dist * 0.8
+        emis[#emis + 1] = { px, py, 0.035, (1 - u) * 0.7, def[1], def[2], def[3], false, 10 + u * 16 }
       end
     end
   end
@@ -421,8 +423,8 @@ local function recogerLuces(mundo, jugador, mapa, cam, radio, nocheV, dentroCasa
         local ang = math.atan2((e.ty or e.y) - e.y, (e.tx or e.x) - e.x)
         for i = 1, 6 do
           local d = i * 0.17
-          emis[#emis + 1] = { e.x - math.cos(ang) * d + (hash(i, math.floor(t * 20), 4) - 0.5) * 0.12, e.y - 0.3 - math.sin(ang) * d + (hash(i, math.floor(t * 20), 5) - 0.5) * 0.12,
-            0.05 * (1 - i / 8), (1 - i / 7) * 0.8, def[1], def[2], def[3] }
+          emis[#emis + 1] = { e.x - math.cos(ang) * d + (hash(i, math.floor(t * 20), 4) - 0.5) * 0.12, e.y - math.sin(ang) * d + (hash(i, math.floor(t * 20), 5) - 0.5) * 0.12,
+            0.05 * (1 - i / 8), (1 - i / 7) * 0.8, def[1], def[2], def[3], false, 10 }
         end
       end
     end
@@ -430,8 +432,8 @@ local function recogerLuces(mundo, jugador, mapa, cam, radio, nocheV, dentroCasa
   if enMazmorra then
     for _, a in ipairs(antorchasVisibles(mapa, cam, E.vw, E.vh, cam.zoom)) do
       local f = 0.85 + 0.15 * math.sin(t * 11 + a.x * 3)
-      luz(a.x, a.y - 0.4, 6.2, 1.0, 0.58, 0.25, 1.05 * f)
-      emis[#emis + 1] = { a.x, a.y - 0.55, 0.18, 1.7 * f, 1.0, 0.6, 0.25 }
+      luz(a.x, a.y, 6.2, 1.0, 0.58, 0.25, 1.05 * f, 14)
+      emis[#emis + 1] = { a.x, a.y, 0.18, 1.7 * f, 1.0, 0.6, 0.25, false, 17 }
     end
   end
   return luces, emis
@@ -441,13 +443,17 @@ local function dibujarLuces(luces, cam, z, escala)
   local img = imagenLuz()
   love.graphics.setBlendMode("add")
   local n = math.min(#luces, 140)
+  local iso = Iso.activo()
   for i = 1, n do
     local l = luces[i]
-    local sx = (E.vx + (l[1] * TILE - cam.x) * z) * escala
-    local sy = (E.vy + (l[2] * TILE - cam.y) * z) * escala
-    local rpx = l[3] * TILE * z * escala
+    local gx, gy = Iso.suelo(l[1], l[2])
+    local sx = (E.vx + (gx - cam.x) * z) * escala
+    local sy = (E.vy + (gy - (l[8] or 0) - cam.y) * z) * escala
+    -- un círculo en el suelo se ve como una elipse de 2:1 en la vista isométrica
+    local rx = l[3] * (iso and Iso.HW * 1.414 or TILE) * z * escala
+    local ry = iso and (l[3] * Iso.HH * 1.414 * z * escala) or rx
     love.graphics.setColor(l[4], l[5], l[6], l[7])
-    love.graphics.draw(img, sx - rpx, sy - rpx, 0, rpx * 2 / 128, rpx * 2 / 128)
+    love.graphics.draw(img, sx - rx, sy - ry, 0, rx * 2 / 128, ry * 2 / 128)
   end
   love.graphics.setBlendMode("alpha")
 end
@@ -456,8 +462,9 @@ local function dibujarEmisivos(emis, cam, z, escala)
   local img = imagenLuz()
   love.graphics.setBlendMode("add")
   for _, m in ipairs(emis) do
-    local sx = (E.vx + (m[1] * TILE - cam.x) * z) * escala
-    local sy = (E.vy + (m[2] * TILE - cam.y) * z) * escala
+    local gx, gy = Iso.suelo(m[1], m[2])
+    local sx = (E.vx + (gx - cam.x) * z) * escala
+    local sy = (E.vy + (gy - (m[9] or 0) - cam.y) * z) * escala
     local rpx = m[3] * TILE * z * escala
     love.graphics.setColor(m[5] * m[4], m[6] * m[4], m[7] * m[4], 1)
     if m[8] then
@@ -572,7 +579,7 @@ function A.terminar(mundo, jugador, mapa, cam)
   actualizarClima(dt, mapa, jugador)
   local clima = A.clima
   local t = love.timer.getTime()
-  local radio = math.ceil(math.max(E.vw, E.vh) / z / TILE) + 4
+  local radio = Iso.radio(E.vw / z, E.vh / z) + 1
 
   -- partículas del clima en el lienzo del mundo
   dibujarParticulas(cam, z, mapa, jugador, enMazmorra, dentroCasa, cal)
@@ -602,7 +609,7 @@ function A.terminar(mundo, jugador, mapa, cam)
   love.graphics.setCanvas(R.emi)
   love.graphics.clear(0, 0, 0, 1)
   dibujarEmisivos(emis, cam, z, 0.5)
-  local conReflejos = cal == "alto" and not os.getenv("DC_SIN_REFLEJO") and jugador.modo == "mundo" and (jugador.z or 0) == 0
+  local conReflejos = cal == "alto" and not Iso.activo() and not os.getenv("DC_SIN_REFLEJO") and jugador.modo == "mundo" and (jugador.z or 0) == 0
   if conReflejos then
     love.graphics.setCanvas(R.agua)
     love.graphics.clear(0, 0, 0, 0)
@@ -709,19 +716,21 @@ function A.sombrasSuelo(mundo, mapa, jugador, radio, cam)
   if jugador.modo ~= "mundo" and jugador.modo ~= "batalla" and jugador.modo ~= "estandarte" then return end
   local dirx, largo, alfa = luzSolar()
   if not dirx then return end
+  Iso.empujar(cam)
+  local iso = Iso.activo()
   -- árboles, faroles, estatuas
   for _, prop in ipairs(mapa.props or {}) do
     local alto = ALTURA_PROP[prop.tipo]
     if not alto and prop.tipo:find("arbol") then alto = 2.8 end
     if alto and math.abs(prop.x - jugador.x) < radio and math.abs(prop.y - jugador.y) < radio then
-      local sx = (prop.x + (prop.ancho or 1) / 2) * TILE - cam.x
-      local sy = (prop.y + (prop.alto or 1)) * TILE - cam.y - 2
+      local sx = (prop.x + (prop.ancho or 1) / 2) * TILE
+      local sy = (prop.y + (prop.alto or 1) / 2 + (iso and 0.25 or 0.5 * (prop.alto or 1))) * TILE - 2
       local l = alto * largo * TILE
       manchaSombra(sx, sy, prop.tipo:find("arbol") and 15 or 6, dirx * l, l * 0.22 + 2, alfa)
     end
   end
   -- casas y edificios: la sombra cae junto a su base y, con el sol bajo, también hacia un lado
-  if jugador.modo == "mundo" then
+  if jugador.modo == "mundo" and not CasasIso.activo() and not iso then
     for _, e in ipairs(mapa.edificios or {}) do
       if math.abs(e.x + e.w / 2 - jugador.x) < radio + 4 and math.abs(e.y + e.h / 2 - jugador.y) < radio + 4 then
         local x0, x1 = e.x * TILE - cam.x, (e.x + e.w) * TILE - cam.x
@@ -747,18 +756,18 @@ function A.sombrasSuelo(mundo, mapa, jugador, radio, cam)
       local grande = e.jefe or e.jefeMz
       local alto = grande and 2.6 or ((e.elite or k == "monstruo") and 1.7 or 1.5)
       local ancho = grande and 17 or (e.elite and 11 or 8)
-      local sx, sy = e.x * TILE - cam.x, e.y * TILE - cam.y + 13
+      local sx, sy = e.x * TILE, e.y * TILE + (iso and 2 or 13)
       local l = alto * largo * TILE * 0.75
       manchaSombra(sx, sy, ancho, dirx * l, l * 0.20 + 1, alfa * 0.9)
     end
   end
+  Iso.sacar()
 end
 
 -- ---------------------------------------------------------------- antorchas de las mazmorras
 function antorchasVisibles(mapa, cam, vw, vh, z)
   local lista = {}
-  local x0, y0 = math.floor(cam.x / TILE), math.floor(cam.y / TILE)
-  local x1, y1 = math.floor((cam.x + vw / z) / TILE), math.floor((cam.y + vh / z) / TILE)
+  local x0, y0, x1, y1 = Iso.rango(cam.x, cam.y, vw / z, vh / z, 1)
   local bloque, suelo = mapa.bloque, mapa.suelo
   if not bloque or not suelo then return lista end
   for tx = x0, x1 do
@@ -781,7 +790,8 @@ function A.dibujarAntorchas(mapa, cam, z, vw, vh)
   if not A.activo() or not mapa.mazmorra then return end
   local t = love.timer.getTime()
   for _, a in ipairs(antorchasVisibles(mapa, cam, vw, vh, z)) do
-    local sx, sy = a.x * TILE - cam.x, a.y * TILE - cam.y - 11
+    local gx, gy = Iso.suelo(a.x, a.y)
+    local sx, sy = gx - cam.x, gy - cam.y - 11
     local f = 0.85 + 0.15 * math.sin(t * 11 + a.x * 3)
     love.graphics.setColor(0.18, 0.12, 0.08, 1)
     love.graphics.rectangle("fill", sx - 2, sy, 4, 11)

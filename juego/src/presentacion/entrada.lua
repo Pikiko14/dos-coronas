@@ -7,6 +7,8 @@ local Dibujo = require("src.presentacion.render.dibujo")
 local Ajustes = require("src.presentacion.ajustes")
 local Config = require("src.infraestructura.config")
 
+local Iso = require("src.presentacion.render.iso")
+
 local Entrada = {}
 
 local function beberPocion(app, tipo)
@@ -24,6 +26,12 @@ function Entrada.deseo()
   if love.keyboard.isDown("d", "right") then x = x + 1 end
   local d = math.sqrt(x * x + y * y)
   if d > 0 then x, y = x / d, y / d end
+  if d > 0 and Iso.activo() then
+    -- vista isométrica: "arriba" es hacia arriba en la pantalla, que en el mundo es la diagonal (-x, -y)
+    local wx, wy = x * Iso.HH + y * Iso.HW, y * Iso.HW - x * Iso.HH
+    local n = math.sqrt(wx * wx + wy * wy)
+    x, y = wx / n, wy / n
+  end
   return x, y
 end
 
@@ -558,7 +566,10 @@ function Entrada.clicMundo(app, mx, my, boton)
       return
     end
   end
-  local ent = mundo:objetivoCercano(jugador, x, y, false)
+  -- en vista isométrica los personajes están de pie sobre el suelo: se elige a quien está bajo el cursor contando su cuerpo
+  local xe, ye = x, y
+  if Iso.activo() then xe, ye = Dibujo.pantallaAMundo(cam, mx, my + 16 * cam.zoom) end
+  local ent = mundo:objetivoCercano(jugador, xe, ye, false)
   if ent and love.keyboard.isDown("lshift", "rshift") then
     app.actuar("mirar", { id = ent.id })
     return

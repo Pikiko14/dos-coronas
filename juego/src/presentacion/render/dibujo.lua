@@ -5,6 +5,9 @@ local Campo = require("src.presentacion.render.campo")
 local Terreno = require("src.presentacion.render.terreno")
 local Casas = require("src.presentacion.render.casas")
 local Ambiente = require("src.presentacion.render.ambiente")
+local MobAnim = require("src.presentacion.render.mob_anim")
+local CasasIso = require("src.presentacion.render.casas_iso")
+local Iso = require("src.presentacion.render.iso")
 local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
 local Trampas = require("src.presentacion.render.trampas")
@@ -37,9 +40,10 @@ end
 function D.camara(jugador, zoom, mapa)
   local vx, vy, vw, vh = vista()
   zoom = zoom or Datos.ZOOM
-  local x = jugador.x * TILE - (vw / zoom) / 2
-  local y = jugador.y * TILE - (vh / zoom) / 2
-  if mapa and mapa.w and mapa.h then
+  local gx, gy = Iso.suelo(jugador.x, jugador.y)
+  local x = gx - (vw / zoom) / 2
+  local y = gy - (vh / zoom) / 2
+  if mapa and mapa.w and mapa.h and not Iso.activo() then
     local ancho, alto = vw / zoom, vh / zoom
     local maxX = mapa.w * TILE - ancho
     local maxY = mapa.h * TILE - alto
@@ -50,13 +54,14 @@ function D.camara(jugador, zoom, mapa)
 end
 
 function D.mundoAPantalla(cam, x, y)
-  return (cam.vx or 0) + (x * TILE - cam.x) * cam.zoom, (cam.vy or 0) + (y * TILE - cam.y) * cam.zoom
+  local gx, gy = Iso.suelo(x, y)
+  return (cam.vx or 0) + (gx - cam.x) * cam.zoom, (cam.vy or 0) + (gy - cam.y) * cam.zoom
 end
 
 function D.pantallaAMundo(cam, mx, my)
-  local wx = (mx - (cam.vx or 0)) / cam.zoom + cam.x
-  local wy = (my - (cam.vy or 0)) / cam.zoom + cam.y
-  return wx / TILE, wy / TILE
+  local gx = (mx - (cam.vx or 0)) / cam.zoom + cam.x
+  local gy = (my - (cam.vy or 0)) / cam.zoom + cam.y
+  return Iso.inversa(gx, gy)
 end
 
 local function hash(x, y)
@@ -157,18 +162,20 @@ local function dibujarPiso(mapa, jugador, cam, w, h)
   if mapa.alto then
     local im = Arte.img("Tilesets/Inside_A5.png")
     local px, py = math.floor(jugador.x), math.floor(jugador.y)
-    local radio = math.ceil(math.max(w, h) / TILE) + 2
+    local radio = Iso.radio(w, h) - 1
     love.graphics.setColor(1, 1, 1, 1)
+    Iso.empujar(cam)
     for x = px - radio, px + radio do
       local col = mapa.alto[x]
       if col then
         for y = py - radio, py + radio do
           if col[y] then
-            love.graphics.draw(im, Arte.quad(im, 32 * (x % 2), 32 * (y % 2), 32, 32), x * TILE - cam.x, y * TILE - cam.y)
+            love.graphics.draw(im, Arte.quad(im, 32 * (x % 2), 32 * (y % 2), 32, 32), x * TILE, y * TILE)
           end
         end
       end
     end
+    Iso.sacar()
   end
 end
 
@@ -188,7 +195,7 @@ function D.escena(mundo, jugador, cam, mx, my)
   love.graphics.scale(z, z)
   local pz = jugador.z or 0
   local ancho, alto = vw / z, vh / z
-  local radio = math.ceil(math.max(ancho, alto) / TILE) + 3
+  local radio = Iso.radio(ancho, alto)
   if pz > 0 then
     dibujarPiso(mapa, jugador, cam, ancho, alto)
   else
@@ -201,11 +208,14 @@ function D.escena(mundo, jugador, cam, mx, my)
   if pz == 0 and jugador.modo == "mundo" then
     for _, ms in ipairs(mapa.mesetas or {}) do
       if math.abs(ms.x + ms.w / 2 - jugador.x) < radio + 8 and math.abs(ms.y + ms.h / 2 - jugador.y) < radio + 8 then
-        local rx, ry = ms.x * TILE - cam.x, ms.y * TILE - cam.y
+        local gx, gy = Iso.suelo(ms.x, ms.y)
+        local rx, ry = gx - cam.x, gy - cam.y
         love.graphics.setColor(1, 0.85, 0.4, 0.35)
-        love.graphics.setLineWidth(2)
-        love.graphics.rectangle("line", rx, ry, ms.w * TILE, ms.h * TILE, 6, 6)
+        Iso.empujar(cam)
+        love.graphics.setLineWidth(2 * (Iso.activo() and 1.4 or 1))
+        love.graphics.rectangle("line", ms.x * TILE, ms.y * TILE, ms.w * TILE, ms.h * TILE, 6, 6)
         love.graphics.setLineWidth(1)
+        Iso.sacar()
         local texto = ms.nombre .. "  (nv " .. ms.nivelMin .. "-" .. ms.nivelMax .. ")  ▲"
         love.graphics.setColor(0, 0, 0, 0.55)
         love.graphics.print(texto, rx + 9, ry + 5)
@@ -216,20 +226,25 @@ function D.escena(mundo, jugador, cam, mx, my)
   end
   for _, s in ipairs(mapa.escaleras or {}) do
     if s.de == pz then
-      local sx, sy = s.x * TILE - cam.x, s.y * TILE - cam.y
+      local gx, gy = Iso.suelo(s.x + 0.5, s.y + 0.5)
+      local sx, sy = gx - cam.x, gy - cam.y
+      Iso.empujar(cam)
       love.graphics.setColor(0.35, 0.22, 0.12, 1)
-      love.graphics.rectangle("fill", sx, sy, TILE, TILE)
+      love.graphics.rectangle("fill", s.x * TILE, s.y * TILE, TILE, TILE)
       love.graphics.setColor(0.8, 0.62, 0.34, 1)
-      for i = 0, 3 do love.graphics.rectangle("fill", sx + 2, sy + 3 + i * 8, TILE - 4, 5) end
+      for i = 0, 3 do love.graphics.rectangle("fill", s.x * TILE + 2, s.y * TILE + 3 + i * 8, TILE - 4, 5) end
+      Iso.sacar()
       love.graphics.setColor(1, 0.9, 0.45, 0.9)
-      love.graphics.print(s.a > s.de and "▲" or "▼", sx + 10, sy + 6)
+      love.graphics.print(s.a > s.de and "▲" or "▼", sx - 5, sy - 10)
     end
   end
   if mx and my and jugador.modo ~= "casa" and love.window.hasMouseFocus() and D.dentroVista(mx, my) then
     local wx, wy = D.pantallaAMundo(cam, mx, my)
     local tx, ty = math.floor(wx), math.floor(wy)
     love.graphics.setColor(1, 1, 1, 0.18)
-    love.graphics.rectangle("fill", tx * TILE - cam.x, ty * TILE - cam.y, TILE, TILE)
+    Iso.empujar(cam)
+    love.graphics.rectangle("fill", tx * TILE, ty * TILE, TILE, TILE)
+    Iso.sacar()
   end
   if pz == 0 and jugador.modo == "mundo" then
     marcarCasaPropia(mapa, jugador, cam, radio)
@@ -238,15 +253,24 @@ function D.escena(mundo, jugador, cam, mx, my)
     local wx, wy = D.pantallaAMundo(cam, mx, my)
     local tx, ty = math.floor(wx), math.floor(wy)
     love.graphics.setColor(1, 0.86, 0.28, 0.35)
-    love.graphics.rectangle("fill", tx * TILE - cam.x, ty * TILE - cam.y, TILE, TILE)
+    Iso.empujar(cam)
+    love.graphics.rectangle("fill", tx * TILE, ty * TILE, TILE, TILE)
+    Iso.sacar()
   end
 
   -- cadáveres y puertas caídas: debajo de todo lo que se mueve
   for _, e in pairs(mundo.entidades) do
     if e.vivo == false and mundo:mismoLugar(jugador, e)
       and math.abs(e.x - jugador.x) < radio and math.abs(e.y - jugador.y) < radio then
-      local sx, sy = e.x * TILE - cam.x, e.y * TILE - cam.y
-      if e.kind == "monstruo" then
+      local px, py = Iso.pos(e.x, e.y)
+      local sx, sy = px - cam.x, py - cam.y
+      local defMuerto = e.kind == "monstruo" and Personajes.de(e) or nil
+      if e.kind == "monstruo" and defMuerto and defMuerto.anim then
+        -- la animación de muerte y, al acabar, el último cuadro que se va apagando antes de reaparecer
+        local resta = (e.respawn or 0) - (mundo.tiempo or 0)
+        local total = e.elite and Datos.RESPAWN_ELITE or Datos.RESPAWN_MONSTRUO
+        MobAnim.muerto(defMuerto.anim, total - resta, sx, sy + 12, (e.dir or 1) == 3, math.max(0, math.min(1, resta / 6)))
+      elseif e.kind == "monstruo" then
         local resta = (e.respawn or 0) - (mundo.tiempo or 0)
         Objetos.dibujar("restos", 0, sx, sy + 14, nil, math.max(0, math.min(1, resta / 6)))
       elseif e.kind == "altar" then
@@ -263,12 +287,21 @@ function D.escena(mundo, jugador, cam, mx, my)
     Ambiente.dibujarAntorchas(mapa, cam, z, vw, vh)
   end
   local cola = {}
+  -- casas isométricas: se ordenan con todo lo demás por el borde de abajo de su huella
+  if pz == 0 and jugador.modo == "mundo" and CasasIso.activo() then
+    for _, e in ipairs(mapa.edificios or {}) do
+      if math.abs(e.x + e.w / 2 - jugador.x) < radio + 5 and math.abs(e.y + e.h / 2 - jugador.y) < radio + 5 then
+        cola[#cola + 1] = { tipo = "casa", x = e.x + e.w / 2, y = e.y + e.h, e = e, prof = e.x + e.w + e.y + e.h - 1.5 }
+      end
+    end
+  end
   if pz == 0 then
     for _, prop in ipairs(mapa.props or {}) do
       if math.abs(prop.x - jugador.x) < radio and math.abs(prop.y - jugador.y) < radio then
         cola[#cola + 1] = {
           tipo = "prop", x = prop.x + (prop.ancho or 1) / 2,
           y = prop.y + (prop.alto or 1) - 0.1, prop = prop,
+          prof = prop.x + (prop.ancho or 1) / 2 + prop.y + (prop.alto or 1) / 2 + 0.2,
         }
       end
     end
@@ -292,10 +325,16 @@ function D.escena(mundo, jugador, cam, mx, my)
       end
     end
   end
-  table.sort(cola, function(a, b) return a.y < b.y end)
+  -- de atrás hacia delante: por la fila en la pantalla (y en vista cenital; x + y en isométrica)
+  local iso = Iso.activo()
+  for _, item in ipairs(cola) do
+    item.p = item.prof or (iso and (item.x + item.y) or item.y)
+  end
+  table.sort(cola, function(a, b) return a.p < b.p end)
   local placas = {}
   for _, item in ipairs(cola) do
-    local sx, sy = item.x * TILE - cam.x, item.y * TILE - cam.y
+    local px, py = Iso.pos(item.x, item.y)
+    local sx, sy = px - cam.x, py - cam.y
     if item.tipo == "prop" then
       local p = item.prop
       local variante = math.floor(hash(p.x, p.y) * 2)
@@ -309,9 +348,18 @@ function D.escena(mundo, jugador, cam, mx, my)
         and jugador.y > p.y - 2.5 and jugador.y < p.y + alto - 0.1 then
         alfa = 0.45 -- el jugador queda detrás: se ve a través de la montaña
       end
-      local px0, py0 = (p.x + ancho / 2) * TILE - cam.x, (p.y + alto) * TILE - cam.y
+      local px0, py0
+      if iso then
+        -- vista isométrica: el objeto se apoya en el centro de su huella
+        local gx, gy = Iso.suelo(p.x + ancho / 2, p.y + alto / 2)
+        px0, py0 = gx - cam.x, gy - cam.y + 4
+      else
+        px0, py0 = (p.x + ancho / 2) * TILE - cam.x, (p.y + alto) * TILE - cam.y
+      end
       if Objetos.personalizados and Objetos.personalizados[p.tipo] then Objetos.personalizados[p.tipo](p, px0, py0)
       else Objetos.dibujar(p.tipo, variante, px0, py0, tint, alfa, p.x * 0.35 + p.y * 0.2 + hash(p.x, p.y) * 0.9) end
+    elseif item.tipo == "casa" then
+      CasasIso.dibujar(item.e, cam.x, cam.y, CasasIso.tapa(item.e, jugador.x, jugador.y) and 0.5 or 1)
     elseif item.tipo == "mueble" then
       D.mueble(item.nombre, sx, sy, item.rot, item.elegido)
     else
@@ -322,12 +370,16 @@ function D.escena(mundo, jugador, cam, mx, my)
   end
   for _, e in pairs(mundo.entidades) do
     if e.kind == "proyectil" and mundo:mismoLugar(jugador, e) then
-      D.proyectil(e, e.x * TILE - cam.x, e.y * TILE - cam.y)
+      local ppx, ppy = Iso.pos(e.x, e.y)
+      D.proyectil(e, ppx - cam.x, ppy - cam.y)
     end
   end
   for _, fx in ipairs(mundo.efectos or {}) do
     if math.abs(fx.x - jugador.x) < radio and math.abs(fx.y - jugador.y) < radio then
-      Efectos.cuadro(fx.tipo, fx.t, fx.dur, fx.x * TILE - cam.x, fx.y * TILE - cam.y + 14, nil, nil, fx.rot)
+      local epx, epy = Iso.pos(fx.x, fx.y)
+      local rotE = fx.rot
+      if rotE and Iso.activo() then rotE = Iso.angulo(math.cos(rotE), math.sin(rotE)) end
+      Efectos.cuadro(fx.tipo, fx.t, fx.dur, epx - cam.x, epy - cam.y + 14, nil, nil, rotE)
     end
   end
   -- apuntando un poder de area: la zona habilitada (alcance) y el area de impacto bajo el cursor
@@ -336,9 +388,12 @@ function D.escena(mundo, jugador, cam, mx, my)
   end
   if pz == 0 and jugador.modo == "mundo" then
     marcarTiendas(mapa, jugador, cam, radio)
-    Casas.humo(mapa, cam, mundo.tiempo or 0, jugador.x, jugador.y, radio)
+    if not CasasIso.activo() then Casas.humo(mapa, cam, mundo.tiempo or 0, jugador.x, jugador.y, radio) end
     -- flecha dorada hacia el destino de la misión que sigues
-    if D.flechaMision then D.flechaMision(jugador, jugador.x * TILE - cam.x, jugador.y * TILE - cam.y) end
+    if D.flechaMision then
+      local fpx, fpy = Iso.pos(jugador.x, jugador.y)
+      D.flechaMision(jugador, fpx - cam.x, fpy - cam.y)
+    end
   end
   love.graphics.pop()
   love.graphics.setScissor()
@@ -353,8 +408,9 @@ function D.escena(mundo, jugador, cam, mx, my)
   love.graphics.setFont(f)
   for _, n in ipairs(mundo.numeros) do
     if math.abs(n.x - jugador.x) < radio then
-      local sx = vx + (n.x * TILE - cam.x) * z
-      local sy = vy + ((n.y - 0.2) * TILE - cam.y) * z - 24 * z
+      local npx, npy = Iso.pos(n.x, n.y - 0.2)
+      local sx = vx + (npx - cam.x) * z
+      local sy = vy + (npy - cam.y) * z - 24 * z
       textoSombra(n.texto, sx - f:getWidth(n.texto) / 2, sy, n.color, math.min(1, n.vida / 0.5))
     end
   end
@@ -366,7 +422,7 @@ local PROYECTILES = { misil = "add", fuego = "add", sagrado = "add", flecha = "a
 
 function D.proyectil(e, sx, sy)
   sy = sy - 8
-  local ang = math.atan2((e.ty or e.y) - e.y, (e.tx or e.x) - e.x)
+  local ang = Iso.angulo((e.tx or e.x) - e.x, (e.ty or e.y) - e.y)
   -- sprites generados (Animations/Proyectil_<tipo>.png: 4 cuadros de 64x64, miran a la derecha)
   if PROYECTILES[e.tipo] then
     local img = Arte.img("Animations/Proyectil_" .. e.tipo .. ".png", true)
@@ -420,19 +476,22 @@ function marcarCasaPropia(mapa, jugador, cam, radio)
     if mias[e.puertaX .. "," .. e.puertaY]
       and math.abs(e.x + e.w / 2 - jugador.x) < radio + 4
       and math.abs(e.y + e.h / 2 - jugador.y) < radio + 4 then
-      local rx, ry = e.x * TILE - cam.x, e.y * TILE - cam.y
       love.graphics.setColor(1, 0.78, 0.22, 0.38)
+      Iso.empujar(cam)
       for fy = 0, e.h - 1 do
         for fx = 0, e.w - 1 do
           if not (e.vacio and e.vacio[fx .. "," .. fy]) then
-            love.graphics.rectangle("fill", rx + fx * TILE, ry + fy * TILE, TILE, TILE)
+            love.graphics.rectangle("fill", (e.x + fx) * TILE, (e.y + fy) * TILE, TILE, TILE)
           end
         end
       end
+      Iso.sacar()
+      local gx, gy = Iso.suelo(e.x + e.w / 2, e.y + e.h / 2)
+      local rx, ry = gx - cam.x - 22, gy - cam.y - (Iso.activo() and 70 or 0) - (e.h * TILE) / 2
       love.graphics.setColor(0.12, 0.07, 0.02, 0.9)
-      love.graphics.print("Tu casa", rx + 8, ry - 16)
+      love.graphics.print("Tu casa", rx + 1, ry + 1)
       love.graphics.setColor(1, 0.95, 0.55, 1)
-      love.graphics.print("Tu casa", rx + 7, ry - 17)
+      love.graphics.print("Tu casa", rx, ry)
     end
   end
 end
@@ -466,8 +525,9 @@ function marcarTiendas(mapa, jugador, cam, radio)
       and math.abs(e.puertaY + 0.5 - jugador.y) < radio then
       local fila = e.techoSur and (e.puertaY + 1) or (e.puertaY - 1)
       if e.estilo == "establo" then fila = e.techoSur and (e.puertaY + 2) or (e.puertaY - 2) end  -- la puerta grande ocupa dos filas: el letrero va en el tejado
-      local cx = (e.puertaX + 0.5) * TILE - cam.x
-      local cy = (fila + 0.5) * TILE - cam.y
+      local gx, gy = Iso.suelo(e.puertaX + 0.5, fila + 0.5)
+      local cx, cy = gx - cam.x, gy - cam.y
+      if Iso.activo() then cy = cy - 26 end   -- el letrero queda sobre la casa
       love.graphics.setColor(0, 0, 0, 0.35)
       love.graphics.rectangle("fill", cx - 11, cy - 9, 24, 24, 4, 4)
       love.graphics.setColor(0.36, 0.24, 0.1, 1)
@@ -513,8 +573,10 @@ end
 
 function D.zonaApuntada(ap, jugador, cam, mx, my, t)
   local ix, iy, fuera = D.puntoApuntado(ap, jugador, cam, mx, my)
-  local px, py = jugador.x * TILE - cam.x, jugador.y * TILE - cam.y
+  local px, py = jugador.x * TILE, jugador.y * TILE
   local pulso = 0.5 + 0.5 * math.sin(t * 6)
+  -- todo va pegado al suelo: en isométrico los círculos salen como elipses
+  Iso.empujar(cam)
   -- zona habilitada: todo lo que alcanza el poder
   love.graphics.setColor(0.4, 0.75, 1, 0.07)
   love.graphics.circle("fill", px, py, (ap.rango or 6) * TILE)
@@ -522,7 +584,7 @@ function D.zonaApuntada(ap, jugador, cam, mx, my, t)
   love.graphics.setLineWidth(1.5)
   love.graphics.circle("line", px, py, (ap.rango or 6) * TILE)
   -- area de impacto
-  local sx, sy = ix * TILE - cam.x, iy * TILE - cam.y
+  local sx, sy = ix * TILE, iy * TILE
   local r = (ap.aoe or 2) * TILE
   local c = fuera and { 1, 0.65, 0.3 } or { 1, 0.45, 0.25 }
   love.graphics.setColor(c[1], c[2], c[3], 0.18 + 0.1 * pulso)
@@ -536,6 +598,7 @@ function D.zonaApuntada(ap, jugador, cam, mx, my, t)
   -- el trazo del personaje al punto
   love.graphics.setColor(c[1], c[2], c[3], 0.35)
   love.graphics.line(px, py, sx, sy)
+  Iso.sacar()
 end
 
 -- ---------------------------------------------------------------------------------------------------------------------------
@@ -568,6 +631,7 @@ local function estadoAtaque(e)
   local st = ATQ[e.id]
   if e.atqN and (not st or st.n ~= e.atqN) then
     st = { n = e.atqN, t0 = ahora, ax = e.atqX, ay = e.atqY, lejos = e.atqL and true or false }
+    if st.ax then st.ax, st.ay = Iso.vector(st.ax, st.ay) end
     if not st.ax then
       local d = DIR_PANTALLA[e.dir or 1] or DIR_PANTALLA[1]
       st.ax, st.ay = d[1], d[2]
@@ -688,8 +752,35 @@ function D.marcaNpc(jugador, qid)
   return c.marca or nil
 end
 
+-- Hacia dónde se ve que mira alguien en la pantalla (1 abajo, 2 arriba, 3 derecha, 4 izquierda). En vista isométrica los ejes del
+-- mundo van en diagonal: se mira hacia donde se mueve en la pantalla y, parado, hacia donde miraba.
+local DIR_MUNDO = { [1] = { 0, 1 }, [2] = { 0, -1 }, [3] = { 1, 0 }, [4] = { -1, 0 } }
+function D.dirVisible(e)
+  if not Iso.activo() then return e.dir end
+  local d = Iso.dirPantalla(e.velx or 0, e.vely or 0)
+  if d then
+    e._dirIso = d
+    return d
+  end
+  if e._dirIso and e._dirMundo == e.dir then return e._dirIso end
+  e._dirMundo = e.dir
+  local v = DIR_MUNDO[e.dir or 1] or DIR_MUNDO[1]
+  e._dirIso = Iso.dirPantalla(v[1], v[2]) or e.dir
+  return e._dirIso
+end
+
+local entidadBase
+
 -- Dibuja una criatura u objeto vivo. Devuelve su altura en píxeles (para la placa).
 function D.entidad(e, sx, sy, mundo, jugador)
+  local dir0 = e.dir
+  e.dir = D.dirVisible(e)
+  local alto = entidadBase(e, sx, sy, mundo, jugador)
+  e.dir = dir0
+  return alto
+end
+
+function entidadBase(e, sx, sy, mundo, jugador)
   local pies = sy + 12
   local alto = 32
   local def = Personajes.de(e)
@@ -699,7 +790,7 @@ function D.entidad(e, sx, sy, mundo, jugador)
   local atq, atqU, atqPose, atqK
   if def and e.kind ~= "caravana" and e.kind ~= "cuerpo" and e.vivo ~= false then
     atq, atqU = estadoAtaque(e)
-    if atq then
+    if atq and not def.anim then
       atqK = math.max(1, math.min(2.4, def.fila and ((def.celda or 64) / 40) or (def.escala or 1)))
       atqPose = poseAtaque(atq, atqU, atqK)
       love.graphics.push()
@@ -719,6 +810,22 @@ function D.entidad(e, sx, sy, mundo, jugador)
   elseif e.kind == "cuerpo" and def then
     -- el cuerpo del caído: misma imagen en gris
     alto = Personajes.dibujarGris(def, e.dir or 1, sx, pies, 0.9)
+  elseif def and def.anim and e.kind == "monstruo" then
+    -- criatura con animación por cuadros: ataque, daño, carrera o espera
+    local ahora = (mundo and mundo.tiempo) or 0
+    local derecha = (e.dir or 1) == 3
+    local tinte = nil
+    local estado, u = "wait", 0
+    local restante = (e.flashHasta or 0) - ahora
+    if atq then
+      estado, u = "att", atqU
+    elseif (e.flash or 0) > 0 or restante > 0 then
+      estado, u = "hurt", math.max(0, math.min(0.99, 1 - (restante > 0 and restante or 0.1) / 0.35))
+      tinte = { 1, 0.78, 0.78 }
+    elseif e.mov or (math.abs(e.velx or 0) + math.abs(e.vely or 0) > 0.08) then
+      estado = "run"
+    end
+    alto = MobAnim.dibujar(def.anim, estado, u, sx, pies, derecha, tinte)
   elseif def then
     def = Personajes.jineteDe(e, def)
     local reloj = (e.anim or 0) / 8
@@ -842,9 +949,12 @@ function D.entidad(e, sx, sy, mundo, jugador)
     love.graphics.setColor(1, 1, 1, 0.9)
     love.graphics.draw(img, Arte.quad(img, 0, 0, 32, 32), sx, pies, 0, 1, 1, 16, 20)
   end
-  if atq then
+  if atq and atqPose then
     love.graphics.pop()
     efectoAtaque(e, atq, atqU, sx + atqPose.dx * 0.6, pies, atqK, def)
+  elseif atq then
+    -- criaturas con animación por cuadros: sin deformación, solo el efecto del golpe
+    efectoAtaque(e, atq, atqU, sx, pies, 1, def)
   end
   -- PNJ de misiones: "!" si tiene algo nuevo para ti y "?" si puedes entregarle algo
   if e.kind == "npc" and e.qid and jugador then

@@ -5,6 +5,7 @@ local Mazmorras = require("compartido.dominio.mazmorras")
 local T = {}
 
 local TILE = 32
+local Iso = require("src.presentacion.render.iso")
 
 local function placa(tipo, px, py)
   love.graphics.setColor(0.07, 0.06, 0.08, 0.85)
@@ -64,11 +65,11 @@ end
 function T.dibujar(mapa, tiempo, camx, camy, ancho, alto)
   local lista = mapa.trampas
   if not lista then return end
-  local x0, x1 = camx / TILE - 1, (camx + ancho) / TILE + 1
-  local y0, y1 = camy / TILE - 1, (camy + alto) / TILE + 1
+  local x0, y0, x1, y1 = Iso.rango(camx, camy, ancho, alto, 1)
   for _, tr in ipairs(lista) do
     if tr.x >= x0 and tr.x <= x1 and tr.y >= y0 and tr.y <= y1 then
-      local px, py = tr.x * TILE - camx, tr.y * TILE - camy
+      local gx, gy = Iso.suelo(tr.x + 0.5, tr.y + 0.5)
+      local px, py = gx - camx - TILE / 2, gy - camy - TILE / 2
       local fase = Mazmorras.faseTrampa(tr, tiempo)
       placa(tr.tipo, px, py)
       if fase == "aviso" then

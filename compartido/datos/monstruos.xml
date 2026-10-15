@@ -142,6 +142,16 @@
   <monstruo id="liche" nombre="Liche de Eclipse" nivel="27" agresivo="true" base="800" bioma="eclipse" cuadros="12" desc="Corona de hueso y un libro que no se cierra." hoja="creatures_03" magico="true">
     <poderes lista="succion,drenaje"/>
   </monstruo>
+  <monstruo id="calabaza" nombre="Calabaza viva" nivel="1" agresivo="false" base="1" bioma="trigal" cuadros="12" desc="Una calabaza que despertó en el huerto y muerde a quien se acerca." hoja="creatures_01">
+    <golpe>
+      <i tipo="sangrar" prob="0.1"/>
+    </golpe>
+  </monstruo>
+  <monstruo id="limo" nombre="Limo del velo" nivel="1" agresivo="false" base="1" bioma="velo" cuadros="12" desc="Un grumo pestilente que se arrastra entre las tumbas de Nocturnia." hoja="creatures_01">
+    <golpe>
+      <i tipo="veneno" prob="0.1"/>
+    </golpe>
+  </monstruo>
   <monstruo id="gallina" nombre="Gallina brava" nivel="1" agresivo="false" base="1" bioma="trigal" cuadros="12" desc="Picotea a quien se lleva sus huevos." hoja="creatures_01">
     <golpe>
       <i tipo="sangrar" prob="0.1"/>

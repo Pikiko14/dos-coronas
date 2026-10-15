@@ -199,6 +199,9 @@ P.monstruos = {
   asaltante = { hoja = "Characters/Actor3.png", idx = 6 },
   saqueador = { hoja = "Characters/Evil.png", idx = 6, tinte = { 0.9, 0.8, 0.8 } },
   gato = { hoja = "Characters/Animal.png", idx = 1 },
+  -- criaturas con animación por cuadros (render/mob_anim.lua); la hoja es solo un respaldo para otros usos
+  calabaza = { anim = "calabaza", hoja = "Characters/Animal.png", idx = 1 },
+  limo = { anim = "limo", hoja = "Characters/Animal.png", idx = 1 },
   cuervo = { hoja = "Characters/Monster3.png", idx = 0 },
   jabali = { hoja = "Characters/Animal.png", idx = 6 },
   rata = { hoja = "Characters/Monster3.png", idx = 4 },

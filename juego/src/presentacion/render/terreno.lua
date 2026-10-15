@@ -5,6 +5,8 @@ local Arte = require("src.presentacion.render.arte")
 local Auto = require("src.presentacion.render.autotile")
 local Objetos = require("src.presentacion.render.objetos")
 local Detalle = require("src.presentacion.render.casas")
+local CasasIso = require("src.presentacion.render.casas_iso")
+local Iso = require("src.presentacion.render.iso")
 local InteriorCasa = require("src.presentacion.render.interior_casa")
 
 local T = {}
@@ -53,7 +55,10 @@ end
 
 local function familia(mapa, x, y)
   if x < 0 or y < 0 or x >= mapa.w or y >= mapa.h then return nil end
-  return FAMILIA[suelo(mapa, x, y) or ""]
+  local f = FAMILIA[suelo(mapa, x, y) or ""]
+  -- con las casas isométricas, bajo la huella del edificio hay hierba normal (la casa se dibuja encima)
+  if f == "edificio" and CasasIso.activo() then return "hierba" end
+  return f
 end
 
 local function lado(mapa, x, y)
@@ -447,6 +452,7 @@ function T.dibujarSuelo(mapa, x, y, px, py, cuadroAgua)
     return
   end
   local f = FAMILIA[tipo]
+  if f == "edificio" and CasasIso.activo() then f = "hierba" end   -- casas isométricas: bajo la huella, hierba normal
   if f == "agua" then
     dibujarAgua(mapa, x, y, px, py, cuadroAgua)
   elseif f == "muralla" then
@@ -477,6 +483,8 @@ function T.dibujarSuelo(mapa, x, y, px, py, cuadroAgua)
   elseif f == "edificio" then
     -- el edificio se pinta aparte; debajo va el patio
     dibujarBase(mapa, x, y, px, py)
+    -- con las casas isométricas el suelo bajo la huella es hierba normal, para que se funda con el resto
+    if CasasIso.activo() then fundirBordes(mapa, x, y, px, py, "hierba") end
   else
     local base = dibujarBase(mapa, x, y, px, py)
     if f == "hierba" or f == "tierra" or f == "arena" then fundirBordes(mapa, x, y, px, py, f) end
@@ -603,8 +611,9 @@ local function tieneAgua(mapa, cx, cy)
 end
 
 local function construir(mapa, cx, cy, cuadro)
-  local canvas = love.graphics.newCanvas(BLOQUE * TILE, BLOQUE * TILE)
-  canvas:setFilter("nearest", "nearest")
+  -- una casilla de margen por cada lado: al proyectar en isométrico (filtro lineal) no quedan costuras entre bloques
+  local canvas = love.graphics.newCanvas((BLOQUE + 2) * TILE, (BLOQUE + 2) * TILE)
+  if Iso.activo() then canvas:setFilter("linear", "linear") else canvas:setFilter("nearest", "nearest") end
   local previo = { love.graphics.getCanvas() }
   love.graphics.push("all")
   -- sin el recorte de la vista del juego: si no, el bloque nuevo se hornea recortado y deja huecos negros en pantalla
@@ -612,16 +621,21 @@ local function construir(mapa, cx, cy, cuadro)
   love.graphics.setCanvas(canvas)
   love.graphics.clear(0, 0, 0, 0)
   love.graphics.origin()
+  love.graphics.translate(TILE, TILE)
   Objetos.estatico = true       -- lo que se hornea en el lienzo no se mueve: dibujos normales (y más baratos)
-  for ty = 0, BLOQUE - 1 do
-    for tx = 0, BLOQUE - 1 do
+  for ty = -1, BLOQUE do
+    for tx = -1, BLOQUE do
       local x, y = cx * BLOQUE + tx, cy * BLOQUE + ty
       T.dibujarSuelo(mapa, x, y, tx * TILE, ty * TILE, cuadro)
     end
   end
-  for _, e in ipairs(mapa.edificios or {}) do
-    if e.x + e.w > cx * BLOQUE and e.x < (cx + 1) * BLOQUE and e.y + e.h > cy * BLOQUE and e.y < (cy + 1) * BLOQUE then
-      dibujarEdificio(e, cx * BLOQUE * TILE, cy * BLOQUE * TILE)
+  -- Casas antiguas (dibujadas por código): desactivadas mientras haya casas isométricas (render/casas_iso.lua).
+  -- Para volver a verlas: DC_CASAS_ISO=0 o Ajustes.casasIso = false.
+  if not CasasIso.activo() then
+    for _, e in ipairs(mapa.edificios or {}) do
+      if e.x + e.w > cx * BLOQUE - 1 and e.x < (cx + 1) * BLOQUE + 1 and e.y + e.h > cy * BLOQUE - 1 and e.y < (cy + 1) * BLOQUE + 1 then
+        dibujarEdificio(e, cx * BLOQUE * TILE, cy * BLOQUE * TILE)
+      end
     end
   end
   Objetos.estatico = false
@@ -656,22 +670,43 @@ local function bloque(mapa, cx, cy, cuadro)
   return b.canvas
 end
 
--- Dibuja el suelo visible. (camX, camY) en píxeles de mundo; la escala la
+-- Bloques (índices de bloque: x0, y0, x1, y1) que cubren el encuadre; margen en bloques.
+local function bloquesVisibles(mapa, camX, camY, vw, vh, margen)
+  local x0, y0, x1, y1
+  if Iso.activo() then
+    x0, y0, x1, y1 = Iso.rango(camX, camY, vw, vh, 2)
+  else
+    x0, y0, x1, y1 = camX / TILE, camY / TILE, (camX + vw) / TILE, (camY + vh) / TILE
+  end
+  local maxX, maxY = math.floor((mapa.w - 1) / BLOQUE), math.floor((mapa.h - 1) / BLOQUE)
+  return math.max(0, math.floor(x0 / BLOQUE) - margen), math.max(0, math.floor(y0 / BLOQUE) - margen),
+    math.min(maxX, math.floor(x1 / BLOQUE) + margen), math.min(maxY, math.floor(y1 / BLOQUE) + margen)
+end
+
+-- Dibuja el suelo visible. (camX, camY) en píxeles de mundo (o de pantalla isométrica); la escala la
 -- pone quien llama con love.graphics.scale.
 function T.dibujar(mapa, camX, camY, vw, vh, tiempo, alfa)
   local cuadro = ({ 0, 1, 2, 1 })[(math.floor((tiempo or 0) * 3) % 4) + 1]
-  local x0 = math.floor(camX / (BLOQUE * TILE))
-  local y0 = math.floor(camY / (BLOQUE * TILE))
-  local x1 = math.floor((camX + vw) / (BLOQUE * TILE))
-  local y1 = math.floor((camY + vh) / (BLOQUE * TILE))
+  local x0, y0, x1, y1 = bloquesVisibles(mapa, camX, camY, vw, vh, 0)
   love.graphics.setColor(1, 1, 1, alfa or 1)
-  local maxX = math.floor((mapa.w - 1) / BLOQUE)
-  local maxY = math.floor((mapa.h - 1) / BLOQUE)
-  for cy = math.max(0, y0), math.min(maxY, y1) do
-    for cx = math.max(0, x0), math.min(maxX, x1) do
+  local iso = Iso.activo()
+  local k, h = Iso.HW / TILE, Iso.HH / TILE
+  for cy = y0, y1 do
+    for cx = x0, x1 do
       local f = tieneAgua(mapa, cx, cy) and cuadro or 0
       local canvas = bloque(mapa, cx, cy, f)
-      love.graphics.draw(canvas, cx * BLOQUE * TILE - camX, cy * BLOQUE * TILE - camY)
+      if iso then
+        -- el bloque (una cuadrícula de casillas) se proyecta entero con una transformación afín: rombos en vez de cuadrados
+        local bx, by = cx * BLOQUE, cy * BLOQUE
+        local t = love.math.newTransform()
+        t:setMatrix("row", k, -k, 0, (bx - by) * Iso.HW - camX, h, h, 0, (bx + by) * Iso.HH - 2 * Iso.HH - camY, 0, 0, 1, 0, 0, 0, 0, 1)
+        love.graphics.push()
+        love.graphics.applyTransform(t)
+        love.graphics.draw(canvas, 0, 0)
+        love.graphics.pop()
+      else
+        love.graphics.draw(canvas, cx * BLOQUE * TILE - camX - TILE, cy * BLOQUE * TILE - camY - TILE)
+      end
     end
   end
 end
@@ -679,15 +714,12 @@ end
 -- Hornea de antemano (como mucho UN bloque por cuadro) los bloques que van a hacer falta: el anillo de bloques alrededor de lo
 -- visible y las otras variantes de la animación del agua. Así el tirón de construir un bloque no cae en mitad de un paso.
 function T.precargar(mapa, camX, camY, vw, vh)
-  local ancho = BLOQUE * TILE
-  local x0, y0 = math.floor(camX / ancho) - 1, math.floor(camY / ancho) - 1
-  local x1, y1 = math.floor((camX + vw) / ancho) + 1, math.floor((camY + vh) / ancho) + 1
-  local maxX, maxY = math.floor((mapa.w - 1) / BLOQUE), math.floor((mapa.h - 1) / BLOQUE)
+  local x0, y0, x1, y1 = bloquesVisibles(mapa, camX, camY, vw, vh, 1)
   mapa._bloques = mapa._bloques or { mapa = {}, n = 0, orden = 0 }
   local c = mapa._bloques
   if c.n >= LIMITE_BLOQUES - 12 then return end
-  for cy = math.max(0, y0), math.min(maxY, y1) do
-    for cx = math.max(0, x0), math.min(maxX, x1) do
+  for cy = y0, y1 do
+    for cx = x0, x1 do
       for _, f in ipairs(tieneAgua(mapa, cx, cy) and { 0, 1, 2 } or { 0 }) do
         if not c.mapa[clave(cx, cy, f)] then
           bloque(mapa, cx, cy, f)

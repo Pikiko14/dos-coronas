@@ -423,7 +423,13 @@ function U.flechaMision(p, I, px, py)
   local dx, dy = d.x - p.x, d.y - p.y
   local dist = math.sqrt(dx * dx + dy * dy)
   if dist < 9 then return end
-  local ang = math.atan2(dy, dx)
+  local Iso = require("src.presentacion.render.iso")
+  local ang
+  if Iso.activo() then
+    ang = math.atan2((dx + dy) * Iso.HH, (dx - dy) * Iso.HW)     -- hacia dónde queda en la pantalla
+  else
+    ang = math.atan2(dy, dx)
+  end
   local t = love.timer.getTime()
   local r = 46 + 2 * math.sin(t * 4)
   local ax, ay = px + math.cos(ang) * r, py - 10 + math.sin(ang) * r * 0.75

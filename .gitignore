@@ -15,3 +15,8 @@ error_log.txt
 # Web: el zip del juego es pesado y se genera con web/publicar.ps1
 web/descargas/*.zip
 web/descargas/version.json
+
+# Banco de criaturas en bruto (2 GB): solo se copian al juego las tiras que se usan, en juego/arte/monstruos/
+juego/arte/hojas/mon/
+juego/arte/hojas/house/
+juego/arte/hojas/npc/

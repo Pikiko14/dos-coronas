@@ -8,6 +8,7 @@ local A = {
   alto = 720,
   teclas = { interactuar = "e", bolsa = "i" },
   esperando = nil,
+  casasIso = true,        -- casas isométricas en las ciudades (false: las antiguas, dibujadas por código)
   graficos = "alto",      -- efectos de ambiente: alto, medio, bajo, apagado
   ultimoUsuario = "",   -- el último usuario con el que se entró (se recuerda en el formulario)
 }
@@ -21,6 +22,7 @@ function A.cargar(aplicar)
       if A.volumen < 0 then A.volumen = 0 end
       if A.volumen > 1 then A.volumen = 1 end
       A.completo = t.completo and true or false
+      if t.casasIso == false then A.casasIso = false end
       if t.graficos == "alto" or t.graficos == "medio" or t.graficos == "bajo" or t.graficos == "apagado" then A.graficos = t.graficos end
       -- la misión que seguías en el mapa se recuerda entre sesiones
       if type(t.misionSeguida) == "string" and #t.misionSeguida <= 40 then require("compartido.dominio.misiones").seguida = t.misionSeguida end
@@ -43,6 +45,7 @@ function A.guardar()
     volumen = A.volumen,
     completo = A.completo,
     graficos = A.graficos,
+    casasIso = A.casasIso,
     misionSeguida = require("compartido.dominio.misiones").seguida,
     ancho = A.ancho,
     alto = A.alto,
