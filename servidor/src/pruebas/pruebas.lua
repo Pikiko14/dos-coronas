@@ -3977,6 +3977,49 @@ mundo.tiempo = 100
       fallar(errores, "el barrido se abre hacia donde mira el personaje", fx and fx.rot and math.abs(fx.rot - math.pi) < 0.2, tostring(fx and fx.rot) .. " " .. tostring(errB))
     end
   end)
+  paso("todos los poderes de todas las clases: se lanzan, suenan, tienen efecto y apuntan al objetivo", function()
+    local ids = {}
+    for id in pairs(Datos.habilidades) do ids[#ids + 1] = id end
+    table.sort(ids)
+    local fallos = {}
+    for _, id in ipairs(ids) do
+      local h = Datos.habilidades[id]
+      local mundo = Mundo.nuevo()
+      local clase = h.clase or "guerrero"
+      local faccion = (clase == "nigromante") and "umbra" or "albor"
+      local p = mundo:crearPersonaje({ nombre = "Validar", faccion = faccion, clase = clase, nivel = 30 })
+      p.hp, p.mp, p.mpMax = p.hpMax, 9999, 9999
+      p.habilidades = p.habilidades or {}
+      p.habilidades[id] = 1
+      mundo:recalcular(p)
+      p.mp = 9999
+      mundo.tiempo = 500
+      local m = mundo:spawnMonstruo("jabali", p.x + math.max(0.9, math.min(2, (h.rango or 2) - 0.5)), p.y, { x = p.x, y = p.y })
+      m.hp, m.hpMax = 99999, 99999
+      local aliado = (h.tipo == "aliado") and p or nil
+      local slot
+      for i, bid in ipairs(Datos.barra[clase] or {}) do if bid == id then slot = i end end
+      if not slot then fallos[#fallos + 1] = id .. ": no está en la barra de " .. clase
+      else
+        p.cds = {}
+        p.objetivo = aliado and p.id or m.id
+        mundo.efectos, mundo.sonidos = {}, {}
+        local ents0 = 0
+        for _ in pairs(mundo.entidades) do ents0 = ents0 + 1 end
+        local err = mundo:usarHabilidad(p, slot, p.x + 2, p.y)
+        local ents1 = 0
+        for _ in pairs(mundo.entidades) do ents1 = ents1 + 1 end
+        local sonido = #mundo.sonidos > 0
+        local efecto = #mundo.efectos > 0 or ents1 > ents0
+        local fx = mundo.efectos[1]
+        if err and not err:find("Te acercas") then fallos[#fallos + 1] = id .. ": error al lanzar (" .. err .. ")"
+        elseif not sonido then fallos[#fallos + 1] = id .. ": sin sonido"
+        elseif not efecto then fallos[#fallos + 1] = id .. ": sin efecto ni proyectil"
+        elseif h.tipo == "enemigo" and not h.proyectil and fx and not fx.rot then fallos[#fallos + 1] = id .. ": el efecto no apunta al objetivo" end
+      end
+    end
+    fallar(errores, "los " .. #ids .. " poderes pasan la validación", #fallos == 0, table.concat(fallos, " | "))
+  end)
   paso("movimiento", function()
     local mundo = Mundo.nuevo()
     local c

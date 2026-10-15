@@ -192,6 +192,29 @@ function Pruebas.correr()
     local ok, err = pcall(Interfaz.personajes, lista, "prueba", 1280, 720, "")
     fallar(errores, "la selección dibuja addons (y tolera uno desconocido)", ok, tostring(err))
   end)
+  paso("todos los poderes tienen su efecto dibujable y los proyectiles su sprite", function()
+    local Efectos = require("src.presentacion.render.efectos")
+    local sin = {}
+    for id, h in pairs(Datos.habilidades) do
+      if not h.proyectil and not Efectos.def[id] then sin[#sin + 1] = id end
+      if not h.proyectil then
+        local ok, err = pcall(function()
+          love.graphics.push()
+          Efectos.cuadro(id, 0.2, 0.5, 100, 100, 1, 1, 0.7)
+          Efectos.cuadro(id, 0.8, 0.5, 100, 100, 1, 1, -2)
+          love.graphics.pop()
+        end)
+        if not ok then sin[#sin + 1] = id .. " (" .. tostring(err) .. ")" end
+      end
+    end
+    fallar(errores, "todos los poderes tienen su efecto", #sin == 0, table.concat(sin, ","))
+    local Arte = require("src.presentacion.render.arte")
+    for _, tipo in ipairs({ "misil", "fuego", "sagrado", "flecha", "sombra", "lanza", "necro" }) do
+      local ok = pcall(Arte.img, "Animations/Proyectil_" .. tipo .. ".png", true)
+      fallar(errores, "existe el sprite del proyectil " .. tipo, ok)
+      fallar(errores, "el impacto del proyectil " .. tipo .. " tiene efecto", Efectos.def[tipo] ~= nil or tipo == "misil")
+    end
+  end)
   paso("objetos y terreno", function()
     local Objetos = require("src.presentacion.render.objetos")
     for _, nombre in ipairs({ "arbol", "arbol_pino", "arbol_seco", "farol", "pozo", "estatua_albor",
