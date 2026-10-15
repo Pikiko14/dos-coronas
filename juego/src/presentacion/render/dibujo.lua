@@ -191,6 +191,7 @@ function D.escena(mundo, jugador, cam, mx, my)
   else
     love.graphics.setColor(1, 1, 1, 1)
     Terreno.dibujar(mapa, cam.x, cam.y, ancho, alto, mundo.tiempo)
+    Terreno.precargar(mapa, cam.x, cam.y, ancho, alto)
     if mapa.trampas then Trampas.dibujar(mapa, mundo.tiempo, cam.x, cam.y, ancho, alto) end
   end
   -- zonas elevadas: desde el suelo se marca su contorno y su nombre con el nivel de sus criaturas

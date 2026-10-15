@@ -95,66 +95,45 @@ function O.catalogo()
   return lista
 end
 
--- Plantas vivas: se mecen con el viento (los árboles secos, las rocas y lo demás no). El sprite va sobre una malla de tiras
--- finas y cada fila se desplaza una fracción de píxel distinta: la base queda quieta y la copa se dobla en una curva suave,
--- sin saltos. amp = píxeles que se mueve la copa al máximo, vel = rapidez del vaivén. El viento avanza como una ola por el mapa
--- (la fase sale de la posición) y sube y baja con ráfagas lentas.
--- Solo se mecen las plantas altas, que es donde se nota (árboles, palmeras y arbustos grandes): la hierba y las flores bajas
--- son cientos por pantalla y un movimiento de un píxel no se ve, así que se dibujan normales (y mucho más baratas).
+-- Plantas vivas: se mecen con el viento (los árboles secos, las rocas y lo demás no). El sprite se dibuja en tiras finas de 4 px
+-- y cada una se desplaza una fracción de píxel distinta: la base queda quieta y la copa se dobla en una curva suave, sin saltos.
+-- Son dibujos normales (nada de mallas ni búferes que se reescriben a cada cuadro: eso daba glitches en algunas tarjetas).
+-- amp = píxeles que se mueve la copa al máximo, vel = rapidez. El viento avanza como una ola por el mapa (la fase sale de la
+-- posición) y sube y baja con ráfagas lentas. Solo se mecen las plantas altas: la hierba y las flores bajas se dibujan normales.
 local VIVAS = {
   arbol = { 2.4, 0.9 }, arbol_pino = { 2.0, 1.0 }, palma = { 3.0, 1.1 },
   arbusto = { 1.2, 1.2 }, arbusto_rosa = { 1.1, 1.2 },
 }
-local MALLAS_POR_SPRITE = 12   -- se turnan: actualizar una y otra vez el mismo búfer en un cuadro hace esperar a la GPU
-local TIRA = 4   -- alto de cada fila de la malla, en píxeles
+local TIRA = 4   -- alto de cada tira, en píxeles
 
--- La malla de un sprite (una sola vez): su propia copia con filtro suave, para que los desplazamientos de fracción de píxel no
--- parpadeen, y los vértices preparados. En reposo se ve idéntico al original.
-local function malla(t)
-  if t.malla ~= nil then return t.malla end
-  t.malla = false
-  local ok = pcall(function()
-    local cv = love.graphics.newCanvas(t.w, t.h)
-    love.graphics.push("all")
-    love.graphics.setCanvas(cv)
-    love.graphics.clear(0, 0, 0, 0)
-    love.graphics.origin()
-    love.graphics.setBlendMode("alpha")
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(t.img, t.quad, 0, 0)
-    love.graphics.pop()
-    -- (el lienzo queda con el color ya multiplicado por la transparencia: se dibuja en modo "premultiplied", si no los
-    -- bordes salen con un halo oscuro que parpadea al moverse)
-    cv:setFilter("nearest", "nearest")
-    local filas = math.max(2, math.ceil(t.h / TIRA))
-    local verts = {}
-    for k = 0, filas do
-      local v = k / filas
-      verts[#verts + 1] = { 0, v * t.h, 0, v, 1, 1, 1, 1 }
-      verts[#verts + 1] = { t.w, v * t.h, 1, v, 1, 1, 1, 1 }
-    end
-    local lista = {}
-    for i = 1, MALLAS_POR_SPRITE do
-      local m = love.graphics.newMesh(verts, "strip", "stream")
-      m:setTexture(cv)
-      lista[i] = m
-    end
-    t.malla, t.mallas, t.turno, t.filas, t.verts = lista[1], lista, 1, filas, verts
-  end)
-  if not ok then t.malla = false end
-  return t.malla
+-- Las tiras del sprite con su quad (se preparan una vez).
+local function tiras(t)
+  if t.tiras then return t.tiras end
+  local lista = {}
+  local y = 0
+  local iw, ih = t.img:getDimensions()
+  while y < t.h do
+    local alto = math.min(TIRA, t.h - y)
+    lista[#lista + 1] = { quad = love.graphics.newQuad(t.rx, t.ry + y, t.w, alto, iw, ih), y = y, alto = alto, arriba = 1 - (y + alto / 2) / t.h }
+    y = y + alto
+  end
+  t.tiras = lista
+  return lista
 end
 
--- Prepara de antemano las mallas de las plantas que se mecen (si no, la primera vez que aparece cada una en pantalla hay un tirón).
+-- (se conserva por compatibilidad: ya no hay nada que preparar)
 function O.precalentar()
   for nombre in pairs(VIVAS) do
     local lista = DEF[nombre]
     for v = 0, (lista and #lista or 0) - 1 do
       local t = trozo(nombre, v)
-      if t and t.h >= 8 then malla(t) end
+      if t and t.h >= 8 then tiras(t) end
     end
   end
 end
+
+-- Mientras se hornea el suelo en un lienzo guardado (terreno.lua) las plantas se dibujan quietas: ya no se moverían.
+O.estatico = false
 
 -- Dibuja con la base en (sx, sy) (centro de abajo de la casilla). fase: desfase del vaivén de las plantas vivas.
 function O.dibujar(nombre, variante, sx, sy, tinte, alfa, fase)
@@ -163,33 +142,18 @@ function O.dibujar(nombre, variante, sx, sy, tinte, alfa, fase)
   if tinte then love.graphics.setColor(tinte[1], tinte[2], tinte[3], alfa or 1)
   else love.graphics.setColor(1, 1, 1, alfa or 1) end
   local viva = VIVAS[nombre]
-  if viva and t.h >= 8 then
-    local m0 = malla(t)
-    if m0 then
-      t.turno = t.turno % MALLAS_POR_SPRITE + 1
-      local m = t.mallas[t.turno]
-      local ahora = love.timer.getTime()
-      local f = fase or 0
-      -- ráfagas lentas y un vaivén propio con un segundo armónico suave, para que no sea un péndulo perfecto
-      local rafaga = 0.7 + 0.3 * math.sin(ahora * 0.3 + f * 0.15)
-      local viento = (math.sin(ahora * viva[2] + f) + 0.25 * math.sin(ahora * viva[2] * 1.9 + f * 1.6)) * rafaga
-      local verts, filas = t.verts, t.filas
-      local x0, y0 = sx - t.w / 2, sy - t.h
-      for k = 0, filas do
-        local arriba = 1 - k / filas                      -- 0 en la base, 1 en la copa
-        local d = viva[1] * viento * arriba * arriba       -- curva: casi nada abajo, mucho arriba
-        local a, b = verts[k * 2 + 1], verts[k * 2 + 2]
-        a[1], a[2] = x0 + d, y0 + (k / filas) * t.h
-        b[1], b[2] = x0 + t.w + d, y0 + (k / filas) * t.h
-      end
-      m:setVertices(verts)
-      local r, g, b, a = love.graphics.getColor()
-      love.graphics.setBlendMode("alpha", "premultiplied")
-      love.graphics.setColor(r * a, g * a, b * a, a)
-      love.graphics.draw(m)
-      love.graphics.setBlendMode("alpha")
-      return true
+  if viva and t.h >= 8 and not O.estatico then
+    local ahora = love.timer.getTime()
+    local f = fase or 0
+    -- ráfagas lentas y un vaivén propio con un segundo armónico suave, para que no sea un péndulo perfecto
+    local rafaga = 0.7 + 0.3 * math.sin(ahora * 0.3 + f * 0.15)
+    local viento = (math.sin(ahora * viva[2] + f) + 0.25 * math.sin(ahora * viva[2] * 1.9 + f * 1.6)) * rafaga
+    local amp = viva[1] * viento
+    local x0, y0 = sx - t.w / 2, sy - t.h
+    for _, ti in ipairs(tiras(t)) do
+      love.graphics.draw(t.img, ti.quad, x0 + amp * ti.arriba * ti.arriba, y0 + ti.y)
     end
+    return true
   end
   love.graphics.draw(t.img, t.quad, sx, sy, 0, 1, 1, t.w / 2, t.h)
   return true

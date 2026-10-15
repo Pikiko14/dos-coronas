@@ -597,10 +597,13 @@ local function construir(mapa, cx, cy, cuadro)
   local canvas = love.graphics.newCanvas(BLOQUE * TILE, BLOQUE * TILE)
   canvas:setFilter("nearest", "nearest")
   local previo = { love.graphics.getCanvas() }
+  love.graphics.push("all")
+  -- sin el recorte de la vista del juego: si no, el bloque nuevo se hornea recortado y deja huecos negros en pantalla
+  love.graphics.setScissor()
   love.graphics.setCanvas(canvas)
   love.graphics.clear(0, 0, 0, 0)
-  love.graphics.push("all")
   love.graphics.origin()
+  Objetos.estatico = true       -- lo que se hornea en el lienzo no se mueve: dibujos normales (y más baratos)
   for ty = 0, BLOQUE - 1 do
     for tx = 0, BLOQUE - 1 do
       local x, y = cx * BLOQUE + tx, cy * BLOQUE + ty
@@ -612,6 +615,7 @@ local function construir(mapa, cx, cy, cuadro)
       dibujarEdificio(e, cx * BLOQUE * TILE, cy * BLOQUE * TILE)
     end
   end
+  Objetos.estatico = false
   love.graphics.pop()
   love.graphics.setCanvas(previo[1])
   return canvas
@@ -659,6 +663,28 @@ function T.dibujar(mapa, camX, camY, vw, vh, tiempo, alfa)
       local f = tieneAgua(mapa, cx, cy) and cuadro or 0
       local canvas = bloque(mapa, cx, cy, f)
       love.graphics.draw(canvas, cx * BLOQUE * TILE - camX, cy * BLOQUE * TILE - camY)
+    end
+  end
+end
+
+-- Hornea de antemano (como mucho UN bloque por cuadro) los bloques que van a hacer falta: el anillo de bloques alrededor de lo
+-- visible y las otras variantes de la animación del agua. Así el tirón de construir un bloque no cae en mitad de un paso.
+function T.precargar(mapa, camX, camY, vw, vh)
+  local ancho = BLOQUE * TILE
+  local x0, y0 = math.floor(camX / ancho) - 1, math.floor(camY / ancho) - 1
+  local x1, y1 = math.floor((camX + vw) / ancho) + 1, math.floor((camY + vh) / ancho) + 1
+  local maxX, maxY = math.floor((mapa.w - 1) / BLOQUE), math.floor((mapa.h - 1) / BLOQUE)
+  mapa._bloques = mapa._bloques or { mapa = {}, n = 0, orden = 0 }
+  local c = mapa._bloques
+  if c.n >= LIMITE_BLOQUES - 12 then return end
+  for cy = math.max(0, y0), math.min(maxY, y1) do
+    for cx = math.max(0, x0), math.min(maxX, x1) do
+      for _, f in ipairs(tieneAgua(mapa, cx, cy) and { 0, 1, 2 } or { 0 }) do
+        if not c.mapa[clave(cx, cy, f)] then
+          bloque(mapa, cx, cy, f)
+          return
+        end
+      end
     end
   end
 end
