@@ -87,7 +87,7 @@ function M.instalar(Mundo)
       partes[#partes + 1] = it.cant .. " × " .. (Datos.item(it.id).nombre or it.id)
     end
     self:mensaje("sistema", "", "Recompensa diaria (día " .. premio.dia .. ", racha " .. p.diaria.racha .. "): " .. table.concat(partes, ", ") .. ".", p)
-    self:sonar("cura")
+    self:sonar("cura", p)
     return nil
   end
 

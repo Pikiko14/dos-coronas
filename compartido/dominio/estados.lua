@@ -134,7 +134,7 @@ function E.instalar(Mundo)
       if pw and d <= pw.rango and (e.cds[id] or 0) <= self.tiempo and self:puedeDanar(e, o) then
         e.cds[id] = self.tiempo + pw.cd + math.random() * 2
         self:numero(e, pw.nombre, { 1, 0.95, 0.7 })
-        self:sonar(pw.sonido or "magia")
+        self:sonar(pw.sonido or "magia", e)
         if pw.area then
           self:efecto(pw.anim, o.x, o.y, 0.6)
           for _, v in pairs(self.entidades) do

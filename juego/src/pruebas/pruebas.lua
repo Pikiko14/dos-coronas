@@ -147,6 +147,41 @@ function Pruebas.correr()
     fallar(errores, "tras la carga hay suelo en 5 x 5 bloques", #Terreno.faltantes(mapa, bx, by, 2) == 0)
     fallar(errores, "con el terreno hecho no vuelve a abrirse la carga", Juego.precargarMundo(app, 1280, 720) == false)
   end)
+  paso("sonido: todos los efectos se sintetizan bien (poderes, voces de criaturas y muerte)", function()
+    local Sintesis = require("src.presentacion.sintesis")
+    local Sonido = require("src.presentacion.sonido")
+    local Voces = require("compartido.dominio.voces")
+    local t0 = love.timer.getTime()
+    local cat = Sintesis.catalogo()
+    local esperados = { "corte", "lanza", "grito", "magia", "fuego", "hielo", "flecha", "cura", "sagrado", "oscuro", "muerte_jugador" }
+    for _, f in ipairs(Voces.FAMILIAS) do
+      for _, p in ipairs({ "ataque_", "herido_", "muerte_" }) do esperados[#esperados + 1] = p .. f end
+    end
+    local peor
+    for _, nombre in ipairs(esperados) do
+      local gen = cat[nombre]
+      fallar(errores, "existe el sonido " .. nombre, gen ~= nil)
+      if gen then
+        local ok, datos = pcall(gen)
+        fallar(errores, nombre .. " se genera", ok, tostring(datos))
+        if ok then
+          local n, pico, suma, nan = datos:getSampleCount(), 0, 0, false
+          for i = 0, n - 1 do
+            local v = datos:getSample(i)
+            if v ~= v then nan = true end
+            pico = math.max(pico, math.abs(v))
+            suma = suma + v * v
+          end
+          local rms = math.sqrt(suma / n)
+          fallar(errores, nombre .. " tiene señal audible y sin NaN", not nan and pico > 0.1 and rms > 0.02, string.format("pico %.2f rms %.3f", pico, rms))
+          fallar(errores, nombre .. " dura entre 0,1 y 1,3 s", n / 22050 >= 0.1 and n / 22050 <= 1.3)
+        end
+      end
+    end
+    Log.info(string.format("sonido: %d efectos sintetizados en %.2f s (prueba)", #esperados, love.timer.getTime() - t0))
+    -- sin audio activo (pruebas) tocar no hace nada ni falla
+    fallar(errores, "sin audio no se toca nada", Sonido.evento({ n = "magia", x = 1, y = 1 }, { x = 1, y = 1 }) == false)
+  end)
   paso("objetos y terreno", function()
     local Objetos = require("src.presentacion.render.objetos")
     for _, nombre in ipairs({ "arbol", "arbol_pino", "arbol_seco", "farol", "pozo", "estatua_albor",

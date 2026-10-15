@@ -429,6 +429,12 @@ function Entrada.manejar(app, id)
   if id == "est_pag_sig" then Interfaz.establoPag = (Interfaz.establoPag or 1) + 1 return end
   if id == "mon_pag_ant" then Interfaz.monturaPag = math.max(1, (Interfaz.monturaPag or 1) - 1) return end
   if id == "mon_pag_sig" then Interfaz.monturaPag = (Interfaz.monturaPag or 1) + 1 return end
+  if id == "aj_vol_menos" or id == "aj_vol_mas" then
+    Ajustes.volumen = math.max(0, math.min(1, math.floor(((Ajustes.volumen or 0.8) + (id == "aj_vol_mas" and 0.1 or -0.1)) * 10 + 0.5) / 10))
+    Ajustes.guardar()
+    require("src.presentacion.sonido").tocar("magia")   -- una muestra para oír el nuevo volumen
+    return
+  end
   if id == "aj_1280" then Ajustes.ancho, Ajustes.alto, Ajustes.completo = 1280, 720, false Ajustes.aplicarVentana() Ajustes.guardar() return end
   if id == "aj_1600" then Ajustes.ancho, Ajustes.alto, Ajustes.completo = 1600, 900, false Ajustes.aplicarVentana() Ajustes.guardar() return end
   if id == "aj_completo" then Ajustes.completo = not Ajustes.completo Ajustes.aplicarVentana() Ajustes.guardar() return end

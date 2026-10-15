@@ -155,7 +155,7 @@ function M.instalar(Mundo)
       self:ganarXpOficio(p, valor / 5)
       self:numero(p, "+" .. n .. " robado", { 1, 0.85, 0.3 })
       self:mensaje("sistema", "", "Robo con éxito: " .. n .. " unidades (valen unos " .. valor .. " de oro).", p)
-      self:sonar("corte")
+      self:sonar("corte", p)
     else
       self:marcarBuscado(p, M.BUSCADO_FALLO_SEG, 0)
       if o.kind == "jugador" then

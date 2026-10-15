@@ -3850,6 +3850,57 @@ mundo.tiempo = 100
       end
     end
   end)
+  paso("sonidos: eventos con posición para poderes, criaturas y muerte del personaje", function()
+    local Voces = require("compartido.dominio.voces")
+    local mundo = Mundo.nuevo()
+    -- cada criatura tiene voz
+    local sinVoz = {}
+    local validas = {}
+    for _, f in ipairs(Voces.FAMILIAS) do validas[f] = true end
+    for _, m in ipairs(Datos.monstruos) do if not validas[Voces.de(m.id)] then sinVoz[#sinVoz + 1] = m.id end end
+    fallar(errores, "todas las criaturas tienen voz", #sinVoz == 0, table.concat(sinVoz, ","))
+    fallar(errores, "el dragón ruge y el gato maúlla distinto", Voces.de("dragon") == "dragon" and Voces.de("gato") == "pequeno" and Voces.de("liche") == "no_muerto")
+    local a = mundo:crearPersonaje({ nombre = "Oyente", faccion = "albor", clase = "guerrero", nivel = 12 })
+    local lejos = mundo:crearPersonaje({ nombre = "Lejano", faccion = "albor", clase = "guerrero", nivel = 12 })
+    lejos.x, lejos.y = a.x + 120, a.y
+    local m = mundo:spawnMonstruo("jabali", a.x + 1, a.y, { x = a.x, y = a.y })
+    local function nombres(foto)
+      local l = {}
+      for _, ev in ipairs(foto.sonidos or {}) do l[#l + 1] = ev.n end
+      return table.concat(l, ",")
+    end
+    mundo.sonidos = {}
+    mundo.tiempo = 200
+    mundo:golpear(m, a, 1)
+    fallar(errores, "la criatura gruñe al atacar", nombres(mundo:foto(a.id)):find("ataque_bestia", 1, true) ~= nil, nombres(mundo:foto(a.id)))
+    fallar(errores, "los que están lejos no lo oyen", nombres(mundo:foto(lejos.id)) == "")
+    mundo.sonidos = {}
+    m.hp = m.hpMax
+    mundo.tiempo = 201
+    mundo:danar(m, 1, a)
+    fallar(errores, "la criatura herida se queja", nombres(mundo:foto(a.id)):find("herido_bestia", 1, true) ~= nil)
+    mundo:danar(m, 1, a)
+    local cuantos = 0
+    for _ in nombres(mundo:foto(a.id)):gmatch("herido_bestia") do cuantos = cuantos + 1 end
+    fallar(errores, "no se queja en cada golpe seguido", cuantos == 1, tostring(cuantos))
+    mundo.sonidos = {}
+    mundo:danar(m, 999999, a)
+    fallar(errores, "la criatura muerta suelta su sonido de muerte", nombres(mundo:foto(a.id)):find("muerte_bestia", 1, true) ~= nil)
+    -- poderes: sonido propio de cada familia de poder
+    mundo.sonidos = {}
+    mundo:marcarAtaque(a, nil, false)
+    fallar(errores, "el guerrero suena a corte", nombres(mundo:foto(a.id)):find("corte", 1, true) ~= nil)
+    local nigro = mundo:crearPersonaje({ nombre = "Nigro", faccion = "umbra", clase = "nigromante", nivel = 12 })
+    nigro.x, nigro.y = a.x + 2, a.y
+    mundo.sonidos = {}
+    mundo:marcarAtaque(nigro, nil, true)
+    fallar(errores, "el nigromante suena a oscuro", nombres(mundo:foto(a.id)):find("oscuro", 1, true) ~= nil)
+    -- muerte del personaje
+    mundo.sonidos = {}
+    a.hp = 1
+    mundo:morir(a, m)
+    fallar(errores, "al morir el personaje suena su muerte", nombres(mundo:foto(nigro.id)):find("muerte_jugador", 1, true) ~= nil)
+  end)
   paso("movimiento", function()
     local mundo = Mundo.nuevo()
     local c

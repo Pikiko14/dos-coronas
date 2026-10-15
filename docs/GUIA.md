@@ -131,6 +131,10 @@ cambias números a propósito, actualiza esas pruebas.
   al personaje y el cuadro de la esquina. Aceptar y entregar solo se puede junto al PNJ (lo valida el servidor).
 - **Viajes:** muelles con barqueros y barcos entre continentes; monturas (también de vehículo).
 - **Grupos:** invita solo el líder; cualquiera puede salir; se puede cambiar de líder.
+- **Sonido** (`juego/src/presentacion/sintesis.lua`, `sonido.lua`, `compartido/dominio/voces.lua`): no hay archivos de audio; los efectos se **sintetizan al arrancar**
+  (senos, sierras y ruido filtrado). Hay un sonido por familia de poder (corte, lanza, grito, magia, fuego, hielo, flecha, cura, sagrado, oscuro), tres por cada familia de
+  criaturas (ataque, herido y muerte; `voces.lua` dice qué familia es cada criatura) y la muerte del personaje. El servidor manda cada sonido con su posición y solo a los que
+  están cerca; el cliente baja el volumen con la distancia. El volumen se cambia en Ajustes (Esc) y se guarda.
 - **Chat:** pestañas con iconos; solo ves mensajes desde que te conectas; scroll con rueda/AvPág/RePág.
 - **Item Mall** (se paga con Monedas Corona, repartidas con `/admin monedas`):
   - *Objetos:* tarjeta de experiencia y pergaminos de atributos.

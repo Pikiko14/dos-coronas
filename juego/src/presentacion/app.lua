@@ -88,7 +88,7 @@ function App.cargar()
   end
   love.graphics.setFont(App.fuente)
   Interfaz.iniciar(App.fuente, App.grande)
-  Sonido.iniciar()
+  Sonido.iniciar(App.modoTest or App.modoFoto or App.modoBot or App.modoAuto or App.modoWeb or App.modoActualizar)
   Ajustes.cargar(not App.modoTest and not App.modoFoto)
   Log.info("arranque " .. (App.modoTest and "test" or App.modoFoto and "foto" or App.modoBot and "bot" or App.modoAuto and "auto" or "cliente"))
 end
@@ -110,7 +110,7 @@ function App.actualizar(dt)
   if App.fase == 0 then App.fase = 1 return end
   if App.fase == 1 then
     Atlas.cargar()
-    Sonido.iniciar()
+    Sonido.iniciar(App.modoTest or App.modoFoto or App.modoBot or App.modoAuto or App.modoWeb or App.modoActualizar)
     if App.modoTest then Pruebas.correr() return end
     if App.modoBot then Pruebas.bot() return end
     if App.modoWeb then require("src.pruebas.exportar_web").correr() return end

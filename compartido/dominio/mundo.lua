@@ -22,6 +22,7 @@ local Admin = require("compartido.dominio.admin")
 local Comercio = require("compartido.dominio.comercio")
 local Mall = require("compartido.dominio.mall")
 local Misiones = require("compartido.dominio.misiones")
+local Voces = require("compartido.dominio.voces")
 local Mazmorras = require("compartido.dominio.mazmorras")
 local Viaje = require("compartido.dominio.viaje")
 
@@ -130,7 +131,13 @@ function Mundo:mismoLugar(a, b)
   return true
 end
 
-function Mundo:sonar(nombre) self.sonidos[#self.sonidos + 1] = nombre end
+-- Un sonido del mundo: nombre y, si lo hace una entidad (e), solo lo oyen quienes están cerca de ella y en su mismo sitio (el cliente
+-- baja el volumen con la distancia). Los nombres los sintetiza el juego (juego/src/presentacion/sintesis.lua).
+function Mundo:sonar(nombre, e)
+  local lista = self.sonidos
+  if #lista >= 40 then return end
+  lista[#lista + 1] = { n = nombre, x = e and e.x, y = e and e.y, e = e }
+end
 
 function Mundo:efecto(tipo, x, y, dur)
   self.efectos[#self.efectos + 1] = {
@@ -824,9 +831,15 @@ end
 -- mult un factor extra (por ejemplo 0.85 en daño en área).
 -- Anota que una criatura acaba de atacar (el cliente anima el ataque a partir de atqN, que sube con cada uno). Un mismo
 -- ataque que golpea a varios (área) o que llama dos veces solo cuenta una vez. lejos: es un disparo o un conjuro, no un golpe.
-function Mundo:marcarAtaque(e, objetivo, lejos)
+local SONIDO_BASICO = { guerrero = "corte", lancero = "lanza", cazador = "flecha", mago = "magia", clerigo = "sagrado", nigromante = "oscuro" }
+
+function Mundo:marcarAtaque(e, objetivo, lejos, silencio)
   if not e or e.kind == "proyectil" then return end
   if self.tiempo - (e.atqT or -9) < 0.25 then return end
+  if not silencio then
+    if e.kind == "monstruo" then self:sonar("ataque_" .. Voces.de(e.monstruo), e)
+    elseif e.kind == "jugador" or e.kind == "bot" then self:sonar(SONIDO_BASICO[e.clase] or (lejos and "flecha" or "corte"), e) end
+  end
   e.atqT = self.tiempo
   e.atqN = (e.atqN or 0) + 1
   e.atqLejos = lejos and true or nil
@@ -881,6 +894,10 @@ function Mundo:danar(objetivo, cantidad, origen, critico, color)
   objetivo.ultimoGolpe = self.tiempo
   objetivo.flashHasta = self.tiempo + 0.12   -- destello rojo de daño: dura un instante y se apaga solo
   if origen then objetivo.amenaza = origen.id end
+  if objetivo.kind == "monstruo" and objetivo.hp > 0 and self.tiempo - (objetivo.sndHerido or -9) > 0.45 then
+    objetivo.sndHerido = self.tiempo
+    self:sonar("herido_" .. Voces.de(objetivo.monstruo), objetivo)
+  end
   if critico then
     self:numero(objetivo, "-" .. cantidad .. "!", { 1, 0.85, 0.2 })
   else
@@ -1011,6 +1028,7 @@ function Mundo:morir(e, origen)
     self:caeBuscado(e, origen)
   end
   if e.kind == "monstruo" then
+    self:sonar("muerte_" .. Voces.de(e.monstruo), e)
     if origen and origen.kind == "jugador" and origen.grupoId and self:recompensaGrupo(e, origen) then
       -- recompensa repartida entre el grupo
     elseif origen and (origen.kind == "jugador" or origen.kind == "bot") then
@@ -1035,6 +1053,7 @@ function Mundo:morir(e, origen)
       self:mensaje("sistema", "", e.nombre .. " ha caído.", origen)
     end
   elseif e.kind == "jugador" or e.kind == "bot" then
+    self:sonar("muerte_jugador", e)
     e.respawn = self.tiempo + 6
     if e.modo == "mundo" then self:dejarCuerpo(e) end
     -- por encima del nivel 10 morir cuesta experiencia (sin bajar de nivel)
@@ -1264,7 +1283,7 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
   p.gcd = self.tiempo + 0.35
   p.swing = 0.2
   p.ultimoGolpe = self.tiempo
-  self:marcarAtaque(p, objetivo ~= p and objetivo or nil, (h.rango or 0) > 3 or objetivo == nil or objetivo == p)
+  self:marcarAtaque(p, objetivo ~= p and objetivo or nil, (h.rango or 0) > 3 or objetivo == nil or objetivo == p, true)
   if h.dash and objetivo then
     local dx, dy = objetivo.x - p.x, objetivo.y - p.y
     local d = math.max(0.1, math.sqrt(dx * dx + dy * dy))
@@ -1356,11 +1375,11 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
     curar = "cura", bendicion = "sagrado", castigo = "sagrado", consagrar = "sagrado",
     desgarro = "corte", furia = "grito", sombra = "magia", meteoro = "fuego",
     flecha_veneno = "flecha", paso_agil = "flecha", sanacion = "cura", juicio = "sagrado",
-    estocada = "corte", barrido = "corte", embestida = "corte", jabalina = "flecha", tormenta_lanzas = "flecha",
-    muro_lanzas = "grito", toque_necro = "magia", espinas = "magia", maldecir = "magia", alzar_esqueletos = "magia",
-    drenar = "magia", espectro = "magia",
+    estocada = "lanza", barrido = "lanza", embestida = "lanza", jabalina = "flecha", tormenta_lanzas = "lanza",
+    muro_lanzas = "grito", toque_necro = "oscuro", espinas = "oscuro", maldecir = "oscuro", alzar_esqueletos = "oscuro",
+    drenar = "oscuro", espectro = "oscuro",
   }
-  self:sonar(sonidos[idh] or "magia")
+  self:sonar(sonidos[idh] or "magia", p)
   local ex = objetivo and objetivo.x or p.x
   local ey = objetivo and objetivo.y or p.y
   if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" or h.tipo == "invocar" then
@@ -1388,7 +1407,7 @@ function Mundo:aprenderHabilidad(p, id)
   self:recalcular(p)
   local nombre = Arbol.nombre(nodo)
   self:mensaje("sistema", "", (nuevo == 1 and "Aprendes " or "Mejoras ") .. nombre .. " (rango " .. nuevo .. ").", p)
-  self:sonar("cura")
+  self:sonar("cura", p)
   return nil
 end
 
@@ -2281,7 +2300,7 @@ function Mundo:encantar(p, donde, ref)
   if math.random() < Encanto.prob(enc) then
     nuevo = enc + 1
     self:mensaje("sistema", "", it.nombre .. " sube a +" .. nuevo .. ".", p)
-    self:sonar("magia")
+    self:sonar("magia", p)
     self:numero(p, "+" .. nuevo, { 0.7, 0.9, 1 })
   elseif Encanto.bajaAlFallar(enc) then
     nuevo = enc - 1
@@ -2753,7 +2772,7 @@ function Mundo:entregarMision(p, id)
     local err = self:aceptarMision(p, sig.id)
     if err then self:mensaje("sistema", "", "Siguiente paso de la cadena: " .. err, p) end
   end
-  self:sonar("magia")
+  self:sonar("magia", p)
   return nil
 end
 
@@ -3335,7 +3354,14 @@ function Mundo:foto(pid)
     end
   end
   local sonidos = {}
-  for i = 1, math.min(#self.sonidos, 8) do sonidos[i] = self.sonidos[i] end
+  for _, ev in ipairs(self.sonidos) do
+    if #sonidos >= 14 then break end
+    if ev.e and ev.x then
+      if p and self:mismoLugar(p, ev.e) and Util.dist(p.x, p.y, ev.x, ev.y) < 26 then
+        sonidos[#sonidos + 1] = { n = ev.n, x = math.floor(ev.x * 10) / 10, y = math.floor(ev.y * 10) / 10 }
+      end
+    end
+  end
   return {
     ents = ents, tu = tu, msgs = msgs, gloria = self.gloria, instancia = self.instancia,
     resumen = self._resumen, duenos = duenos, sesiones = sesiones,

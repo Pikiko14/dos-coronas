@@ -430,7 +430,7 @@ function M.instalar(Mundo)
       end
     end
     cofre.vivo, cofre.borrar = false, true
-    self:sonar("cura")
+    self:sonar("cura", e)
   end
 
   -- E dentro de una mazmorra: abrir el cofre cercano o salir por la puerta.

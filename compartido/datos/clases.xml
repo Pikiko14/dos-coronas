@@ -20,7 +20,7 @@
       <mano x="52" y="50"/>
     </recorte>
   </clase>
-  <clase id="clerigo" orden="4" nombre="Clérigo" arma="maza" atk="5" atkN="0.6" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="magico" danoMul="1" def="3" defN="0.6" desc="Cura y bendice a los suyos, y castiga con luz a quien se acerque." hoja="humanos" hp="128" hpN="10" matk="11" matkN="1.6" mdef="8" mdefN="1.5" mp="155" mpN="22" porDir="1" proyectil="true" rango="5.8" rol="Curación, apoyo y castigo" spd="4.55">
+  <clase id="clerigo" orden="4" nombre="Clérigo" arma="maza" atk="5" atkN="0.6" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="magico" danoMul="1" def="3" defN="0.6" desc="Cura y bendice a los suyos, y castiga con luz a quien se acerque." hoja="humanos" hp="100" hpN="10" matk="11" matkN="1.6" mdef="8" mdefN="1.5" mp="155" mpN="22" porDir="1" proyectil="true" rango="5.8" rol="Curación, apoyo y castigo" spd="4.55">
     <recorte h="88" w="68" x="56" y="220">
       <mano x="58" y="56"/>
     </recorte>
@@ -30,7 +30,7 @@
       <mano x="14" y="34"/>
     </recorte>
   </clase>
-  <clase id="nigromante" orden="6" faccion="umbra" nombre="Nigromante" arma="baculo" atk="5" atkN="0.7" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="magico" danoMul="1" def="3" defN="0.6" desc="Maldice, drena la vida y alza esqueletos y espectros que luchan a su lado." hoja="humanos" hp="104" hpN="10" matk="16" matkN="2.6" mdef="8" mdefN="1.5" mp="175" mpN="26" porDir="1" proyectil="true" rango="6.6" rol="Maná, maldiciones y esbirros" spd="4.5">
+  <clase id="nigromante" orden="6" faccion="umbra" nombre="Nigromante" arma="baculo" atk="5" atkN="0.7" base="0" cuadros="1" cuerpo="cuerpo" danoBasico="magico" danoMul="1" def="3" defN="0.6" desc="Maldice, drena la vida y alza esqueletos y espectros que luchan a su lado." hoja="humanos" hp="110" hpN="10" matk="16" matkN="2.6" mdef="8" mdefN="1.5" mp="175" mpN="26" porDir="1" proyectil="true" rango="6.6" rol="Maná, maldiciones y esbirros" spd="4.5">
     <recorte h="84" w="68" x="340" y="20">
       <mano x="50" y="40"/>
     </recorte>

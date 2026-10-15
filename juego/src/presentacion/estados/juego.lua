@@ -171,7 +171,7 @@ function Juego.tickCliente(app, dt)
       if app.marcaPing then app.ping = love.timer.getTime() - app.marcaPing end
       app.marcaPing = love.timer.getTime()
       mezclar(app, msg.snap)
-      for _, nombre in ipairs(app.mundo.sonidosRed or {}) do Sonido.tocar(nombre) end
+      for _, ev in ipairs(app.mundo.sonidosRed or {}) do Sonido.evento(ev, app.jugador) end
       app.mundo.sonidosRed = {}
     end
   end
@@ -185,7 +185,7 @@ function Juego.actualizar(app, dt)
       app.jugador.deseoX, app.jugador.deseoY = x, y
     end
     app.mundo:actualizar(dt)
-    for _, s in ipairs(app.mundo.sonidos) do Sonido.tocar(s) end
+    for _, ev in ipairs(app.mundo.sonidos) do Sonido.evento(ev, app.jugador) end
     app.mundo.sonidos = {}
   end
   -- con el panel de gremio abierto se pide la lista al servidor cada par de segundos
