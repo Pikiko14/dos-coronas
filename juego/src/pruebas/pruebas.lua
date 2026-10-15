@@ -1806,8 +1806,44 @@ function Pruebas.prepararFoto(app)
   app.foto = { paso = "menu", espera = 0 }
 end
 
+-- DC_FOTO_CASAS=1: solo fotos de casas (exterior albor, exterior umbra e interior)
+local function fotoCasas(app)
+  local foto = app.foto
+  local function junto(ciudadId, n)
+    for _, c in ipairs(app.mundo.mapas.mundo.ciudades) do
+      if c.id == ciudadId then
+        local casas = {}
+        for _, e in ipairs(app.mundo.mapas.mundo.edificios) do
+          if not e.tienda and e.x >= c.x and e.x <= c.x + c.w and e.y >= c.y and e.y <= c.y + c.h then casas[#casas + 1] = e end
+        end
+        local e = casas[n] or casas[1]
+        app.jugador.x, app.jugador.y = e.x + e.w / 2, e.y + e.h + 2.5
+      end
+    end
+  end
+  app.estado = "juego"
+  Interfaz.panel = nil
+  if foto.paso == "menu" then
+    foto.paso = "lago"
+    for _, c in ipairs(app.mundo.mapas.mundo.ciudades) do
+      if c.id == "auroria" then app.jugador.x, app.jugador.y = c.x + c.w / 2 - 17, c.y + c.h - 8.5 end
+    end
+  elseif foto.paso == "lago" then foto.paso = "casa_albor" junto("auroria", 3)
+  elseif foto.paso == "casa_albor" then foto.paso = "casa_umbra" app.jugador.modo = "mundo" junto("nocturnia", 3)
+  elseif foto.paso == "casa_umbra" then
+    foto.paso = "casa_dentro"
+    local j = app.jugador
+    j.modo, j.casaId = "casa", "demo"
+    j.casas = { demo = { muebles = { cama = true, cofre = true, mesa = true, estandarte = true }, cofre = {} } }
+    local sal = app.mundo.mapas.casa.salida
+    j.x, j.y = sal.x - 6, 4.5
+  else foto.paso = "fin" love.event.quit(0) end
+  foto.espera = 0
+end
+
 local function avanzarFoto(app)
   local foto = app.foto
+  if os.getenv("DC_FOTO_CASAS") then return fotoCasas(app) end
   if foto.paso == "menu" then
     foto.paso = "cuenta"
     app.estado = "cuenta"

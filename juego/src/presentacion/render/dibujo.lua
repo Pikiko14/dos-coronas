@@ -3,6 +3,7 @@ local Atlas = require("src.presentacion.render.atlas")
 local Campo = require("src.presentacion.render.campo")
 
 local Terreno = require("src.presentacion.render.terreno")
+local Casas = require("src.presentacion.render.casas")
 local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
 local Trampas = require("src.presentacion.render.trampas")
@@ -329,6 +330,7 @@ function D.escena(mundo, jugador, cam, mx, my)
   end
   if pz == 0 and jugador.modo == "mundo" then
     marcarTiendas(mapa, jugador, cam, radio)
+    Casas.humo(mapa, cam, mundo.tiempo or 0, jugador.x, jugador.y, radio)
     -- flecha dorada hacia el destino de la misión que sigues
     if D.flechaMision then D.flechaMision(jugador, jugador.x * TILE - cam.x, jugador.y * TILE - cam.y) end
   end

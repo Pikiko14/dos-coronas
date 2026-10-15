@@ -4,6 +4,8 @@
 local Arte = require("src.presentacion.render.arte")
 local Auto = require("src.presentacion.render.autotile")
 local Objetos = require("src.presentacion.render.objetos")
+local Detalle = require("src.presentacion.render.casas")
+local InteriorCasa = require("src.presentacion.render.interior_casa")
 
 local T = {}
 
@@ -285,6 +287,9 @@ local function dibujarInterior(mapa, x, y, px, py)
   if tipo == "madera" then
     -- parquet de la lámina interior (A5, fila 2)
     love.graphics.draw(im.ia5, Arte.quad(im.ia5, 0, 2 * 32, 32, 32), px, py)
+    InteriorCasa.interior(mapa, x, y, px, py, tipo)
+  elseif InteriorCasa.interior(mapa, x, y, px, py, tipo) then
+    -- pared de la casa pintada por código
   else
     -- muro de piedra
     love.graphics.draw(im.ia5, Arte.quad(im.ia5, (2 + (x + y) % 2) * 32, 0, 32, 32), px, py)
@@ -525,6 +530,7 @@ local function dibujarEdificio(e, ox, oy)
       end
     end
   end
+  Detalle.fachada(e, ox, oy, solido, esTecho, cima, filasTecho, puertaX, puertaY)
   -- ventanas en la primera fila de fachada de las columnas 1 y w-2 (si no son la puerta)
   love.graphics.setColor(1, 1, 1, 1)
   for _, fx in ipairs({ 1, e.w - 2 }) do
@@ -533,6 +539,8 @@ local function dibujarEdificio(e, ox, oy)
       love.graphics.draw(im.b, Arte.quad(im.b, 32, 4 * 32, 32, 32), (e.x + fx) * TILE - ox, (e.y + fy) * TILE - oy)
     end
   end
+  Detalle.ventanas(e, ox, oy, solido, cima, filasTecho, puertaX)
+  Detalle.dibujarChimenea(e, ox, oy)
   if e.estilo == "establo" then
     -- puerta doble de granero (tres casillas de ancho y dos de alto) con aspas y un hueco oscuro entre las hojas
     local px, py = (e.x + puertaX) * TILE - ox, (e.y + puertaY) * TILE - oy
@@ -572,6 +580,7 @@ local function dibujarEdificio(e, ox, oy)
   love.graphics.rectangle("fill", dx + 15, dy + 8, 2, TILE - 8)
   love.graphics.setColor(0.95, 0.8, 0.3, 1)
   love.graphics.circle("fill", dx + 21, dy + 21, 1.6)
+  Detalle.puerta(e, dx, dy)
 end
 
 -- Bloques cacheados ----------------------------------------------------

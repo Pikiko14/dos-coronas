@@ -588,6 +588,29 @@ local function estamparCiudad(mapa, ciudad)
       end
     end
   end
+  -- Ciudades grandes: un lago a cada lado de la avenida, en el espacio verde de debajo de las últimas casas
+  if grande then
+    for _, cxl in ipairs({ medio - 17, medio + 17 }) do
+      local cyl, rxl, ryl = h - 5, 11, 2.6
+      for yy = cyl - 4, cyl + 4 do
+        for xx = cxl - rxl - 2, cxl + rxl + 2 do
+          if xx >= 3 and xx <= w - 4 and yy >= 3 and yy <= h - 3
+            and not avenida(xx, yy) and not enPlaza(xx, yy) and not reservado[xx .. "," .. yy] then
+            local d = ((xx - cxl) / rxl) ^ 2 + ((yy - cyl) / ryl) ^ 2 + (azar(xx, yy, 15) - 0.5) * 0.25
+            if d <= 1 then
+              setSuelo(mapa, x0 + xx, y0 + yy, "agua", "ciudad", ciudad.faccion)
+              reservado[xx .. "," .. yy] = true
+              ocupado[xx .. "," .. yy] = true
+            elseif d <= 1.55 then
+              setSuelo(mapa, x0 + xx, y0 + yy, "arena", "ciudad", ciudad.faccion)
+              reservado[xx .. "," .. yy] = true
+              ocupado[xx .. "," .. yy] = true
+            end
+          end
+        end
+      end
+    end
+  end
   -- Detalles: macetas junto a las puertas, árboles y faroles a los lados de las avenidas y flores sueltas
   for i, pu in ipairs(puertas) do
     local lx, ly = pu.x - x0, pu.y - y0
