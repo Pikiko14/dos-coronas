@@ -10,7 +10,9 @@ end
 
 function Menu.cargando()
   love.graphics.setColor(0.9, 0.85, 0.7)
-  love.graphics.print("Forjando el mundo con las láminas...", 40, 40)
+  local P = require("src.presentacion.render.propias")
+  local detalle = (P.totalWarm and P.totalWarm > 0) and ("  Preparando personajes " .. P.hechosWarm .. "/" .. P.totalWarm) or ""
+  love.graphics.print("Forjando el mundo con las láminas..." .. detalle, 40, 40)
 end
 
 return Menu

@@ -32,8 +32,8 @@ F.def = {
     part = { tipo = "nube", n = 6, c = { { 1, 1, 1 } }, radio = 16, alto = 18, vel = 0.35, tam = 5, capa = "detras" },
   },
   fenix = {
-    aura = { 1, 0.5, 0.1 }, alas = "fenix",
-    part = { tipo = "llama", n = 14, c = { { 1, 0.9, 0.35 }, { 1, 0.35, 0.05 } }, radio = 20, alto = 34, vel = 0.9, tam = 4.5 },
+    aura = { 1, 0.5, 0.1 },
+    part = { tipo = "llama", n = 9, c = { { 1, 0.9, 0.35 }, { 1, 0.35, 0.05 } }, radio = 22, alto = 40, vel = 0.9, tam = 4 },
   },
   corcel_astral = {
     aura = { 0.55, 0.4, 1 }, halo = { 0.7, 0.6, 1 },

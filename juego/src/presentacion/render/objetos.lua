@@ -99,13 +99,13 @@ end
 -- finas y cada fila se desplaza una fracción de píxel distinta: la base queda quieta y la copa se dobla en una curva suave,
 -- sin saltos. amp = píxeles que se mueve la copa al máximo, vel = rapidez del vaivén. El viento avanza como una ola por el mapa
 -- (la fase sale de la posición) y sube y baja con ráfagas lentas.
+-- Solo se mecen las plantas altas, que es donde se nota (árboles, palmeras y arbustos grandes): la hierba y las flores bajas
+-- son cientos por pantalla y un movimiento de un píxel no se ve, así que se dibujan normales (y mucho más baratas).
 local VIVAS = {
   arbol = { 2.4, 0.9 }, arbol_pino = { 2.0, 1.0 }, palma = { 3.0, 1.1 },
-  arbusto = { 1.2, 1.2 }, matorral = { 1.1, 1.2 }, matas = { 1.1, 1.4 }, helecho = { 1.3, 1.4 },
-  hierba_alta = { 1.5, 1.5 }, hierba_seca = { 1.3, 1.5 }, flor_amarilla = { 1.1, 1.4 }, flor_blanca = { 1.1, 1.4 },
-  flor_roja = { 1.1, 1.4 }, flores_mixtas = { 1.1, 1.4 }, flores_naranja = { 1.0, 1.4 }, arbusto_rosa = { 1.1, 1.2 },
-  cultivo = { 0.9, 1.4 },
+  arbusto = { 1.2, 1.2 }, arbusto_rosa = { 1.1, 1.2 },
 }
+local MALLAS_POR_SPRITE = 12   -- se turnan: actualizar una y otra vez el mismo búfer en un cuadro hace esperar a la GPU
 local TIRA = 4   -- alto de cada fila de la malla, en píxeles
 
 -- La malla de un sprite (una sola vez): su propia copia con filtro suave, para que los desplazamientos de fracción de píxel no
@@ -119,11 +119,13 @@ local function malla(t)
     love.graphics.setCanvas(cv)
     love.graphics.clear(0, 0, 0, 0)
     love.graphics.origin()
-    love.graphics.setBlendMode("replace", "premultiplied")
+    love.graphics.setBlendMode("alpha")
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.draw(t.img, t.quad, 0, 0)
     love.graphics.pop()
-    cv:setFilter("linear", "linear")
+    -- (el lienzo queda con el color ya multiplicado por la transparencia: se dibuja en modo "premultiplied", si no los
+    -- bordes salen con un halo oscuro que parpadea al moverse)
+    cv:setFilter("nearest", "nearest")
     local filas = math.max(2, math.ceil(t.h / TIRA))
     local verts = {}
     for k = 0, filas do
@@ -131,12 +133,27 @@ local function malla(t)
       verts[#verts + 1] = { 0, v * t.h, 0, v, 1, 1, 1, 1 }
       verts[#verts + 1] = { t.w, v * t.h, 1, v, 1, 1, 1, 1 }
     end
-    local m = love.graphics.newMesh(verts, "strip", "stream")
-    m:setTexture(cv)
-    t.malla, t.filas, t.verts = m, filas, verts
+    local lista = {}
+    for i = 1, MALLAS_POR_SPRITE do
+      local m = love.graphics.newMesh(verts, "strip", "stream")
+      m:setTexture(cv)
+      lista[i] = m
+    end
+    t.malla, t.mallas, t.turno, t.filas, t.verts = lista[1], lista, 1, filas, verts
   end)
   if not ok then t.malla = false end
   return t.malla
+end
+
+-- Prepara de antemano las mallas de las plantas que se mecen (si no, la primera vez que aparece cada una en pantalla hay un tirón).
+function O.precalentar()
+  for nombre in pairs(VIVAS) do
+    local lista = DEF[nombre]
+    for v = 0, (lista and #lista or 0) - 1 do
+      local t = trozo(nombre, v)
+      if t and t.h >= 8 then malla(t) end
+    end
+  end
 end
 
 -- Dibuja con la base en (sx, sy) (centro de abajo de la casilla). fase: desfase del vaivén de las plantas vivas.
@@ -147,8 +164,10 @@ function O.dibujar(nombre, variante, sx, sy, tinte, alfa, fase)
   else love.graphics.setColor(1, 1, 1, alfa or 1) end
   local viva = VIVAS[nombre]
   if viva and t.h >= 8 then
-    local m = malla(t)
-    if m then
+    local m0 = malla(t)
+    if m0 then
+      t.turno = t.turno % MALLAS_POR_SPRITE + 1
+      local m = t.mallas[t.turno]
       local ahora = love.timer.getTime()
       local f = fase or 0
       -- ráfagas lentas y un vaivén propio con un segundo armónico suave, para que no sea un péndulo perfecto
@@ -164,7 +183,11 @@ function O.dibujar(nombre, variante, sx, sy, tinte, alfa, fase)
         b[1], b[2] = x0 + t.w + d, y0 + (k / filas) * t.h
       end
       m:setVertices(verts)
+      local r, g, b, a = love.graphics.getColor()
+      love.graphics.setBlendMode("alpha", "premultiplied")
+      love.graphics.setColor(r * a, g * a, b * a, a)
       love.graphics.draw(m)
+      love.graphics.setBlendMode("alpha")
       return true
     end
   end

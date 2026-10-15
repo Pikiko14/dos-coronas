@@ -64,6 +64,71 @@ function Pruebas.correr()
       fallar(errores, "efecto del poder " .. id, Efectos.def[id] ~= nil)
     end
   end)
+  paso("rendimiento: el terreno con plantas vivas no se come el cuadro", function()
+    local Terreno = require("src.presentacion.render.terreno")
+    local Objetos = require("src.presentacion.render.objetos")
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.mundo
+    -- una zona con muchos árboles y matas
+    local mejor, n0 = nil, -1
+    for _, pu in ipairs(mapa.puestos) do
+      local n = 0
+      for _, pr in ipairs(mapa.props) do if math.abs(pr.x - pu.x) < 20 and math.abs(pr.y - pu.y) < 12 and pr.tipo:find("arbol") then n = n + 1 end end
+      if n > n0 then mejor, n0 = pu, n end
+    end
+    local cv = love.graphics.newCanvas(1280, 720)
+    local function medir(etiqueta)
+      love.graphics.setCanvas({ cv, stencil = true })
+      local t0 = love.timer.getTime()
+      for i = 1, 40 do
+        love.graphics.clear(0, 0, 0, 1)
+        Terreno.dibujar(mapa, (mejor.x - 20) * 32, (mejor.y - 11) * 32, 1280, 720, 0)
+        for _, pr in ipairs(mapa.props) do
+          if math.abs(pr.x - mejor.x) < 21 and math.abs(pr.y - mejor.y) < 12 then
+            Objetos.dibujar(pr.tipo, 0, (pr.x - mejor.x + 20) * 32 + 16, (pr.y - mejor.y + 11) * 32 + 32, nil, nil, pr.x * 0.35 + pr.y * 0.2)
+          end
+        end
+      end
+      love.graphics.setCanvas()
+      local ms = (love.timer.getTime() - t0) / 40 * 1000
+      Log.info(string.format("rendimiento %s: %.2f ms por cuadro (%d arboles cerca)", etiqueta, ms, n0))
+      return ms
+    end
+    medir("calentar")
+    local ms = medir("terreno+props")
+    fallar(errores, "terreno y objetos de un bosque en menos de 8 ms por cuadro", ms < 8, string.format("%.2f ms", ms))
+  end)
+  paso("rendimiento: memoria que genera el HUD y el dibujo por cuadro", function()
+    local Misiones = require("compartido.dominio.misiones")
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Medidor", faccion = "albor", clase = "guerrero", nivel = 12 })
+    for _, c in ipairs(mundo.mapas.mundo.ciudades) do if c.id == "auroria" then pj.x, pj.y = c.x + c.w / 2, c.y + c.h / 2 + 6 end end
+    pj.misiones = { q_auroria = { aceptada = true, entregada = false, progreso = 2 } }
+    Misiones.seguida = "q_auroria"
+    Interfaz.escala, Interfaz.panel = 1, nil
+    local cv = love.graphics.newCanvas(1280, 720)
+    love.graphics.setCanvas({ cv, stencil = true })
+    for _ = 1, 30 do Interfaz.hud(mundo, pj, 1280, 720) end
+    collectgarbage() collectgarbage()
+    local m0 = collectgarbage("count")
+    collectgarbage("stop")
+    for _ = 1, 120 do Interfaz.hud(mundo, pj, 1280, 720) end
+    local kb = (collectgarbage("count") - m0) / 120
+    collectgarbage("restart")
+    love.graphics.setCanvas()
+    Misiones.seguida = nil
+    Log.info(string.format("rendimiento hud: %.1f KB de basura por cuadro", kb))
+    fallar(errores, "el HUD no genera basura de más por cuadro", kb < 40, string.format("%.1f KB", kb))
+    -- marcas de PNJ
+    collectgarbage() collectgarbage()
+    m0 = collectgarbage("count")
+    collectgarbage("stop")
+    for i = 1, 200 do Misiones.marcaNpc(pj, "c_auroria") end
+    local kb2 = (collectgarbage("count") - m0) / 200
+    collectgarbage("restart")
+    Log.info(string.format("rendimiento marcaNpc: %.2f KB por llamada", kb2))
+  end)
   paso("objetos y terreno", function()
     local Objetos = require("src.presentacion.render.objetos")
     for _, nombre in ipairs({ "arbol", "arbol_pino", "arbol_seco", "farol", "pozo", "estatua_albor",
@@ -865,7 +930,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
         local h = Propias.hoja(def.generada)
         fallar(errores, "hoja de " .. def.generada, h ~= nil and h:getWidth() == 96 and h:getHeight() == 128)
         love.graphics.push("all")
-        love.graphics.setCanvas(cv)
+        love.graphics.setCanvas({ cv, stencil = true })
         local ok, err = pcall(Personajes.dibujar, def, 2, true, 0.3, 100, 100)
         love.graphics.pop()
         fallar(errores, "se dibuja " .. def.generada, ok, tostring(err))
@@ -876,7 +941,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
         local def = Personajes.monturaDe(esp, faccion)
         fallar(errores, "montura " .. esp .. "/" .. faccion, def and def.generada and Propias.hoja(def.generada) ~= nil)
         love.graphics.push("all")
-        love.graphics.setCanvas(cv)
+        love.graphics.setCanvas({ cv, stencil = true })
         local ok, err = pcall(Personajes.dibujar, def, 3, true, 0.5, 100, 100)
         love.graphics.pop()
         fallar(errores, "se dibuja " .. esp, ok, tostring(err))
@@ -964,7 +1029,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       for _, clase in ipairs({ "guerrero", "mago", "cazador", "clerigo" }) do
         for dir = 1, 4 do
           love.graphics.push("all")
-          love.graphics.setCanvas(cv)
+          love.graphics.setCanvas({ cv, stencil = true })
           local ok2, err2 = pcall(function()
             Personajes.dibujar(d, dir, true, 0.3, 100, 100)
             Personajes.dibujar(Personajes.clases[clase][f], dir, false, 0, 100, 100 - d.altura)
@@ -1009,7 +1074,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
           for dir = 1, 4 do
             e.dir = dir
             love.graphics.push("all")
-            love.graphics.setCanvas(cv)
+            love.graphics.setCanvas({ cv, stencil = true })
             local ok, err = pcall(Dibujo.entidad, e, 150, 150, mundo, e)
             love.graphics.pop()
             fallar(errores, "se dibuja " .. addon .. " sobre " .. montura .. " mirando " .. dir, ok, tostring(err))
@@ -1123,7 +1188,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
         fallar(errores, "la hoja de " .. id .. " mide 5x3 cuadros de 192", img:getWidth() == 960 and img:getHeight() == 576)
         for _, tt in ipairs({ 0, 0.2, 0.5, 0.8, 1 }) do
           love.graphics.push("all")
-          love.graphics.setCanvas(cv)
+          love.graphics.setCanvas({ cv, stencil = true })
           local ok, err = pcall(Efectos.cuadro, id, tt, 1, 150, 150)
           love.graphics.pop()
           fallar(errores, "se dibuja " .. id .. " en t=" .. tt, ok, tostring(err))
@@ -1131,7 +1196,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
         end
         -- la miniatura de la barra de poderes
         love.graphics.push("all")
-        love.graphics.setCanvas(cv)
+        love.graphics.setCanvas({ cv, stencil = true })
         local ok2, err2 = pcall(Efectos.icono, id, 10, 10, 40)
         love.graphics.pop()
         fallar(errores, "miniatura de " .. id, ok2, tostring(err2))
@@ -1143,7 +1208,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       fallar(errores, "proyectil " .. tipo .. " de 4 cuadros", img:getWidth() == 256 and img:getHeight() == 64)
       fallar(errores, "impacto de " .. tipo, Efectos.def[tipo] ~= nil)
       love.graphics.push("all")
-      love.graphics.setCanvas(cv)
+      love.graphics.setCanvas({ cv, stencil = true })
       local ok, err = pcall(Dibujo.proyectil, { tipo = tipo, x = 0, y = 0, tx = 5, ty = 2 }, 150, 150)
       love.graphics.pop()
       fallar(errores, "se dibuja el proyectil " .. tipo, ok, tostring(err))

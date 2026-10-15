@@ -93,7 +93,19 @@ function App.cargar()
   Log.info("arranque " .. (App.modoTest and "test" or App.modoFoto and "foto" or App.modoBot and "bot" or App.modoAuto and "auto" or "cliente"))
 end
 
+-- Registro de tirones: si un cuadro tarda más de 60 ms se anota en tirones.txt (carpeta de datos del juego) con lo que había en
+-- pantalla, para poder ver qué los causa. Como mucho 60 líneas por sesión.
+local tironesAnotados = 0
+local function anotarTiron(dt)
+  if dt < 0.06 or tironesAnotados >= 60 or App.fase < 2 then return end
+  tironesAnotados = tironesAnotados + 1
+  local linea = string.format("%s tirón de %d ms (estado=%s panel=%s fps=%d mem=%.0fMB)\n", os.date("%H:%M:%S"), math.floor(dt * 1000), tostring(App.estado),
+    tostring(Interfaz.panel), love.timer.getFPS(), collectgarbage("count") / 1024)
+  pcall(love.filesystem.append, "tirones.txt", linea)
+end
+
 function App.actualizar(dt)
+  anotarTiron(dt or 0)
   dt = math.min(dt or 0, 0.05)
   if App.fase == 0 then App.fase = 1 return end
   if App.fase == 1 then
@@ -104,9 +116,20 @@ function App.actualizar(dt)
     if App.modoWeb then require("src.pruebas.exportar_web").correr() return end
     if App.modoFoto then Pruebas.prepararFoto(App) App.fase = 2 return end
     if App.modoActualizar then Actualizacion.modoPrueba = true Actualizacion.iniciar() App.estado = "actualizando" App.fase = 2 return end
-    App.estado = "menu"
-    App.fase = 2
-    if not App.modoTest and not App.modoFoto and not App.modoBot and not App.modoAuto then Actualizacion.iniciar() end
+    -- los sprites generados y las mallas de los árboles se preparan ahora, antes de jugar (ver Propias.precalentar)
+    pcall(function() require("src.presentacion.render.objetos").precalentar() end)
+    App.fase = 1.5
+    App.t0Warm = love.timer.getTime()
+    return
+  end
+  if App.fase == 1.5 then
+    local okW, listo = pcall(function() return require("src.presentacion.render.propias").precalentar(0.03) end)
+    if not okW or listo then
+      Log.info(string.format("arranque: sprites preparados en %.2f s (%s)", love.timer.getTime() - (App.t0Warm or 0), tostring(okW)))
+      App.estado = "menu"
+      App.fase = 2
+      if not App.modoTest and not App.modoFoto and not App.modoBot and not App.modoAuto then Actualizacion.iniciar() end
+    end
     return
   end
   Actualizacion.actualizar(dt)

@@ -61,18 +61,45 @@ function Pruebas.correr()
     local porCiudad = {}
     for _, camp in ipairs(mundo.mapas.mundo.campamentos) do
       local mon = Datos.monstruo(camp.monstruo)
-      if camp.ciudad and mon and not camp.z then
+      if camp.ciudad and mon and not camp.z and mundo.mapas.mundo.cont[math.floor(camp.x)][math.floor(camp.y)] <= 2 then
         local t = porCiudad[camp.ciudad] or { min = 99, max = 0 }
         t.min, t.max = math.min(t.min, mon.nivel), math.max(t.max, mon.nivel)
         porCiudad[camp.ciudad] = t
       end
     end
-    local todas = true
-    for _, c in ipairs(mundo.mapas.mundo.ciudades) do
-      local t = porCiudad[c.id]
-      if not t or t.min > 3 or t.max < 25 then todas = false end
+    -- cada ciudad se especializa en una banda de niveles: sus criaturas son de ese tramo (con un margen en los bordes)
+    local Mapa = require("compartido.dominio.mapa")
+    local enBanda, bandas = true, {}
+    local medias = {}
+    for _, camp in ipairs(mundo.mapas.mundo.campamentos) do
+      local mon = Datos.monstruo(camp.monstruo)
+      if camp.ciudad and mon and not camp.z and mundo.mapas.mundo.cont[math.floor(camp.x)][math.floor(camp.y)] <= 2 then
+        local t = medias[camp.ciudad] or { suma = 0, n = 0, fuera = 0 }
+        t.suma, t.n = t.suma + mon.nivel, t.n + 1
+        local b0 = Mapa.bandas[camp.ciudad]
+        if b0 and (mon.nivel < b0.lo - 8 or mon.nivel > b0.hi + 8) then t.fuera = t.fuera + 1 end
+        medias[camp.ciudad] = t
+      end
     end
-    fallar(errores, "cada ciudad tiene zonas para todos los niveles", todas)
+    for _, c in ipairs(mundo.mapas.mundo.ciudades) do
+      local t, b = porCiudad[c.id], Mapa.bandas[c.id]
+      local m = medias[c.id]
+      -- el nivel medio de sus criaturas cae dentro de su banda (con un punto de margen) y casi ninguna queda muy fuera de ella
+      if not t or not b or not m or m.suma / m.n < b.lo - 1 or m.suma / m.n > b.hi + 1 or m.fuera > m.n * 0.15 then enBanda = false end
+      if b then bandas[c.id] = b end
+    end
+    fallar(errores, "cada ciudad se especializa en una banda de niveles", enBanda)
+    -- en cada continente las bandas cubren del 1 al 30 sin huecos y la capital tiene la primera
+    for _, ids in ipairs({ { "auroria", "puerto_sol", "henar", "liria", "alba" }, { "nocturnia", "puerto_sombra", "velo", "nox", "eclipse" } }) do
+      local ocupado, capitalPrimera = {}, bandas[ids[1]] and bandas[ids[1]].lo == 1
+      for _, id in ipairs(ids) do
+        local b = bandas[id]
+        if b then for n = b.lo, b.hi do ocupado[n] = true end end
+      end
+      local completo = true
+      for n = 1, 30 do if not ocupado[n] then completo = false end end
+      fallar(errores, "las bandas de un continente cubren los 30 niveles y la capital empieza en el 1", completo and capitalPrimera)
+    end
     local mobs = 0
     for _, e in pairs(mundo.entidades) do if e.kind == "monstruo" then mobs = mobs + 1 end end
     fallar(errores, "hay muchas más criaturas", mobs >= 1000, tostring(mobs))
@@ -3799,6 +3826,29 @@ mundo.tiempo = 100
     nuevo.misiones.q_auroria_2 = { aceptada = true, entregada = false, progreso = 0 }
     local d1 = Misiones.destinos(nuevo, Misiones.por_id.q_auroria_2, nuevo.misiones.q_auroria_2)
     fallar(errores, "para cazar, los destinos son los campamentos de la criatura", #d1 >= 1 and d1[1].tipo == "criatura")
+  end)
+  paso("mazmorras: la puerta de cada una siempre está en el mismo sitio, en una zona de su nivel", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local a = Mundo.nuevo().mapas.mundo
+    -- un segundo mundo con otro estado del azar: las puertas no se mueven
+    math.randomseed(12345)
+    for _ = 1, 50 do math.random() end
+    local b = Mundo.nuevo().mapas.mundo
+    local iguales = #a.mazmorras == #Datos.mazmorras and #a.mazmorras == #b.mazmorras
+    for i, z in ipairs(a.mazmorras) do
+      local y = b.mazmorras[i]
+      if not y or y.x ~= z.x or y.y ~= z.y or y.id ~= z.id then iguales = false end
+    end
+    fallar(errores, "las puertas están siempre en el mismo sitio", iguales)
+    for _, def in ipairs(Datos.mazmorras) do
+      local z
+      for _, k in ipairs(a.mazmorras) do if k.id == def.id then z = k end end
+      fallar(errores, def.id .. " tiene puerta", z ~= nil)
+      if z then
+        fallar(errores, def.id .. " está en el continente " .. tostring(def.continente), a.cont[z.x][z.y] == (def.continente or 1))
+        fallar(errores, def.id .. " está en una zona de su nivel", math.abs(Mapa.nivelZona(z.x, z.y) - def.nivelMin) <= 2, tostring(Mapa.nivelZona(z.x, z.y)))
+      end
+    end
   end)
   paso("movimiento", function()
     local mundo = Mundo.nuevo()

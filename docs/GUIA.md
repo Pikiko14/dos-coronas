@@ -114,7 +114,11 @@ cambias números a propósito, actualiza esas pruebas.
 - **Facciones y PvP:** Albor vs Umbra. Con un oficio (job) activo se ignora la facción; en modo job solo se montan monturas de transporte.
 - **Ciudades:** muralla, avenidas, plaza central con estatua, farolas, pozos, **bancos, macetas, setos y flores**, casas, tiendas (clériga = pociones, armero, establo),
   rincones temáticos por ciudad. NPC solo dentro de ciudades.
-- **Mazmorras:** generadas por semilla, no lineales, con **trampas**; los monstruos **no reaparecen**; el cofre suelta su botín al suelo y desaparece;
+- **Niveles por región:** cada ciudad de un continente se especializa en una **banda de niveles** (con cinco ciudades: 1-6, 7-12, 13-18, 19-24 y 25-30). La capital
+  tiene siempre la primera, y las bandas se reparten para que las ciudades unidas por camino tengan bandas parecidas. Las criaturas de alrededor son de esa banda y el
+  nivel sube o baja poco a poco hacia la ciudad vecina (`Mapa.nivelZona`, `Mapa.bandas`): no se pasa de nivel 1 a 29 en unos pasos. La isla de la Cicatriz sigue siendo
+  la zona de guerra, siempre de nivel alto.
+- **Mazmorras:** la puerta de cada una está **siempre en el mismo sitio** (se calcula sin azar, en el continente de `mazmorras.xml` y en una zona de su nivel); por dentro se generan por semilla, no lineales, con **trampas**; los monstruos **no reaparecen**; el cofre suelta su botín al suelo y desaparece;
   el loot puede ser de cualquier clase.
 - **Eventos:** *Captura del estandarte* y *Batalla de cristales* (mapas temáticos por facción, no lineales; el portador del cristal se ve; aviso en marquesina).
   Premios: 1000 de oro al equipo ganador del estandarte, monedas del mall (5 ganar / 2 perder), polvo arcano, pergaminos.

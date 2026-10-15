@@ -171,6 +171,52 @@ function E.correr()
     local f = io.open(Log.carpeta() .. "/capturas/web/arboles_vista.png", "wb")
     if f then f:write(datos:encode("png"):getString()) f:close() end
   end
+  -- hoja de revisión del fénix: 4 direcciones (filas) x 3 cuadros de aleteo, de Albor y de Umbra
+  do
+    local E2, C = 6, 36
+    local cv = love.graphics.newCanvas(6 * C * E2, 4 * C * E2)
+    love.graphics.push("all")
+    love.graphics.setCanvas({ cv, stencil = true })
+    love.graphics.clear(0.3, 0.42, 0.55, 1)
+    for lado, fac in ipairs({ "albor", "umbra" }) do
+      local def = Personajes.monturaDe("fenix", fac)
+      for dir = 1, 4 do
+        for k, t in ipairs({ 0.0, 0.0, 0.25 }) do
+          love.graphics.push()
+          love.graphics.translate(((lado - 1) * 3 + (k - 1)) * C * E2 + 18 * E2, (dir - 1) * C * E2 + 33 * E2)
+          love.graphics.scale(E2, E2)
+          love.graphics.setColor(1, 1, 1, 1)
+          Personajes.dibujar(def, dir, k ~= 2, t + (k == 1 and 0 or 0), 0, 0)
+          love.graphics.pop()
+        end
+      end
+    end
+    love.graphics.pop()
+    local fh = io.open(Log.carpeta() .. "/capturas/web/fenix_vista.png", "wb")
+    if fh then fh:write(cv:newImageData():encode("png"):getString()) fh:close() end
+  end
+  -- el fénix con jinete, en las 4 direcciones
+  do
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local E2, C = 5, 60
+    local cv = love.graphics.newCanvas(4 * C * E2, 2 * C * E2)
+    love.graphics.push("all")
+    love.graphics.setCanvas({ cv, stencil = true })
+    love.graphics.clear(0.3, 0.42, 0.55, 1)
+    for k, par in ipairs({ { "guerrero", "albor" }, { "mago", "umbra" } }) do
+      for dir = 1, 4 do
+        local e = { id = "fj" .. k .. dir, kind = "jugador", clase = par[1], faccion = par[2], montado = "fenix", dir = dir, vivo = true, hp = 10, hpMax = 10, nivel = 5 }
+        love.graphics.push()
+        love.graphics.translate((dir - 1) * C * E2 + 30 * E2, (k - 1) * C * E2 + 42 * E2)
+        love.graphics.scale(E2, E2)
+        Dibujo.entidad(e, 0, 0, { tiempo = 0, entidades = {} }, nil)
+        love.graphics.pop()
+      end
+    end
+    love.graphics.pop()
+    local fh = io.open(Log.carpeta() .. "/capturas/web/fenix_jinete.png", "wb")
+    if fh then fh:write(cv:newImageData():encode("png"):getString()) fh:close() end
+  end
   Log.info("exportar_web: " .. n .. " sprites en " .. Log.carpeta() .. "/capturas/web")
   print("exportar_web: " .. n .. " sprites")
   love.event.quit(0)

@@ -1233,14 +1233,79 @@ local function generarMundo(rng)
       if ok and not dentroCiudad(mapa.ciudades, x, y) then return x + 0.5, y + 0.5 end
     end
   end
-  -- Campamentos de criaturas: alrededor de CADA ciudad hay zonas para todos los niveles. Las criaturas
-  -- de nivel bajo salen cerca de la ciudad y las de nivel alto cada vez mas lejos (anillos). En la
-  -- ciudad de su bioma cada criatura tiene el doble de campamentos.
-  local function puntoAnillo(c, dist)
+  -- Campamentos de criaturas. Cada ciudad de un continente se ESPECIALIZA en un tramo de niveles (su "banda"): la capital en
+  -- el primero (1-6 si hay cinco ciudades), la siguiente en el segundo... hasta el último (25-30). Así, caminando desde una
+  -- ciudad, las criaturas de alrededor son de su banda y el nivel sube poco a poco hacia las ciudades de la banda vecina: nunca
+  -- se pasa de un nivel 1 a un nivel 29 en unos pasos. Las bandas se reparten para que las ciudades unidas por camino tengan
+  -- bandas lo más parecidas posible (se prueban todos los órdenes, con la capital siempre en la primera).
+  local bandas = {}
+  do
+    for _, k in pairs(mapa.continentes) do
+      local ciudades = {}
+      for _, cid in ipairs(k.ciudades or {}) do
+        for _, c in ipairs(mapa.ciudades) do if c.id == cid then ciudades[#ciudades + 1] = c end end
+      end
+      local n = #ciudades
+      if n >= 1 then
+        table.sort(ciudades, function(a, b) return a.id < b.id end)
+        local capital = 1
+        for i, c in ipairs(ciudades) do if c.capital then capital = i end end
+        -- caminos entre las ciudades de este continente
+        local aristas = {}
+        for _, cam in ipairs(mapa.caminos or {}) do
+          local ia, ib
+          for i, c in ipairs(ciudades) do
+            if c.id == cam.a then ia = i end
+            if c.id == cam.b then ib = i end
+          end
+          if ia and ib then aristas[#aristas + 1] = { ia, ib } end
+        end
+        local function costo(orden)         -- orden[i] = posición (banda) de la ciudad i
+          local t = 0
+          for _, e in ipairs(aristas) do t = t + math.abs(orden[e[1]] - orden[e[2]]) end
+          return t
+        end
+        local mejorOrden, mejorCosto
+        local usado, orden = {}, {}
+        local function permutar(i)
+          if i > n then
+            local c = costo(orden)
+            if not mejorCosto or c < mejorCosto then mejorCosto, mejorOrden = c, { unpack(orden) } end
+            return
+          end
+          if i == capital then
+            orden[i] = 1
+            usado[1] = true
+            permutar(i + 1)
+            usado[1] = nil
+            return
+          end
+          for pos = 2, n do
+            if not usado[pos] then
+              usado[pos] = true
+              orden[i] = pos
+              permutar(i + 1)
+              usado[pos] = nil
+            end
+          end
+        end
+        if n == 1 then mejorOrden = { 1 } else permutar(1) end
+        for i, c in ipairs(ciudades) do
+          local p = mejorOrden[i]
+          local lo = math.floor((p - 1) * Datos.NIVEL_MAX / n) + 1
+          local hi = math.floor(p * Datos.NIVEL_MAX / n)
+          bandas[c.id] = { lo = lo, hi = hi, mid = (lo + hi) / 2, orden = p }
+          c.nivelMin, c.nivelMax = lo, hi
+        end
+      end
+    end
+  end
+  M.bandas = bandas
+  local function puntoCerca(c, dmin, dmax, nivelBuscado)
     local ccx, ccy = c.x + c.w / 2, c.y + c.h / 2
-    for _ = 1, 80 do
+    for _ = 1, 90 do
       local ang = rng:int(0, 359) * math.pi / 180
-      local d = dist + rng:int(-9, 9)
+      local d = rng:int(dmin, dmax)
       local x, y = math.floor(ccx + math.cos(ang) * d), math.floor(ccy + math.sin(ang) * d)
       if x > 2 and y > 2 and x < mapa.w - 3 and y < mapa.h - 3 then
         local s = M.get(mapa, x, y)
@@ -1248,40 +1313,47 @@ local function generarMundo(rng)
         local ok = M.transitable(mapa, x, y) and mapa.cont[x][y] == c.cont and b ~= "ciudad" and b ~= "cicatriz" and s ~= "camino" and s ~= "plaza"
         if ok and cercaCiudad(x, y, 10) then ok = false end
         if ok and cercaDePuesto(x, y, 12) then ok = false end
+        if ok and nivelBuscado and math.abs(M.nivelZona(x, y) - nivelBuscado) > M.TOLERANCIA_NIVEL then ok = false end
         if ok then return x + 0.5, y + 0.5 end
       end
     end
   end
-  -- Nivel de la zona en un punto: depende de lo lejos que está de la ciudad MÁS CERCANA, así una
-  -- criatura nunca sale en una zona de otro nivel aunque el anillo de otra ciudad pase por ahí.
+  -- Nivel de la zona en un punto: mezcla suave de las bandas de las ciudades de su continente (cada una pesa más cuanto más
+  -- cerca está), así junto a una ciudad manda su banda y entre dos ciudades el nivel sube o baja poco a poco.
   local function nivelZona(x, y)
-    local md
+    local k = mapa.cont[math.floor(x)] and mapa.cont[math.floor(x)][math.floor(y)]
+    if k == 3 then return Datos.NIVEL_MAX - 2 end   -- la isla de la Cicatriz es la zona de guerra: siempre alta
+    local num, den = 0, 0
     for _, c in ipairs(mapa.ciudades) do
-      local d2 = (c.x + c.w / 2 - x) ^ 2 + (c.y + c.h / 2 - y) ^ 2
-      if not md or d2 < md then md = d2 end
+      local b = bandas[c.id]
+      if b and (k == c.cont or k == nil or k > 2) then
+        local d = math.sqrt((c.x + c.w / 2 - x) ^ 2 + (c.y + c.h / 2 - y) ^ 2) + 14
+        local w = 1 / (d * d * d)
+        num = num + w * b.mid
+        den = den + w
+      end
     end
-    return math.max(1, math.min(Datos.NIVEL_MAX, math.floor((math.sqrt(md) - M.DIST_BASE) / M.DIST_POR_NIVEL + 0.5)))
+    if den == 0 then return 1 end
+    return math.max(1, math.min(Datos.NIVEL_MAX, math.floor(num / den + 0.5)))
   end
   M.nivelZona = nivelZona
-  M.TOLERANCIA_NIVEL = 2
+  M.TOLERANCIA_NIVEL = 3     -- una banda ancha (6 niveles) deja el nivel de la zona a ±3 del de sus criaturas
   for _, mon in ipairs(Datos.monstruos) do
     if not mon.noCampamento then
       local cant = mon.elite and 2 or (mon.nivel <= 8 and 4 or 3)
       for _, c in ipairs(mapa.ciudades) do
-        local propia = mon.bioma == c.bioma
-        -- menos campamentos: dos en la ciudad de su bioma y uno en la mitad de las demás
-        local camps = mon.elite and (propia and 1 or 0) or (propia and 2 or rng:int(0, 1))
-        for _ = 1, camps do
-          local x, y
-          for _ = 1, 8 do
-            x, y = puntoAnillo(c, M.DIST_BASE + mon.nivel * M.DIST_POR_NIVEL)
-            if x and math.abs(nivelZona(x, y) - mon.nivel) <= M.TOLERANCIA_NIVEL then break end
-            x = nil
-          end
-          if x then
-            mapa.campamentos[#mapa.campamentos + 1] = {
-              x = x, y = y, monstruo = mon.id, cantidad = cant, radio = 4, ciudad = c.id,
-            }
+        local b = bandas[c.id]
+        -- solo las ciudades cuya banda incluye (o roza) el nivel de la criatura
+        if b and mon.nivel >= b.lo - 1 and mon.nivel <= b.hi + 1 then
+          local propia = mon.bioma == c.bioma
+          local camps = mon.elite and (propia and 1 or 0) or (propia and 3 or 2)
+          for _ = 1, camps do
+            local x, y = puntoCerca(c, 24, 140, mon.nivel)
+            if x then
+              mapa.campamentos[#mapa.campamentos + 1] = {
+                x = x, y = y, monstruo = mon.id, cantidad = cant, radio = 4, ciudad = c.id,
+              }
+            end
           end
         end
       end
@@ -1312,7 +1384,7 @@ local function generarMundo(rng)
               local d2 = (c.x + c.w / 2 - x) ^ 2 + (c.y + c.h / 2 - y) ^ 2
               if not md or d2 < md then cerca, md = c, d2 end
             end
-            local nivel = math.max(1, math.min(Datos.NIVEL_MAX, math.floor((math.sqrt(md) - M.DIST_BASE) / M.DIST_POR_NIVEL + 0.5)))
+            local nivel = nivelZona(x, y)
             local posibles = {}
             for _, mon in ipairs(Datos.monstruos) do
               if not mon.noCampamento and not mon.elite and math.abs(mon.nivel - nivel) <= 2 then posibles[#posibles + 1] = mon end
@@ -1417,9 +1489,26 @@ local function generarMundo(rng)
     end
     return true
   end
+  -- La puerta de cada mazmorra está SIEMPRE en el mismo sitio: se busca sin azar, rastreando el continente indicado en
+  -- mazmorras.xml en orden fijo, y se queda con el punto despejado cuyo nivel de zona se parece más al nivel de la mazmorra.
+  -- Así no se mueve aunque cambie cualquier otra parte de la generación del mapa.
+  local function sitioFijoMazmorra(def)
+    local mejor, mejorPuntos
+    for y = 20, mapa.h - 20, 6 do
+      for x = 20, mapa.w - 20, 6 do
+        local k = mapa.cont[x] and mapa.cont[x][y]
+        if k == (def.continente or 1) and areaBuena(x, y, 4) and not cercaCiudad(x, y, 26) and not cercaDePuesto(x, y, 20) and lejosDeOtras(x, y, 110) then
+          local puntos = math.abs(M.nivelZona(x, y) - (def.nivelMin or 1)) * 100 + math.abs(x - mapa.w / 2) * 0.01
+          if not mejorPuntos or puntos < mejorPuntos then mejorPuntos, mejor = puntos, { x, y } end
+        end
+      end
+    end
+    if mejor then return mejor[1], mejor[2] end
+  end
   for _, def in ipairs(Datos.mazmorras) do
-    local x, y
+    local x, y = sitioFijoMazmorra(def)
     for _, d in ipairs({ 260, 160, 80, 0 }) do
+      if x then break end
       for _, biomas in ipairs({ def.biomas, TODOS }) do
         for _ = 1, 25 do
           x, y = buscarSitio(biomas, 26, 20)
@@ -1428,7 +1517,6 @@ local function generarMundo(rng)
         end
         if x then break end
       end
-      if x then break end
     end
     if x then
       limpiar(x, y, 3)

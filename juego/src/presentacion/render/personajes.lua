@@ -168,7 +168,7 @@ P.monturas = {
   lobo_escarcha = { porFaccion = "montura_lobo_escarcha" },
   toro_trueno = { porFaccion = "montura_toro_trueno" },
   pegaso = { porFaccion = "montura_pegaso" },
-  fenix = { porFaccion = "montura_fenix" },
+  fenix = { porFaccion = "montura_fenix", escala = 1.4, altura = 18, extraFrente = 12 },
   corcel_astral = { porFaccion = "montura_corcel_astral" },
   dragon_hielo = { porFaccion = "montura_dragon_hielo", escala = 1.35, altura = 20, extraFrente = 14 },
   dragon_sombra = { porFaccion = "montura_dragon_sombra", escala = 1.35, altura = 20, extraFrente = 14 },
