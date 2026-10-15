@@ -66,6 +66,14 @@ function M.codigoDe(e)
   return c
 end
 
+-- Dónde está la puerta en el dibujo de cada casa (fracción del ancho y del alto, a ras de suelo). La casa se coloca para que esa puerta
+-- quede junto a la puerta real del edificio (la casilla por la que se entra), con un desplazamiento máximo para no separarla de su huella.
+local PUERTAS = {
+  ["01-005"] = { 0.27, 0.87 }, ["01-010"] = { 0.53, 0.90 }, ["01-002"] = { 0.11, 0.62 },
+  ["02-006"] = { 0.22, 0.90 }, ["02-005"] = { 0.38, 0.92 }, ["01-003"] = { 0.31, 0.80 },
+}
+local DESPLAZ_MAX_X, DESPLAZ_MAX_Y = 46, 22
+
 -- Rectángulo (en píxeles de pantalla del mundo) que ocupa el dibujo de la casa: x0, y0, ancho, alto y escala.
 -- En vista isométrica la casa se apoya en el rombo de su huella; en cenital, en el borde de abajo.
 local function caja(e, img)
@@ -74,7 +82,15 @@ local function caja(e, img)
     local esc = ancho / img:getWidth()
     local alto = img:getHeight() * esc
     local gx, gy = Iso.suelo(e.x + e.w, e.y + e.h)     -- la esquina de delante del rombo
-    return gx - ancho / 2, gy + 2 - alto, ancho, alto, esc
+    local x0, y0 = gx - ancho / 2, gy + 2 - alto
+    local pu = PUERTAS[M.codigoDe(e)]
+    if pu and e.puertaX then
+      -- la puerta del dibujo sobre la casilla de la puerta real
+      local dx, dy = Iso.suelo(e.puertaX + 0.5, e.puertaY + 1)
+      x0 = x0 + math.max(-DESPLAZ_MAX_X, math.min(DESPLAZ_MAX_X, dx - (x0 + pu[1] * ancho)))
+      y0 = y0 + math.max(-DESPLAZ_MAX_Y, math.min(DESPLAZ_MAX_Y, dy - (y0 + pu[2] * alto)))
+    end
+    return x0, y0, ancho, alto, esc
   end
   local ancho = e.w * TILE * 1.12
   local esc = ancho / img:getWidth()
@@ -89,7 +105,8 @@ function M.dibujar(e, camX, camY, alfa)
   local img = imagen(M.codigoDe(e))
   if not img then return end
   local x0, y0, _, _, esc = caja(e, img)
-  love.graphics.setColor(1, 1, 1, alfa or 1)
+  -- las casas de Umbra se igualan con un tinte frío, para que las tres se vean de la misma familia de color
+  if e.faccion == "umbra" then love.graphics.setColor(0.88, 0.86, 1.0, alfa or 1) else love.graphics.setColor(1, 1, 1, alfa or 1) end
   love.graphics.draw(img, x0 - camX, y0 - camY, 0, esc, esc)
 end
 

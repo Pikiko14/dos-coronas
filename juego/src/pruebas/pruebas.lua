@@ -98,6 +98,33 @@ function Pruebas.correr()
     local ms = medir("terreno+props")
     fallar(errores, "terreno y objetos de un bosque en menos de 8 ms por cuadro", ms < 8, string.format("%.2f ms", ms))
   end)
+  paso("predicción del movimiento propio: avanza al instante, se queda en su casilla y entrega el control", function()
+    local Juego = require("src.presentacion.estados.juego")
+    local mundo = Mundo.nuevo()
+    local c = mundo.mapas.mundo.ciudades[1]
+    local x0, y0 = c.spawn.x, c.spawn.y
+    local j = { id = 7, kind = "jugador", modo = "mundo", z = 0, vivo = true, x = x0, y = y0, spd = 4, faccion = c.faccion, nombre = "t" }
+    mundo.entidades[7] = j
+    local app = { jugador = j, mundo = mundo, miId = 7, _srv = { x = x0, y = y0, t = 0 }, ping = 0.15 }
+    for _ = 1, 30 do Juego.predecirPropio(app, 1 / 60, 1, 0) end      -- medio segundo hacia +x
+    local recorrido = j.x - x0
+    fallar(errores, "avanza sin esperar al servidor (medio segundo a 4 casillas/s)", app._pred ~= nil and recorrido > 0.8 and recorrido < 3.2, string.format("%.2f casillas", recorrido))
+    -- el servidor llega a la misma posición y las teclas se sueltan: termina la casilla y entrega el control
+    for _ = 1, 120 do
+      app._srv = { x = app._pred and app._pred.x or j.x, y = app._pred and app._pred.y or j.y, t = 0 }
+      Juego.predecirPropio(app, 1 / 60, 0, 0)
+    end
+    fallar(errores, "al soltar las teclas entrega el control al servidor", app._pred == nil)
+    fallar(errores, "queda centrado en una casilla", math.abs((j.x % 1) - 0.5) < 0.01 and math.abs((j.y % 1) - 0.5) < 0.01, j.x .. "," .. j.y)
+    -- si el servidor lo deja muy lejos (no le dejó pasar), vuelve a su posición
+    app._pred = nil
+    j.x, j.y = x0, y0
+    app._srv = { x = x0, y = y0, t = 0 }
+    Juego.predecirPropio(app, 1 / 60, 1, 0)
+    app._srv = { x = x0 - 5, y = y0, t = 0 }
+    Juego.predecirPropio(app, 1 / 60, 1, 0)
+    fallar(errores, "si el servidor lo corrige lejos, abandona la predicción", app._pred == nil and j._mx == x0 - 5)
+  end)
   paso("rendimiento: memoria que genera el HUD y el dibujo por cuadro", function()
     local Misiones = require("compartido.dominio.misiones")
     local Dibujo = require("src.presentacion.render.dibujo")
@@ -399,7 +426,9 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     end
     fallar(errores, "todos los addons tienen sprite", todas)
     local base = { kind = "jugador", clase = "mago", faccion = "albor" }
+    require("src.presentacion.render.fao").forzar(false)
     fallar(errores, "sin addon, el de la clase", P.de(base) == P.clases.mago.albor)
+    require("src.presentacion.render.fao").forzar(nil)
     base.addon = "skin_rey"
     fallar(errores, "con addon, el sprite único", P.de(base) == P.skins.skin_rey)
     base.job = "thief"
@@ -1049,7 +1078,149 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local P = require("src.presentacion.render.personajes")
     fallar(errores, "los PNJ de misiones tienen sprite", P.de({ kind = "npc", rol = "misiones", id = "x1" }) ~= nil and Interfaz.ICONO_NPC.misiones ~= nil)
   end)
+  -- Hoja de comprobación visual del equipo FAO: DC_PRUEBA_EQUIPOS=1 la guarda en capturas/equipos_<animación>.png (6 clases x 2 géneros en filas,
+  -- los 8 escalones en columnas) y avisa de las combinaciones que no dibujan nada.
+  if os.getenv("DC_PRUEBA_EQUIPOS") then
+    paso("equipo FAO: hojas de comprobación por animación", function()
+      local Fao = require("src.presentacion.render.fao")
+      Fao.forzar(nil)
+      local I = require("compartido.dominio.items")
+      local clases = { "guerrero", "lancero", "cazador", "mago", "clerigo", "nigromante" }
+      local CW, CH = 96, 104
+      for _, anim in ipairs({ "wait", "run", "att", "cast", "dead" }) do
+        for _, dir in ipairs({ 0, 4 }) do
+          local cv = love.graphics.newCanvas(CW * 8, CH * 12)
+          love.graphics.push("all")
+          love.graphics.setCanvas(cv)
+          love.graphics.clear(0.23, 0.27, 0.34, 1)
+          for f, clase in ipairs(clases) do
+            for g, gen in ipairs({ "h", "m" }) do
+              for tier = 1, 8 do
+                local fila = (f - 1) * 2 + g - 1
+                local e = { kind = "jugador", id = 3, clase = clase, gen = gen, equipo = I.equipoDe(clase, tier), x = 10, y = 10, dir = 1 }
+                local ok, err = pcall(Fao.dibujar, e, anim == "run", (tier - 1) * CW + CW / 2, fila * CH + CH - 14, nil, 1, { anim = anim, paso = 1, d5 = dir })
+                if not ok then fallar(errores, "equipo " .. clase .. "/" .. gen .. "/" .. tier .. "/" .. anim, false, tostring(err)) end
+              end
+            end
+          end
+          love.graphics.pop()
+          local datosImg = cv:newImageData()
+          Log.volcar("capturas/equipos_" .. anim .. "_d" .. dir .. ".png", datosImg:encode("png"):getString())
+        end
+      end
+    end)
+  end
+  if os.getenv("DC_PRUEBA_CAMINAR") then
+    paso("equipo FAO: ciclo de caminar (6 pasos x 5 direcciones)", function()
+      local Fao = require("src.presentacion.render.fao")
+      Fao.forzar(nil)
+      local I = require("compartido.dominio.items")
+      local clase, gen, tier = os.getenv("DC_PRUEBA_CAMINAR"), os.getenv("DC_GEN") or "h", tonumber(os.getenv("DC_TIER") or "3")
+      local CW, CH = 100, 110
+      local cv = love.graphics.newCanvas(CW * 6, CH * 5)
+      love.graphics.push("all")
+      love.graphics.setCanvas(cv)
+      love.graphics.clear(0.23, 0.27, 0.34, 1)
+      for d5 = 0, 4 do
+        for p = 0, 5 do
+          local e = { kind = "jugador", id = 3, clase = clase, gen = gen, equipo = I.equipoDe(clase, tier), x = 10, y = 10, dir = 1 }
+          Fao.dibujar(e, true, p * CW + CW / 2, d5 * CH + CH - 14, nil, 1, { anim = "run", paso = p, d5 = d5 })
+        end
+      end
+      love.graphics.pop()
+      Log.volcar("capturas/caminar_" .. clase .. ".png", cv:newImageData():encode("png"):getString())
+    end)
+  end
+  -- Ciclo de correr en las 8 direcciones de pantalla (con las volteadas): DC_PRUEBA_OCTANTES=<clase> -> capturas/octantes_<clase>.png
+  -- (filas = octante 0 derecha, 1 abajo-derecha, 2 abajo, 3 abajo-izquierda, 4 izquierda, 5 arriba-izquierda, 6 arriba, 7 arriba-derecha).
+  if os.getenv("DC_PRUEBA_OCTANTES") then
+    paso("equipo FAO: correr en los 8 octantes (incluye las hojas volteadas)", function()
+      local Fao = require("src.presentacion.render.fao")
+      Fao.forzar(nil)
+      local I = require("compartido.dominio.items")
+      local clase, gen, tier = os.getenv("DC_PRUEBA_OCTANTES"), os.getenv("DC_GEN") or "h", tonumber(os.getenv("DC_TIER") or "3")
+      local CW, CH = 100, 110
+      local cv = love.graphics.newCanvas(CW * 6, CH * 8)
+      love.graphics.push("all")
+      love.graphics.setCanvas(cv)
+      love.graphics.clear(0.23, 0.27, 0.34, 1)
+      for oc = 0, 7 do
+        for p = 0, 5 do
+          local e = { kind = "jugador", id = 9000 + oc, clase = clase, gen = gen, equipo = I.equipoDe(clase, tier), x = 10, y = 10, dir = 1, _f8 = oc }
+          Fao.dibujar(e, true, p * CW + CW / 2, oc * CH + CH - 14, nil, 1, { anim = "run", paso = p })
+        end
+      end
+      love.graphics.pop()
+      Log.volcar("capturas/octantes_" .. clase .. ".png", cv:newImageData():encode("png"):getString())
+    end)
+  end
+  paso("personajes por capas: la dirección no parpadea al caminar", function()
+    local Fao = require("src.presentacion.render.fao")
+    Fao.forzar(nil)
+    if os.getenv("DC_FAO") == "0" then return end
+    -- Camino con posiciones a saltos (como llegan del servidor: 3 cuadros quietos y un salto) y temblor lateral. Se cuentan los cambios de
+    -- octante: en un tramo recto no debe haber ninguno y en un zigzag solo los giros de verdad.
+    local recorridos = 0
+    local function recorrer(tramos)
+      recorridos = recorridos + 1
+      local id = 7000 + recorridos      -- (la dirección se guarda por id, fuera de la entidad: cada recorrido es un sujeto nuevo)
+      local e = { id = id, nombre = "Zig", x = 50, y = 50, dir = 1 }
+      local cambios, previo, x, y, n = 0, Fao.direccion(e, nil), 50, 50, 0
+      local log = {}
+      for _, tr in ipairs(tramos) do
+        for i = 1, tr.pasos do
+          x, y = x + tr.dx * 0.25, y + tr.dy * 0.25
+          -- el servidor mueve el punto cada 3 cuadros; entre medias se repite la posición anterior
+          for f = 1, 3 do
+            n = n + 1
+            local temblor = ((n * 7919) % 11 - 5) * 0.004
+            local nx, ny = (f == 3) and x + temblor or e.x or x, (f == 3) and y - temblor or e.y or y
+            if f == 3 then
+              -- como en Mundo:aplicarFoto: cada foto REEMPLAZA la entidad por una tabla nueva (sin ningún estado de dibujo) y con la dirección
+              -- cardinal del mundo, que en una diagonal alterna de eje a cada casilla
+              e = { id = id, nombre = "Zig", x = nx, y = ny, dir = (tr.dx ~= 0 and tr.dy ~= 0) and (i % 2 == 0 and 3 or 1) or (tr.dx ~= 0 and 3 or 1) }
+            else
+              e.x, e.y = nx, ny
+            end
+            local oc = Fao.direccion(e, nil)
+            if oc ~= previo then cambios = cambios + 1 log[#log + 1] = oc previo = oc end
+          end
+        end
+      end
+      return cambios, log
+    end
+    local rectos = recorrer({ { dx = 1, dy = 0, pasos = 40 } })
+    fallar(errores, "tramo recto: la dirección no alterna", rectos <= 1, tostring(rectos))
+    local diag = recorrer({ { dx = 1, dy = 1, pasos = 40 } })
+    fallar(errores, "tramo en diagonal: la dirección no alterna", diag <= 1, tostring(diag))
+    local zig = recorrer({ { dx = 1, dy = 0, pasos = 16 }, { dx = 0, dy = 1, pasos = 16 }, { dx = 1, dy = 0, pasos = 16 }, { dx = 0, dy = 1, pasos = 16 } })
+    fallar(errores, "zigzag: solo cambia en los giros", zig <= 5, tostring(zig))
+  end)
+
+  paso("personajes por capas: cada clase, género y escalón se dibuja", function()
+    local Fao = require("src.presentacion.render.fao")
+    Fao.forzar(nil)
+    if os.getenv("DC_FAO") == "0" then return end      -- (DC_FAO=0: se usan los personajes antiguos y no hay capas que probar)
+    fallar(errores, "los personajes por capas están activos", Fao.activo())
+    local I = require("compartido.dominio.items")
+    local cv = love.graphics.newCanvas(300, 200)
+    for _, clase in ipairs({ "guerrero", "lancero", "cazador", "mago", "clerigo", "nigromante" }) do
+      for _, gen in ipairs({ "h", "m" }) do
+        for _, tier in ipairs({ 1, 4, 8 }) do
+          for _, estado in ipairs({ "wait", "run", "att", "cast", "sht", "hurt", "dead" }) do
+            local e = { kind = "jugador", id = 7, clase = clase, gen = gen, faccion = "albor", equipo = I.equipoDe(clase, tier), x = 10, y = 10, dir = 3 }
+            love.graphics.push("all")
+            love.graphics.setCanvas({ cv, stencil = true })
+            local ok, err = pcall(Fao.dibujar, e, estado == "run", 100, 100, nil, 1, { anim = estado, paso = 0 })
+            love.graphics.pop()
+            fallar(errores, "se dibuja " .. clase .. "/" .. gen .. "/" .. tier .. "/" .. estado, ok, tostring(err))
+          end
+        end
+      end
+    end
+  end)
   paso("sprites de clases y monturas por código", function()
+    require("src.presentacion.render.fao").forzar(false)
     local Propias = require("src.presentacion.render.propias")
     local Personajes = require("src.presentacion.render.personajes")
     local cv = love.graphics.newCanvas(300, 200)
@@ -1078,6 +1249,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       end
     end
     fallar(errores, "las monturas de carga siguen con su hoja", Personajes.monturaDe("buey", "albor").hoja ~= nil)
+    require("src.presentacion.render.fao").forzar(nil)
   end)
   paso("ayudas de interfaz: números, avisos [E] y motivos", function()
     local Ayudas = require("src.presentacion.ayudas")
@@ -1868,7 +2040,40 @@ local function fotoCasas(app)
   app.estado = "juego"
   Interfaz.panel = nil
   if os.getenv("DC_ZOOM") then app.zoom = tonumber(os.getenv("DC_ZOOM")) end
-  if foto.paso == "menu" and os.getenv("DC_FOTO_MOBS") then
+  if foto.paso == "menu" and os.getenv("DC_FOTO_CLASES") then
+    foto.paso = "clases"
+    local m, j = app.mundo, app.jugador
+    for _, c in ipairs(m.mapas.mundo.ciudades) do
+      if c.id == "auroria" then j.x, j.y = c.plaza.x + 0.5, c.plaza.y + 4.5 end
+    end
+    local tier = tonumber(os.getenv("DC_FOTO_CLASES")) or 1
+    local I = require("compartido.dominio.items")
+    local lista = { "guerrero", "lancero", "cazador", "mago", "clerigo", "nigromante" }
+    for i, cl in ipairs(lista) do
+      for g = 1, 2 do
+        local e = m:crearPersonaje({ nombre = cl .. g, faccion = i % 2 == 0 and "umbra" or "albor", clase = cl, genero = g == 1 and "h" or "m", nivel = 1 })
+        e.x, e.y = j.x + (i - 3.5) * 1.5 + (g - 1.5) * 0.6, j.y - 2 + (g - 1) * 1.8
+        e.equipo = I.equipoDe(cl, tier)
+        e.modo = "mundo"
+        e.dir = tonumber(os.getenv("DC_DIR") or "1") or 1
+        if g == 2 and i % 2 == 0 then e.mov = true end
+      end
+    end
+  elseif foto.paso == "clases" then
+    foto.paso = "fin"
+    love.event.quit(0)
+  elseif foto.paso == "menu" and os.getenv("DC_FOTO_MALL") then
+    foto.paso = "mall"
+    if os.getenv("DC_VENTANA") then local a, b = os.getenv("DC_VENTANA"):match("(%d+)x(%d+)") love.window.setMode(tonumber(a), tonumber(b), { fullscreen = os.getenv("DC_PANTALLA") == "1", resizable = true }) end
+    Interfaz.panel = "mall"
+    Interfaz.mallTab = os.getenv("DC_FOTO_MALL")
+    Interfaz.mallScroll = 0
+    if os.getenv("DC_MALL_UMBRA") then app.jugador.faccion = "umbra" end
+    if os.getenv("DC_MALL_MONTADO") then app.jugador.montado = "dragon" end
+  elseif foto.paso == "mall" then
+    foto.paso = "fin"
+    love.event.quit(0)
+  elseif foto.paso == "menu" and os.getenv("DC_FOTO_MOBS") then
     foto.paso = "mobs"
     local m, j = app.mundo, app.jugador
     local cuenta = { calabaza = 0, limo = 0 }
@@ -2282,7 +2487,7 @@ function Pruebas.tickFoto(app, dt)
   if foto.espera > 0.35 and not app.capturando and foto.paso ~= "fin" then
     app.capturando = true
     local nombre = foto.paso
-    if nombre ~= "equipo" and nombre ~= "arbol" and nombre ~= "mercado" and nombre ~= "encantar" and nombre ~= "mascotas" and nombre ~= "gremio" and nombre ~= "mapa" and nombre ~= "tablon" and nombre ~= "diario" and nombre ~= "mapamision" and nombre ~= "oficios" and nombre ~= "mercancias" and nombre ~= "establo" and nombre ~= "subastas" and nombre ~= "grupo" then Interfaz.panel = nil end
+    if nombre ~= "mall" and nombre ~= "clases" and nombre ~= "equipo" and nombre ~= "arbol" and nombre ~= "mercado" and nombre ~= "encantar" and nombre ~= "mascotas" and nombre ~= "gremio" and nombre ~= "mapa" and nombre ~= "tablon" and nombre ~= "diario" and nombre ~= "mapamision" and nombre ~= "oficios" and nombre ~= "mercancias" and nombre ~= "establo" and nombre ~= "subastas" and nombre ~= "grupo" then Interfaz.panel = nil end
     Log.info(string.format("foto %s fps=%d panel=%s", nombre, love.timer.getFPS(), tostring(Interfaz.panel)))
     love.graphics.captureScreenshot(function(img)
       local fd = img:encode("png")

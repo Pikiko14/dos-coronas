@@ -20,3 +20,7 @@ web/descargas/version.json
 juego/arte/hojas/mon/
 juego/arte/hojas/house/
 juego/arte/hojas/npc/
+
+# Sprites FAO en bruto (de terceros): solo se suben las capas horneadas de juego/arte/fao/
+juego/arte/fao-equipos/
+juego/arte/fao-personajes/

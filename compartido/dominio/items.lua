@@ -92,11 +92,6 @@ function M.generar(D)
       def = 2.4 * u, mdef = 0.9 * u, hp = 3 * u, precio = precio(40, u), hoja = "equipment", sprite = ESCUDOS[t],
     })
     add({
-      id = "clerigo_escudo_" .. t, nombre = "Escudo " .. ADJ.m[t], hueco = "escudo", clase = "clerigo",
-      tier = t, nivel = tier.nivel, armadura = "tela",
-      def = 1.0 * u, mdef = 2.4 * u, precio = precio(40, u), hoja = "equipment", sprite = ESCUDOS[t],
-    })
-    add({
       id = "anillo_" .. t, nombre = "Anillo " .. ADJ.m[t], hueco = "anillo", tier = t, nivel = tier.nivel,
       atk = 0.6 * u, matk = 0.6 * u, mp = 5 * u, precio = precio(45, u), hoja = "equipment", sprite = ANILLOS[t],
     })

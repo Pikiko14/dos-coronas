@@ -178,6 +178,11 @@ end
 -- Atiende un mensaje de un cliente. servidor: transporte con enviar() y vinculo.
 function Servicio.tratar(servidor, mundo, idCon, msg)
   if type(msg) ~= "table" then return end
+  if msg.t == "ping" then
+    -- el cliente mide el tiempo de ida y vuelta con esto: se devuelve tal cual el número que mandó
+    servidor:enviar(idCon, { t = "pong", n = tonumber(msg.n) or 0 })
+    return
+  end
   if msg.t == "cuenta" then
     if servidor.vinculo[idCon] then
       servidor:enviar(idCon, { t = "no", error = "Ya estás dentro del mundo." })
@@ -206,7 +211,7 @@ function Servicio.tratar(servidor, mundo, idCon, msg)
         servidor:enviar(idCon, { t = "no", error = usuario or "Sesión no válida." })
         return
       end
-      local pid, err = Cuentas.crearPersonaje(cuentaId, msg.nombre, msg.faccion, msg.clase)
+      local pid, err = Cuentas.crearPersonaje(cuentaId, msg.nombre, msg.faccion, msg.clase, msg.genero)
       if not pid then
         servidor:enviar(idCon, { t = "no", error = err or "No se pudo crear el personaje." })
         return
@@ -236,6 +241,7 @@ function Servicio.tratar(servidor, mundo, idCon, msg)
       nombre = datos.nombre,
       faccion = datos.faccion,
       clase = datos.clase,
+      genero = datos.genero,
     })
     pj.chatDesde = chatDesde
     -- la cuenta decide si es del personal: GM o CM por su rol guardado, o GM si está en el .env (solo el servidor lo marca)

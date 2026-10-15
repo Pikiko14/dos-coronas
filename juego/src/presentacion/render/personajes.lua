@@ -253,6 +253,8 @@ function P.de(e)
   if k == "jugador" or k == "bot" or k == "cuerpo" then
     if e.job and P.oficios[e.job] then return P.oficios[e.job] end
     if e.addon and P.skins[e.addon] then return P.skins[e.addon] end
+    -- personajes por capas (arte/fao): sin addon ni oficio con aspecto propio
+    if require("src.presentacion.render.fao").activo() then return { fao = e } end
     local c = P.clases[e.clase or "guerrero"] or P.clases.guerrero
     return c[e.faccion or "albor"] or c.albor
   elseif k == "guardia" then
@@ -289,6 +291,7 @@ end
 
 -- Dibuja la criatura con los pies en (sx, sy). mov: está andando; reloj: segundos.
 function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa)
+  if def.fao then return require("src.presentacion.render.fao").dibujar(def.fao, mov, sx, sy, tinte, alfa) end
   -- las skins propias del mall se dibujan por código (render/propias.lua)
   local img = def.generada and require("src.presentacion.render.propias").hoja(def.generada) or Arte.img(def.hoja)
   local col = mov and CICLO[(math.floor(reloj * 8) % 4) + 1] or 1

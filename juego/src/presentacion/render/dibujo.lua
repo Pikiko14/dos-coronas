@@ -8,6 +8,8 @@ local Ambiente = require("src.presentacion.render.ambiente")
 local MobAnim = require("src.presentacion.render.mob_anim")
 local CasasIso = require("src.presentacion.render.casas_iso")
 local Iso = require("src.presentacion.render.iso")
+local PropsIso = require("src.presentacion.render.props_iso")
+local InteriorCasa = require("src.presentacion.render.interior_casa")
 local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
 local Trampas = require("src.presentacion.render.trampas")
@@ -282,6 +284,7 @@ function D.escena(mundo, jugador, cam, mx, my)
     end
   end
 
+  if jugador.modo == "casa" then InteriorCasa.paredesIso(mapa, cam) end
   if ambiente and pz == 0 then
     Ambiente.sombrasSuelo(mundo, mapa, jugador, radio, cam)
     Ambiente.dibujarAntorchas(mapa, cam, z, vw, vh)
@@ -356,7 +359,9 @@ function D.escena(mundo, jugador, cam, mx, my)
       else
         px0, py0 = (p.x + ancho / 2) * TILE - cam.x, (p.y + alto) * TILE - cam.y
       end
-      if Objetos.personalizados and Objetos.personalizados[p.tipo] then Objetos.personalizados[p.tipo](p, px0, py0)
+      if PropsIso.dibujar(p, mapa, px0, py0, alfa, tint) then
+        -- arte nuevo de las ciudades
+      elseif Objetos.personalizados and Objetos.personalizados[p.tipo] then Objetos.personalizados[p.tipo](p, px0, py0)
       else Objetos.dibujar(p.tipo, variante, px0, py0, tint, alfa, p.x * 0.35 + p.y * 0.2 + hash(p.x, p.y) * 0.9) end
     elseif item.tipo == "casa" then
       CasasIso.dibujar(item.e, cam.x, cam.y, CasasIso.tapa(item.e, jugador.x, jugador.y) and 0.5 or 1)
@@ -527,7 +532,11 @@ function marcarTiendas(mapa, jugador, cam, radio)
       if e.estilo == "establo" then fila = e.techoSur and (e.puertaY + 2) or (e.puertaY - 2) end  -- la puerta grande ocupa dos filas: el letrero va en el tejado
       local gx, gy = Iso.suelo(e.puertaX + 0.5, fila + 0.5)
       local cx, cy = gx - cam.x, gy - cam.y
-      if Iso.activo() then cy = cy - 26 end   -- el letrero queda sobre la casa
+      if Iso.activo() then
+        -- el letrero cuelga sobre la puerta del dibujo de la casa
+        local dx, dy = Iso.suelo(e.puertaX + 0.5, e.puertaY + 1)
+        cx, cy = dx - cam.x, dy - cam.y - 66
+      end
       love.graphics.setColor(0, 0, 0, 0.35)
       love.graphics.rectangle("fill", cx - 11, cy - 9, 24, 24, 4, 4)
       love.graphics.setColor(0.36, 0.24, 0.1, 1)
@@ -790,7 +799,7 @@ function entidadBase(e, sx, sy, mundo, jugador)
   local atq, atqU, atqPose, atqK
   if def and e.kind ~= "caravana" and e.kind ~= "cuerpo" and e.vivo ~= false then
     atq, atqU = estadoAtaque(e)
-    if atq and not def.anim then
+    if atq and not def.anim and not def.fao then
       atqK = math.max(1, math.min(2.4, def.fila and ((def.celda or 64) / 40) or (def.escala or 1)))
       atqPose = poseAtaque(atq, atqU, atqK)
       love.graphics.push()
@@ -888,6 +897,7 @@ function entidadBase(e, sx, sy, mundo, jugador)
       love.graphics.ellipse("line", sx, pies - 1, 22 + 2 * pulso, 9 + pulso)
       if (e.dir or 1) ~= 1 then Objetos.dibujar(llevaEst == "umbra" and "bandera_umbra" or "bandera_albor", 0, sx + 10, piesJinete + 4) end
     end
+    if def.fao then def.fao._faoAtq = atq and { st = atq, u = atqU } or nil end
     -- montado, la que camina es la montura: el jinete va quieto (sin mover los pies)
     alto = Personajes.dibujar(def, e.dir or 1, anda and not e.montado, reloj, sx, piesJinete, rojo and { 1, 0.6, 0.6 } or nil)
     if montaFrente then Personajes.dibujar(montaFrente, 1, anda, reloj, sx, pies) end

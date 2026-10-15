@@ -96,7 +96,7 @@ if (Test-Path $archivoBase) {
 
 function Incluir($rel, $ruta) {
   $r = $rel.Replace("\", "/")
-  if ($r -match "^(capturas|preview|arte/hojas/(mon|house|npc))/") { return $false }
+  if ($r -match "^(capturas|preview|arte/hojas/(mon|house|npc)|arte/fao-equipos|arte/fao-personajes)/") { return $false }
   if ($r -in @("main.lua", "conf.lua", "src/infraestructura/destino.lua", ".env", "log.txt", "error_log.txt")) { return $false }
   if ($r -match "(^|/)prueba_[^/]*\.txt$" -or $r -match "(^|/)cuentas\.json$") { return $false }
   if ($r -match "^arte/") {

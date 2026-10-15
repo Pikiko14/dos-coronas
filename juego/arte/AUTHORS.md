@@ -55,3 +55,10 @@ alphabetical order:
 
 Some people didn't make the sprites themselves, but paid for them and made them available. The artist is already credited above, here the list of Mecenas:
 - Sajgon - [@OTLand](https://otland.net/members/sajgon.221620/);
+
+### Personajes y equipo (Free Angels Online / Angel Online)
+
+Los sprites de los personajes por capas (cuerpo, cabeza, armadura y armas, `arte/fao/`) proceden de **Free Angels Online / Angel Online**
+y pertenecen a sus propietarios (terceros). Se usan en este proyecto con el permiso de su autor y **no deben publicarse en un
+repositorio público sin tener permiso**. Los originales en bruto (`arte/fao-equipos/`, `arte/fao-personajes/`) no se suben al repositorio;
+solo las capas horneadas con `herramientas/generar_personajes/hornear_equipos.py`.

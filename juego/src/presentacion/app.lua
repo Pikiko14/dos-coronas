@@ -23,7 +23,7 @@ local App = {
   rol = "local",
   cliente = nil,
   miId = nil,
-  creacion = { nombre = "", faccion = nil, clase = nil, error = "" },
+  creacion = { nombre = "", faccion = nil, clase = nil, genero = "h", error = "" },
   cuenta = { modo = "entrar", usuario = "", clave = "", error = "" },
   sesion = { cuentaId = nil, usuario = "", personajes = {}, error = "" },
   ipUnirse = Config.red.host,

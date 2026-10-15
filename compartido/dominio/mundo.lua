@@ -290,6 +290,7 @@ function Mundo:crearPersonaje(opts)
     nombre = opts.nombre or "Aventurero",
     faccion = opts.faccion,
     clase = opts.clase,
+    genero = opts.genero == "m" and "m" or "h",      -- aspecto del personaje: h = hombre, m = mujer
     nivel = opts.nivel or 1,
     xp = 0,
     oro = opts.oro or 140,
@@ -1188,7 +1189,7 @@ Mundo.AUTOPOCION_UMBRAL = 0.5 -- con la autopoción encendida, bebe vida al baja
 function Mundo:dejarCuerpo(e)
   local id = self:idNuevo()
   self.entidades[id] = {
-    id = id, kind = "cuerpo", nombre = e.nombre, faccion = e.faccion, clase = e.clase, job = e.job, addon = e.addonActivo,
+    id = id, kind = "cuerpo", nombre = e.nombre, faccion = e.faccion, clase = e.clase, job = e.job, addon = e.addonActivo, genero = e.genero, equipo = e.equipo,
     dir = e.dir or 1, x = e.x, y = e.y, z = e.z or 0, modo = e.modo, vivo = true,
     hasta = self.tiempo + Mundo.CUERPO_SEG,
   }
@@ -3268,6 +3269,40 @@ function Mundo:aplicarGuardado(p, data)
     if tonumber(fin) and tonumber(fin) > self:reloj() then p.bonos[bono] = tonumber(fin) end
   end
   self:recalcularCarga(p)
+  -- equipo retirado al igualar los objetos con lo que puede llevar cada clase (arte FAO): las armas secundarias pasan a ser el arma
+  -- principal de su oficio y el escudo del clérigo se devuelve en oro (al precio del escudo del guerrero)
+  do
+    local RETIRADAS = { ballesta = true, alabarda = true, vara = true, cetro = true, grimorio = true }
+    local function nuevo(id)
+      local clase, fam, t = tostring(id):match("^(%a+)_(%a+)_(%d+)$")
+      if clase and RETIRADAS[fam] then return clase .. "_arma_" .. t end
+      return nil
+    end
+    local oroDevuelto = 0
+    local function escudoClerigo(id)
+      local t = tostring(id):match("^clerigo_escudo_(%d+)$")
+      local ref = t and Datos.item("guerrero_escudo_" .. t)
+      return ref and math.floor((ref.precio or 0) * Datos.FACTOR_VENTA) or nil
+    end
+    for _, s in ipairs(p.bolsa) do
+      local n = nuevo(s.id)
+      if n and Datos.item(n) then s.id = n end
+    end
+    for hueco, id in pairs(p.equipo or {}) do
+      local n = nuevo(id)
+      if n and Datos.item(n) then p.equipo[hueco] = n end
+      local o = escudoClerigo(id)
+      if o then p.equipo[hueco] = nil oroDevuelto = oroDevuelto + o end
+    end
+    for i = #p.bolsa, 1, -1 do
+      local o = escudoClerigo(p.bolsa[i].id)
+      if o then oroDevuelto = oroDevuelto + o * (p.bolsa[i].cant or 1) table.remove(p.bolsa, i) end
+    end
+    if oroDevuelto > 0 then
+      p.oro = (p.oro or 0) + oroDevuelto
+      self:mensaje("sistema", "", "El clérigo ya no lleva escudo: se te devolvieron " .. oroDevuelto .. " de oro.", p)
+    end
+  end
   -- objetos retirados del juego (ya no existen en los datos) se quitan de la bolsa; los pergaminos de forja, que se
   -- vendían en el Item Mall, se devuelven en Monedas Corona al precio que tenían
   do
@@ -3339,7 +3374,7 @@ end
 
 function Mundo:compactar(e)
   return {
-    id = e.id, kind = e.kind, nombre = e.nombre, faccion = e.faccion, clase = e.clase,
+    id = e.id, kind = e.kind, nombre = e.nombre, faccion = e.faccion, clase = e.clase, gen = e.genero,
     monstruo = e.monstruo, x = e.x, y = e.y, z = e.z or 0, dir = e.dir or 1, vivo = e.vivo ~= false,
     modo = e.modo, hp = e.hp, hpMax = e.hpMax, mp = e.mp, mpMax = e.mpMax,
     nivel = e.nivel, hoja = e.hoja, base = e.base, cuadros = e.cuadros,

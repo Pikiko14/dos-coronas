@@ -3,9 +3,10 @@
 --
 -- Cliente -> servidor
 --   { t = "cuenta", a = "registrar" | "entrar", usuario, clave }
---   { t = "cuenta", a = "crear", token, nombre, faccion, clase }
+--   { t = "cuenta", a = "crear", token, nombre, faccion, clase, genero }
 --   { t = "hola", token, personaje }          entra al mundo con un personaje
 --   { t = "act", a = <acción>, p = {...} }    acción de juego (ver ACCIONES)
+--   { t = "ping", n }                         mide la latencia; el servidor contesta { t = "pong", n }
 --
 -- Servidor -> cliente
 --   { t = "sesion", token, usuario, cuenta, personajes, creado }
@@ -16,11 +17,11 @@
 local P = {}
 
 P.CLIENTE = {
-  CUENTA = "cuenta", HOLA = "hola", ACCION = "act",
+  CUENTA = "cuenta", HOLA = "hola", ACCION = "act", PING = "ping",
 }
 
 P.SERVIDOR = {
-  SESION = "sesion", OK = "ok", FOTO = "snap", PANEL = "panel", NO = "no",
+  SESION = "sesion", OK = "ok", FOTO = "snap", PANEL = "panel", NO = "no", PONG = "pong",
 }
 
 P.CUENTA = { REGISTRAR = "registrar", ENTRAR = "entrar", CREAR = "crear" }

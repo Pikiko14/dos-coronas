@@ -74,7 +74,26 @@ local function mezclar(app, snap)
     local a = antes[id]
     local sx, sy = e.x, e.y
     e._movHasta = a and a.hasta or 0
-    if a and sx then
+    local pr = app._pred
+    if id == app.miId and sx then
+      -- velocidad real del propio personaje medida en las fotos (la usa la predicción): solo si se movió en dos fotos seguidas
+      local s0 = app._srv
+      local dtF = s0 and (ahora - s0.t) or 0
+      if s0 and dtF > 0.03 and dtF < 0.4 then
+        local v = math.sqrt((sx - s0.x) ^ 2 + (sy - s0.y) ^ 2) / dtF
+        if v > 1.5 and v < 30 and s0.v then app._velProp = (app._velProp or v) * 0.75 + v * 0.25
+        elseif v < 0.3 then app._velProp = nil end
+        s0 = { x = sx, y = sy, t = ahora, v = v > 1.5 }
+      else
+        s0 = { x = sx, y = sy, t = ahora }
+      end
+      app._srv = s0
+    end
+    if id == app.miId and pr and pr.activo and a then
+      -- el propio personaje se mueve por predicción: la foto del servidor solo sirve para corregir
+      e.x, e.y, e._mx = a.x, a.y, nil
+      e._movHasta = ahora + 0.22
+    elseif a and sx then
       local ddx, ddy = a.x - sx, a.y - sy
       local d2 = ddx * ddx + ddy * ddy
       if d2 < 9 then
@@ -96,8 +115,56 @@ local function enviarDeseo(app, dt)
   if not cambio and not (app._acumDeseo >= 0.05 and (x ~= 0 or y ~= 0)) then return end
   app._acumDeseo = 0
   app._ux, app._uy = x, y
-  app.marcaPing = app.marcaPing or love.timer.getTime()
   app.cliente:enviar({ t = "act", a = "deseo", p = { x = x, y = y } })
+end
+
+local function signo(v) return v > 0.05 and 1 or (v < -0.05 and -1 or 0) end
+
+-- Predicción del movimiento propio: mientras mantienes las teclas, el personaje avanza ya en tu pantalla con las mismas reglas de
+-- pasos y colisiones del servidor (sobre un "fantasma" que copia el resto de datos del jugador) y las fotos del servidor solo lo
+-- corrigen: si se separa demasiado (algo le impidió el paso allí) se vuelve a la posición del servidor. Sin teclas, el fantasma
+-- termina su casilla y entrega el control cuando el servidor lo alcanza.
+function Juego.predecirPropio(app, dt, dx, dy)
+  local j, mundo, s = app.jugador, app.mundo, app._srv
+  if app._predOff or not j or not mundo or not s then app._pred = nil return end
+  dx, dy = signo(dx or 0), signo(dy or 0)
+  local posible = j.vivo ~= false and j.modo == "mundo" and (j.z or 0) == 0
+  local pr = app._pred
+  if not pr then
+    if not posible or (dx == 0 and dy == 0) then return end
+    pr = { activo = true, x = j.x, y = j.y, parado = 0 }
+    setmetatable(pr, { __index = function(_, k) local q = app.jugador return q and q[k] end })
+    app._pred = pr
+  end
+  local err = math.sqrt((pr.x - s.x) ^ 2 + (pr.y - s.y) ^ 2)
+  if not posible or err > 2.5 then
+    j._ox, j._oy, j._mx, j._my, j._t = pr.x, pr.y, s.x, s.y, 0
+    j.x, j.y = pr.x, pr.y
+    app._pred = nil
+    return
+  end
+  -- ritmo: el que mide el servidor; se afloja o aprieta un poco para mantener la ventaja justa sobre la foto (medio ping)
+  local spd = app._velProp or j.spd or 4
+  local ventaja = spd * ((app.ping or 0.15) / 2 + (app._intervalo or 0.1) / 2)
+  spd = spd * math.max(0.8, math.min(1.2, 1 + 0.5 * (ventaja - err) / math.max(ventaja, 0.5)))
+  local ok, motivo = pcall(mundo.avanzar, mundo, pr, dt, dx, dy, spd)
+  if not ok then
+    Log.warn("predicción desactivada: " .. tostring(motivo))
+    app._predOff = true
+    app._pred = nil
+    return
+  end
+  j.x, j.y, j.dir, j._mx = pr.x, pr.y, pr.dir or j.dir, nil
+  if pr.mov then j._movHasta = love.timer.getTime() + 0.22 end
+  if dx == 0 and dy == 0 and not pr.tramo then
+    pr.parado = pr.parado + dt
+    if err < 0.3 or pr.parado > 1 then
+      j._ox, j._oy, j._mx, j._my, j._t = pr.x, pr.y, s.x, s.y, 0
+      app._pred = nil
+    end
+  else
+    pr.parado = 0
+  end
 end
 
 function Juego.predecir(app, dt)
@@ -112,8 +179,12 @@ function Juego.predecir(app, dt)
     n.y = n.y - dt * 0.4
   end
   local dur = app._intervalo or 0.1
+  if app.estado == "juego" then
+    local dx, dy = Entrada.deseo()
+    Juego.predecirPropio(app, dt, dx, dy)
+  end
   for _, e in pairs(app.mundo.entidades) do
-    if e._mx then
+    if e._mx and not (e.id == app.miId and app._pred) then
       e._t = math.min(1, (e._t or 0) + dt / dur)
       e.x = e._ox + (e._mx - e._ox) * e._t
       e.y = e._oy + (e._my - e._oy) * e._t
@@ -127,6 +198,16 @@ end
 function Juego.tickCliente(app, dt)
   if not app.cliente or not app.mundo or app.rol ~= "cliente" then return end
   local msgs, err, codigo = app.cliente:actualizar()
+  -- latencia real: cada segundo se manda un "ping" con un número y el servidor lo devuelve; el ping es lo que tarda la vuelta
+  app._pingT = (app._pingT or 0) + dt
+  if app._pingT >= 1 and app.estado == "juego" then
+    app._pingT = 0
+    app._pingN = (app._pingN or 0) + 1
+    app._pingEnv = app._pingEnv or {}
+    app._pingEnv[app._pingN] = love.timer.getTime()
+    app._pingEnv[app._pingN - 5] = nil
+    app.cliente:enviar({ t = "ping", n = app._pingN })
+  end
   if err then
     Log.warn("conexion cerrada codigo " .. tostring(codigo or "?"))
     cortar(app, "Se cortó la conexión con el servidor.")
@@ -138,6 +219,14 @@ function Juego.tickCliente(app, dt)
       return
     end
     if msg.t == "ok" then app.miId = msg.id end
+    if msg.t == "pong" then
+      local t0 = app._pingEnv and app._pingEnv[msg.n]
+      if t0 then
+        local rtt = love.timer.getTime() - t0
+        app.ping = app.ping and (app.ping * 0.6 + rtt * 0.4) or rtt
+        app._pingEnv[msg.n] = nil
+      end
+    end
     if msg.t == "panel" then
       if msg.panel == "gremio" then
         -- el servidor responde también a las consultas de actualización: no reabren un panel cerrado
@@ -168,8 +257,6 @@ function Juego.tickCliente(app, dt)
       end
     end
     if msg.t == "snap" and app.miId then
-      if app.marcaPing then app.ping = love.timer.getTime() - app.marcaPing end
-      app.marcaPing = love.timer.getTime()
       mezclar(app, msg.snap)
       for _, ev in ipairs(app.mundo.sonidosRed or {}) do Sonido.evento(ev, app.jugador) end
       app.mundo.sonidosRed = {}
@@ -324,8 +411,6 @@ function Juego.esperar(app, dt)
       app.rol = "cliente"
     end
     if msg.t == "snap" and app.mundo and app.miId then
-      if app.marcaPing then app.ping = love.timer.getTime() - app.marcaPing end
-      app.marcaPing = love.timer.getTime()
       mezclar(app, msg.snap)
     end
   end

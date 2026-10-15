@@ -1110,8 +1110,11 @@ local function limpiarEspalda(datos, c)
 end
 
 -- Hoja de 96 x 128 del personaje (imagen lista para dibujar con quads de 32 x 32).
+local intentosVacios = {}
+
 function P.hoja(id)
   if cache[id] then return cache[id] end
+  local vacia = false
   local d = DISENOS[id]
   if not d then return nil end
   local base = Arte.img(d.hoja)
@@ -1150,6 +1153,14 @@ function P.hoja(id)
   -- la fila de espalda se limpia (sin brillos sueltos ni restos); el resultado es una imagen normal
   local ok, limpio = pcall(function()
     local datos = cv:newImageData()
+    -- una hoja que sale en blanco (el lienzo no se pintó, por ejemplo tras un cambio de ventana) no se guarda: se regenera
+    local hayAlgo = false
+    datos:mapPixel(function(_, _, r, g, b, a) if a > 0.02 then hayAlgo = true end return r, g, b, a end)
+    if not hayAlgo and (intentosVacios[id] or 0) < 6 then
+      intentosVacios[id] = (intentosVacios[id] or 0) + 1
+      require("compartido.infraestructura.log").info("hoja propia vacía, se regenera: " .. tostring(id) .. " (intento " .. intentosVacios[id] .. ")")
+      vacia = true
+    end
     limpiarEspalda(datos, c)
     local imagen = love.graphics.newImage(datos)
     imagen:setFilter("nearest", "nearest")
@@ -1168,7 +1179,7 @@ function P.hoja(id)
   end)
   if ok and limpio then cv = limpio end
   cv:setFilter("nearest", "nearest")
-  cache[id] = cv
+  if not vacia then cache[id] = cv end
   return cv
 end
 

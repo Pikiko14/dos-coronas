@@ -119,6 +119,7 @@ extern float niebla;
 extern vec2 cam;
 extern float rayo;
 extern float reflejos;
+extern float modoIso;
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
 float ruido(vec2 p) {
   vec2 i = floor(p), f = fract(p);
@@ -133,6 +134,16 @@ vec4 effect(vec4 color, Image tex, vec2 uv, vec2 sc) {
     if (m.g > 0.5) {
       float d = m.r * 256.0 * zoom;
       float prof = clamp(d / (7.0 * 32.0 * zoom), 0.0, 1.0);
+      if (modoIso > 0.5) {
+        // isométrico: la distancia hasta la orilla se mide hacia arriba en la pantalla, hasta salir del agua
+        d = 0.0;
+        for (int i = 1; i < 60; i++) {
+          float paso = float(i) * 3.0;
+          d = paso;
+          if (Texel(agua, vec2(uv.x, uv.y - paso / ventana.y)).g < 0.5) break;
+        }
+        prof = clamp(d / (80.0 * zoom), 0.0, 1.0);
+      }
       float rip = fbm(vec2(uv.x * ventana.x / (46.0 * zoom), uv.y * ventana.y / (8.0 * zoom) + tiempo * 0.7)) - 0.5;
       vec2 r = vec2(uv.x + rip * 0.010 * (0.4 + prof), uv.y - 2.0 * d / ventana.y + rip * 0.006);
       r = clamp(r, vista.xy + vec2(0.002), vista.xy + vista.zw - vec2(0.002));
@@ -479,6 +490,32 @@ end
 
 -- Máscara del agua: por cada casilla de agua, cuántos píxeles hay hasta la orilla de arriba (para reflejar).
 local function dibujarAgua(mapa, cam, z, escala)
+  if Iso.activo() then
+    -- isométrico: cada casilla de agua es un rombo blanco en la máscara (el shader mide hacia arriba hasta la orilla)
+    local suelo = mapa.suelo
+    if not suelo then return end
+    local x0, y0, x1, y1 = Iso.rango(cam.x, cam.y, E.vw / z, E.vh / z, 1)
+    love.graphics.setColor(0, 1, 0, 1)
+    for tx = x0, x1 do
+      local col = suelo[tx]
+      if col then
+        for ty = y0, y1 do
+          if col[ty] == "agua" then
+            local function p(ax, ay)
+              local gx, gy = Iso.suelo(ax, ay)
+              return (E.vx + (gx - cam.x) * z) * escala, (E.vy + (gy - cam.y) * z) * escala
+            end
+            local ax, ay = p(tx, ty)
+            local bx, by = p(tx + 1, ty)
+            local cx, cy = p(tx + 1, ty + 1)
+            local dx, dy = p(tx, ty + 1)
+            love.graphics.polygon("fill", ax, ay, bx, by, cx, cy, dx, dy)
+          end
+        end
+      end
+    end
+    return
+  end
   local x0, y0 = math.floor(cam.x / TILE), math.floor(cam.y / TILE)
   local x1, y1 = math.floor((cam.x + E.vw / z) / TILE), math.floor((cam.y + E.vh / z) / TILE)
   local suelo = mapa.suelo
@@ -609,7 +646,7 @@ function A.terminar(mundo, jugador, mapa, cam)
   love.graphics.setCanvas(R.emi)
   love.graphics.clear(0, 0, 0, 1)
   dibujarEmisivos(emis, cam, z, 0.5)
-  local conReflejos = cal == "alto" and not Iso.activo() and not os.getenv("DC_SIN_REFLEJO") and jugador.modo == "mundo" and (jugador.z or 0) == 0
+  local conReflejos = cal == "alto" and not os.getenv("DC_SIN_REFLEJO") and jugador.modo == "mundo" and (jugador.z or 0) == 0
   if conReflejos then
     love.graphics.setCanvas(R.agua)
     love.graphics.clear(0, 0, 0, 0)
@@ -630,6 +667,7 @@ function A.terminar(mundo, jugador, mapa, cam)
   sc:send("cam", { cam.x, cam.y })
   sc:send("rayo", clima.rayo)
   sc:send("reflejos", conReflejos and 1 or 0)
+  sc:send("modoIso", Iso.activo() and 1 or 0)
   love.graphics.setCanvas(R.lit)
   love.graphics.clear(0, 0, 0, 1)
   love.graphics.setShader(sc)

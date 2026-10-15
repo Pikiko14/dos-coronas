@@ -26,8 +26,10 @@ function Entrada.deseo()
   if love.keyboard.isDown("d", "right") then x = x + 1 end
   local d = math.sqrt(x * x + y * y)
   if d > 0 then x, y = x / d, y / d end
-  if d > 0 and Iso.activo() then
-    -- vista isométrica: "arriba" es hacia arriba en la pantalla, que en el mundo es la diagonal (-x, -y)
+  -- Vista isométrica: las teclas siguen los ejes del mundo, que en la pantalla son las diagonales del rombo. W va hacia arriba a la
+  -- derecha, A hacia arriba a la izquierda, S hacia abajo a la izquierda y D hacia abajo a la derecha; dos teclas juntas dan el
+  -- movimiento recto (W+A arriba, W+D derecha, S+A izquierda, S+D abajo). Con Ajustes.teclasPantalla = true, W/A/S/D irían derechas.
+  if d > 0 and Iso.activo() and Ajustes.teclasPantalla then
     local wx, wy = x * Iso.HH + y * Iso.HW, y * Iso.HW - x * Iso.HH
     local n = math.sqrt(wx * wx + wy * wy)
     x, y = wx / n, wy / n
@@ -110,7 +112,7 @@ function Entrada.manejar(app, id)
   if id == "pj_nuevo" then
     if not sesion.cuentaId then app.estado = "cuenta" return end
     -- Alba viene elegida de entrada, así se ven desde el principio los oficios de una facción (cambia con el botón de Umbra)
-    app.creacion = { nombre = "", faccion = "albor", clase = nil, error = "" }
+    app.creacion = { nombre = "", faccion = "albor", clase = nil, genero = "h", error = "" }
     app.estado = "crear"
     Interfaz.foco = "nombre"
     return
@@ -134,6 +136,7 @@ function Entrada.manejar(app, id)
     if creacion.clase and not Datos.claseValida(creacion.clase, creacion.faccion) then creacion.clase = nil end
     return
   end
+  if id == "genero_h" or id == "genero_m" then creacion.genero = id:sub(8) return end
   if id:sub(1, 6) == "clase_" then
     local clase = id:sub(7)
     if Datos.claseValida(clase, creacion.faccion) then creacion.clase = clase end
@@ -146,7 +149,7 @@ function Entrada.manejar(app, id)
       local nombre = creacion.nombre ~= "" and creacion.nombre or "Aventurero"
       require("src.presentacion.estados.juego").pedirCuenta(app, Config.red.host, {
         t = "cuenta", a = "crear", token = sesion.token,
-        nombre = nombre, faccion = creacion.faccion, clase = creacion.clase,
+        nombre = nombre, faccion = creacion.faccion, clase = creacion.clase, genero = creacion.genero or "h",
       }, "mundo", "crear")
     end
     return

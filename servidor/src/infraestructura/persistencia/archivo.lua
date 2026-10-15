@@ -105,13 +105,13 @@ function M.listar(cuentaId)
   for _, p in ipairs(leerAlmacen().personajes) do
     if p.cuenta == tonumber(cuentaId) then
       -- addon = el último que tenía puesto: la selección de personaje lo dibuja con su aspecto
-      lista[#lista + 1] = { id = p.id, nombre = p.nombre, faccion = p.faccion, clase = p.clase, nivel = p.nivel or 1, addon = p.datos and p.datos.addonActivo or nil }
+      lista[#lista + 1] = { id = p.id, nombre = p.nombre, faccion = p.faccion, clase = p.clase, genero = p.genero or "h", nivel = p.nivel or 1, addon = p.datos and p.datos.addonActivo or nil }
     end
   end
   return lista
 end
 
-function M.crearPersonaje(cuentaId, nombre, faccion, clase)
+function M.crearPersonaje(cuentaId, nombre, faccion, clase, genero)
   if not nombreValido(nombre) then return nil, "El nombre del personaje usa 3 a 16 letras." end
   if faccion ~= "albor" and faccion ~= "umbra" then return nil, "Elige una facción." end
   if not require("compartido.dominio.datos").claseValida(clase, faccion) then
@@ -129,7 +129,7 @@ function M.crearPersonaje(cuentaId, nombre, faccion, clase)
   local id = a.sigPj
   a.sigPj = id + 1
   a.personajes[#a.personajes + 1] = {
-    id = id, cuenta = cuenta, nombre = nombre, faccion = faccion, clase = clase,
+    id = id, cuenta = cuenta, nombre = nombre, faccion = faccion, clase = clase, genero = genero == "m" and "m" or "h",
     nivel = 1, xp = 0, oro = 140, x = 0, y = 0, hp = 1, mp = 1, datos = {},
   }
   local ok, err = volcarAlmacen()
@@ -142,7 +142,7 @@ function M.cargar(personajeId)
   local p = buscar(a.personajes, "id", tonumber(personajeId))
   if not p then return nil, "No está ese personaje." end
   local datos = Util.jsonDec(Util.jsonEnc(p.datos or {})) or {}
-  datos.nombre, datos.faccion, datos.clase = p.nombre, p.faccion, p.clase
+  datos.nombre, datos.faccion, datos.clase, datos.genero = p.nombre, p.faccion, p.clase, p.genero or "h"
   datos.nivel, datos.xp, datos.oro = p.nivel or 1, p.xp or 0, p.oro or 0
   datos.x, datos.y, datos.hp, datos.mp = p.x, p.y, p.hp, p.mp
   datos.dbId = p.id

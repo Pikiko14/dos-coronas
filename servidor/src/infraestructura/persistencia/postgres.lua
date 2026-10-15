@@ -257,6 +257,7 @@ function M.abrir()
       fin BIGINT NOT NULL,
       PRIMARY KEY (personaje_id, bono)
     );
+    ALTER TABLE personajes ADD COLUMN IF NOT EXISTS genero TEXT NOT NULL DEFAULT 'h';
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS vinculo_modo TEXT;
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS vinculo_x DOUBLE PRECISION;
     ALTER TABLE personajes ADD COLUMN IF NOT EXISTS vinculo_y DOUBLE PRECISION;
@@ -497,7 +498,7 @@ end
 function M.listar(cuentaId)
   return con(function(conn)
     local filas, err = conn:consulta(
-      "SELECT id, nombre, faccion, clase, nivel, " ..
+      "SELECT id, nombre, faccion, clase, genero, nivel, " ..
       "(SELECT addon FROM personaje_addon a WHERE a.personaje_id = personajes.id AND a.activo LIMIT 1) AS addon " ..
       "FROM personajes WHERE cuenta_id = " .. tonumber(cuentaId) .. " ORDER BY id"
     )
@@ -506,7 +507,7 @@ function M.listar(cuentaId)
     for _, row in ipairs(filas) do
       lista[#lista + 1] = {
         id = tonumber(row.id), nombre = row.nombre, faccion = row.faccion,
-        clase = row.clase, nivel = tonumber(row.nivel) or 1,
+        clase = row.clase, genero = row.genero == "m" and "m" or "h", nivel = tonumber(row.nivel) or 1,
         addon = (row.addon and row.addon ~= "") and row.addon or nil,
       }
     end
@@ -514,7 +515,8 @@ function M.listar(cuentaId)
   end)
 end
 
-function M.crearPersonaje(cuentaId, nombre, faccion, clase)
+function M.crearPersonaje(cuentaId, nombre, faccion, clase, genero)
+  genero = genero == "m" and "m" or "h"
   if not nombreValido(nombre) then
     return nil, "El nombre del personaje usa 3 a 16 letras."
   end
@@ -528,8 +530,8 @@ function M.crearPersonaje(cuentaId, nombre, faccion, clase)
     local n = conn:consulta("SELECT count(*) AS n FROM personajes WHERE cuenta_id = " .. cuenta)
     if n and n[1] and tonumber(n[1].n) >= 4 then return nil, "Esta cuenta ya tiene 4 personajes." end
     local filas, err = conn:consulta(
-      "INSERT INTO personajes (cuenta_id, nombre, faccion, clase) VALUES (" ..
-      tonumber(cuenta) .. "," .. Pg.literal(nombre) .. "," .. Pg.literal(faccion) .. "," .. Pg.literal(clase) ..
+      "INSERT INTO personajes (cuenta_id, nombre, faccion, clase, genero) VALUES (" ..
+      tonumber(cuenta) .. "," .. Pg.literal(nombre) .. "," .. Pg.literal(faccion) .. "," .. Pg.literal(clase) .. "," .. Pg.literal(genero) ..
       ") RETURNING id"
     )
     if not filas or not filas[1] then
@@ -543,14 +545,14 @@ end
 function M.cargar(personajeId)
   return con(function(conn)
     local filas, err = conn:consulta(
-      "SELECT id, nombre, faccion, clase, nivel, xp, oro, monedas, regalo_mall, autopocion, autopocion_umbral, automana, automana_umbral, x, y, z, modo, hp, mp, guardado, diaria_ultimo, diaria_racha, " ..
+      "SELECT id, nombre, faccion, clase, genero, nivel, xp, oro, monedas, regalo_mall, autopocion, autopocion_umbral, automana, automana_umbral, x, y, z, modo, hp, mp, guardado, diaria_ultimo, diaria_racha, " ..
       "vinculo_modo, vinculo_x, vinculo_y FROM personajes WHERE id = " .. tonumber(personajeId)
     )
     if not filas or not filas[1] then return nil, err or "No está ese personaje." end
     local row = filas[1]
     local pid = tonumber(row.id)
     local datos = {
-      nombre = row.nombre, faccion = row.faccion, clase = row.clase,
+      nombre = row.nombre, faccion = row.faccion, clase = row.clase, genero = row.genero == "m" and "m" or "h",
       nivel = tonumber(row.nivel) or 1, xp = tonumber(row.xp) or 0, oro = tonumber(row.oro) or 0, monedas = tonumber(row.monedas) or 0, regaloMall = row.regalo_mall == "t",
       autoPocion = row.autopocion == "t", autoPocionUmbral = (tonumber(row.autopocion_umbral) or 50) / 100,
       autoMana = row.automana == "t", autoManaUmbral = (tonumber(row.automana_umbral) or 50) / 100,

@@ -13,7 +13,9 @@ local T = {}
 
 local TILE = 32
 local BLOQUE = 16
-local LIMITE_BLOQUES = 120   -- (cada bloque son 1 MB de memoria de vídeo)
+-- En isométrico los bloques se hornean al doble de resolución (así el suelo proyectado no sale borroso) y pesan 4 veces más.
+local ESC_BLOQUE = Iso.activo() and 2 or 1
+local LIMITE_BLOQUES = Iso.activo() and 45 or 120   -- (cada bloque son 1 MB de memoria de vídeo, 5 MB al doble de resolución)
 local TINTE_UMBRA = { 0.66, 0.58, 0.92 }
 local TINTE_CICATRIZ = { 0.62, 0.42, 0.40 }
 
@@ -444,6 +446,67 @@ local function dibujarProcedural(mapa, x, y, px, py, fam, tipo)
   end
 end
 
+-- Suelo de las ciudades con las texturas nuevas (arte/ciudad/terreno/): cada textura cubre 8x8 casillas. Devuelve true si dibujó la casilla.
+local TEX_CIUDAD = {}
+local function texturaCiudad(nombre)
+  local t = TEX_CIUDAD[nombre]
+  if t == nil then
+    local ruta = "arte/ciudad/terreno/" .. nombre .. ".png"
+    if love.filesystem.getInfo(ruta) then
+      local img = love.graphics.newImage(ruta, { mipmaps = true })
+      img:setFilter("linear", "linear")
+      img:setWrap("repeat", "repeat")
+      t = { img = img, w = img:getWidth(), h = img:getHeight(), quads = {} }
+    else
+      t = false
+    end
+    TEX_CIUDAD[nombre] = t
+  end
+  return t or nil
+end
+
+local SUELO_CIUDAD = {
+  calle = "calle", plaza = "plaza", adoquin = "hierba", agua = "agua", arena = "arena",
+  teja = "hierba", teja_umbra = "hierba", fachada = "hierba", tejado = "hierba",
+}
+
+local TONO_CIUDAD = { calle = { 1.35, 1.28, 1.15 }, plaza = { 1.0, 0.95, 0.84 }, hierba = { 1.0, 1.03, 0.95 } }
+
+local function sueloCiudad(mapa, x, y, px, py, tipo)
+  if not Iso.activo() then return false end
+  local nombre = SUELO_CIUDAD[tipo]
+  if not nombre then return false end
+  if not (mapa.bioma[x] and mapa.bioma[x][y] == "ciudad") then return false end
+  local t = texturaCiudad(nombre)
+  if not t then return false end
+  local cel = t.w / 8
+  local q = t.quads[(x % 8) .. "," .. (y % 8)]
+  if not q then
+    q = love.graphics.newQuad((x % 8) * cel, (y % 8) * (t.h / 8), cel, t.h / 8, t.w, t.h)
+    t.quads[(x % 8) .. "," .. (y % 8)] = q
+  end
+  local c = (lado(mapa, x, y) == "umbra" and nombre ~= "agua") and TINTE_UMBRA or { 1, 1, 1 }
+  -- tonos unificados: calles de piedra cálida y clara, plaza algo más dorada, hierba sin manchas
+  if (nombre == "calle" or nombre == "plaza") and lado(mapa, x, y) == "umbra" then c = { 0.92, 0.88, 1.0 } end   -- piedra fría, no violeta
+  local k = TONO_CIUDAD[nombre]
+  if k then c = { math.min(1.3, c[1] * k[1]), math.min(1.3, c[2] * k[2]), math.min(1.3, c[3] * k[3]) } end
+  love.graphics.setColor(math.min(1, c[1]), math.min(1, c[2]), math.min(1, c[3]), 1)
+  love.graphics.draw(t.img, q, px, py, 0, TILE / cel, TILE / (t.h / 8))
+  if nombre == "calle" or nombre == "plaza" then
+    -- bordillo: una franja oscura donde la piedra toca la hierba
+    local function vecino(dx, dy)
+      local n = SUELO_CIUDAD[suelo(mapa, x + dx, y + dy) or ""]
+      return n ~= nil and n ~= "calle" and n ~= "plaza"
+    end
+    love.graphics.setColor(0.18, 0.14, 0.1, 0.55)
+    if vecino(0, -1) then love.graphics.rectangle("fill", px, py, TILE, 2) end
+    if vecino(0, 1) then love.graphics.rectangle("fill", px, py + TILE - 2, TILE, 2) end
+    if vecino(-1, 0) then love.graphics.rectangle("fill", px, py, 2, TILE) end
+    if vecino(1, 0) then love.graphics.rectangle("fill", px + TILE - 2, py, 2, TILE) end
+  end
+  return true
+end
+
 function T.dibujarSuelo(mapa, x, y, px, py, cuadroAgua)
   local tipo = suelo(mapa, x, y)
   if not tipo then
@@ -451,6 +514,7 @@ function T.dibujarSuelo(mapa, x, y, px, py, cuadroAgua)
     love.graphics.rectangle("fill", px, py, TILE, TILE)
     return
   end
+  if sueloCiudad(mapa, x, y, px, py, tipo) then return end
   local f = FAMILIA[tipo]
   if f == "edificio" and CasasIso.activo() then f = "hierba" end   -- casas isométricas: bajo la huella, hierba normal
   if f == "agua" then
@@ -612,7 +676,7 @@ end
 
 local function construir(mapa, cx, cy, cuadro)
   -- una casilla de margen por cada lado: al proyectar en isométrico (filtro lineal) no quedan costuras entre bloques
-  local canvas = love.graphics.newCanvas((BLOQUE + 2) * TILE, (BLOQUE + 2) * TILE)
+  local canvas = love.graphics.newCanvas((BLOQUE + 2) * TILE * ESC_BLOQUE, (BLOQUE + 2) * TILE * ESC_BLOQUE)
   if Iso.activo() then canvas:setFilter("linear", "linear") else canvas:setFilter("nearest", "nearest") end
   local previo = { love.graphics.getCanvas() }
   love.graphics.push("all")
@@ -621,6 +685,7 @@ local function construir(mapa, cx, cy, cuadro)
   love.graphics.setCanvas(canvas)
   love.graphics.clear(0, 0, 0, 0)
   love.graphics.origin()
+  love.graphics.scale(ESC_BLOQUE, ESC_BLOQUE)
   love.graphics.translate(TILE, TILE)
   Objetos.estatico = true       -- lo que se hornea en el lienzo no se mueve: dibujos normales (y más baratos)
   for ty = -1, BLOQUE do
@@ -690,7 +755,7 @@ function T.dibujar(mapa, camX, camY, vw, vh, tiempo, alfa)
   local x0, y0, x1, y1 = bloquesVisibles(mapa, camX, camY, vw, vh, 0)
   love.graphics.setColor(1, 1, 1, alfa or 1)
   local iso = Iso.activo()
-  local k, h = Iso.HW / TILE, Iso.HH / TILE
+  local k, h = Iso.HW / TILE / ESC_BLOQUE, Iso.HH / TILE / ESC_BLOQUE
   for cy = y0, y1 do
     for cx = x0, x1 do
       local f = tieneAgua(mapa, cx, cy) and cuadro or 0

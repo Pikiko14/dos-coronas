@@ -182,13 +182,19 @@ local function estamparCiudad(mapa, ciudad)
   local puertaTipo = ciudad.faccion == "umbra" and "puerta_hierro" or "puerta"
   local medio = math.floor(w / 2)
   local medioY = math.floor(h / 2)
+  -- Ciudad asimétrica: la plaza se desplaza del centro (distinto en cada ciudad) y la avenida horizontal pasa por ella; la vertical
+  -- sigue en el eje de los accesos. Así cada ciudad tiene su propio trazado, sin una cruz perfecta.
+  local semAsim = 0
+  for i = 1, #ciudad.id do semAsim = (semAsim * 31 + ciudad.id:byte(i)) % 9973 end
+  local cx = medio + (semAsim % 7) - 3
+  local cy = medioY + (math.floor(semAsim / 7) % 5) - 2
   local prx = grande and 8 or 5
   local pry = grande and 6 or 4
   local function avenida(x, y)
-    return math.abs(x - medio) <= 2 or math.abs(y - medioY) <= 2
+    return math.abs(x - medio) <= 2 or math.abs(y - cy) <= 2
   end
   local function enPlaza(x, y)
-    return math.abs(x - medio) <= prx and math.abs(y - medioY) <= pry
+    return math.abs(x - cx) <= prx and math.abs(y - cy) <= pry
   end
   local function esAcceso(x, y)
     if math.abs(x - medio) > 1 then return false end
@@ -215,21 +221,21 @@ local function estamparCiudad(mapa, ciudad)
       end
     end
   end
-  setBloque(mapa, x0 + medio, y0 + medioY, true)
+  setBloque(mapa, x0 + cx, y0 + cy, true)
   mapa.props[#mapa.props + 1] = {
-    x = x0 + medio, y = y0 + medioY,
+    x = x0 + cx, y = y0 + cy,
     tipo = ciudad.faccion == "umbra" and "estatua_umbra" or "estatua_albor",
   }
   -- farolas en las cuatro esquinas de la plaza y pozos a los lados
   for _, sx in ipairs({ -1, 1 }) do
     for _, sy in ipairs({ -1, 1 }) do
-      local fx, fy = x0 + medio + sx * prx, y0 + medioY + sy * pry
+      local fx, fy = x0 + cx + sx * prx, y0 + cy + sy * pry
       setBloque(mapa, fx, fy, true)
       mapa.props[#mapa.props + 1] = { x = fx, y = fy, tipo = "farol" }
     end
-    local px = x0 + medio + sx * (prx - 2)
-    setBloque(mapa, px, y0 + medioY - pry + 1, true)
-    mapa.props[#mapa.props + 1] = { x = px, y = y0 + medioY - pry + 1, tipo = (sx < 0) and "pozo" or "barril" }
+    local px = x0 + cx + sx * (prx - 2)
+    setBloque(mapa, px, y0 + cy - pry + 1, true)
+    mapa.props[#mapa.props + 1] = { x = px, y = y0 + cy - pry + 1, tipo = (sx < 0) and "pozo" or "barril" }
   end
   -- mobiliario de la plaza: cada cuadrante (las avenidas que la cruzan quedan libres) se amuebla distinto, con una semilla
   -- propia de la ciudad y del cuadrante: filas de bancos de 1 a 3 en sitios distintos, macetas, jarrones, setos, barriles,
@@ -241,7 +247,7 @@ local function estamparCiudad(mapa, ciudad)
     local base = 17
     for i = 1, #ciudad.id do base = (base * 131 + ciudad.id:byte(i)) % 1000003 end
     local function mueble(dx, dy, tipo, solido)
-      local tx, ty = x0 + medio + dx, y0 + medioY + dy
+      local tx, ty = x0 + cx + dx, y0 + cy + dy
       if not enPlaza(tx - x0, ty - y0) or avenida(tx - x0, ty - y0) or ocupado[tx .. "," .. ty] then return false end
       ocupado[tx .. "," .. ty] = true
       if solido ~= false then setBloque(mapa, tx, ty, true) end
@@ -269,7 +275,7 @@ local function estamparCiudad(mapa, ciudad)
         local ax = 3 + math.floor(azar() * math.max(1, anchoQ - largo + 1))
         local ay = 3 + math.floor(azar() * altoQ)
         local libre = true
-        for k = 0, largo - 1 do if ocupado[(x0 + medio + sx * (ax + k)) .. "," .. (y0 + medioY + sy * ay)] then libre = false end end
+        for k = 0, largo - 1 do if ocupado[(x0 + cx + sx * (ax + k)) .. "," .. (y0 + cy + sy * ay)] then libre = false end end
         if libre then for k = 0, largo - 1 do mueble(sx * (ax + k), sy * ay, "banco") end end
       end
       -- piezas sueltas y flores en lo que queda
@@ -298,6 +304,7 @@ local function estamparCiudad(mapa, ciudad)
       }
     end
   end
+  ciudad.plaza = { x = x0 + cx, y = y0 + cy }
   ciudad.accesos = {}
   local function abrir(y)
     ciudad.accesos[#ciudad.accesos + 1] = { x = x0 + medio, y = y0 + y }
@@ -317,16 +324,9 @@ local function estamparCiudad(mapa, ciudad)
   -- arriba (cima). Cada columna lleva su propio tejado sobre su fachada, así las alas más bajas de las
   -- casas en L y en T tienen tejado y no quedan paredes sin cubrir. La puerta va en la fila de abajo.
   local FORMAS = {
-    { tamano = "pequena", w = 3, h = 3, techo = 1 },
-    { tamano = "pequena", w = 4, h = 3, techo = 1 },
-    { tamano = "pequena", w = 5, h = 3, techo = 1 },
+    { tamano = "pequena", w = 4, h = 4, techo = 2 },
     { tamano = "mediana", w = 5, h = 4, techo = 2 },
-    { tamano = "mediana", w = 6, h = 4, techo = 2 },
-    { tamano = "mediana", w = 6, h = 4, techo = 2, cima = { 0, 0, 0, 0, 1, 1 } },
-    { tamano = "grande", w = 7, h = 5, techo = 2 },
-    { tamano = "grande", w = 7, h = 5, techo = 2, cima = { 2, 2, 0, 0, 0, 0, 0 } },
-    { tamano = "grande", w = 7, h = 5, techo = 2, cima = { 2, 2, 0, 0, 0, 2, 2 } },
-    { tamano = "mediana", w = 6, h = 5, techo = 2, cima = { 0, 0, 0, 0, 2, 2 } },
+    { tamano = "grande", w = 6, h = 5, techo = 2 },
   }
   local function recorte(forma, xx) return forma.cima and forma.cima[xx + 1] or 0 end
   local function hueco(forma, xx, yy) return yy < recorte(forma, xx) end
@@ -427,10 +427,10 @@ local function estamparCiudad(mapa, ciudad)
     end
   end
   local altoLocal = 3
-  local eyLocal = (medioY - 3) - (altoLocal - 1)
+  local eyLocal = (cy - 3) - (altoLocal - 1)
   local anchoTienda = 5
-  tienda((medio - prx) - anchoTienda - 1, eyLocal, anchoTienda, altoLocal, "mercado", "Clériga de " .. ciudad.nombre, "Pociones")
-  tienda(medio + prx + 2, eyLocal, anchoTienda, altoLocal, "armero", "Armero de " .. ciudad.nombre, "Armas")
+  tienda((cx - prx) - anchoTienda - 1, eyLocal, anchoTienda, altoLocal, "mercado", "Clériga de " .. ciudad.nombre, "Pociones")
+  tienda(cx + prx + 2, eyLocal, anchoTienda, altoLocal, "armero", "Armero de " .. ciudad.nombre, "Armas")
   -- El establo, en la misma fila al oeste de la clériga, con el tejado arriba y la puerta a la avenida.
   tienda(3, eyLocal, 9, altoLocal, "establo", "Establo de " .. ciudad.nombre, "Establo")
   -- detrás del establo no se construyen casas: queda un patio despejado
@@ -549,15 +549,16 @@ local function estamparCiudad(mapa, ciudad)
     }
     puertas[#puertas + 1] = { x = x0 + dx, y = y0 + dy, tamano = forma.tamano }
     -- una casilla libre alrededor de cada casa (y delante de su puerta): las demás no se pegan a ella
-    for yy = ey - 1, ey + forma.h do
-      for xx = ex - 1, ex + forma.w do reservado[xx .. "," .. yy] = true end
+    -- (dos casillas de aire alrededor: las casas isométricas son altas y, más juntas, se tapan unas a otras)
+    for yy = ey - 2, ey + forma.h + 1 do
+      for xx = ex - 2, ex + forma.w + 1 do reservado[xx .. "," .. yy] = true end
     end
   end
   local n = 0
   -- la rejilla de casas arranca en un punto distinto en cada ciudad pequeña y deja algunas parcelas vacías
   local cx0, cy0 = grande and 2 or (2 + semilla % 3), grande and 2 or (2 + math.floor(semilla / 3) % 3)
-  for ey = cy0, h - 7, 6 do
-    for ex = cx0, w - 9, 8 do
+  for ey = cy0, h - 7, 7 do
+    for ex = cx0, w - 9, 9 do
       n = n + 1
       local puesta = (not grande) and azar(ex, ey, 6) < 0.2
       for k = 0, #FORMAS - 1 do
@@ -631,8 +632,8 @@ local function estamparCiudad(mapa, ciudad)
     end
     for xx = 3 + semilla % 3, w - 4, 4 do
       i = i + 1
-      calle(xx, medioY - 4, i)
-      calle(xx, medioY + 4, i + 1)
+      calle(xx, cy - 4, i)
+      calle(xx, cy + 4, i + 1)
     end
   end
   for yy = 3, h - 4 do
@@ -661,7 +662,12 @@ local function estamparCiudad(mapa, ciudad)
   end
   -- Los PNJ se reparten por las avenidas de la ciudad, no en el centro de la plaza.
   local k = grande and 1.5 or 1
-  local function en(dx, dy) return medio + math.floor(dx * k), medioY + math.floor(dy * k) end
+  -- (los PNJ van siempre sobre una avenida: a lo largo de la vertical con x entre -2 y 2 del eje, a lo largo de la horizontal con y entre -2 y 2)
+  local function en(dx, dy)
+    local ax, ay = math.floor(dx * k), math.floor(dy * k)
+    if math.abs(ay) >= math.abs(ax) then ax = math.max(-2, math.min(2, ax)) else ay = math.max(-2, math.min(2, ay)) end
+    return medio + ax, cy + ay
+  end
   local function npcEn(dx, dy, rol, nombre)
     local nx, ny = en(dx, dy)
     npc(nx, ny, rol, nombre)
@@ -685,17 +691,17 @@ local function estamparCiudad(mapa, ciudad)
     local o = ({ -2, -1, 1, 2, 0 })[(i + semilla) % 5 + 1]
     local a, b
     if lado == 0 then
-      local ya = 3 + math.floor(azar(i, 1, 11) * math.max(1, medioY - pry - 9))
+      local ya = 3 + math.floor(azar(i, 1, 11) * math.max(1, cy - pry - 9))
       a, b = { x = medio + o, y = ya }, { x = medio + o, y = ya + 5 }
     elseif lado == 1 then
-      local ya = medioY + pry + 3 + math.floor(azar(i, 1, 12) * math.max(1, h - medioY - pry - 10))
+      local ya = cy + pry + 3 + math.floor(azar(i, 1, 12) * math.max(1, h - cy - pry - 10))
       a, b = { x = medio + o, y = ya }, { x = medio + o, y = ya + 5 }
     elseif lado == 2 then
       local xa = 3 + math.floor(azar(i, 1, 13) * math.max(1, medio - prx - 9))
-      a, b = { x = xa, y = medioY + o }, { x = xa + 5, y = medioY + o }
+      a, b = { x = xa, y = cy + o }, { x = xa + 5, y = cy + o }
     else
       local xa = medio + prx + 3 + math.floor(azar(i, 1, 14) * math.max(1, w - medio - prx - 10))
-      a, b = { x = xa, y = medioY + o }, { x = xa + 5, y = medioY + o }
+      a, b = { x = xa, y = cy + o }, { x = xa + 5, y = cy + o }
     end
     if not M.bloqueado(mapa, x0 + a.x + 0.5, y0 + a.y + 0.5) and not M.bloqueado(mapa, x0 + b.x + 0.5, y0 + b.y + 0.5) then
       ciudad.npcs[#ciudad.npcs + 1] = {

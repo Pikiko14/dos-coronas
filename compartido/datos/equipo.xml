@@ -25,51 +25,36 @@
   <hojas_armadura lancero="extra" necro="extra"/>
   <armas>
     <cazador>
-      <i id="arma" nombre="Arco" arma="arco" atk="5.8" g="m" spd="0.01">
-        <iconos lista="288,290,296,300,301,303,302,319"/>
-      </i>
-      <i id="ballesta" nombre="Ballesta" arma="arco" atk="7" g="f" spd="-0.012">
-        <iconos lista="304,305,306,307,308,319,321,322"/>
+      <i hoja="armas" id="arma" nombre="Arco" arma="arco" atk="5.8" g="m" spd="0.01">
+        <iconos lista="32,33,34,35,36,37,38,39"/>
       </i>
     </cazador>
     <clerigo>
-      <i id="arma" nombre="Maza" arma="maza" atk="1" g="f" hp="4" matk="4.6">
-        <iconos lista="176,178,183,190,196,199,204,201"/>
-      </i>
-      <i id="cetro" nombre="Cetro" arma="maza" atk="0.6" g="m" matk="5.4" mp="3">
-        <iconos lista="197,198,200,202,203,205,184,186"/>
+      <i hoja="armas" id="arma" nombre="Maza" arma="maza" atk="1" g="f" hp="4" matk="4.6">
+        <iconos lista="64,65,66,67,68,69,70,71"/>
       </i>
     </clerigo>
     <guerrero>
-      <i id="arma" nombre="Espada" arma="espada" atk="5.5" def="0.4" g="f">
-        <iconos lista="49,52,101,116,148,86,62,165"/>
+      <i hoja="armas" id="arma" nombre="Espada" arma="espada" atk="5.5" def="0.4" g="f">
+        <iconos lista="0,1,2,3,4,5,6,7"/>
       </i>
-      <i id="hacha" nombre="Hacha" arma="espada" atk="6.9" g="f" hp="-1.5">
-        <iconos lista="224,225,241,247,251,259,262,260"/>
+      <i hoja="armas" id="hacha" nombre="Hacha" arma="espada" atk="6.9" g="f" hp="-1.5">
+        <iconos lista="8,9,10,11,12,13,14,15"/>
       </i>
     </guerrero>
     <mago>
-      <i id="arma" nombre="Bastón" arma="baston" atk="0.8" g="m" matk="6" mp="4">
-        <iconos lista="352,359,367,342,364,365,368,366"/>
-      </i>
-      <i id="vara" nombre="Vara" arma="baston" atk="0.8" g="f" matk="6.9">
-        <iconos lista="343,344,345,346,347,363,362,361"/>
+      <i hoja="armas" id="arma" nombre="Bastón" arma="baston" atk="0.8" g="m" matk="6" mp="4">
+        <iconos lista="48,49,50,51,52,53,54,55"/>
       </i>
     </mago>
     <lancero>
-      <i id="arma" nombre="Lanza" arma="lanza" hoja="extra" atk="5.7" def="0.3" g="f">
-        <iconos lista="0,1,2,3,4,5,6,7"/>
-      </i>
-      <i id="alabarda" nombre="Alabarda" arma="lanza" hoja="extra" atk="7" g="f" hp="-1.2">
-        <iconos lista="8,9,10,11,12,13,14,15"/>
+      <i hoja="armas" id="arma" nombre="Lanza" arma="lanza" atk="5.7" def="0.3" g="f">
+        <iconos lista="16,17,18,19,20,21,22,23"/>
       </i>
     </lancero>
     <nigromante>
-      <i id="arma" nombre="Báculo" arma="baculo" hoja="extra" atk="0.8" g="m" matk="6.2" mp="4">
-        <iconos lista="16,17,18,19,20,21,22,23"/>
-      </i>
-      <i id="grimorio" nombre="Grimorio" arma="grimorio" hoja="extra" atk="0.6" g="m" hp="3" matk="5.7" mp="5">
-        <iconos lista="24,25,26,27,28,29,30,31"/>
+      <i hoja="armas" id="arma" nombre="Báculo" arma="baculo" atk="0.8" g="m" matk="6.2" mp="4">
+        <iconos lista="80,81,82,83,84,85,86,87"/>
       </i>
     </nigromante>
   </armas>

@@ -163,4 +163,55 @@ function M.interior(mapa, x, y, px, py, tipo)
   return false
 end
 
+
+-- Paredes levantadas de la vista isométrica: las dos paredes del fondo (la de arriba a la derecha, con sus ventanas, y la de arriba a la
+-- izquierda) se dibujan como paneles verticales sobre el borde del suelo. Se pintan antes que los muebles y los personajes.
+local Iso = require("src.presentacion.render.iso")
+local ALTO_PARED = 78
+
+local function panel(ax, ay, bx, by, cam, h, col, colZ)
+  local x1, y1 = Iso.suelo(ax, ay)
+  local x2, y2 = Iso.suelo(bx, by)
+  x1, y1, x2, y2 = x1 - cam.x, y1 - cam.y, x2 - cam.x, y2 - cam.y
+  local zoc = h * 0.34
+  -- friso de madera abajo y yeso arriba
+  love.graphics.setColor(colZ[1], colZ[2], colZ[3], 1)
+  love.graphics.polygon("fill", x1, y1, x2, y2, x2, y2 - zoc, x1, y1 - zoc)
+  love.graphics.setColor(col[1], col[2], col[3], 1)
+  love.graphics.polygon("fill", x1, y1 - zoc, x2, y2 - zoc, x2, y2 - h, x1, y1 - h)
+  love.graphics.setColor(0.2, 0.12, 0.06, 1)
+  love.graphics.setLineWidth(2)
+  love.graphics.line(x1, y1 - zoc, x2, y2 - zoc)
+  love.graphics.line(x1, y1 - h, x2, y2 - h)
+  love.graphics.setLineWidth(1)
+  return x1, y1, x2, y2
+end
+
+function M.paredesIso(mapa, cam)
+  if not Iso.activo() or not mapa.muebles or not mapa.w then return end
+  local w, h = mapa.w, mapa.h
+  local yeso, madera = { 0.86, 0.78, 0.64 }, { 0.46, 0.30, 0.17 }
+  -- pared de arriba a la izquierda (columna x = 0): se ve su cara que mira hacia abajo a la derecha
+  for y = 0, h - 2 do
+    panel(1, y, 1, y + 1, cam, ALTO_PARED, { 0.74, 0.66, 0.53 }, { 0.38, 0.25, 0.14 })
+  end
+  -- pared de arriba a la derecha (fila y = 0), con sus dos ventanas con cortinas
+  for x = 0, w - 2 do
+    local x1, y1, x2, y2 = panel(x, 1, x + 1, 1, cam, ALTO_PARED, yeso, madera)
+    for _, vx in ipairs({ 5, w - 6 }) do
+      if x == vx then
+        local mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+        local a, b = (x2 - x1) * 0.3, (y2 - y1) * 0.3
+        love.graphics.setColor(0.2, 0.12, 0.06, 1)
+        love.graphics.polygon("fill", mx - a - 3, my - b - 26, mx + a + 3, my + b - 26, mx + a + 3, my + b - 66, mx - a - 3, my - b - 66)
+        love.graphics.setColor(0.6, 0.82, 0.96, 1)
+        love.graphics.polygon("fill", mx - a, my - b - 29, mx + a, my + b - 29, mx + a, my + b - 63, mx - a, my - b - 63)
+        love.graphics.setColor(0.62, 0.12, 0.14, 1)
+        love.graphics.polygon("fill", mx - a - 3, my - b - 26, mx - a * 0.4, my - b * 0.4 - 26, mx - a * 0.4, my - b * 0.4 - 66, mx - a - 3, my - b - 66)
+        love.graphics.polygon("fill", mx + a + 3, my + b - 26, mx + a * 0.4, my + b * 0.4 - 26, mx + a * 0.4, my + b * 0.4 - 66, mx + a + 3, my + b - 66)
+      end
+    end
+  end
+end
+
 return M

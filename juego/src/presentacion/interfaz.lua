@@ -9,6 +9,7 @@ local Mascotas = require("compartido.dominio.mascotas")
 local Monturas = require("compartido.dominio.monturas")
 local MonturaFx = require("src.presentacion.render.monturas_fx")
 local Subastas = require("compartido.dominio.subastas")
+local Iso = require("src.presentacion.render.iso")
 local Ajustes = require("src.presentacion.ajustes")
 local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
@@ -161,7 +162,13 @@ end
 
 -- Retrato de un oficio: (x, y) son los pies; zoom 1 equivale a un personaje de 32 px por 2,4.
 -- addon (opcional): el aspecto del addon activo del personaje en lugar del de su clase.
-function I.persona(claseId, x, y, zoom, faccion, addon)
+function I.persona(claseId, x, y, zoom, faccion, addon, genero, equipo)
+  local Fao = require("src.presentacion.render.fao")
+  if not addon and Fao.activo() then
+    -- personaje por capas: se dibuja de frente, con su equipo (o el de escalón 1 si no hay)
+    Fao.retrato(claseId or "guerrero", genero or "h", equipo, x, y, (zoom or 1) * 1.6)
+    return
+  end
   local c = Personajes.clases[claseId or "guerrero"] or Personajes.clases.guerrero
   local def = c[faccion or "albor"] or c.albor
   if addon then def = Personajes.de({ kind = "jugador", clase = claseId, faccion = faccion, addon = addon }) or def end
@@ -541,7 +548,7 @@ function I.crear(estado, w, h)
     love.graphics.setColor(facVista.color[1], facVista.color[2], facVista.color[3], 0.25)
     love.graphics.rectangle("fill", 48, 160, 252, 220, 8, 8)
   end
-  I.persona(claseVista, 174, 360, 2.3, estado.faccion)
+  I.persona(claseVista, 174, 360, 2.3, estado.faccion, nil, estado.genero)
   love.graphics.setColor(0.95, 0.9, 0.75)
   local nombreVista = (estado.nombre ~= "" and estado.nombre) or "Sin nombre"
   love.graphics.printf(nombreVista, 40, 400, 268, "center")
@@ -554,9 +561,12 @@ function I.crear(estado, w, h)
   end
   love.graphics.setColor(0.9, 0.84, 0.7)
   love.graphics.printf(Datos.clases[claseVista].nombre, 40, 452, 268, "center")
+  -- aspecto: hombre o mujer
+  I.boton(48, 480, 122, 30, (estado.genero ~= "m") and "● Hombre" or "Hombre", "genero_h")
+  I.boton(178, 480, 122, 30, (estado.genero == "m") and "● Mujer" or "Mujer", "genero_m")
   if not estado.clase then
     love.graphics.setColor(0.65, 0.62, 0.55)
-    love.graphics.printf("El oficio cambia este dibujo.", 40, 490, 268, "center")
+    love.graphics.printf("El oficio cambia este dibujo.", 40, 520, 268, "center")
   end
 
   local function tarjetaFaccion(id, x)
@@ -568,7 +578,7 @@ function I.crear(estado, w, h)
     love.graphics.rectangle("line", x, 84, 450, 168, 6, 6)
     love.graphics.setColor(f.color[1], f.color[2], f.color[3], 0.2)
     love.graphics.rectangle("fill", x + 16, 118, 120, 110, 6, 6)
-    I.persona(claseVista, x + 76, 220, 1.25, id)
+    I.persona(claseVista, x + 76, 220, 1.25, id, nil, estado.genero)
     love.graphics.setColor(f.color)
     love.graphics.print(f.nombre, x + 150, 108)
     love.graphics.setColor(0.9, 0.86, 0.75)
@@ -594,7 +604,7 @@ function I.crear(estado, w, h)
     love.graphics.rectangle("line", cx, 268, ancho, 250, 6, 6)
     love.graphics.setColor(0.95, 0.9, 0.75)
     love.graphics.printf(c.nombre, cx, 278, ancho, "center")
-    I.persona(id, cx + ancho / 2, 400, 1.15, estado.faccion)
+    I.persona(id, cx + ancho / 2, 400, 1.15, estado.faccion, nil, estado.genero)
     love.graphics.setColor(0.75, 0.72, 0.64)
     love.graphics.printf(c.rol, cx + 8, 414, ancho - 16, "center")
     I.boton(cx + 12, 472, ancho - 24, 30, elegida and "Oficio elegido" or "Elegir", "clase_" .. id)
@@ -1218,6 +1228,15 @@ function I.iconoMazmorra(x, y, r)
   arco("fill", 0.55)
 end
 
+-- ¿Queda el punto dentro de lo que enseña el minimapa? (girado, la zona visible es un círculo que cubre el cuadrado)
+local function dentroMini(ex, ey, x, y, lado, m)
+  if Iso.activo() then
+    local dx, dy = ex - (x + lado / 2), ey - (y + lado / 2)
+    return dx * dx + dy * dy < (lado * 0.72) ^ 2
+  end
+  return ex > x + m and ex < x + lado - m and ey > y + m and ey < y + lado - m
+end
+
 local function minimapaLocal(mundo, p, x, y, lado)
   marco(x - 3, y - 3, lado + 6, lado + 6, true)
   if p.modo ~= "mundo" then
@@ -1234,6 +1253,19 @@ local function minimapaLocal(mundo, p, x, y, lado)
   local k = lado / ventana
   local s = I.escala or 1
   love.graphics.setScissor(x * s, y * s, lado * s, lado * s)
+  -- en vista isométrica el minimapa se gira 45º para que coincida con lo que se ve en pantalla (arriba = arriba en la pantalla)
+  local girado = Iso.activo()
+  if girado then
+    love.graphics.push()
+    love.graphics.translate(x + lado / 2, y + lado / 2)
+    love.graphics.rotate(math.pi / 4)
+    love.graphics.scale(1, 1)
+    love.graphics.translate(-(x + lado / 2), -(y + lado / 2))
+    -- el centro de la vista es el jugador (salvo en los bordes del mundo): se recentra
+    love.graphics.translate((x + lado / 2) - (x + (px - x0) * k), (y + lado / 2) - (y + (py - y0) * k))
+    love.graphics.setColor(0.04, 0.05, 0.07)
+    love.graphics.rectangle("fill", x - lado, y - lado, lado * 3, lado * 3)
+  end
   love.graphics.setColor(1, 1, 1)
   love.graphics.draw(I.mini, -x0 * k + x, -y0 * k + y, 0, k, k)
   for _, c in ipairs(mundo.mapas.mundo.ciudades) do
@@ -1244,18 +1276,18 @@ local function minimapaLocal(mundo, p, x, y, lado)
   -- un icono por cada PNJ (la lista sale del mapa, así se ven aunque estén lejos)
   for _, n in ipairs(mundo.mapas.mundo.npcsMapa or {}) do
     local ex, ey = x + (n.x - x0) * k, y + (n.y - y0) * k
-    if ex > x + 2 and ex < x + lado - 2 and ey > y + 2 and ey < y + lado - 2 then I.iconoNpc(n.rol, ex, ey, 2.4) end
+    if dentroMini(ex, ey, x, y, lado, 2) then I.iconoNpc(n.rol, ex, ey, 2.4) end
   end
   -- puertas de mazmorra
   for _, z in ipairs(mundo.mapas.mundo.mazmorras or {}) do
     local ex, ey = x + (z.x - x0) * k, y + (z.y - y0) * k
-    if ex > x + 4 and ex < x + lado - 4 and ey > y + 4 and ey < y + lado - 4 then I.iconoMazmorra(ex, ey, 3) end
+    if dentroMini(ex, ey, x, y, lado, 4) then I.iconoMazmorra(ex, ey, 3) end
   end
   -- compañeros de grupo (se ven aunque estén lejos)
   for _, m in ipairs(p.grupo and p.grupo.miembros or {}) do
     if m.id ~= p.id then
       local ex, ey = x + (m.x - x0) * k, y + (m.y - y0) * k
-      if ex > x + 2 and ex < x + lado - 2 and ey > y + 2 and ey < y + lado - 2 then
+      if dentroMini(ex, ey, x, y, lado, 2) then
         love.graphics.setColor(0, 0, 0, 0.9)
         love.graphics.circle("fill", ex, ey, 4)
         love.graphics.setColor(0.35, 0.85, 1)
@@ -1266,7 +1298,7 @@ local function minimapaLocal(mundo, p, x, y, lado)
   -- caravanas en marcha y ladrones buscados (los oficios los rastrean)
   for _, c in ipairs(p.caravanas or {}) do
     local ex, ey = x + (c.x - x0) * k, y + (c.y - y0) * k
-    if ex > x + 2 and ex < x + lado - 2 and ey > y + 2 and ey < y + lado - 2 then
+    if dentroMini(ex, ey, x, y, lado, 2) then
       love.graphics.setColor(0, 0, 0, 0.85)
       love.graphics.rectangle("fill", ex - 3.5, ey - 2.5, 7, 5)
       love.graphics.setColor(0.95, 0.8, 0.4)
@@ -1275,7 +1307,7 @@ local function minimapaLocal(mundo, p, x, y, lado)
   end
   for _, b in ipairs(p.buscados or {}) do
     local ex, ey = x + (b.x - x0) * k, y + (b.y - y0) * k
-    if ex > x + 2 and ex < x + lado - 2 and ey > y + 2 and ey < y + lado - 2 then
+    if dentroMini(ex, ey, x, y, lado, 2) then
       love.graphics.setColor(0, 0, 0, 0.9)
       love.graphics.circle("fill", ex, ey, 4.2)
       love.graphics.setColor(1, 0.15, 0.15)
@@ -1286,7 +1318,7 @@ local function minimapaLocal(mundo, p, x, y, lado)
   for _, e in pairs(mundo.entidades) do
     if e.vivo ~= false and e.modo == "mundo" and e.id ~= p.id and mundo:mismoLugar(p, e) then
       local ex, ey = x + (e.x - x0) * k, y + (e.y - y0) * k
-      if ex > x and ex < x + lado and ey > y and ey < y + lado then
+      if dentroMini(ex, ey, x, y, lado, 0) then
         if e.kind == "jugador" or e.kind == "bot" then
           local c = Datos.facciones[e.faccion] and Datos.facciones[e.faccion].color or { 1, 1, 1 }
           love.graphics.setColor(c[1], c[2], c[3])
@@ -1303,6 +1335,7 @@ local function minimapaLocal(mundo, p, x, y, lado)
   love.graphics.rectangle("fill", ex - 3, ey - 3, 6, 6)
   love.graphics.setColor(1, 1, 1)
   love.graphics.rectangle("fill", ex - 2, ey - 2, 4, 4)
+  if girado then love.graphics.pop() end
   love.graphics.setScissor()
 end
 
@@ -3005,7 +3038,7 @@ function I.panelEquipo(mundo, p, w, h)
   love.graphics.setColor(0.10, 0.13, 0.25)
   love.graphics.rectangle("fill", px + 14, py + 44, 200, 150, 6, 6)
   local addonAct = (p.mall and p.mall.addonActivo) or p.addon
-  I.persona(p.clase, px + 114, py + 160, 1.7, p.faccion, addonAct)
+  I.persona(p.clase, px + 114, py + 160, 1.7, p.faccion, addonAct, p.genero or p.gen, p.equipo)
   love.graphics.setFont(I.fuente)
   love.graphics.setColor(0.98, 0.93, 0.78)
   love.graphics.printf(p.nombre or "", px + 14, py + 198, 200, "center")
@@ -3847,7 +3880,7 @@ function I.personajes(lista, usuario, w, h, errorTxt)
       love.graphics.setColor(fac.color[1], fac.color[2], fac.color[3], 0.2)
       love.graphics.rectangle("fill", w / 2 - 324, y + 12, 72, 72, 4, 4)
     end
-    I.persona(pj.clase, w / 2 - 288, y + 84, 0.85, pj.faccion, (type(pj.addon) == "string" and Personajes.skins[pj.addon]) and pj.addon or nil)
+    I.persona(pj.clase, w / 2 - 288, y + 84, 0.85, pj.faccion, (type(pj.addon) == "string" and Personajes.skins[pj.addon]) and pj.addon or nil, pj.genero)
     love.graphics.setColor(fac and fac.color or { 1, 1, 1 })
     love.graphics.print(pj.nombre .. "   nivel " .. pj.nivel, w / 2 - 220, y + 28)
     love.graphics.setColor(0.85, 0.82, 0.75)

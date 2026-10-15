@@ -8,6 +8,8 @@ local A = {
   alto = 720,
   teclas = { interactuar = "e", bolsa = "i" },
   esperando = nil,
+  teclasPantalla = false, -- isométrico: true = W/A/S/D van derechas en la pantalla; false = siguen las diagonales del rombo
+  personajesCapas = true, -- personajes por capas (arte/fao); false = los personajes antiguos
   casasIso = true,        -- casas isométricas en las ciudades (false: las antiguas, dibujadas por código)
   graficos = "alto",      -- efectos de ambiente: alto, medio, bajo, apagado
   ultimoUsuario = "",   -- el último usuario con el que se entró (se recuerda en el formulario)

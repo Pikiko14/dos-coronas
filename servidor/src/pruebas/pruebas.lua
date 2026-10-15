@@ -356,6 +356,9 @@ function Pruebas.correr()
     local mundo = Mundo.nuevo()
     Servidor.tratar(srv, mundo, 7, { t = "hola" })
     fallar(errores, "hola sin token", srv.enviados[1] and srv.enviados[1].t == "no")
+    srv.enviados = {}
+    Servidor.tratar(srv, mundo, 7, { t = "ping", n = 42 })
+    fallar(errores, "el servidor devuelve el ping con el mismo número", srv.enviados[1] and srv.enviados[1].t == "pong" and srv.enviados[1].n == 42)
     local usuario = "qs" .. string.format("%06d", os.time() % 1000000)
     local nombre = "Neria" .. string.format("%03d", os.time() % 1000)
     Cuentas.borrarUsuario(usuario)
@@ -1688,6 +1691,21 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     fallar(errores, "se enfría", mundo:equipar(p, 1) ~= nil and p.x == 200.5)
     mundo.tiempo = 140
     fallar(errores, "tras el enfriamiento vuelve a funcionar", mundo:equipar(p, 1) == nil and #p.bolsa == 0)
+  end)
+
+  paso("equipo igualado a lo que lleva cada clase", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    fallar(errores, "ya no hay ballesta, alabarda, vara, cetro ni grimorio", Datos.item("cazador_ballesta_1") == nil and Datos.item("lancero_alabarda_1") == nil
+      and Datos.item("mago_vara_1") == nil and Datos.item("clerigo_cetro_1") == nil and Datos.item("nigromante_grimorio_1") == nil)
+    fallar(errores, "el clérigo no lleva escudo", Datos.item("clerigo_escudo_1") == nil and Datos.item("guerrero_escudo_1") ~= nil)
+    local p = mundo:crearPersonaje({ nombre = "Viejo", faccion = "albor", clase = "cazador", nivel = 5 })
+    mundo:aplicarGuardado(p, { equipo = { arma = "cazador_ballesta_3" }, bolsa = { { id = "cazador_ballesta_2", cant = 1 } }, nivel = 5, nombre = "Viejo", faccion = "albor", clase = "cazador" })
+    fallar(errores, "la ballesta guardada pasa a ser el arco", p.equipo.arma == "cazador_arma_3" and p.bolsa[1] and p.bolsa[1].id == "cazador_arma_2")
+    local c = mundo:crearPersonaje({ nombre = "Cler", faccion = "albor", clase = "clerigo", nivel = 5 })
+    local oro = c.oro
+    mundo:aplicarGuardado(c, { equipo = { escudo = "clerigo_escudo_2" }, bolsa = {}, nivel = 5, oro = oro, nombre = "Cler", faccion = "albor", clase = "clerigo" })
+    fallar(errores, "el escudo del clérigo se devuelve en oro", c.equipo.escudo == nil and c.oro > oro)
   end)
 
   paso("las paredes frenan los ataques", function()
@@ -4133,7 +4151,7 @@ mundo.tiempo = 100
     local mundo = Mundo.nuevo()
     local c
     for _, ci in ipairs(mundo.mapas.mundo.ciudades) do if ci.id == "auroria" then c = ci end end
-    local cx, cy = c.x + math.floor(c.w / 2), c.y + math.floor(c.h / 2)
+    local cx, cy = c.plaza.x, c.plaza.y
     local j = mundo:crearPersonaje({ nombre = "Paso", faccion = "albor", clase = "guerrero" })
     local function poner(x, y)
       j.x, j.y, j.tramo, j.camino, j.persigue, j.objetivo = x + 0.5, y + 0.5, nil, nil, false, nil
@@ -4259,7 +4277,7 @@ mundo.tiempo = 100
     local nCiudades = #mapa.ciudades
     fallar(errores, "casas bien formadas", mal == 0, tostring(mal))
     fallar(errores, "tres tamanos de casa", tamanos.pequena and tamanos.mediana and tamanos.grande)
-    fallar(errores, "varias formas de casa", n >= 6, tostring(n))
+    fallar(errores, "tres formas de casa", n == 3, tostring(n))
     fallar(errores, "cada ciudad tiene establo, pociones y armas",
       tiendas.establo == nCiudades and tiendas.mercado == nCiudades and tiendas.armero == nCiudades,
       tostring(tiendas.establo) .. "/" .. tostring(tiendas.mercado) .. "/" .. tostring(tiendas.armero))
@@ -4336,10 +4354,10 @@ mundo.tiempo = 100
     fallar(errores, "el Ocaso ofrece cinco oficios, el último el nigromante", #ocaso == 5 and ocaso[5] == "nigromante")
     -- equipo propio en los ocho escalones
     for t = 1, 8 do
-      for _, id in ipairs({ "lancero_arma_", "lancero_alabarda_", "lancero_cabeza_", "lancero_pecho_", "lancero_piernas_", "lancero_pies_",
-        "nigromante_arma_", "nigromante_grimorio_", "nigromante_cabeza_", "nigromante_pecho_", "nigromante_piernas_", "nigromante_pies_" }) do
+      for _, id in ipairs({ "lancero_arma_", "lancero_cabeza_", "lancero_pecho_", "lancero_piernas_", "lancero_pies_",
+        "nigromante_arma_", "nigromante_cabeza_", "nigromante_pecho_", "nigromante_piernas_", "nigromante_pies_" }) do
         local it = Datos.items[id .. t]
-        fallar(errores, "existe " .. id .. t, it ~= nil and it.hoja == "extra", tostring(it and it.hoja))
+        fallar(errores, "existe " .. id .. t, it ~= nil and (it.hoja == "extra" or (it.hoja == "armas" and it.hueco == "arma")), tostring(it and it.hoja))
       end
     end
     fallar(errores, "la lanza es de tipo lanza", Datos.items.lancero_arma_1.arma == "lanza")

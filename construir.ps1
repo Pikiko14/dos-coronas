@@ -23,7 +23,7 @@ function Empaquetar($nombre) {
   $stage = Join-Path $dist ($nombre + "-stage")
   Vaciar $stage
   New-Item -ItemType Directory -Force $stage | Out-Null
-  robocopy $origen $stage /E /XD capturas preview mon house npc /XF .env log.txt error_log.txt "prueba_*.txt" cuentas.json /NFL /NDL /NJH /NJS /NP | Out-Null
+  robocopy $origen $stage /E /XD capturas preview mon house npc fao-equipos fao-personajes /XF .env log.txt error_log.txt "prueba_*.txt" cuentas.json /NFL /NDL /NJH /NJS /NP | Out-Null
   robocopy (Join-Path $raiz "compartido") (Join-Path $stage "compartido") /E /NFL /NDL /NJH /NJS /NP | Out-Null
   if ($nombre -eq "juego" -and ($Servidor -or $Puerto -gt 0)) {
     # el servidor de destino va DENTRO del paquete (no en un .env suelto junto al .exe)
