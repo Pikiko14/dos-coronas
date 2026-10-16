@@ -257,6 +257,11 @@ function Servicio.tratar(servidor, mundo, idCon, msg)
     mundo:aplicarGuardado(pj, datos)
     mundo:avisoDiaria(pj)
     servidor.vinculo[idCon] = pj.id
+    -- protocolo del cliente: 2 = fotos diferenciales (render del servidor: Mundo:fotoDelta); sin él, fotos completas como siempre
+    servidor.proto = servidor.proto or {}
+    servidor.estadoFoto = servidor.estadoFoto or {}
+    servidor.proto[idCon] = tonumber(msg.proto) or 1
+    servidor.estadoFoto[idCon] = { completo = true }
     servidor:enviar(idCon, { t = "ok", id = pj.id, nombre = pj.nombre })
     return
   end
@@ -267,6 +272,10 @@ function Servicio.tratar(servidor, mundo, idCon, msg)
     local ok, limpio = Autoridad.aceptar(mundo, pj, msg.a, msg.p)
     if not ok then return end
     local r = mundo:accion(pid, msg.a, limpio)
+    if msg.a ~= "deseo" and servidor.estadoFoto and servidor.estadoFoto[idCon] then
+      -- el jugador hizo algo: su foto siguiente lleva ya su parte propia (inventario, misiones...) y lo que cambió en el mundo
+      servidor.estadoFoto[idCon].forzarTu, servidor.estadoFoto[idCon].forzarMeta = true, true
+    end
     if r and (msg.a == "interactuar" or r.panel ~= nil) then
       servidor:enviar(idCon, { t = "panel", panel = r.panel, ciudad = r.ciudad, npc = r.npc, datos = r.datos, tienda = r.tienda })
     end
@@ -281,7 +290,22 @@ function Servicio.actualizar(ctx, dt)
   if mundo then mundo._servidor = servidor end
   local nota = ctx.nota or function() end
   if mundo then
-    mundo:actualizar(dt)
+    if not servidor then
+      mundo:actualizar(dt)
+    else
+      -- LÖVE llama a esto unas mil veces por segundo: la simulación del mundo corre a un ritmo fijo (60 por segundo por defecto), no en
+      -- cada vuelta. Antes cada vuelta simulaba el mundo entero con 1 ms de tiempo y el servidor ocupaba casi un núcleo sin nadie dentro.
+      -- La red (aceptar, leer, contestar pings) sí se atiende en cada vuelta, para no añadir espera.
+      mundo._simAcum = (mundo._simAcum or 0) + dt
+      -- cada paso del mundo cuesta lo mismo (~2 ms aquí, ~6 ms en el VPS) con 1.500 entidades: sin nadie conectado el mundo duerme a
+      -- 4 pasos por segundo, y con jugadores corre a 30 (los proyectiles ya aguantan pasos largos)
+      local hay = next(servidor.vinculo) ~= nil
+      if mundo._simAcum >= 1 / (hay and (cfg.simulacion_hz or 30) or 4) then
+        local d = math.min(mundo._simAcum, 0.3)
+        mundo._simAcum = 0
+        mundo:actualizar(d)
+      end
+    end
   end
   if not servidor or not mundo then return end
   for _, ev in ipairs(servidor:actualizar()) do
@@ -295,6 +319,8 @@ function Servicio.actualizar(ctx, dt)
         pj.borrar = true
       end
       servidor.vinculo[ev.id] = nil
+      if servidor.proto then servidor.proto[ev.id] = nil end
+      if servidor.estadoFoto then servidor.estadoFoto[ev.id] = nil end
       servidor.tasa[ev.id] = nil
       if servidor.actividad then servidor.actividad[ev.id] = nil end
       if servidor.avisadoInactivo then servidor.avisadoInactivo[ev.id] = nil end
@@ -333,10 +359,21 @@ function Servicio.actualizar(ctx, dt)
   servidor._guardar = (servidor._guardar or 0) + dt
   if servidor._acum > 1 / (cfg.fotos_por_segundo or 15) then
     servidor._acum = 0
+    local ronda = mundo:rondaFoto()     -- una sola pasada por las entidades (y una sola codificación de cada una) para todos los jugadores
+    local indice = ronda.indice
     for _, c in ipairs(servidor.clientes) do
       local pid = servidor.vinculo[c.id]
-      if pid and servidor:puedeEnviar(c.id) then
-        servidor:enviar(c.id, { t = "snap", snap = mundo:foto(pid) })
+      local est = servidor.estadoFoto and servidor.estadoFoto[c.id]
+      if pid and est and servidor.proto[c.id] >= 2 then
+        -- cliente con fotos diferenciales: si no se pudo enviar esta ronda, la siguiente empieza de cero (foto completa con reset)
+        if servidor:puedeEnviar(c.id) then
+          local texto = mundo:fotoDelta(pid, est, ronda)
+          if texto then servidor:enviar(c.id, texto) end
+        else
+          est.completo = true
+        end
+      elseif pid and servidor:puedeEnviar(c.id) then
+        servidor:enviar(c.id, { t = "snap", snap = mundo:foto(pid, indice) })
       end
     end
     -- los sonidos de este intervalo ya viajaron en las fotos

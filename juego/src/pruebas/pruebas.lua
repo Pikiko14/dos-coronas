@@ -125,6 +125,86 @@ function Pruebas.correr()
     Juego.predecirPropio(app, 1 / 60, 1, 0)
     fallar(errores, "si el servidor lo corrige lejos, abandona la predicción", app._pred == nil and j._mx == x0 - 5)
   end)
+  paso("eco instantáneo de poderes: se ve al lanzar, el servidor no lo duplica y se corta si lo rechaza", function()
+    local Eco = require("src.presentacion.eco")
+    local mundo = Mundo.nuevo()
+    local c = mundo.mapas.mundo.ciudades[1]
+    local pj = mundo:crearPersonaje({ nombre = "Mago", faccion = "albor", clase = "mago", nivel = 20 })
+    pj.habilidades.fuego, pj.habilidades.nova = 1, 1
+    pj.mp, pj.mpMax, pj.cds = 9999, 9999, {}
+    pj.x, pj.y = c.spawn.x, c.spawn.y
+    local mob = { id = 900, kind = "monstruo", faccion = "bestia", x = pj.x + 4, y = pj.y, vivo = true, hp = 100, hpMax = 100, modo = "mundo", z = 0, nivel = 1 }
+    mundo.entidades[900] = mob
+    pj.objetivo = 900
+    local app = { jugador = pj, mundo = mundo, miId = pj.id, rol = "cliente", ping = 0.15 }
+    local function slotDe(id) for i, h in ipairs(Datos.barra.mago) do if h == id then return i end end end
+    local dibujo = Eco.lanzar(app, { slot = slotDe("nova") })
+    Eco.actualizar(app, 0.016)
+    local nfx = 0
+    for _, fx in ipairs(mundo.efectos) do if fx._eco and fx.tipo == "nova" then nfx = nfx + 1 end end
+    fallar(errores, "la nova se dibuja al instante", dibujo == true and nfx == 1, tostring(dibujo) .. "/" .. nfx)
+    fallar(errores, "el maná y el enfriamiento se adelantan", pj.cds.nova and pj.cds.nova > mundo.tiempo)
+    fallar(errores, "en enfriamiento no hay eco", Eco.lanzar(app, { slot = slotDe("nova") }) == false)
+    -- llega la foto con el efecto del servidor: se descarta (no se ve doble) y cuenta como confirmación
+    mundo.efectos = { { tipo = "nova", x = pj.x + 0.1, y = pj.y, t = 0.1, dur = 0.5 } }
+    Eco.actualizar(app, 0.016)
+    local propios, ajenos = 0, 0
+    for _, fx in ipairs(mundo.efectos) do if fx._eco then propios = propios + 1 else ajenos = ajenos + 1 end end
+    fallar(errores, "el efecto del servidor no se duplica", propios == 1 and ajenos == 0, propios .. "/" .. ajenos)
+    -- proyectil: vuela al instante hacia el objetivo y el del servidor se oculta
+    app._ecoGcd = 0
+    local ok = Eco.lanzar(app, { slot = slotDe("fuego") })
+    Eco.actualizar(app, 0.05)
+    local pr
+    for _, e in pairs(mundo.entidades) do if e._eco and e.kind == "proyectil" then pr = e end end
+    fallar(errores, "la bola de fuego sale al instante y avanza", ok == true and pr and pr.x > pj.x, tostring(ok))
+    mundo.entidades[901] = { id = 901, kind = "proyectil", tipo = "fuego", x = pj.x + 1.5, y = pj.y, tx = mob.x, ty = mob.y, vivo = true }
+    Eco.actualizar(app, 0.016)
+    fallar(errores, "el proyectil del servidor se oculta mientras se ve el eco", mundo.entidades[901] == nil)
+    -- el servidor rechaza: sin confirmación el eco se corta
+    local app2 = { jugador = pj, mundo = mundo, miId = pj.id, rol = "cliente", ping = 0.05 }
+    pj.cds = {}
+    mundo.efectos = {}
+    Eco.lanzar(app2, { slot = slotDe("nova") })
+    app2._eco.sup[1].limite = love.timer.getTime() - 1       -- ya pasó el plazo
+    Eco.actualizar(app2, 0.016)
+    local quedan = 0
+    for _, fx in ipairs(mundo.efectos) do if fx._eco and fx.tipo == "nova" then quedan = quedan + 1 end end
+    fallar(errores, "sin confirmación del servidor el eco se corta", quedan == 0, tostring(quedan))
+  end)
+  paso("fotos diferenciales en el cliente: entran, se deslizan hacia la posición nueva, cambian campos y salen", function()
+    local Juego = require("src.presentacion.estados.juego")
+    local mundo = Mundo.nuevo()
+    local app = { mundo = mundo, miId = 1, rol = "cliente", estado = "juego" }
+    local ya = love.timer.getTime
+    mundo.entidades = {}
+    Juego._mezclar(app, { delta = 1, reset = 1, nuevos = {
+      { id = 1, kind = "jugador", nombre = "Yo", x = 50, y = 50, hp = 100, hpMax = 100, vivo = true, dir = 1 },
+      { id = 7, kind = "monstruo", nombre = "Gato", x = 52, y = 50, hp = 10, hpMax = 10, vivo = true, dir = 1 },
+    } })
+    fallar(errores, "la foto con reset trae las entidades", mundo.entidades[7] and mundo.entidades[7].x == 52 and app.jugador == mundo.entidades[1])
+    -- el monstruo avanza: la posición que se ve sigue donde estaba y el destino es la nueva
+    Juego._mezclar(app, { delta = 1, mods = { { id = 7, x = 53, dir = 4 } } })
+    local m = mundo.entidades[7]
+    fallar(errores, "una diferencia no mueve de golpe lo que se ve", m.x == 52 and m._mx == 53 and m.sx == 53 and m.dir == 4)
+    Juego.predecir(app, 0.05)
+    fallar(errores, "se desliza hacia la posición nueva", m.x > 52 and m.x < 53, tostring(m.x))
+    -- sin diferencias nuevas, el deslizamiento acaba solo
+    for _ = 1, 10 do Juego.predecir(app, 0.05) end
+    fallar(errores, "y llega a ella sin más fotos", math.abs(m.x - 53) < 0.001, tostring(m.x))
+    -- cambian campos sueltos y se quita uno
+    Juego._mezclar(app, { delta = 1, mods = { { id = 7, hp = 4, burbuja = "hola" } } })
+    fallar(errores, "los campos que cambian se aplican", m.hp == 4 and m.burbuja == "hola" and m.x == 53 and m.hpMax == 10)
+    Juego._mezclar(app, { delta = 1, mods = { { id = 7, ["~"] = { "burbuja" } } } })
+    fallar(errores, "los campos quitados desaparecen", m.burbuja == nil)
+    -- la parte propia llega por diferencias
+    Juego._mezclar(app, { delta = 1, tu = { oro = 55, bolsa = { { id = "x", cant = 1 } } } })
+    Juego._mezclar(app, { delta = 1, tu = { oro = 60 } })
+    fallar(errores, "la parte propia se completa con diferencias", mundo.entidades[1].oro == 60 and mundo.entidades[1].bolsa[1].id == "x")
+    -- sale de la vista
+    Juego._mezclar(app, { delta = 1, sal = { 7 } })
+    fallar(errores, "las que salen se quitan", mundo.entidades[7] == nil and mundo.entidades[1] ~= nil)
+  end)
   paso("rendimiento: memoria que genera el HUD y el dibujo por cuadro", function()
     local Misiones = require("compartido.dominio.misiones")
     local Dibujo = require("src.presentacion.render.dibujo")
@@ -507,7 +587,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     Dibujo.relojAtaque = function() return reloj end
     local ok, err = pcall(function()
       for _, base in ipairs({
-        { kind = "monstruo", monstruo = "gato", dir = 3 },
+        { kind = "monstruo", monstruo = "seta_azul", dir = 3 },
         { kind = "jugador", clase = "guerrero", faccion = "albor", addon = "skin_hoplita", dir = 1 },
         { kind = "jugador", clase = "mago", faccion = "umbra", dir = 4, atqL = true },
       }) do
@@ -904,24 +984,46 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
   paso("todas las criaturas tienen sprite", function()
     local P = require("src.presentacion.render.personajes")
     local Arte = require("src.presentacion.render.arte")
+    local MobAnim = require("src.presentacion.render.mob_anim")
     local faltan = {}
+    local CUADROS = { wait = 15, run = 30, att = 20, hurt = 10, dead = 30 }
     for _, m in ipairs(Datos.monstruos) do
-      if not m.noCampamento then
-        local d = P.monstruos[m.id]
-        if not d or not Arte.img(d.hoja) then faltan[#faltan + 1] = m.id
-        else
-          local ok = pcall(P.dibujar, d, 1, true, 0.2, 100, 100, d.tinte)
-          if not ok then faltan[#faltan + 1] = m.id .. "(dibujo)" end
+      local d = P.monstruos[m.id]
+      local def = MobAnim.DEFS[m.id]
+      if not d or not d.anim or not def then faltan[#faltan + 1] = m.id .. "(sin dibujo)"
+      else
+        -- las cinco tiras existen y su ancho es múltiplo de sus cuadros (y de 5 direcciones si las trae)
+        for tipo, n in pairs(CUADROS) do
+          local ruta = "arte/monstruos/" .. def.carpeta .. "/" .. tipo .. ".png"
+          if not love.filesystem.getInfo(ruta) then faltan[#faltan + 1] = m.id .. "(" .. tipo .. ")"
+          else
+            local w = love.graphics.newImage(ruta):getWidth()
+            local celdas = def.dirs2 and (n * 2 / 5) or n
+            if w % celdas ~= 0 then faltan[#faltan + 1] = m.id .. "(" .. tipo .. " ancho)" end
+          end
         end
+        -- cada estado y cada dirección se dibujan sin error
+        for _, estado in ipairs({ "wait", "run", "att", "hurt" }) do
+          for dir = 1, 4 do
+            local ok = pcall(MobAnim.dibujar, m.id, estado, 0.5, 100, 100, dir, nil, 0)
+            if not ok then faltan[#faltan + 1] = m.id .. "(" .. estado .. dir .. ")" end
+          end
+        end
+        if not pcall(MobAnim.muerto, m.id, 0.5, 100, 100, 1, 1) then faltan[#faltan + 1] = m.id .. "(muerto)" end
+        if not (def.alto and def.alto >= 20 and def.escala and def.escala > 0.1 and def.escala < 3) then faltan[#faltan + 1] = m.id .. "(tamaño)" end
       end
     end
-    fallar(errores, "cada criatura se dibuja", #faltan == 0, table.concat(faltan, ", "))
-    local dragon = P.monstruos.dragon
-    local hoja = Arte.img(dragon.hoja)
-    fallar(errores, "el dragón joven usa el cuadro de 80 de su lámina", dragon.celda == 80 and dragon.fila == 1
-      and hoja:getWidth() == dragon.celda * 3 and hoja:getHeight() >= (dragon.fila + 1) * dragon.celda)
-    local alto = P.dibujar(dragon, 1, false, 0, 100, 100)
-    fallar(errores, "el dragón joven se dibuja entero", alto == 80, tostring(alto))
+    fallar(errores, "cada criatura tiene sus cinco animaciones y se dibuja en cualquier estado y dirección", #faltan == 0, table.concat(faltan, ", "))
+    -- los jefes del mundo llevan aura y son más grandes que cualquier criatura normal
+    local mayorNormal = 0
+    for _, m in ipairs(Datos.monstruos) do
+      if not m.elite and not m.categoria and not m.id:find("^jefe_") and MobAnim.DEFS[m.id] then mayorNormal = math.max(mayorNormal, MobAnim.DEFS[m.id].alto) end
+    end
+    local pequenos = {}
+    for _, m in ipairs(Datos.monstruos) do
+      if m.jefeMundo and not (MobAnim.DEFS[m.id].aura and MobAnim.DEFS[m.id].alto >= mayorNormal + 20) then pequenos[#pequenos + 1] = m.id end
+    end
+    fallar(errores, "los jefes del mundo llevan aura y se ven mayores que las criaturas normales", #pequenos == 0, table.concat(pequenos, ", "))
   end)
   paso("interfaz: los botones del mall mandan la acción correcta", function()
     local Entrada = require("src.presentacion.entrada")
@@ -1536,7 +1638,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     -- la rueda sobre el chat sube y baja
     local lado, consola = Interfaz.medidas()
     love.mouse.setPosition(300, 720 - consola / 2)
-    Entrada.rueda({ estado = "juego" }, 1)
+    Entrada.rueda({ estado = "juego", zoom = 1 }, 1)
     fallar(errores, "la rueda sube el chat", (Interfaz.chatScroll or 0) > 0, tostring(Interfaz.chatScroll))
     Entrada.tecla({ estado = "juego" }, "pagedown")
     Entrada.tecla({ estado = "juego" }, "pagedown")
@@ -1779,16 +1881,39 @@ function Pruebas.bot()
   local cli = Red.conectar(Config.red.host, Config.red.puerto)
   fallar(errores, "conecta al servidor", cli ~= nil)
   local snaps, ultimoSnap, miId, token, personaje = 0, nil, nil, nil, nil
+  -- DC_BOT_PROTO=2: el bot habla con fotos diferenciales; se aplican a un mundo de cliente y se reconstruye una foto completa equivalente
+  local proto = os.getenv("DC_BOT_PROTO") == "2" and 2 or nil
+  local mundoBot, tuAcum, mensajesAcum = nil, {}, {}
+  local function tomar(snap)
+    if not snap.delta then return snap end
+    mundoBot = mundoBot or require("compartido.dominio.mundo").nuevo()
+    mundoBot:aplicarFoto(snap, miId)
+    local ents = {}
+    for _, e in pairs(mundoBot.entidades) do ents[#ents + 1] = { id = e.id, x = e.sx or e.x, y = e.sy or e.y, hp = e.hp, nombre = e.nombre } end
+    for k, v in pairs(snap.tu or {}) do if k ~= "~" then tuAcum[k] = v end end
+    for _, m in ipairs(snap.msgs or {}) do mensajesAcum[#mensajesAcum + 1] = m end
+    return { ents = ents, tu = tuAcum, msgs = mensajesAcum, efectos = snap.efectos, tiempo = snap.tiempo, delta = true }
+  end
   local posFinal
   local usuario
+  -- los mensajes que llegan juntos se atienden todos: si no, la primera foto (que llega pegada al "ok") se perdería
+  local pendientes = {}
+  local function vaciar()
+    while #pendientes > 0 do
+      local m = table.remove(pendientes, 1)
+      if m.t == "snap" then snaps = snaps + 1 ultimoSnap = tomar(m.snap) end
+    end
+  end
   local function esperar(tipo, segundos)
     local limite = love.timer.getTime() + (segundos or 5)
     while love.timer.getTime() < limite do
       love.timer.sleep(0.02)
       local msgs, err = cli:actualizar()
       if err then return nil, "cerrado" end
-      for _, m in ipairs(msgs or {}) do
-        if m.t == "snap" then snaps = snaps + 1 ultimoSnap = m.snap end
+      for _, m in ipairs(msgs or {}) do pendientes[#pendientes + 1] = m end
+      while #pendientes > 0 do
+        local m = table.remove(pendientes, 1)
+        if m.t == "snap" then snaps = snaps + 1 ultimoSnap = tomar(m.snap) end
         if m.t == tipo then return m end
         if m.t == "no" then return nil, m.error end
       end
@@ -1808,10 +1933,11 @@ function Pruebas.bot()
       personaje = cre and cre.creado
     end
     if personaje then
-      cli:enviar({ t = "hola", token = token, personaje = personaje })
+      cli:enviar({ t = "hola", token = token, personaje = personaje, proto = proto })
       local ok, e3 = esperar("ok")
       fallar(errores, "entrada al mundo", ok ~= nil, tostring(e3))
       miId = ok and ok.id
+      vaciar()
     end
     if miId then
       local function yo()
@@ -1830,7 +1956,7 @@ function Pruebas.bot()
         while love.timer.getTime() < fin do
           love.timer.sleep(0.02)
           local msgs = cli:actualizar() or {}
-          for _, m in ipairs(msgs) do if m.t == "snap" then snaps = snaps + 1 ultimoSnap = m.snap end end
+          for _, m in ipairs(msgs) do if m.t == "snap" then snaps = snaps + 1 ultimoSnap = tomar(m.snap) end end
           local pp = yo()
           if pp and pp.y ~= ultimoX then vistos = vistos + 1 ultimoX = pp.y end
         end
@@ -1853,7 +1979,7 @@ function Pruebas.bot()
           for _, m in ipairs(cli:actualizar() or {}) do
             if m.t == "snap" then
               snaps = snaps + 1
-              ultimoSnap = m.snap
+              ultimoSnap = tomar(m.snap)
               for _, fx in ipairs(m.snap.efectos or {}) do
                 if fx.tipo == "curar" then vioEfecto = true end
               end
@@ -2007,10 +2133,10 @@ function Pruebas.prepararFoto(app)
   Log.asegurar("capturas")
   app.mundo = Mundo.nuevo()
   app.jugador = app.mundo:crearPersonaje({ nombre = "Liora", faccion = "albor", clase = "clerigo" })
-  app.mundo:spawnMonstruo("gato", app.jugador.x + 2, app.jugador.y + 0.2, { x = app.jugador.x, y = app.jugador.y })
-  app.mundo:spawnMonstruo("jabali", app.jugador.x + 3.2, app.jugador.y + 1, { x = app.jugador.x, y = app.jugador.y })
-  app.mundo:spawnMonstruo("cuervo", app.jugador.x - 2, app.jugador.y + 1, { x = app.jugador.x, y = app.jugador.y })
-  app.mundo:spawnMonstruo("gargola", app.jugador.x + 4, app.jugador.y - 1, { x = app.jugador.x, y = app.jugador.y })
+  app.mundo:spawnMonstruo("seta_azul", app.jugador.x + 2, app.jugador.y + 0.2, { x = app.jugador.x, y = app.jugador.y })
+  app.mundo:spawnMonstruo("pinguino_aprendiz", app.jugador.x + 3.2, app.jugador.y + 1, { x = app.jugador.x, y = app.jugador.y })
+  app.mundo:spawnMonstruo("larva_verde", app.jugador.x - 2, app.jugador.y + 1, { x = app.jugador.x, y = app.jugador.y })
+  app.mundo:spawnMonstruo("girasol_lancero", app.jugador.x + 4, app.jugador.y - 1, { x = app.jugador.x, y = app.jugador.y })
   for _, e in pairs(app.mundo.entidades) do
     if e.kind == "bot" and e.faccion == "albor" then
       e.x, e.y = app.jugador.x - 1.2, app.jugador.y + 0.4
@@ -2074,22 +2200,44 @@ local function fotoCasas(app)
     foto.paso = "fin"
     love.event.quit(0)
   elseif foto.paso == "menu" and os.getenv("DC_FOTO_MOBS") then
+    -- DC_FOTO_MOBS=<página>: una cuadrícula de 6 x 4 criaturas (en orden de monstruos.xml), cada fila mirando a una dirección y las columnas
+    -- impares andando; DC_FOTO_MOBS=jefes enseña los 10 jefes del mundo y los 3 de mazmorra
     foto.paso = "mobs"
     local m, j = app.mundo, app.jugador
-    local cuenta = { calabaza = 0, limo = 0 }
-    for _, e in pairs(m.entidades) do if e.kind == "monstruo" and cuenta[e.monstruo] then cuenta[e.monstruo] = cuenta[e.monstruo] + 1 end end
-    require("compartido.infraestructura.log").info("MOBS en el mundo: calabaza=" .. cuenta.calabaza .. " limo=" .. cuenta.limo)
     for _, c in ipairs(m.mapas.mundo.ciudades) do
-      if c.id == "auroria" then j.x, j.y = c.x + c.w / 2 - 3.5, c.y + c.h / 2 + 5.5 end
+      if c.id == "auroria" then j.x, j.y = c.x + c.w / 2 + 0.5, c.y + c.h + 16 end
     end
-    local a = m:spawnMonstruo("calabaza", j.x + 3, j.y - 1, { x = j.x + 3, y = j.y - 1 })
-    local b = m:spawnMonstruo("limo", j.x - 3, j.y - 1, { x = j.x - 3, y = j.y - 1 })
-    local c2 = m:spawnMonstruo("calabaza", j.x + 3, j.y + 2, { x = j.x + 3, y = j.y + 2 })
-    c2.mov, c2.dir = true, 3
-    local d2 = m:spawnMonstruo("limo", j.x - 3, j.y + 2, { x = j.x - 3, y = j.y + 2 })
-    d2.mov, d2.dir = true, 4
-    a.dir, b.dir = 1, 1
-    for _, e in ipairs({ a, b, c2, d2 }) do e.hp = e.hpMax end
+    local lista = {}
+    local sel = os.getenv("DC_FOTO_MOBS")
+    for _, d in ipairs(Datos.monstruos) do
+      if sel == "jefes" then
+        if d.jefeMundo or d.id:find("^jefe_") and not d.categoria then lista[#lista + 1] = d.id end
+      elseif not d.jefeMundo and not (d.id:find("^jefe_") and not d.categoria) then lista[#lista + 1] = d.id end
+    end
+    local pagina = tonumber(sel) or 1
+    local COLS, FILAS = 8, 3
+    local PORPAG = COLS * FILAS
+    local ini = sel == "jefes" and 0 or (pagina - 1) * PORPAG
+    -- sin las criaturas del mundo: solo la cuadrícula, repartida sobre la pantalla (no sobre el mundo, que en isométrica es en diagonal)
+    for id, e in pairs(m.entidades) do if e.kind == "monstruo" or e.kind == "guardia" or e.kind == "npc" then m.entidades[id] = nil end end
+    local Iso = require("src.presentacion.render.iso")
+    local gx, gy = Iso.suelo(j.x, j.y)
+    local cols = sel == "jefes" and 7 or COLS
+    for k = 1, PORPAG do
+      local id = lista[ini + k]
+      if id then
+        local col, fila = (k - 1) % cols, math.floor((k - 1) / cols)
+        local x, y = Iso.inversa(gx + (col - (cols - 1) / 2) * (sel == "jefes" and 170 or 150), gy - 10 + (fila - 1) * (sel == "jefes" and 150 or 120))
+        local e = m:spawnMonstruo(id, x, y, { x = x, y = y })
+        if e then
+          e.dir = fila % 4 + 1
+          e.mov = col % 2 == 1
+          e.hp = e.hpMax
+          e.agresivo = false
+        end
+      end
+    end
+    require("compartido.infraestructura.log").info("MOBS página " .. tostring(sel) .. ": " .. #lista .. " criaturas")
   elseif foto.paso == "mobs" then
     foto.paso = "fin"
     love.event.quit(0)
@@ -2126,8 +2274,60 @@ local function fotoCasas(app)
   foto.espera = 0
 end
 
+-- DC_FOTO_MUROS=1: muros de la ciudad (esquina y puerta) y un bosque, para revisar el arte de mapa
+local function fotoMuros(app)
+  local foto = app.foto
+  app.estado = "juego"
+  Interfaz.panel = nil
+  if os.getenv("DC_ZOOM") then app.zoom = tonumber(os.getenv("DC_ZOOM")) end
+  local j, m = app.jugador, app.mundo
+  local ciudad
+  for _, c in ipairs(m.mapas.mundo.ciudades) do if c.id == (os.getenv("DC_CIUDAD") or "auroria") then ciudad = c end end
+  local pasos = { menu = "muro_esquina", muro_esquina = "muro_puerta", muro_puerta = "muro_sur", muro_sur = "muro_este", muro_este = "ciudad_centro", ciudad_centro = "bosque", bosque = "fin" }
+  foto.paso = pasos[foto.paso] or "fin"
+  if foto.paso == "muro_esquina" then j.x, j.y = ciudad.x + 5, ciudad.y + 5
+  elseif foto.paso == "muro_puerta" then
+    local ac = ciudad.acceso == "norte" and ciudad.y + 4 or ciudad.y + ciudad.h - 4
+    j.x, j.y = ciudad.x + math.floor(ciudad.w / 2) + 0.5, ac
+  elseif foto.paso == "muro_sur" then j.x, j.y = ciudad.x + ciudad.w / 2 + 0.5, ciudad.y + ciudad.h - 7
+  elseif foto.paso == "muro_este" then j.x, j.y = ciudad.x + ciudad.w - 7, ciudad.y + ciudad.h / 2 + 0.5
+  elseif foto.paso == "ciudad_centro" then j.x, j.y = ciudad.plaza.x + 0.5, ciudad.plaza.y + 3.5
+  elseif foto.paso == "bosque" then
+    local mejor, n0 = nil, -1
+    for _, pu in ipairs(m.mapas.mundo.puestos) do
+      local n = 0
+      for _, pr in ipairs(m.mapas.mundo.props) do if math.abs(pr.x - pu.x) < 12 and math.abs(pr.y - pu.y) < 8 and pr.tipo:find("arbol") then n = n + 1 end end
+      if n > n0 then mejor, n0 = pu, n end
+    end
+    j.x, j.y = mejor.x, mejor.y
+  elseif foto.paso == "fin" then love.event.quit(0) end
+  foto.espera = 0
+end
+
+-- DC_FOTO_MAPAS=1: una vista de cada mapa que no es el mundo abierto (mazmorras, batalla, estandarte), para revisar su arte
+local function fotoMapas(app)
+  local foto = app.foto
+  app.estado = "juego"
+  Interfaz.panel = nil
+  if os.getenv("DC_ZOOM") then app.zoom = tonumber(os.getenv("DC_ZOOM")) end
+  local j, m = app.jugador, app.mundo
+  local orden = { "mz1", "mz2", "mz3", "batalla", "estandarte" }
+  local sig = { menu = orden[1] }
+  for i, n in ipairs(orden) do sig[n] = orden[i + 1] or "fin" end
+  foto.paso = sig[foto.paso] or "fin"
+  if foto.paso == "fin" then love.event.quit(0) foto.espera = 0 return end
+  local mapa = m.mapas[foto.paso]
+  j.modo, j.z = foto.paso, 0
+  local pos = (os.getenv("DC_JEFE") and mapa.jefe) or mapa.entrada or (mapa.spawns and (mapa.spawns.albor or mapa.spawns.umbra)) or { x = mapa.w / 2, y = mapa.h / 2 }
+  local dx, dy = tonumber(os.getenv("DC_DX") or "0") or 0, tonumber(os.getenv("DC_DY") or "0") or 0
+  j.x, j.y = pos.x + dx, pos.y + dy
+  foto.espera = 0
+end
+
 local function avanzarFoto(app)
   local foto = app.foto
+  if os.getenv("DC_FOTO_MAPAS") then return fotoMapas(app) end
+  if os.getenv("DC_FOTO_MUROS") then return fotoMuros(app) end
   if os.getenv("DC_FOTO_CASAS") then return fotoCasas(app) end
   if foto.paso == "menu" then
     foto.paso = "cuenta"

@@ -3,6 +3,7 @@
 -- derecha, arriba) con cuadros de 32x32. Hoja "$": una criatura grande por fila,
 -- con 3 cuadros de caminar. BigMonster1 usa 64 px; BigMonster2 usa 80 px (celda).
 local Arte = require("src.presentacion.render.arte")
+local MobAnim = require("src.presentacion.render.mob_anim")
 
 local P = {}
 
@@ -188,64 +189,11 @@ function P.monturaDe(especie, faccion)
   return cacheMonturas[k]
 end
 
-P.monstruos = {
-  jefe_manada = { hoja = "Characters/Animal.png", idx = 6, tinte = { 1, 0.55, 0.5 } },
-  sectario_mayor = { hoja = "Characters/Evil.png", idx = 5, tinte = { 0.85, 0.7, 1 } },
-  reina_avispa = { hoja = "Characters/Monster3.png", idx = 2, tinte = { 1, 0.9, 0.5 } },
-  oso_gigante = { hoja = "Characters/$BigMonster1.png", fila = 2, tinte = { 0.85, 0.7, 0.55 } },
-  coloso = { hoja = "Characters/$BigMonster1.png", fila = 1, tinte = { 0.7, 0.75, 0.85 } },
-  gigante_guerra = { hoja = "Characters/$BigMonster2.png", fila = 2, celda = 80, tinte = { 1, 0.7, 0.7 } },
-  bandido = { hoja = "Characters/People7.png", idx = 1, tinte = { 0.85, 0.75, 0.75 } },
-  asaltante = { hoja = "Characters/Actor3.png", idx = 6 },
-  saqueador = { hoja = "Characters/Evil.png", idx = 6, tinte = { 0.9, 0.8, 0.8 } },
-  gato = { hoja = "Characters/Animal.png", idx = 1 },
-  -- criaturas con animación por cuadros (render/mob_anim.lua); la hoja es solo un respaldo para otros usos
-  calabaza = { anim = "calabaza", hoja = "Characters/Animal.png", idx = 1 },
-  limo = { anim = "limo", hoja = "Characters/Animal.png", idx = 1 },
-  cuervo = { hoja = "Characters/Monster3.png", idx = 0 },
-  jabali = { hoja = "Characters/Animal.png", idx = 6 },
-  rata = { hoja = "Characters/Monster3.png", idx = 4 },
-  escarabajo = { hoja = "Characters/Monster3.png", idx = 7 },
-  jabali_fuego = { hoja = "Characters/Animal.png", idx = 6, tinte = { 1, 0.55, 0.45 } },
-  aguila = { hoja = "Characters/Monster3.png", idx = 2 },
-  oso = { hoja = "Characters/$BigMonster1.png", fila = 2 },
-  elefante = { hoja = "Characters/$BigMonster1.png", fila = 0 },
-  espectro = { hoja = "Characters/Monster1.png", idx = 0 },
-  gargola = { hoja = "Characters/Monster1.png", idx = 3 },
-  automata = { hoja = "Characters/Monster1.png", idx = 7 },
-  alma = { hoja = "Characters/Monster1.png", idx = 5 },
-  troll = { hoja = "Characters/Monster1.png", idx = 2 },
-  caballero = { hoja = "Characters/People4.png", idx = 7, tinte = { 0.62, 0.62, 0.78 } },
-  alma_verde = { hoja = "Characters/Monster2.png", idx = 6 },
-  cultista = { hoja = "Characters/Monster1.png", idx = 6 },
-  alma_hielo = { hoja = "Characters/Monster2.png", idx = 2 },
-  demonio_musgo = { hoja = "Characters/Monster2.png", idx = 1 },
-  saurio = { hoja = "Characters/Monster3.png", idx = 6 },
-  bruja = { hoja = "Characters/Monster2.png", idx = 3 },
-  demonio_marea = { hoja = "Characters/Monster3.png", idx = 5 },
-  quimera = { hoja = "Characters/Monster3.png", idx = 1 },
-  hidra = { hoja = "Characters/$BigMonster1.png", fila = 3 },
-  golem = { hoja = "Characters/Monster1.png", idx = 4 },
-  demonio_foso = { hoja = "Characters/Monster2.png", idx = 5 },
-  titan = { hoja = "Characters/$BigMonster1.png", fila = 1 },
-  dragon = { hoja = "Characters/$BigMonster2.png", fila = 1, celda = 80 },
-  liche = { hoja = "Characters/Evil.png", idx = 5 },
-  behemot = { hoja = "Characters/$BigMonster2.png", fila = 2, celda = 80 },
-  gallina = { hoja = "Characters/Animal.png", idx = 2 },
-  planta_roja = { hoja = "Characters/Monster2.png", idx = 0 },
-  esqueleto = { hoja = "Characters/Monster1.png", idx = 1 },
-  arpia = { hoja = "Characters/Monster2.png", idx = 7 },
-  medusa = { hoja = "Characters/Monster3.png", idx = 3 },
-  flor_sangrienta = { hoja = "Characters/Monster2.png", idx = 4, tinte = { 1, 0.55, 0.6 } },
-  esqueleto_real = { hoja = "Characters/Monster1.png", idx = 1, tinte = { 1, 0.9, 0.5 } },
-  escorpion_carmesi = { hoja = "Characters/Monster3.png", idx = 6, tinte = { 1, 0.6, 0.5 } },
-  dragon_brasas = { hoja = "Characters/Monster2.png", idx = 5, tinte = { 1, 0.75, 0.45 } },
-  medusa_abisal = { hoja = "Characters/Monster3.png", idx = 3, tinte = { 0.55, 0.6, 0.95 } },
-  ojo_abismo = { hoja = "Characters/Monster3.png", idx = 1, tinte = { 0.7, 0.55, 1 } },
-  rey_espectral = { hoja = "Characters/Monster1.png", idx = 0, tinte = { 0.8, 0.65, 1 } },
-  demonio_rey = { hoja = "Characters/Monster1.png", idx = 7, tinte = { 0.8, 0.5, 0.5 } },
-  hidra_ceniza = { hoja = "Characters/$BigMonster1.png", fila = 3, tinte = { 0.65, 0.6, 0.6 } },
-}
+-- Criaturas: todas con animación por cuadros (render/mob_anim.lua); la hoja de respaldo solo existe para quien pida un dibujo estático.
+P.monstruos = {}
+for id in pairs(MobAnim.DEFS) do
+  P.monstruos[id] = { anim = id, hoja = "Characters/Animal.png", idx = 1 }
+end
 
 -- Definición de dibujo de una entidad, o nil si no es una criatura.
 function P.de(e)
@@ -269,7 +217,7 @@ function P.de(e)
     if d.albor then return d[e.faccion or "albor"] or d.albor end
     return d
   elseif k == "monstruo" then
-    return P.monstruos[e.monstruo or ""] or P.monstruos.gato
+    return P.monstruos[e.monstruo or ""] or P.monstruos.seta_azul
   elseif k == "mascota" then
     return P.mascotas[e.especie or ""] or P.mascotas.gatito
   elseif k == "esbirro" then

@@ -43,7 +43,7 @@ local function bajarAArchivo(ruta, destino, total)
     if trozo and #trozo > 0 then
       f:write(trozo)
       recibido = recibido + #trozo
-      if recibido - aviso >= 524288 then
+      if recibido - aviso >= math.max(65536, math.floor((total or 0) / 200)) then
         aviso = recibido
         canal:push({ estado = "progreso", recibido = recibido, total = total })
       end
@@ -76,7 +76,7 @@ if build < minimo then
     return
   end
   local total = tonumber(d.tamanocompleto) or 0
-  canal:push({ estado = "completo", nombre = nombre, total = total })
+  canal:push({ estado = "completo", nombre = nombre, total = total, descarga = d.completo })
   local bytes, err2 = bajarAArchivo(d.completo, d.completo, total)
   if not bytes then canal:push({ estado = "error", texto = "descarga fallida (" .. tostring(err2) .. ")" }) return end
   if sha256Archivo(d.completo) ~= d.shacompleto then
@@ -92,12 +92,21 @@ if not (d.archivo and d.archivo:match("^actualizacion_%d+%.zip$") and d.sha256 a
   canal:push({ estado = "error", texto = "manifiesto no válido" })
   return
 end
-canal:push({ estado = "descargando", nombre = nombre })
-local zip, err3 = pedir(d.archivo)
-if not zip then canal:push({ estado = "error", texto = "descarga fallida (" .. tostring(err3) .. ")" }) return end
-local hash = love.data.encode("string", "hex", love.data.hash("sha256", zip))
-if hash ~= d.sha256 then canal:push({ estado = "error", texto = "la descarga no coincide con su sha256" }) return end
-if not love.filesystem.write(d.archivo, zip) then canal:push({ estado = "error", texto = "no se pudo guardar" }) return end
+-- tamaño del parche: el del manifiesto o, si no lo trae, el que dice el servidor (Content-Length de un HEAD)
+local totalParche = tonumber(d.tamano) or 0
+if totalParche == 0 then
+  local _, _, cab = http.request({ url = url .. d.archivo, method = "HEAD" })
+  totalParche = tonumber(cab and (cab["content-length"] or cab["Content-Length"])) or 0
+end
+canal:push({ estado = "descargando", nombre = nombre, total = totalParche, descarga = d.archivo })
+local bytes3, err3 = bajarAArchivo(d.archivo, d.archivo, totalParche)
+if not bytes3 then canal:push({ estado = "error", texto = "descarga fallida (" .. tostring(err3) .. ")" }) return end
+canal:push({ estado = "progreso", recibido = bytes3, total = totalParche > 0 and totalParche or bytes3 })
+if sha256Archivo(d.archivo) ~= d.sha256 then
+  love.filesystem.remove(d.archivo)
+  canal:push({ estado = "error", texto = "la descarga no coincide con su sha256" })
+  return
+end
 love.filesystem.write("actualizacion.txt", "build=" .. remoto .. "\narchivo=" .. d.archivo .. "\nsha256=" .. d.sha256 .. "\nnombre=" .. nombre .. "\n")
 canal:push({ estado = "listo", nombre = nombre })
 ]]
@@ -202,9 +211,19 @@ function A.actualizar(dt)
     while m do
       if m.estado == "progreso" then
         A.recibido, A.total = m.recibido, m.total
+        local ahora = love.timer.getTime()
+        -- velocidad de bajada (suavizada)
+        if A.muestraT and ahora - A.muestraT >= 0.4 then
+          local v = (m.recibido - (A.muestraB or 0)) / (ahora - A.muestraT)
+          A.velocidad = A.velocidad and (A.velocidad * 0.6 + v * 0.4) or v
+          A.muestraT, A.muestraB = ahora, m.recibido
+        elseif not A.muestraT then
+          A.muestraT, A.muestraB = ahora, m.recibido
+        end
       else
         A.estado = m.estado
         if m.nombre then A.nombre = m.nombre end
+        if m.descarga then A.descarga, A.desde, A.recibido = m.descarga, love.timer.getTime(), 0 end
         if m.total then A.total = m.total end
         if m.archivo then A.archivoCompleto = m.archivo end
         if m.estado == "error" then
@@ -220,6 +239,15 @@ function A.actualizar(dt)
       A.estado, A.error = "error", A.hilo:getError()
       Log.error("actualización: " .. tostring(A.error))
       A.hilo = nil
+    end
+  end
+  -- (prueba) DC_CAPTURA_ACT=<segundos>: guarda una captura de la pantalla de descarga en la carpeta de datos
+  local cap = os.getenv("DC_CAPTURA_ACT")
+  if cap and A.bloquea() and not A.capturada then
+    A.tCaptura = (A.tCaptura or 0) + (dt or 0)
+    if A.tCaptura >= (tonumber(cap) or 3) then
+      A.capturada = true
+      love.graphics.captureScreenshot("descarga_actualizacion.png")
     end
   end
   if A.estado == "completo_listo" and not A.aplicado then
@@ -266,16 +294,35 @@ function A.dibujar(w, h)
       or ((e == "completo_listo" or e == "aplicando") and "El juego se cerrará y volverá a abrirse solo.")
       or "Un momento, no cierres el juego."
     love.graphics.printf(sub, 0, h / 2 - f:getHeight() * 0.8, w, "center")
-    if e == "completo" and A.total > 0 then
-      local frac = math.max(0, math.min(1, A.recibido / A.total))
+    if e == "completo" or e == "descargando" then
       local bw = math.min(420, w - 80)
       local bx, by = (w - bw) / 2, h / 2 + f:getHeight() * 1.0
       love.graphics.setColor(0.12, 0.15, 0.28, 1)
       love.graphics.rectangle("fill", bx, by, bw, 16, 6, 6)
       love.graphics.setColor(0.95, 0.75, 0.2, 1)
-      love.graphics.rectangle("fill", bx, by, bw * frac, 16, 6, 6)
+      local texto
+      if A.total > 0 then
+        local frac = math.max(0, math.min(1, A.recibido / A.total))
+        love.graphics.rectangle("fill", bx, by, bw * frac, 16, 6, 6)
+        texto = string.format("%d%%  (%.1f de %.1f MB)", math.floor(frac * 100), A.recibido / 1048576, A.total / 1048576)
+        if A.velocidad and A.velocidad > 1024 then
+          texto = texto .. string.format("   %.1f MB/s", A.velocidad / 1048576)
+          local resta = (A.total - A.recibido) / A.velocidad
+          if resta >= 1 and resta < 3600 then texto = texto .. string.format("   quedan %d s", math.ceil(resta)) end
+        end
+      else
+        -- tamaño desconocido: franja que va y viene, y lo que lleva bajado
+        local x = (love.timer.getTime() * 0.8 % 1)
+        local ancho = bw * 0.25
+        love.graphics.rectangle("fill", bx + (bw - ancho) * (0.5 - 0.5 * math.cos(x * math.pi * 2)), by, ancho, 16, 6, 6)
+        texto = string.format("%.1f MB descargados", A.recibido / 1048576)
+      end
       love.graphics.setColor(0.85, 0.88, 0.95, 1)
-      love.graphics.printf(string.format("%d%%  (%.1f de %.1f MB)", math.floor(frac * 100), A.recibido / 1048576, A.total / 1048576), 0, by + 22, w, "center")
+      love.graphics.printf(texto, 0, by + 22, w, "center")
+      if A.descarga then
+        love.graphics.setColor(0.6, 0.65, 0.78, 0.9)
+        love.graphics.printf("Archivo: " .. A.descarga, 0, by + 44, w, "center")
+      end
     end
   elseif A.estado == "error" and A.error and (A.version.build or 0) > 0 then
     love.graphics.setColor(0.95, 0.6, 0.5, 0.85)

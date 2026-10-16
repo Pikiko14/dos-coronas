@@ -2,6 +2,7 @@
 -- peñascos, riscos (crestas de montaña), huecos con borde y marcas en el suelo (manchas de quemado,
 -- brasas, guijarros, grietas finas). Se generan una vez en lienzos y se reutilizan.
 local Objetos = require("src.presentacion.render.objetos")
+local MapaFao = require("src.presentacion.render.mapa_fao")
 
 local C = {}
 
@@ -243,6 +244,12 @@ end
 -- Dibuja una decoración del campo de batalla en la casilla (x, y) cuya esquina está en (px, py).
 function C.decoracion(mapa, tipo, x, y, px, py)
   local v = (x * 7 + y * 13) % 4
+  -- arte de mapa FAO: las piedras y grietas (con colisión) se dibujan como rocas de pie (props, ver MapaFao.decorProps); el resto son
+  -- marcas del suelo que se hornean en el bloque
+  if MapaFao.activo() then
+    if tipo == "grieta" or tipo == "piedra" then return end
+    if MapaFao.tiene(tipo) and MapaFao.dibujar(tipo, x * 7 + y * 13, px + 16, py + 31, nil, nil, nil, true) then return end
+  end
   if tipo == "grieta" then return C.hueco(mapa, x, y, px, py) end
   local img
   local ox, oy

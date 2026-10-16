@@ -58,6 +58,7 @@ return {
     reintento_segundos = numero("DOSCORONAS_REINTENTO_SEGUNDOS", 5, 1, 600),
     tasa_mensajes = entero("DOSCORONAS_TASA_MENSAJES", 40, 5, 1000),
     fotos_por_segundo = numero("DOSCORONAS_FOTOS_POR_SEGUNDO", 15, 2, 60),
+    simulacion_hz = numero("DOSCORONAS_SIMULACION_HZ", 30, 10, 240),
     -- segundos sin ninguna acción tras los que se desconecta a un jugador (0 = nunca)
     inactividad_segundos = entero("DOSCORONAS_INACTIVIDAD_SEG", 60, 0, 86400),
   },

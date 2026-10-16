@@ -82,7 +82,7 @@ for clase, lista in pairs(D.barra) do
   end
 end
 for _, m in ipairs(D.monstruos) do
-  Config.validar("monstruos.xml", "monstruo", m.id, m, { id = "texto", nombre = "texto", nivel = "numero", hoja = "texto", base = "numero", cuadros = "numero", desc = "texto" })
+  Config.validar("monstruos.xml", "monstruo", m.id, m, { id = "texto", nombre = "texto", nivel = "numero", desc = "texto" })
 end
 for _, c in ipairs(D.ciudades) do
   Config.validar("ciudades.xml", "ciudad", c.id, c, { nombre = "texto", faccion = "texto", bioma = "texto" })
@@ -243,21 +243,6 @@ function D.pocionAlUsar(bolsa, nivel, tipo)
     if D.esTipoPocion(D.items[s.id], tipo) and (s.cant or 1) > 0 then return s.id end
   end
   return tipo == "mana" and "pocion_mana" or "pocion_vida"
-end
-
-function D.cuadro(def, dir, frame)
-  local porDir = def.porDir or 3
-  local paso = def.paso or 1
-  local total = def.cuadros or (porDir * 4)
-  local grupos = math.max(1, math.floor(total / porDir))
-  local mapa = { [2] = 0, [3] = 1, [1] = 2, [4] = 3 }
-  local g = mapa[dir] or 0
-  if g >= grupos then g = g % grupos end
-  local f = (frame or 0) % porDir
-  local maxFrame = math.floor(total / paso) - 1
-  local n = g * porDir + f
-  if n > maxFrame then n = n % (maxFrame + 1) end
-  return def.base + n * paso
 end
 
 -- Mazmorras: tres cuevas con su puerta en distintos lugares del mapa. Dentro hay salas con criaturas

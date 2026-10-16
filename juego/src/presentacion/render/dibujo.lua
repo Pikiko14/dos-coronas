@@ -9,6 +9,7 @@ local MobAnim = require("src.presentacion.render.mob_anim")
 local CasasIso = require("src.presentacion.render.casas_iso")
 local Iso = require("src.presentacion.render.iso")
 local PropsIso = require("src.presentacion.render.props_iso")
+local MapaFao = require("src.presentacion.render.mapa_fao")
 local InteriorCasa = require("src.presentacion.render.interior_casa")
 local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
@@ -271,7 +272,7 @@ function D.escena(mundo, jugador, cam, mx, my)
         -- la animación de muerte y, al acabar, el último cuadro que se va apagando antes de reaparecer
         local resta = (e.respawn or 0) - (mundo.tiempo or 0)
         local total = e.elite and Datos.RESPAWN_ELITE or Datos.RESPAWN_MONSTRUO
-        MobAnim.muerto(defMuerto.anim, total - resta, sx, sy + 12, (e.dir or 1) == 3, math.max(0, math.min(1, resta / 6)))
+        MobAnim.muerto(defMuerto.anim, total - resta, sx, sy + 12, e.dir or 1, math.max(0, math.min(1, resta / 6)))
       elseif e.kind == "monstruo" then
         local resta = (e.respawn or 0) - (mundo.tiempo or 0)
         Objetos.dibujar("restos", 0, sx, sy + 14, nil, math.max(0, math.min(1, resta / 6)))
@@ -309,6 +310,21 @@ function D.escena(mundo, jugador, cam, mx, my)
       end
     end
   end
+  if pz == 0 and MapaFao.activo() and mapa.decorado then
+    for _, prop in ipairs(MapaFao.decorProps(mapa)) do
+      if math.abs(prop.x - jugador.x) < radio and math.abs(prop.y - jugador.y) < radio then
+        prop.fao = prop.fao or { 0.74, 0.68, 0.66 }      -- piedras del campo quemado: algo más oscuras
+        cola[#cola + 1] = { tipo = "prop", x = prop.x + 0.5, y = prop.y + 0.9, prop = prop, prof = prop.x + prop.y + 1.2 }
+      end
+    end
+  end
+  if pz == 0 and MapaFao.murosActivo() then
+    for _, m in ipairs(MapaFao.lista(mapa)) do
+      if math.abs(m.x - jugador.x) < radio and math.abs(m.y - jugador.y) < radio then
+        cola[#cola + 1] = { tipo = "muro", x = m.x + 0.5, y = m.y + 0.5, m = m, prof = m.x + m.y + 1.2 }
+      end
+    end
+  end
   if jugador.modo == "casa" then
     local casa = jugador.casas and jugador.casas[jugador.casaId]
     for nombre in pairs(casa and casa.muebles or {}) do
@@ -340,9 +356,16 @@ function D.escena(mundo, jugador, cam, mx, my)
     local sx, sy = px - cam.x, py - cam.y
     if item.tipo == "prop" then
       local p = item.prop
-      local variante = math.floor(hash(p.x, p.y) * 2)
-      local tint
-      if p.tipo:find("arbol") and mapa.lado and mapa.lado[p.x] and mapa.lado[p.x][p.y] == "umbra" then
+      local variante = math.floor(hash(p.x, p.y) * 997)
+      local tint = p.fao
+      local nombreFao = p.tipo
+      local umbra = mapa.lado and mapa.lado[p.x] and mapa.lado[p.x][p.y] == "umbra"
+      if MapaFao.activo() then
+        -- arte de mapa FAO: en las ciudades los árboles son de hoja ancha; en tierras de Umbra los abetos son de otro color
+        if nombreFao == "arbol_pino" and mapa.bioma and mapa.bioma[p.x] and mapa.bioma[p.x][p.y] == "ciudad" then nombreFao = "arbol"
+        elseif nombreFao == "arbol_pino" and umbra then nombreFao = "arbol_pino_umbra" end
+      end
+      if p.tipo:find("arbol") and umbra and nombreFao ~= "arbol_pino_umbra" then
         tint = { 0.72, 0.64, 0.95 }
       end
       local ancho, alto = p.ancho or 1, p.alto or 1
@@ -359,10 +382,18 @@ function D.escena(mundo, jugador, cam, mx, my)
       else
         px0, py0 = (p.x + ancho / 2) * TILE - cam.x, (p.y + alto) * TILE - cam.y
       end
-      if PropsIso.dibujar(p, mapa, px0, py0, alfa, tint) then
+      if iso and MapaFao.tiene(nombreFao) and MapaFao.dibujar(nombreFao, variante, px0, py0, tint, alfa, p.x * 0.35 + p.y * 0.2 + hash(p.x, p.y) * 0.9) then
+        -- arte de mapa FAO
+      elseif PropsIso.dibujar(p, mapa, px0, py0, alfa, tint) then
         -- arte nuevo de las ciudades
       elseif Objetos.personalizados and Objetos.personalizados[p.tipo] then Objetos.personalizados[p.tipo](p, px0, py0)
       else Objetos.dibujar(p.tipo, variante, px0, py0, tint, alfa, p.x * 0.35 + p.y * 0.2 + hash(p.x, p.y) * 0.9) end
+    elseif item.tipo == "muro" then
+      local m = item.m
+      local gx, gy = Iso.suelo(m.x + 0.5, m.y + 0.5)
+      -- el jugador queda tapado por el muro (delante de él): se ve a través
+      local alfa = (jugador.x + jugador.y < m.x + m.y + 1 and math.abs(jugador.x - m.x) < 2.6 and math.abs(jugador.y - m.y) < 2.6) and 0.5 or 1
+      MapaFao.dibujarMuro(m, gx - cam.x, gy - cam.y, alfa)
     elseif item.tipo == "casa" then
       CasasIso.dibujar(item.e, cam.x, cam.y, CasasIso.tapa(item.e, jugador.x, jugador.y) and 0.5 or 1)
     elseif item.tipo == "mueble" then
@@ -822,7 +853,6 @@ function entidadBase(e, sx, sy, mundo, jugador)
   elseif def and def.anim and e.kind == "monstruo" then
     -- criatura con animación por cuadros: ataque, daño, carrera o espera
     local ahora = (mundo and mundo.tiempo) or 0
-    local derecha = (e.dir or 1) == 3
     local tinte = nil
     local estado, u = "wait", 0
     local restante = (e.flashHasta or 0) - ahora
@@ -834,7 +864,7 @@ function entidadBase(e, sx, sy, mundo, jugador)
     elseif e.mov or (math.abs(e.velx or 0) + math.abs(e.vely or 0) > 0.08) then
       estado = "run"
     end
-    alto = MobAnim.dibujar(def.anim, estado, u, sx, pies, derecha, tinte)
+    alto = MobAnim.dibujar(def.anim, estado, u, sx, pies, e.dir or 1, tinte, (tonumber(e.id and tostring(e.id):match("%d+")) or 0) % 7 * 0.13)
   elseif def then
     def = Personajes.jineteDe(e, def)
     local reloj = (e.anim or 0) / 8

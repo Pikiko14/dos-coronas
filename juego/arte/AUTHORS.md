@@ -62,3 +62,15 @@ Los sprites de los personajes por capas (cuerpo, cabeza, armadura y armas, `arte
 y pertenecen a sus propietarios (terceros). Se usan en este proyecto con el permiso de su autor y **no deben publicarse en un
 repositorio público sin tener permiso**. Los originales en bruto (`arte/fao-equipos/`, `arte/fao-personajes/`) no se suben al repositorio;
 solo las capas horneadas con `herramientas/generar_personajes/hornear_equipos.py`.
+
+## Arte de mapa (`arte/mapa/`)
+Los árboles, rocas, plantas, props y muros de las ciudades (`arte/mapa/`) proceden también de **Free Angels Online / Angel Online** (adornos de mapa
+isométricos, usados con permiso). Igual que los personajes: **no deben publicarse en un repositorio público sin tener permiso**. Los originales
+en bruto viven fuera del proyecto (`../arte-fuente/mapa-adornos/`); `herramientas/generar_mapa/hornear_mapa.py` recorta las variantes elegidas,
+las reduce a la escala del juego (0,375) y regenera `render/mapa_fao_datos.lua`.
+
+## Criaturas animadas (`arte/monstruos/`)
+Todas las criaturas del juego (normales, jefes del mundo, jefes de mazmorra, criaturas de grupo y bandidos) proceden de **Free Angels Online / Angel Online**
+(tiras de animación de criaturas, usadas con permiso); no deben publicarse en un repositorio público sin permiso. Los originales en bruto viven fuera del
+proyecto (`../arte-fuente/hojas-brutas/mon/`). `herramientas/generar_mobs/mobs.py` las hornea (reduce, ordena por pasos x 5 direcciones y, en algunos jefes,
+cambia el color) y genera `compartido/datos/monstruos.xml` y `render/mob_anim_datos.lua`. El tamaño en pantalla, el aura de los jefes y los tintes son de este proyecto.

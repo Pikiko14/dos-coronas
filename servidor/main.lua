@@ -35,6 +35,7 @@ local modoTest = bandera("--test")
 local modoCalibrar = bandera("--calibrar")
 local Consola = not (modoTest or modoCalibrar) and require("src.consola") or nil
 local probado = false
+local salud
 
 function love.load()
   if Consola then Consola.cargar() end
@@ -56,7 +57,22 @@ function love.update(dt)
     end
     return
   end
+  -- Salud del ciclo del servidor: cuánto tarda cada vuelta (ms). Un ciclo largo es un tirón para TODOS los jugadores (guardado, base de
+  -- datos, una ciudad muy llena...). Cada minuto se deja en el registro el medio, el máximo y cuántos pasaron de 50 ms.
+  local t0 = love.timer.getTime()
   Consola.actualizar(math.min(dt or 0, 0.05))
+  local ms = (love.timer.getTime() - t0) * 1000
+  salud = salud or { n = 0, suma = 0, max = 0, lentos = 0, desde = t0 }
+  salud.n, salud.suma = salud.n + 1, salud.suma + ms
+  if ms > salud.max then salud.max = ms end
+  if ms > 50 then salud.lentos = salud.lentos + 1 end
+  if t0 - salud.desde >= 60 then
+    local ok, Log = pcall(require, "compartido.infraestructura.log")
+    if ok then
+      Log.info(string.format("ciclo del servidor: medio %.1f ms, máximo %.1f ms, %d de %d ciclos pasaron de 50 ms", salud.suma / salud.n, salud.max, salud.lentos, salud.n))
+    end
+    salud = { n = 0, suma = 0, max = 0, lentos = 0, desde = t0 }
+  end
 end
 
 function love.quit()

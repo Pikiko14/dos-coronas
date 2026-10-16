@@ -1,16 +1,12 @@
--- Objetos de las ciudades con el arte nuevo (arte/ciudad/props/): árboles, farolas, pozos, estatuas, flores... Solo se usan dentro de
+-- Objetos sueltos de las ciudades con el arte de arte/ciudad/props/ (lo que el arte de mapa FAO no cubre). Solo se usan dentro de
 -- las ciudades y en vista isométrica; fuera de ellas (y para lo que no está aquí) se sigue dibujando el arte anterior.
 local Iso = require("src.presentacion.render.iso")
 
 local M = {}
 
+-- Casi todo lo de las ciudades ya sale del arte de mapa FAO (render/mapa_fao.lua); aquí queda lo que ese arte no tiene.
 local MAPA = {
-  arbol_pino = { "arbol1", "arbol2", "arbol3", "arbol4" },
-  arbusto = { "arbusto1", "arbusto2" },
-  farol = { "farol" }, pozo = { "pozo" }, barril = { "barril" }, maceta = { "maceta" }, caja = { "caja" }, banco = { "banco" },
-  estatua_albor = { "estatua_albor" }, estatua_umbra = { "estatua_umbra" },
-  flores_mixtas = { "flor1", "flor2", "flor3", "flor4", "flor5", "flor6" }, flor_roja = { "flor5" }, flor_blanca = { "flor1" },
-  flor_amarilla = { "flor6" }, matas = { "junco" }, hierba_alta = { "junco" },
+  maceta = { "maceta" },
 }
 
 local imgs = {}

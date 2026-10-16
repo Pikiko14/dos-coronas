@@ -4,6 +4,7 @@
 local Arte = require("src.presentacion.render.arte")
 local Auto = require("src.presentacion.render.autotile")
 local Objetos = require("src.presentacion.render.objetos")
+local MapaFao = require("src.presentacion.render.mapa_fao")
 local Detalle = require("src.presentacion.render.casas")
 local CasasIso = require("src.presentacion.render.casas_iso")
 local Iso = require("src.presentacion.render.iso")
@@ -253,7 +254,7 @@ local function decorar(mapa, x, y, px, py, tipo, fam)
       if r < acum then nombre = d[1] break end
     end
     if not nombre then return end
-    variante = math.floor(hash(x, y, 8) * 4)
+    variante = math.floor(hash(x, y, 8) * 997)
   end
   Objetos.dibujar(nombre, variante, px + 16, py + 31, (not SIN_TINTE[nombre]) and tinte(mapa, x, y, fam) or nil, nil, x * 0.35 + y * 0.2)
 end
@@ -475,6 +476,7 @@ local TONO_CIUDAD = { calle = { 1.35, 1.28, 1.15 }, plaza = { 1.0, 0.95, 0.84 },
 local function sueloCiudad(mapa, x, y, px, py, tipo)
   if not Iso.activo() then return false end
   local nombre = SUELO_CIUDAD[tipo]
+  if not nombre and tipo == "muralla" and MapaFao.murosActivo() then nombre = "hierba" end    -- bajo los muros nuevos, hierba normal
   if not nombre then return false end
   if not (mapa.bioma[x] and mapa.bioma[x][y] == "ciudad") then return false end
   local t = texturaCiudad(nombre)
@@ -507,6 +509,109 @@ local function sueloCiudad(mapa, x, y, px, py, tipo)
   return true
 end
 
+-- Suelo del mundo abierto con las texturas FAO (arte/ciudad/terreno/): hierba, arena, tierra, nieve, roca, pantano, camino, cicatriz y mar.
+-- Cada textura cubre 8x8 casillas. Entre dos suelos distintos no hay corte seco: cada casilla funde en sus bordes la textura del vecino
+-- (una franja que va de medio opaca en el borde a transparente hacia dentro; los dos lados lo hacen, así empalman sin salto).
+local TEX_MUNDO = {
+  hierba = "hierba", hierba_osc = "hierba", bosque = "hierba", adoquin = "hierba", arena = "arena", tierra = "tierra", cicatriz = "cicatriz",
+  montana = "roca", camino = "camino", agua = "agua", nieve = "nieve", roca = "roca", pantano = "pantano", plaza = "plaza",
+}
+local DECORA_MUNDO = { hierba = "hierba", arena = "arena", tierra = "tierra", cicatriz = "tierra", montana = "tierra", nieve = "tierra", roca = "tierra", pantano = "tierra" }
+local FUNDIDO, MALLA = 10, nil
+
+local function colorMundo(mapa, x, y)
+  local tipo = suelo(mapa, x, y)
+  if tipo == "cicatriz" then return 1, 1, 1 end
+  if tipo == "plaza" then
+    -- las bases del campo de batalla: piedra clara para Alba y fría para Umbra
+    if lado(mapa, x, y) == "umbra" then return 0.78, 0.72, 1.0 end
+    return 1, 1, 1
+  end
+  local c = tinte(mapa, x, y, FAMILIA[tipo or ""])
+  if c then return c[1], c[2], c[3] end
+  return 1, 1, 1
+end
+
+local function celda(t, x, y) return (x % 8) / 8, (y % 8) / 8 end
+
+local function fundirFao(mapa, x, y, px, py, nombre)
+  for _, d in ipairs({ { 0, -1 }, { 0, 1 }, { -1, 0 }, { 1, 0 } }) do
+    local nx, ny = x + d[1], y + d[2]
+    local tn = suelo(mapa, nx, ny)
+    local nombreN = tn and TEX_MUNDO[tn]
+    if nombreN and nombreN ~= nombre then
+      local t = texturaCiudad(nombreN)
+      if t then
+        local r, g, b = colorMundo(mapa, nx, ny)
+        local u0, v0 = celda(t, x, y)
+        local function vert(vx, vy, a)
+          return { px + vx, py + vy, u0 + vx / TILE / 8, v0 + vy / TILE / 8, r, g, b, a }
+        end
+        local e, i = 0.55, 0
+        local v
+        if d[2] == -1 then v = { vert(0, 0, e), vert(TILE, 0, e), vert(TILE, FUNDIDO, i), vert(0, FUNDIDO, i) }
+        elseif d[2] == 1 then v = { vert(0, TILE, e), vert(TILE, TILE, e), vert(TILE, TILE - FUNDIDO, i), vert(0, TILE - FUNDIDO, i) }
+        elseif d[1] == -1 then v = { vert(0, 0, e), vert(0, TILE, e), vert(FUNDIDO, TILE, i), vert(FUNDIDO, 0, i) }
+        else v = { vert(TILE, 0, e), vert(TILE, TILE, e), vert(TILE - FUNDIDO, TILE, i), vert(TILE - FUNDIDO, 0, i) } end
+        if not MALLA then MALLA = love.graphics.newMesh(4, "fan", "stream") end
+        MALLA:setTexture(t.img)
+        MALLA:setVertices(v)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(MALLA)
+      end
+    end
+  end
+end
+
+local function sueloMundo(mapa, x, y, px, py, tipo)
+  if not Iso.activo() or not MapaFao.activo() or not mapa.ciudades then return false end
+  local nombre = TEX_MUNDO[tipo]
+  if not nombre then return false end
+  local t = texturaCiudad(nombre)
+  if not t then return false end
+  local cel = t.w / 8
+  local clave = (x % 8) .. "," .. (y % 8)
+  local q = t.quads[clave]
+  if not q then
+    q = love.graphics.newQuad((x % 8) * cel, (y % 8) * (t.h / 8), cel, t.h / 8, t.w, t.h)
+    t.quads[clave] = q
+  end
+  local r, g, b = colorMundo(mapa, x, y)
+  love.graphics.setColor(r, g, b, 1)
+  love.graphics.draw(t.img, q, px, py, 0, TILE / cel, TILE / (t.h / 8))
+  fundirFao(mapa, x, y, px, py, nombre)
+  local fam = DECORA_MUNDO[tipo]
+  if fam and not (mapa.bloque[x] and mapa.bloque[x][y] and tipo == "montana") then decorar(mapa, x, y, px, py, tipo, fam) end
+  return true
+end
+
+-- Suelo de las mazmorras con texturas FAO: cada mazmorra tiene la suya (arte/ciudad/terreno/mz1..mz3.png); la roca maciza se pinta oscura
+-- y sus bordes los dibujan los muros de render/mapa_fao.lua. Sobre el suelo se reparten restos (huesos, brasas, grietas) de cada una.
+local DECOR_MZ = { mz1 = { "restos" }, mz2 = { "brasas", "mancha" }, mz3 = { "grietita", "guijarros" } }
+local function sueloMazmorra(mapa, x, y, px, py, tipo)
+  if not mapa.mazmorra or not Iso.activo() or not MapaFao.activo() then return false end
+  local nombre = (tipo == "muralla" and "vacio") or (tipo == "mazmorra" and mapa.mazmorra) or nil
+  if not nombre then return false end
+  local t = texturaCiudad(nombre)
+  if not t then return false end
+  local cel = t.w / 8
+  local clave = (x % 8) .. "," .. (y % 8)
+  local q = t.quads[clave]
+  if not q then
+    q = love.graphics.newQuad((x % 8) * cel, (y % 8) * (t.h / 8), cel, t.h / 8, t.w, t.h)
+    t.quads[clave] = q
+  end
+  if tipo == "muralla" then love.graphics.setColor(0.35, 0.35, 0.4, 1) else love.graphics.setColor(1, 1, 1, 1) end
+  love.graphics.draw(t.img, q, px, py, 0, TILE / cel, TILE / (t.h / 8))
+  if tipo == "mazmorra" then
+    local lista = DECOR_MZ[mapa.mazmorra]
+    if lista and hash(x, y, 31) < 0.04 then
+      MapaFao.dibujar(lista[1 + math.floor(hash(x, y, 32) * #lista)], math.floor(hash(x, y, 33) * 997), px + 16, py + 31, nil, nil, nil, true)
+    end
+  end
+  return true
+end
+
 function T.dibujarSuelo(mapa, x, y, px, py, cuadroAgua)
   local tipo = suelo(mapa, x, y)
   if not tipo then
@@ -515,6 +620,8 @@ function T.dibujarSuelo(mapa, x, y, px, py, cuadroAgua)
     return
   end
   if sueloCiudad(mapa, x, y, px, py, tipo) then return end
+  if sueloMundo(mapa, x, y, px, py, tipo) then return end
+  if sueloMazmorra(mapa, x, y, px, py, tipo) then return end
   local f = FAMILIA[tipo]
   if f == "edificio" and CasasIso.activo() then f = "hierba" end   -- casas isométricas: bajo la huella, hierba normal
   if f == "agua" then

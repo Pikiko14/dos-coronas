@@ -6,6 +6,7 @@ local Red = require("compartido.infraestructura.red")
 local Datos = require("compartido.dominio.datos")
 local Config = require("src.infraestructura.config")
 local Log = require("compartido.infraestructura.log")
+local Eco = require("src.presentacion.eco")
 
 local Juego = {}
 
@@ -57,6 +58,46 @@ end
 
 -- El servidor manda el estado cada 0.1 s; entre foto y foto cada criatura
 -- se desliza de su sitio anterior al nuevo para que el paso se vea continuo.
+-- Pone una entidad en marcha hacia la posición que dice el servidor (e.sx, e.sy, o e.x/e.y en la foto completa). a: dónde se veía antes
+-- ({ x, y, hasta }, nil si es nueva).
+local function deslizar(app, id, e, a, ahora)
+  local sx, sy = e.sx or e.x, e.sy or e.y
+  e._movHasta = a and a.hasta or e._movHasta or 0
+  local pr = app._pred
+  if id == app.miId and sx then
+    -- velocidad real del propio personaje medida en las fotos (la usa la predicción): solo si se movió en dos fotos seguidas
+    local s0 = app._srv
+    local dtF = s0 and (ahora - s0.t) or 0
+    if s0 and dtF > 0.03 and dtF < 0.4 then
+      local v = math.sqrt((sx - s0.x) ^ 2 + (sy - s0.y) ^ 2) / dtF
+      if v > 1.5 and v < 30 and s0.v then app._velProp = (app._velProp or v) * 0.75 + v * 0.25
+      elseif v < 0.3 then app._velProp = nil end
+      s0 = { x = sx, y = sy, t = ahora, v = v > 1.5 }
+    else
+      s0 = { x = sx, y = sy, t = ahora }
+    end
+    app._srv = s0
+  end
+  if id == app.miId and pr and pr.activo and a then
+    -- el propio personaje se mueve por predicción: la foto del servidor solo sirve para corregir
+    e.x, e.y, e._mx = a.x, a.y, nil
+    e._movHasta = ahora + 0.22
+  elseif a and sx then
+    local ddx, ddy = a.x - sx, a.y - sy
+    local d2 = ddx * ddx + ddy * ddy
+    if d2 < 9 then
+      e._ox, e._oy, e._mx, e._my, e._t = a.x, a.y, sx, sy, 0
+      e.x, e.y = a.x, a.y
+      -- se mueve mientras el servidor diga que anda o la posición cambie
+      if e.mov or d2 > 0.0004 then e._movHasta = ahora + 0.22 end
+    else
+      e.x, e.y, e._mx = sx, sy, nil      -- salto grande (teletransporte): sin deslizar
+    end
+  elseif sx then
+    e.x, e.y = sx, sy
+  end
+end
+
 local function mezclar(app, snap)
   local ahora = love.timer.getTime()
   -- tiempo real entre fotos (suavizado): es lo que dura el deslizamiento
@@ -65,47 +106,44 @@ local function mezclar(app, snap)
     app._intervalo = (app._intervalo or dtFoto) * 0.8 + dtFoto * 0.2
   end
   app._ultimaFoto = ahora
-  local antes = {}
-  for id, e in pairs(app.mundo.entidades) do
-    antes[id] = e.x and { x = e.x, y = e.y, hasta = e._movHasta }
-  end
-  app.mundo:aplicarFoto(snap, app.miId)
-  for id, e in pairs(app.mundo.entidades) do
-    local a = antes[id]
-    local sx, sy = e.x, e.y
-    e._movHasta = a and a.hasta or 0
-    local pr = app._pred
-    if id == app.miId and sx then
-      -- velocidad real del propio personaje medida en las fotos (la usa la predicción): solo si se movió en dos fotos seguidas
-      local s0 = app._srv
-      local dtF = s0 and (ahora - s0.t) or 0
-      if s0 and dtF > 0.03 and dtF < 0.4 then
-        local v = math.sqrt((sx - s0.x) ^ 2 + (sy - s0.y) ^ 2) / dtF
-        if v > 1.5 and v < 30 and s0.v then app._velProp = (app._velProp or v) * 0.75 + v * 0.25
-        elseif v < 0.3 then app._velProp = nil end
-        s0 = { x = sx, y = sy, t = ahora, v = v > 1.5 }
-      else
-        s0 = { x = sx, y = sy, t = ahora }
-      end
-      app._srv = s0
+  local ents = app.mundo.entidades
+  if snap.delta then
+    -- foto diferencial: solo las entidades que traen posición nueva necesitan ponerse en marcha
+    local antes = {}
+    for _, e in ipairs(snap.nuevos or {}) do
+      local v = ents[e.id]
+      if v and v.x then antes[e.id] = { x = v.x, y = v.y, hasta = v._movHasta } end
     end
-    if id == app.miId and pr and pr.activo and a then
-      -- el propio personaje se mueve por predicción: la foto del servidor solo sirve para corregir
-      e.x, e.y, e._mx = a.x, a.y, nil
-      e._movHasta = ahora + 0.22
-    elseif a and sx then
-      local ddx, ddy = a.x - sx, a.y - sy
-      local d2 = ddx * ddx + ddy * ddy
-      if d2 < 9 then
-        e._ox, e._oy, e._mx, e._my, e._t = a.x, a.y, sx, sy, 0
-        e.x, e.y = a.x, a.y
-        -- se mueve mientras el servidor diga que anda o la posición cambie
-        if e.mov or d2 > 0.0004 then e._movHasta = ahora + 0.22 end
+    if snap.reset then
+      for id, v in pairs(ents) do if v.x and not antes[id] then antes[id] = { x = v.x, y = v.y, hasta = v._movHasta } end end
+    end
+    app.mundo:aplicarFoto(snap, app.miId)
+    ents = app.mundo.entidades
+    for _, e in ipairs(snap.nuevos or {}) do
+      local v = ents[e.id]
+      if v then deslizar(app, e.id, v, antes[e.id], ahora) end
+    end
+    for _, m in ipairs(snap.mods or {}) do
+      if m.x ~= nil or m.y ~= nil then
+        local v = ents[m.id]
+        if v then deslizar(app, m.id, v, v.x and { x = v.x, y = v.y, hasta = v._movHasta } or nil, ahora) end
       end
+    end
+  else
+    local antes = {}
+    for id, e in pairs(ents) do
+      antes[id] = e.x and { x = e.x, y = e.y, hasta = e._movHasta }
+    end
+    app.mundo:aplicarFoto(snap, app.miId)
+    for id, e in pairs(app.mundo.entidades) do
+      e._movHasta = nil
+      deslizar(app, id, e, antes[id], ahora)
     end
   end
   app.jugador = app.mundo.entidades[app.miId]
 end
+
+Juego._mezclar = mezclar      -- (para las pruebas)
 
 local function enviarDeseo(app, dt)
   if not app.cliente or not app.jugador then return end
@@ -193,6 +231,7 @@ function Juego.predecir(app, dt)
     e.mov = ahora < (e._movHasta or 0)
     if e.mov then e.anim = (e.anim or 0) + dt * 8 end
   end
+  Eco.actualizar(app, dt)
 end
 
 function Juego.tickCliente(app, dt)
@@ -223,6 +262,8 @@ function Juego.tickCliente(app, dt)
       local t0 = app._pingEnv and app._pingEnv[msg.n]
       if t0 then
         local rtt = love.timer.getTime() - t0
+        -- jitter: cuánto se separa cada medida de la media (si sube, la red va a tirones aunque el ping medio sea bueno)
+        if app.ping then app.jitter = (app.jitter or 0) * 0.75 + math.abs(rtt - app.ping) * 0.25 end
         app.ping = app.ping and (app.ping * 0.6 + rtt * 0.4) or rtt
         app._pingEnv[msg.n] = nil
       end
@@ -258,7 +299,9 @@ function Juego.tickCliente(app, dt)
     end
     if msg.t == "snap" and app.miId then
       mezclar(app, msg.snap)
-      for _, ev in ipairs(app.mundo.sonidosRed or {}) do Sonido.evento(ev, app.jugador) end
+      for _, ev in ipairs(app.mundo.sonidosRed or {}) do
+        if not Eco.sonidoRepetido(app, ev) then Sonido.evento(ev, app.jugador) end
+      end
       app.mundo.sonidosRed = {}
     end
   end
@@ -357,8 +400,8 @@ function Juego.dibujar(app, w, h)
       for _ in pairs(app.mundo.entidades) do n = n + 1 end
       love.graphics.setColor(1, 0.95, 0.8)
       love.graphics.print(string.format(
-        "FPS %d   entes %d   ping %d ms   piso %d",
-        love.timer.getFPS(), n, math.floor((app.ping or 0) * 1000), app.jugador.z or 0
+        "FPS %d   entes %d   ping %d ms (±%d)   piso %d",
+        love.timer.getFPS(), n, math.floor((app.ping or 0) * 1000), math.floor((app.jitter or 0) * 1000), app.jugador.z or 0
       ), 16, h - 28)
     end
   end
@@ -436,7 +479,7 @@ function pedirHola(app)
   app.miId = nil
   if not app.mundo then app.mundo = require("compartido.dominio.mundo").nuevo() end
   app.conectaDesde = love.timer.getTime()
-  app.cliente:enviar({ t = "hola", token = app.sesion.token, personaje = app.personajeRed })
+  app.cliente:enviar({ t = "hola", token = app.sesion.token, personaje = app.personajeRed, proto = 2 })   -- proto 2: fotos diferenciales
   Interfaz.foco = nil
 end
 

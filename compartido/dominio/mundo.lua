@@ -1091,6 +1091,12 @@ function Mundo:morir(e, origen)
     if e.elite and not e.jefeMz then
       self:mensaje("sistema", "", e.nombre .. " ha caído.", origen)
     end
+    -- los jefes del mundo (uno por zona) son noticia: lo oye todo el servidor
+    local defJefe = Datos.monstruo(e.monstruo)
+    if defJefe and defJefe.jefeMundo then
+      local quien = origen and (origen.kind == "jugador" or origen.kind == "bot") and origen.nombre or "alguien"
+      self:avisoEvento("mundo", "", "¡" .. e.nombre .. " ha sido derrotado por " .. quien .. "!", nil)
+    end
   elseif e.kind == "jugador" or e.kind == "bot" then
     self:sonar("muerte_jugador", e)
     e.respawn = self.tiempo + 6
@@ -1294,6 +1300,19 @@ function Mundo:recoger(p, loot)
   loot.borrar = true
 end
 
+-- Sonido de cada poder (lo usa también el cliente para el eco instantáneo al lanzarlo).
+Mundo.SONIDO_PODER = {
+  golpe = "corte", tajo = "corte", carga = "corte", grito = "grito",
+  misil = "magia", fuego = "fuego", escudo = "magia", nova = "hielo",
+  disparo = "flecha", lluvia = "flecha", preciso = "flecha", trampa = "flecha",
+  curar = "cura", bendicion = "sagrado", castigo = "sagrado", consagrar = "sagrado",
+  desgarro = "corte", furia = "grito", sombra = "magia", meteoro = "fuego",
+  flecha_veneno = "flecha", paso_agil = "flecha", sanacion = "cura", juicio = "sagrado",
+  estocada = "lanza", barrido = "lanza", embestida = "lanza", jabalina = "flecha", tormenta_lanzas = "lanza",
+  muro_lanzas = "grito", toque_necro = "oscuro", espinas = "oscuro", maldecir = "oscuro", alzar_esqueletos = "oscuro",
+  drenar = "oscuro", espectro = "oscuro",
+}
+
 function Mundo:usarHabilidad(p, slot, tx, ty)
   if not p.vivo or (p.aturdido or 0) > 0 then return "No puedes actuar." end
   local idh = Datos.barra[p.clase][slot]
@@ -1415,18 +1434,7 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
       hasta = self.tiempo + 12, casaId = p.casaId,
     }
   end
-  local sonidos = {
-    golpe = "corte", tajo = "corte", carga = "corte", grito = "grito",
-    misil = "magia", fuego = "fuego", escudo = "magia", nova = "hielo",
-    disparo = "flecha", lluvia = "flecha", preciso = "flecha", trampa = "flecha",
-    curar = "cura", bendicion = "sagrado", castigo = "sagrado", consagrar = "sagrado",
-    desgarro = "corte", furia = "grito", sombra = "magia", meteoro = "fuego",
-    flecha_veneno = "flecha", paso_agil = "flecha", sanacion = "cura", juicio = "sagrado",
-    estocada = "lanza", barrido = "lanza", embestida = "lanza", jabalina = "flecha", tormenta_lanzas = "lanza",
-    muro_lanzas = "grito", toque_necro = "oscuro", espinas = "oscuro", maldecir = "oscuro", alzar_esqueletos = "oscuro",
-    drenar = "oscuro", espectro = "oscuro",
-  }
-  self:sonar(sonidos[idh] or "magia", p)
+  self:sonar(Mundo.SONIDO_PODER[idh] or "magia", p)
   local ex = objetivo and objetivo.x or p.x
   local ey = objetivo and objetivo.y or p.y
   if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" or h.tipo == "invocar" then
@@ -1878,7 +1886,9 @@ function Mundo:actualizarProyectil(p, dt)
   local dx, dy = tx - p.x, ty - p.y
   local d = math.sqrt(dx * dx + dy * dy)
   p.vida = p.vida - dt
-  if d < 0.3 or p.vida <= 0 then
+  -- con pasos largos de simulación (30 por segundo) el proyectil avanza 0,37 casillas por paso: si el paso alcanza la distancia, impacta
+  if d < 0.3 or d <= 11 * dt or p.vida <= 0 then
+    if d <= 11 * dt then p.x, p.y = tx, ty end
     local dueno = p.dueno and self.entidades[p.dueno]
     if dueno and obj and obj.vivo then
       if p.aoe then
@@ -3372,14 +3382,25 @@ function Mundo:aplicarGuardado(p, data)
   p.hp, p.mp = p.hpMax, p.mpMax
 end
 
+-- Redondeos: las posiciones a centésimas y la vida y el maná a enteros (cada cifra de más son bytes en cada foto de cada jugador).
+-- El equipo se copia: la foto no debe apuntar a la tabla viva (se cambia en el sitio y las diferencias no verían el cambio).
+local function copiaSup(t)
+  if not t then return nil end
+  local c = {}
+  for k, v in pairs(t) do c[k] = v end
+  return c
+end
+local function r2(v) return v and math.floor(v * 100 + 0.5) / 100 or nil end
+local function r0(v) return v and math.floor(v + 0.5) or nil end
+
 function Mundo:compactar(e)
   return {
     id = e.id, kind = e.kind, nombre = e.nombre, faccion = e.faccion, clase = e.clase, gen = e.genero,
-    monstruo = e.monstruo, x = e.x, y = e.y, z = e.z or 0, dir = e.dir or 1, vivo = e.vivo ~= false,
-    modo = e.modo, hp = e.hp, hpMax = e.hpMax, mp = e.mp, mpMax = e.mpMax,
+    monstruo = e.monstruo, x = r2(e.x), y = r2(e.y), z = e.z or 0, dir = e.dir or 1, vivo = e.vivo ~= false,
+    modo = e.modo, hp = r0(e.hp), hpMax = r0(e.hpMax), mp = r0(e.mp), mpMax = r0(e.mpMax),
     nivel = e.nivel, hoja = e.hoja, base = e.base, cuadros = e.cuadros,
     tam = e.tam, paso = e.paso, porDir = e.porDir, elite = e.elite,
-    estructura = e.estructura, llevaBandera = e.llevaBandera, llevaCristales = e.llevaCristales, equipo = e.equipo,
+    estructura = e.estructura, llevaBandera = e.llevaBandera, llevaCristales = e.llevaCristales, equipo = copiaSup(e.equipo),
     rol = e.rol, qid = e.qid, staff = e.staff, casaId = e.casaId, casaTamano = e.casaTamano, anim = e.anim, portador = e.portador,
     mov = e.mov and true or nil, objetivo = (e.kind == "monstruo") and e.objetivo or nil,
     respawn = (e.kind == "monstruo" or e.kind == "puerta") and e.respawn or nil,
@@ -3397,20 +3418,66 @@ function Mundo:compactar(e)
   }
 end
 
-function Mundo:foto(pid)
-  local p = self.entidades[pid]
-  local ents = {}
+-- Área de interés: radio (en casillas) de lo que cada jugador recibe en su foto.
+Mundo.RADIO_FOTO = 28
+local CELDA_FOTO = 16
+
+-- Índice espacial de las entidades para las fotos: se construye UNA vez por ronda de fotos y cada jugador consulta solo las celdas
+-- que tiene a su alrededor, en vez de recorrer todas las entidades del mundo por cada jugador. Lo que se ve siempre (estatuas,
+-- puertas, altares, banderas) y lo que no tiene posición van en una lista aparte.
+function Mundo:indiceFoto()
+  local celdas, siempre = {}, {}
   for _, e in pairs(self.entidades) do
-    if p and self:mismoLugar(p, e) then
-      local d = Util.dist(p.x, p.y, e.x or p.x, e.y or p.y)
-      if d < 28 or e.kind == "estatua" or e.kind == "puerta" or e.kind == "altar" or e.kind == "bandera" then
-        ents[#ents + 1] = self:compactar(e)
+    local k = e.kind
+    if k == "estatua" or k == "puerta" or k == "altar" or k == "bandera" or not e.x then
+      siempre[#siempre + 1] = e
+    else
+      local clave = math.floor(e.x / CELDA_FOTO) * 4096 + math.floor(e.y / CELDA_FOTO)
+      local l = celdas[clave]
+      if not l then l = {} celdas[clave] = l end
+      l[#l + 1] = e
+    end
+  end
+  return { celdas = celdas, siempre = siempre }
+end
+
+-- Entidades que ve p (las de su área de interés), con el índice espacial de la ronda si lo hay.
+function Mundo:visibles(p, indice)
+  local lista = {}
+  if p and indice then
+    local r = Mundo.RADIO_FOTO
+    local c0x, c1x = math.floor((p.x - r) / CELDA_FOTO), math.floor((p.x + r) / CELDA_FOTO)
+    local c0y, c1y = math.floor((p.y - r) / CELDA_FOTO), math.floor((p.y + r) / CELDA_FOTO)
+    for cx = c0x, c1x do
+      for cy = c0y, c1y do
+        local l = indice.celdas[cx * 4096 + cy]
+        if l then
+          for i = 1, #l do
+            local e = l[i]
+            if self:mismoLugar(p, e) and Util.dist(p.x, p.y, e.x, e.y) < r then lista[#lista + 1] = e end
+          end
+        end
+      end
+    end
+    for _, e in ipairs(indice.siempre) do
+      if self:mismoLugar(p, e) then lista[#lista + 1] = e end
+    end
+  else
+    for _, e in pairs(self.entidades) do
+      if p and self:mismoLugar(p, e) then
+        local d = Util.dist(p.x, p.y, e.x or p.x, e.y or p.y)
+        if d < Mundo.RADIO_FOTO or e.kind == "estatua" or e.kind == "puerta" or e.kind == "altar" or e.kind == "bandera" then
+          lista[#lista + 1] = e
+        end
       end
     end
   end
-  local tu = nil
-  if p then
-    tu = {
+  return lista
+end
+
+function Mundo:construirTu(p)
+  local pid = p.id
+    local tu = {
       bolsa = p.bolsa, equipo = p.equipo, oro = p.oro, xp = p.xp, nivel = p.nivel,
       hp = p.hp, hpMax = p.hpMax, mp = p.mp, mpMax = p.mpMax, cds = {},
       misiones = p.misiones, casas = p.casas, sesion = p.sesion, zona = p.zona,
@@ -3458,7 +3525,41 @@ function Mundo:foto(pid)
       tu.buffsResta[#tu.buffsResta + 1] = { id = b.id, hab = b.habilidad, resta = math.max(0, b.dur), max = b.max or b.dur }
     end
     for k, v in pairs(p.cds or {}) do tu.cds[k] = v end
+    return tu
+end
+
+function Mundo:efectosCercanos(p)
+  -- Efectos de poderes, números de daño y sonidos en curso cerca del jugador.
+  local efectos, numeros = {}, {}
+  if p then
+    for _, fx in ipairs(self.efectos) do
+      if Util.dist(p.x, p.y, fx.x, fx.y) < 30 then
+        efectos[#efectos + 1] = { tipo = fx.tipo, x = fx.x, y = fx.y, t = fx.t, dur = fx.dur, rot = fx.rot and math.floor(fx.rot * 100) / 100 or nil }
+      end
+    end
+    for _, n in ipairs(self.numeros) do
+      if Util.dist(p.x, p.y, n.x, n.y) < 30 then
+        numeros[#numeros + 1] = { x = n.x, y = n.y, texto = n.texto, color = n.color, vida = n.vida }
+      end
+    end
   end
+  local sonidos = {}
+  for _, ev in ipairs(self.sonidos) do
+    if #sonidos >= 14 then break end
+    if ev.e and ev.x then
+      if p and self:mismoLugar(p, ev.e) and Util.dist(p.x, p.y, ev.x, ev.y) < 26 then
+        sonidos[#sonidos + 1] = { n = ev.n, x = math.floor(ev.x * 10) / 10, y = math.floor(ev.y * 10) / 10 }
+      end
+    end
+  end
+  return efectos, numeros, sonidos
+end
+
+function Mundo:foto(pid, indice)
+  local p = self.entidades[pid]
+  local ents = {}
+  for _, e in ipairs(self:visibles(p, indice)) do ents[#ents + 1] = self:compactar(e) end
+  local tu = p and self:construirTu(p) or nil
   local msgs = {}
   for i = #self.mensajes, 1, -1 do
     local m = self.mensajes[i]
@@ -3485,29 +3586,8 @@ function Mundo:foto(pid)
   end
   local sesiones
   if p and p.sesion and self.sesiones[p.sesion] then sesiones = { [p.sesion] = self.sesiones[p.sesion] } end
-  -- Efectos de poderes, números de daño y sonidos en curso cerca del jugador.
-  local efectos, numeros = {}, {}
-  if p then
-    for _, fx in ipairs(self.efectos) do
-      if Util.dist(p.x, p.y, fx.x, fx.y) < 30 then
-        efectos[#efectos + 1] = { tipo = fx.tipo, x = fx.x, y = fx.y, t = fx.t, dur = fx.dur, rot = fx.rot and math.floor(fx.rot * 100) / 100 or nil }
-      end
-    end
-    for _, n in ipairs(self.numeros) do
-      if Util.dist(p.x, p.y, n.x, n.y) < 30 then
-        numeros[#numeros + 1] = { x = n.x, y = n.y, texto = n.texto, color = n.color, vida = n.vida }
-      end
-    end
-  end
-  local sonidos = {}
-  for _, ev in ipairs(self.sonidos) do
-    if #sonidos >= 14 then break end
-    if ev.e and ev.x then
-      if p and self:mismoLugar(p, ev.e) and Util.dist(p.x, p.y, ev.x, ev.y) < 26 then
-        sonidos[#sonidos + 1] = { n = ev.n, x = math.floor(ev.x * 10) / 10, y = math.floor(ev.y * 10) / 10 }
-      end
-    end
-  end
+  local efectos, numeros, sonidos = {}, {}, {}
+  if p then efectos, numeros, sonidos = self:efectosCercanos(p) end
   return {
     ents = ents, tu = tu, msgs = msgs, gloria = self.gloria, instancia = self.instancia,
     resumen = self._resumen, duenos = duenos, sesiones = sesiones,
@@ -3515,20 +3595,208 @@ function Mundo:foto(pid)
   }
 end
 
+-- ------------------------------------------------------------------------------------------------------------------ fotos diferenciales
+-- Con muchos jugadores la foto completa de cada uno (todas las entidades con todos sus campos, 15 veces por segundo) es inviable: pesa
+-- cientos de KB por segundo por jugador y se codifica a JSON una vez POR JUGADOR. La foto diferencial manda, por cada jugador, solo:
+--   nuevos: las entidades que entran en su área (completas)          mods: de las que ya conoce, solo los campos que cambiaron
+--   sal:    los ids de las que salen                                  tu: solo los campos propios que cambiaron (4 veces por segundo)
+-- y el resto (chat nuevo, efectos...) cuando hay algo. Cada entidad se compacta y se codifica UNA vez por ronda y el texto se reutiliza
+-- en la foto de todos los que la ven. Si una foto no pudo enviarse (cola llena) se marca para empezar de cero: foto completa con reset.
+-- Copia independiente de lo enviado: la foto lleva referencias a tablas VIVAS del mundo (bolsa, equipo, misiones...) que luego se modifican
+-- en el sitio; si lo "ya enviado" fuese la misma tabla, comparar daría siempre "igual" y el cambio no llegaría nunca al cliente.
+local function copiaProf(v)
+  if type(v) ~= "table" then return v end
+  local c = {}
+  for k, x in pairs(v) do c[k] = copiaProf(x) end
+  return c
+end
+
+local function iguales(a, b)
+  if a == b then return true end
+  if type(a) ~= "table" or type(b) ~= "table" then return false end
+  for k, v in pairs(a) do if not iguales(v, b[k]) then return false end end
+  for k in pairs(b) do if a[k] == nil then return false end end
+  return true
+end
+
+-- Campos que el cliente lleva por su cuenta y no se mandan en las diferencias (la fase de la animación cambia cada vuelta en el servidor).
+local SIN_DELTA = { anim = true }
+
+local function diferencia(prev, c, conId)
+  local d, quitar, hay = {}, nil, false
+  for k, v in pairs(c) do
+    if not SIN_DELTA[k] and not iguales(v, prev[k]) then d[k] = v hay = true end
+  end
+  for k in pairs(prev) do
+    if c[k] == nil and not SIN_DELTA[k] then quitar = quitar or {} quitar[#quitar + 1] = k hay = true end
+  end
+  if not hay then return false end
+  if conId then d.id = c.id end
+  if quitar then d["~"] = quitar end
+  return d
+end
+
+Mundo.TU_CADA = 4        -- la parte propia (inventario, misiones...) se manda cada 4 fotos, o al momento si el jugador hizo algo (est.forzarTu)
+Mundo.META_CADA = 15     -- gloria, eventos, parcelas y sesiones: cada 15 fotos (~1 s)
+
+-- Una ronda de fotos: el índice espacial y las cajas donde se guarda lo que es común a todos los jugadores.
+function Mundo:rondaFoto()
+  return { indice = self:indiceFoto(), compact = {}, diff = {}, dstr = {}, enc = {}, n = (self._rondaN or 0) + 1 }
+end
+
+-- est: el estado de ese cliente (lo que ya conoce). Devuelve el mensaje ya codificado a JSON.
+function Mundo:fotoDelta(pid, est, ronda)
+  local p = self.entidades[pid]
+  if not p then return nil end
+  self._rondaN = ronda.n
+  local completo = est.completo ~= false
+  if completo or not est.conocido then est.conocido = {} end
+  local conocido = est.conocido
+  est.vueltas = (est.vueltas or 0) + 1
+  local nuevos, mods, vistos = {}, {}, {}
+  for _, e in ipairs(self:visibles(p, ronda.indice)) do
+    local c = ronda.compact[e]
+    if not c then c = self:compactar(e) ronda.compact[e] = c end
+    local id = c.id
+    vistos[id] = true
+    local prev = conocido[id]
+    if not prev then
+      local t = ronda.enc[c]
+      if not t then t = Util.jsonEnc(c) ronda.enc[c] = t end
+      nuevos[#nuevos + 1] = t
+      conocido[id] = c
+    elseif prev ~= c then
+      local d = ronda.diff[prev]
+      if d == nil then
+        d = diferencia(prev, c, true)
+        ronda.diff[prev] = d
+        if d then ronda.dstr[prev] = Util.jsonEnc(d) end
+      end
+      if d then mods[#mods + 1] = ronda.dstr[prev] end
+      conocido[id] = c
+    end
+  end
+  local sal
+  for id in pairs(conocido) do
+    if not vistos[id] then
+      sal = sal or {}
+      sal[#sal + 1] = id
+      conocido[id] = nil
+    end
+  end
+  local partes = { '"delta":1,"tiempo":' .. Util.jsonEnc(self.tiempo) }
+  if completo then partes[#partes + 1] = '"reset":1' end
+  if #nuevos > 0 then partes[#partes + 1] = '"nuevos":[' .. table.concat(nuevos, ",") .. "]" end
+  if #mods > 0 then partes[#partes + 1] = '"mods":[' .. table.concat(mods, ",") .. "]" end
+  if sal then partes[#partes + 1] = '"sal":' .. Util.jsonEnc(sal) end
+  -- la parte propia, solo lo que cambió
+  if completo or est.forzarTu or est.vueltas % Mundo.TU_CADA == 1 then
+    local tu = self:construirTu(p)
+    local previo = est.tuPrev
+    est.tuPrev, est.forzarTu = copiaProf(tu), nil
+    if not previo or completo then
+      partes[#partes + 1] = '"tu":' .. Util.jsonEnc(tu)
+    else
+      local d = diferencia(previo, tu, false)
+      if d then partes[#partes + 1] = '"tu":' .. Util.jsonEnc(d) end
+    end
+  end
+  -- chat nuevo desde la última foto
+  local desde = est.msgUlt or p.chatDesde or 0
+  local msgs
+  for i = #self.mensajes, 1, -1 do
+    local m = self.mensajes[i]
+    if m.id <= desde then break end
+    local visible = true
+    if m.canal == "sistema" and m.para and m.para ~= pid then visible = false end
+    if m.canal == "gremio" and m.gremio ~= p.gremioId then visible = false end
+    if m.canal == "grupo" and (not p.grupoId or m.grupo ~= p.grupoId) then visible = false end
+    if visible then
+      msgs = msgs or {}
+      table.insert(msgs, 1, m)
+      if #msgs >= 40 then break end
+    end
+  end
+  est.msgUlt = self._msgId or desde
+  if msgs then partes[#partes + 1] = '"msgs":' .. Util.jsonEnc(msgs) end
+  -- lo que cambia poco: gloria, eventos, parcelas con dueño y la sesión propia
+  if completo or est.vueltas % Mundo.META_CADA == 1 or est.forzarMeta then
+    est.forzarMeta = nil
+    if not ronda.meta then
+      if not self._resumen or self.tiempo - (self._resumenT or 0) > 0.5 then
+        self._resumenT = self.tiempo
+        self._resumen = { batalla = self:resumenEvento("batalla"), estandarte = self:resumenEvento("estandarte") }
+      end
+      local duenos = {}
+      for _, c in ipairs(self.mapas.mundo.ciudades) do
+        for _, par in ipairs(c.parcelas) do
+          if par.dueno then duenos[par.id] = par.dueno end
+        end
+      end
+      ronda.meta = '"gloria":' .. Util.jsonEnc(self.gloria) .. ',"instancia":' .. Util.jsonEnc(self.instancia)
+        .. ',"resumen":' .. Util.jsonEnc(self._resumen) .. ',"duenos":' .. Util.jsonEnc(duenos)
+    end
+    partes[#partes + 1] = ronda.meta
+    local ses = p.sesion and self.sesiones[p.sesion]
+    partes[#partes + 1] = '"sesiones":' .. (ses and Util.jsonEnc({ [p.sesion] = ses }) or "false")
+  end
+  local efectos, numeros, sonidos = self:efectosCercanos(p)
+  if #efectos > 0 or est.hayEfectos then partes[#partes + 1] = '"efectos":' .. Util.jsonEnc(efectos) end
+  if #numeros > 0 or est.hayNumeros then partes[#partes + 1] = '"numeros":' .. Util.jsonEnc(numeros) end
+  if #sonidos > 0 then partes[#partes + 1] = '"sonidos":' .. Util.jsonEnc(sonidos) end
+  est.hayEfectos, est.hayNumeros = #efectos > 0, #numeros > 0
+  est.completo = false
+  return '{"t":"snap","snap":{' .. table.concat(partes, ",") .. "}}"
+end
+
 function Mundo:aplicarFoto(snap, pid)
   if not snap then return end
   local viejo = self.entidades
-  local nuevo = {}
-  for _, e in ipairs(snap.ents or {}) do
-    local prev = viejo[e.id]
-    if prev and prev.anim then e.anim = prev.anim end
-    e.vivo = e.vivo ~= false
-    nuevo[e.id] = e
-  end
-  self.entidades = nuevo
-  local p = nuevo[pid]
-  if p and snap.tu then
-    for k, v in pairs(snap.tu) do p[k] = v end
+  local p
+  if snap.delta then
+    -- foto diferencial: se aplica sobre las entidades que ya hay (ver Mundo:fotoDelta)
+    local nuevo = viejo
+    if snap.reset then nuevo = {} end
+    for _, id in ipairs(snap.sal or {}) do nuevo[id] = nil end
+    for _, e in ipairs(snap.nuevos or {}) do
+      local prev = viejo[e.id]
+      if prev and prev.anim then e.anim = prev.anim end
+      e.vivo = e.vivo ~= false
+      e.sx, e.sy = e.x, e.y          -- posición según el servidor (la que se ve se desliza hacia ella)
+      nuevo[e.id] = e
+    end
+    for _, m in ipairs(snap.mods or {}) do
+      local e = nuevo[m.id]
+      if e then
+        for k, v in pairs(m) do
+          if k == "x" then e.sx = v
+          elseif k == "y" then e.sy = v
+          elseif k ~= "id" and k ~= "~" then e[k] = v end
+        end
+        if m.vivo ~= nil then e.vivo = m.vivo ~= false end
+        for _, k in ipairs(m["~"] or {}) do e[k] = nil end
+      end
+    end
+    self.entidades = nuevo
+    p = nuevo[pid]
+    if p and snap.tu then
+      for k, v in pairs(snap.tu) do p[k] = v end
+      for _, k in ipairs(snap.tu["~"] or {}) do p[k] = nil end
+      p["~"] = nil
+    end
+  else
+    local nuevo = {}
+    for _, e in ipairs(snap.ents or {}) do
+      local prev = viejo[e.id]
+      if prev and prev.anim then e.anim = prev.anim end
+      e.vivo = e.vivo ~= false
+      nuevo[e.id] = e
+    end
+    self.entidades = nuevo
+    p = nuevo[pid]
+    if p and snap.tu then
+      for k, v in pairs(snap.tu) do p[k] = v end
+    end
   end
   if snap.msgs then
     -- el chat se acumula desde que entras: cada foto trae lo reciente y aquí se añade lo que aún no se tenía
@@ -3553,8 +3821,8 @@ function Mundo:aplicarFoto(snap, pid)
   end
   if snap.gloria then self.gloria = snap.gloria end
   if snap.instancia then self.instancia = snap.instancia end
-  self.resumenes = snap.resumen
-  self.sesiones = snap.sesiones or {}
+  if not snap.delta or snap.resumen ~= nil then self.resumenes = snap.resumen end
+  if not snap.delta or snap.sesiones ~= nil then self.sesiones = snap.sesiones or {} end
   -- El reloj del servidor manda: los enfriamientos y los efectos dependen de él.
   if snap.tiempo then
     if math.abs(self.tiempo - snap.tiempo) > 0.25 then

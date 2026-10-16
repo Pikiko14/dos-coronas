@@ -61,6 +61,7 @@ function App.actuar(nombre, datos)
   local jugador = App.jugador
   if not jugador then return end
   if App.rol == "cliente" and App.cliente then
+    if nombre == "habilidad" then require("src.presentacion.eco").lanzar(App, datos) end   -- se ve al instante; el servidor confirma
     App.cliente:enviar({ t = "act", a = nombre, p = datos or {} })
     return
   end

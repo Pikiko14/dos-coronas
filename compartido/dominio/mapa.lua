@@ -172,8 +172,12 @@ end
 
 local function estamparCiudad(mapa, ciudad)
   local grande = ciudad.capital and true or false
-  local w = grande and 72 or 48
-  local h = grande and 56 or 36
+  -- Más grandes que antes (72x56 y 48x36): las casas isométricas son altas y necesitan aire entre ellas y los muros. La ciudad crece
+  -- hacia todos lados desde su centro de siempre.
+  local w = grande and 84 or 60
+  local h = grande and 66 or 46
+  local viejoW, viejoH = grande and 72 or 48, grande and 56 or 36
+  ciudad.x, ciudad.y = ciudad.x - math.floor((w - viejoW) / 2), ciudad.y - math.floor((h - viejoH) / 2)
   local x0, y0 = ciudad.x, ciudad.y
   ciudad.w, ciudad.h = w, h
   ciudad.npcs = {}
@@ -354,7 +358,7 @@ local function estamparCiudad(mapa, ciudad)
   local function rectLibre(rx, ry, rw, rh)
     for yy = ry - 1, ry + rh do
       for xx = rx - 1, rx + rw do
-        if xx <= 2 or yy <= 2 or xx >= w - 3 or yy >= h - 3 then return false end
+        if xx <= 5 or yy <= 5 or xx >= w - 6 or yy >= h - 6 then return false end
         if avenida(xx, yy) or enPlaza(xx, yy) or reservado[xx .. "," .. yy] then return false end
       end
     end
@@ -363,7 +367,11 @@ local function estamparCiudad(mapa, ciudad)
   local function reservar(rx, ry, rw, rh)
     for yy = ry - 1, ry + rh do for xx = rx - 1, rx + rw do reservado[xx .. "," .. yy] = true end end
   end
+  -- Las casas isométricas son altas: pegadas a un muro lo tapan (o las tapa él). Se dejan SEPARACION casillas de aire entre las
+  -- casas y los muros, algo más por el norte y el oeste, donde el muro queda detrás y la casa lo cubre con su tejado.
+  local SEP_NO, SEP_SE = 8, 6
   local function libre(forma, ex, ey)
+    if ex < SEP_NO or ey < SEP_NO or ex + forma.w > w - SEP_SE or ey + forma.h > h - SEP_SE then return false end
     for yy = 0, forma.h - 1 do
       for xx = 0, forma.w - 1 do
         if not hueco(forma, xx, yy) then
@@ -935,7 +943,8 @@ local function generarMundo(rng)
   end
   local function cercaCiudad(x, y, margen)
     for _, c in ipairs(mapa.ciudades) do
-      if x >= c.x - margen and x < c.x + c.w + margen and y >= c.y - margen and y < c.y + c.h + margen then
+      local bx, by, bw, bh = c.x, c.y, c.w, c.h
+      if x >= bx - margen and x < bx + bw + margen and y >= by - margen and y < by + bh + margen then
         return true
       end
     end
@@ -1332,7 +1341,7 @@ local function generarMundo(rng)
   M.bandas = bandas
   local function puntoCerca(c, dmin, dmax, nivelBuscado)
     local ccx, ccy = c.x + c.w / 2, c.y + c.h / 2
-    for _ = 1, 90 do
+    for _ = 1, 400 do
       local ang = rng:int(0, 359) * math.pi / 180
       local d = rng:int(dmin, dmax)
       local x, y = math.floor(ccx + math.cos(ang) * d), math.floor(ccy + math.sin(ang) * d)
@@ -1356,7 +1365,8 @@ local function generarMundo(rng)
     for _, c in ipairs(mapa.ciudades) do
       local b = bandas[c.id]
       if b and (k == c.cont or k == nil or k > 2) then
-        local d = math.sqrt((c.x + c.w / 2 - x) ^ 2 + (c.y + c.h / 2 - y) ^ 2) + 14
+        -- (el -6 compensa lo que creció la ciudad: los niveles de la zona siguen igual medidos desde su borde)
+        local d = math.max(4, math.sqrt((c.x + c.w / 2 - x) ^ 2 + (c.y + c.h / 2 - y) ^ 2) + 14 - 6)
         local w = 1 / (d * d * d)
         num = num + w * b.mid
         den = den + w
@@ -1453,6 +1463,42 @@ local function generarMundo(rng)
             mapa.campamentos[#mapa.campamentos + 1] = camp
           end
         end
+      end
+    end
+  end
+  -- Jefes del mundo (monstruos.xml: jefeMundo + continente): uno por zona, cinco por continente, siempre en el mismo sitio. Para cada uno se
+  -- rastrea su continente en orden fijo y se queda con el punto despejado cuyo nivel de zona se parece más al suyo, lejos de ciudades, puestos y
+  -- de los demás jefes. Salen solos (cantidad 1) con su aura; al caer reaparecen como cualquier élite.
+  mapa.jefes = {}
+  do
+    local lista = {}
+    for _, mon in ipairs(Datos.monstruos) do
+      if mon.jefeMundo then lista[#lista + 1] = mon end
+    end
+    table.sort(lista, function(a, b)
+      if a.continente ~= b.continente then return a.continente < b.continente end
+      return a.nivel < b.nivel
+    end)
+    local function lejosDeJefes(x, y, d)
+      for _, j in ipairs(mapa.jefes) do
+        if (j.x - x) ^ 2 + (j.y - y) ^ 2 < d * d then return false end
+      end
+      return true
+    end
+    for _, mon in ipairs(lista) do
+      local mejor, mejorPuntos
+      for y = 20, mapa.h - 20, 6 do
+        for x = 20, mapa.w - 20, 6 do
+          local k = mapa.cont[x] and mapa.cont[x][y]
+          if k == mon.continente and areaBuena(x, y, 4) and not cercaCiudad(x, y, 18) and not cercaDePuesto(x, y, 16) and lejosDeJefes(x, y, 70) then
+            local puntos = math.abs(nivelZona(x, y) - mon.nivel) * 100 + math.abs(x - mapa.w / 2) * 0.01
+            if not mejorPuntos or puntos < mejorPuntos then mejorPuntos, mejor = puntos, { x, y } end
+          end
+        end
+      end
+      if mejor then
+        mapa.jefes[#mapa.jefes + 1] = { id = mon.id, nombre = mon.nombre, nivel = mon.nivel, continente = mon.continente, x = mejor[1] + 0.5, y = mejor[2] + 0.5 }
+        mapa.campamentos[#mapa.campamentos + 1] = { x = mejor[1] + 0.5, y = mejor[2] + 0.5, monstruo = mon.id, cantidad = 1, radio = 3, jefe = true }
       end
     end
   end

@@ -22,7 +22,11 @@ local function guardar(nombre, def, lado)
   love.graphics.setCanvas({ pequeno, stencil = true })
   love.graphics.clear(0, 0, 0, 0)
   love.graphics.setColor(1, 1, 1, 1)
-  Personajes.dibujar(def, 1, false, 0, lado / 2, lado - 6)
+  if def.anim then
+    require("src.presentacion.render.mob_anim").dibujar(def.anim, "wait", 0, lado / 2, lado - 6, 1, nil, 0)
+  else
+    Personajes.dibujar(def, 1, false, 0, lado / 2, lado - 6)
+  end
   love.graphics.setCanvas({ grande, stencil = true })
   love.graphics.clear(0, 0, 0, 0)
   love.graphics.setColor(1, 1, 1, 1)
@@ -60,10 +64,10 @@ function E.correr()
     end
   end
   -- jefes y criaturas notables
-  for _, id in ipairs({ "caballero", "titan", "behemot", "dragon_brasas", "liche", "golem", "demonio_rey", "hidra_ceniza", "rey_espectral", "ojo_abismo", "medusa_abisal" }) do
+  for _, id in ipairs({ "jefe_gorila_bosque", "jefe_orco_glacial", "jefe_basilisco_dorado", "jefe_wyvern_carmesi", "jefe_dragon_sombra", "reina_espejos", "elemental_brasas", "golem_cristal", "troll_escarcha", "bestia_espectral", "medusa_guerrera" }) do
     local def = Personajes.de({ kind = "monstruo", monstruo = id })
     if def and Personajes.monstruos[id] then
-      guardar("jefe_" .. id, def, (def.fila and (def.celda or 64) or 40) + 24)
+      guardar("jefe_" .. id, def, (def.anim and (require("src.presentacion.render.mob_anim").DEFS[id].alto + 40)) or ((def.fila and (def.celda or 64) or 40) + 24))
       n = n + 1
     end
   end
@@ -104,9 +108,9 @@ function E.correr()
   do
     local Dibujo = require("src.presentacion.render.dibujo")
     local filas = {
-      { kind = "monstruo", monstruo = "gato", dir = 3 },
-      { kind = "monstruo", monstruo = "jabali", dir = 1 },
-      { kind = "monstruo", monstruo = "gargola", dir = 4 },
+      { kind = "monstruo", monstruo = "seta_azul", dir = 3 },
+      { kind = "monstruo", monstruo = "pinguino_aprendiz", dir = 1 },
+      { kind = "monstruo", monstruo = "girasol_lancero", dir = 4 },
       { kind = "jugador", clase = "guerrero", faccion = "albor", dir = 3 },
       { kind = "jugador", clase = "guerrero", faccion = "albor", addon = "skin_hoplita", dir = 1 },
       { kind = "jugador", clase = "mago", faccion = "umbra", addon = "skin_archimago", dir = 3, lejos = true },

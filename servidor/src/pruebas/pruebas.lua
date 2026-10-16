@@ -123,7 +123,7 @@ function Pruebas.correr()
     jugador.hp = 10
     mundo:accion(jugador.id, "habilidad", { slot = 1 })
     fallar(errores, "clerigo cura", jugador.hp > 10, tostring(jugador.hp))
-    local gato = mundo:spawnMonstruo("gato", jugador.x + 1, jugador.y, { x = jugador.x, y = jugador.y })
+    local gato = mundo:spawnMonstruo("seta_azul", jugador.x + 1, jugador.y, { x = jugador.x, y = jugador.y })
     fallar(errores, "spawn gato", gato ~= nil)
     mundo:danar(gato, 99999, jugador)
     fallar(errores, "gato muere", gato.vivo == false)
@@ -334,6 +334,31 @@ function Pruebas.correr()
         if recibio then break end
       end
       fallar(errores, "mensaje hola", recibio)
+      -- las respuestas llegan al cliente CORRECTO aunque otros se conecten y se vayan (regresión: un mapa id->conexión desfasado dejaba
+      -- sin respuesta a las conexiones nuevas cuando se iba una y entraba otra en la misma vuelta)
+      local function ronda(cli2, texto)
+        local resp
+        for _ = 1, 60 do
+          love.timer.sleep(0.02)
+          for _, e in ipairs(srv:actualizar()) do
+            if e.tipo == "msg" and e.msg.t == "eco" then srv:enviar(e.id, { t = "recibido", n = e.msg.n }) end
+          end
+          for _, m in ipairs(cli2:actualizar() or {}) do if m.t == "recibido" then resp = m.n end end
+          if resp then break end
+          cli2:enviar({ t = "eco", n = texto })
+        end
+        return resp
+      end
+      fallar(errores, "responde al cliente que ya estaba", ronda(cli, 1) == 1)
+      for i = 1, 4 do
+        local otro = Red.conectar("127.0.0.1", 30556)
+        fallar(errores, "responde a una conexión nueva (" .. i .. ")", otro and ronda(otro, 10 + i) == 10 + i)
+        if otro then otro:cerrar() end
+        for _ = 1, 5 do love.timer.sleep(0.02) srv:actualizar() end
+        -- el primero se va y entra otro de golpe
+        if i == 2 then cli:cerrar() cli = Red.conectar("127.0.0.1", 30556) end
+      end
+      fallar(errores, "responde al que entró tras irse otro", cli and ronda(cli, 99) == 99)
       cli:cerrar()
       srv:cerrar()
     end
@@ -441,7 +466,7 @@ function Pruebas.correr()
     -- en el mundo: un guerrero contra un muñeco sin defensa
     local mundo = Mundo.nuevo()
     local j = mundo:crearPersonaje({ nombre = "Pega", faccion = "albor", clase = "guerrero" })
-    local gato = mundo:spawnMonstruo("gato", j.x + 1, j.y, { x = j.x, y = j.y })
+    local gato = mundo:spawnMonstruo("seta_azul", j.x + 1, j.y, { x = j.x, y = j.y })
     gato.def, gato.hp, gato.hpMax = 0, 1e9, 1e9
     local golpes = {}
     for _ = 1, 300 do
@@ -618,13 +643,13 @@ function Pruebas.correr()
     -- en campo abierto (las ciudades son zonas seguras)
     local pu0 = mundo.mapas.mundo.puestos[1]
     dueno.x, dueno.y = pu0.x + 8.5, pu0.y + 8.5
-    local blanco = mundo:spawnMonstruo("gato", dueno.x + 1.2, dueno.y, { x = dueno.x, y = dueno.y })
+    local blanco = mundo:spawnMonstruo("seta_azul", dueno.x + 1.2, dueno.y, { x = dueno.x, y = dueno.y })
     blanco.hp, blanco.hpMax, blanco.agresivo, blanco.atk, blanco.matk = 400, 400, false, 0, 0
     dueno.objetivo = blanco.id
     local antes = blanco.hp
     avanzar(8)
     fallar(errores, "la mascota ataca", blanco.hp < antes, tostring(blanco.hp))
-    local presa = mundo:spawnMonstruo("gargola", dueno.x + 1.2, dueno.y, { x = dueno.x, y = dueno.y })
+    local presa = mundo:spawnMonstruo("girasol_lancero", dueno.x + 1.2, dueno.y, { x = dueno.x, y = dueno.y })
     presa.hp = 1
     local xpAntes = dueno.mascotas[1].xp
     mundo:danar(presa, 5, dueno)
@@ -718,6 +743,83 @@ function Pruebas.correr()
     fallar(errores, "el oficial expulsa a un miembro", mundo:expulsarGremio(b, 103) == nil and c.gremioId == nil)
     -- chat: solo lo ve el gremio; los avisos de sistema son de cada uno
     mundo:decir(a, "/g hola gremio")
+    do
+      -- fotos diferenciales: un cliente que las aplica ve lo mismo que en la foto completa, también tras moverse, salir de rango y volver
+      local Util = require("compartido.dominio.util")
+      local cliente = Mundo.nuevo()
+      local est = { completo = true }
+      local function paso(dt)
+        mundo:actualizar(dt)
+        local ronda = mundo:rondaFoto()
+        local texto = mundo:fotoDelta(a.id, est, ronda)
+        local msg = Util.jsonDec(texto)
+        cliente:aplicarFoto(msg.snap, a.id)
+        return msg.snap, #texto
+      end
+      local function coincide()
+        local completa = mundo:foto(a.id)
+        for _, ce in ipairs(completa.ents) do
+          local e = cliente.entidades[ce.id]
+          if not e then return false, "falta " .. tostring(ce.id) end
+          local ex, ey = e.sx or e.x, e.sy or e.y
+          if math.abs((ex or 0) - (ce.x or 0)) > 0.011 or math.abs((ey or 0) - (ce.y or 0)) > 0.011 then return false, "posición de " .. tostring(ce.id) end
+          if e.hp ~= ce.hp or e.nombre ~= ce.nombre or e.dir ~= ce.dir or (e.vivo ~= false) ~= (ce.vivo ~= false) then return false, "campos de " .. tostring(ce.id) end
+        end
+        local n = 0
+        for _ in pairs(cliente.entidades) do n = n + 1 end
+        if n ~= #completa.ents then return false, "sobran entidades: " .. n .. " vs " .. #completa.ents end
+        return true
+      end
+      local s1, bytes1 = paso(0.05)
+      local ok1, why1 = coincide()
+      fallar(errores, "la primera foto diferencial lleva todo (reset)", s1.reset == 1 and ok1, tostring(why1))
+      b.deseoX, b.deseoY = 1, 0
+      for _ = 1, 12 do paso(0.05) end
+      local s2, bytes2 = paso(0.05)
+      local ok2, why2 = coincide()
+      fallar(errores, "tras moverse y combatir, el cliente coincide con la foto completa", ok2, tostring(why2))
+      fallar(errores, "la foto diferencial es mucho más pequeña que la primera", bytes2 < bytes1 * 0.6 or #(s2.nuevos or {}) == 0 and bytes2 < 3000, bytes1 .. " -> " .. bytes2)
+      -- lo que cambia EN EL SITIO (bolsa, equipo, misiones) también llega: quitarse una pieza, ganar un item, avanzar una misión
+      do
+        a.equipo = a.equipo or {}
+        a.equipo.arma = "guerrero_arma_1"
+        a.bolsa[#a.bolsa + 1] = { id = "pocion_vida", cant = 3 }
+        a.misiones = a.misiones or {}
+        a.misiones.q_prueba = { aceptada = true, progreso = 1 }
+        paso(0.05)
+        a.equipo.arma = nil
+        table.remove(a.bolsa, 1)
+        a.misiones.q_prueba.progreso = 2
+        for _ = 1, 5 do paso(0.05) end
+        local ca = cliente.entidades[a.id]
+        fallar(errores, "el cliente ve que se quitó la pieza del equipo", ca and ca.equipo and ca.equipo.arma == nil)
+        fallar(errores, "el cliente ve la bolsa tal cual", ca and #ca.bolsa == #a.bolsa and (ca.bolsa[#ca.bolsa].id == a.bolsa[#a.bolsa].id))
+        fallar(errores, "el cliente ve avanzar la misión", ca and ca.misiones and ca.misiones.q_prueba and ca.misiones.q_prueba.progreso == 2)
+        a.equipo.cabeza = "guerrero_cabeza_1"
+        for _ = 1, 5 do paso(0.05) end
+        fallar(errores, "y una pieza nueva puesta", cliente.entidades[a.id].equipo.cabeza == "guerrero_cabeza_1")
+        a.equipo.cabeza = nil
+      end
+      -- si c se aleja, sale de la vista de a y deja de estar en el cliente; al volver, vuelve a entrar completo
+      local cx, cy = c.x, c.y
+      c.x, c.y = a.x + 90, a.y
+      paso(0.05)
+      fallar(errores, "una entidad lejana sale del cliente", cliente.entidades[c.id] == nil)
+      c.x, c.y = cx, cy
+      paso(0.05)
+      local ok3, why3 = coincide()
+      fallar(errores, "y al volver entra completa", ok3 and cliente.entidades[c.id] ~= nil, tostring(why3))
+      -- tras un envío omitido se empieza de cero
+      est.completo = true
+      local s4 = paso(0.05)
+      fallar(errores, "tras un envío omitido llega un reset completo", s4.reset == 1 and coincide())
+    end
+    do
+      -- el índice espacial da las mismas entidades que recorrer todo el mundo
+      local idx = mundo:indiceFoto()
+      local function ids(f) local l = {} for _, e in ipairs(f.ents) do l[#l + 1] = e.id end table.sort(l) return table.concat(l, ",") end
+      fallar(errores, "la foto con índice espacial lleva lo mismo que sin él", ids(mundo:foto(a.id, idx)) == ids(mundo:foto(a.id)) and ids(mundo:foto(b.id, idx)) == ids(mundo:foto(b.id)))
+    end
     local fa, fb, fc = mundo:foto(a.id), mundo:foto(b.id), mundo:foto(c.id)
     local function ve(f, texto) for _, m in ipairs(f.msgs) do if m.texto == texto then return true end end return false end
     fallar(errores, "el gremio ve su chat", ve(fa, "hola gremio") and ve(fb, "hola gremio"))
@@ -1284,7 +1386,7 @@ function Pruebas.correr()
     fallar(errores, "las duraciones se leen de una lista", h and #h == 2 and h[1] == 2 and h[2] == 48)
     fallar(errores, "una lista mala no cambia nada", Ajustes.horas("abc") == nil)
     -- aplicar valores propios al crear el mundo
-    local gato0 = Datos.statsMonstruo(Datos.monstruo("gato")).hp
+    local gato0 = Datos.statsMonstruo(Datos.monstruo("seta_azul")).hp
     local xp0 = Balance.xpPara(1)
     local mundo = Servicio.crearMundo({ ajustes = {
       juego = { xpDificultad = 3.6, monstruoVida = 6, subastaComision = 0.1, subastaDuraciones = "2,48", gremioCoste = 99,
@@ -1292,7 +1394,7 @@ function Pruebas.correr()
       eventos = { minJugadores = 2, duracionBatalla = 600, duracionEstandarte = 120 },
     } })
     fallar(errores, "sube la dificultad de experiencia", Balance.xpPara(1) == xp0 * 2, xp0 .. " -> " .. Balance.xpPara(1))
-    fallar(errores, "las criaturas nacen con la vida nueva", math.abs(Datos.statsMonstruo(Datos.monstruo("gato")).hp - gato0 * 2) <= 1)
+    fallar(errores, "las criaturas nacen con la vida nueva", math.abs(Datos.statsMonstruo(Datos.monstruo("seta_azul")).hp - gato0 * 2) <= 1)
     fallar(errores, "subastas ajustadas", Subastas.COMISION == 0.1 and #Subastas.DURACIONES == 2 and Subastas.DURACIONES[2] == 48)
     fallar(errores, "gremios ajustados", Gremios.COSTE == 99)
     fallar(errores, "eventos ajustados", Datos.JUGADORES_EVENTO == 2 and mundo.instancia.batalla.duracion == 600 and mundo.instancia.estandarte.duracion == 120)
@@ -1318,7 +1420,7 @@ function Pruebas.correr()
     local pu = mundo.mapas.mundo.puestos[1]
     local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "albor", clase = "guerrero", nivel = 12 })
     p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
-    local m = mundo:spawnMonstruo("gato", p.x + 1, p.y, { x = p.x, y = p.y })
+    local m = mundo:spawnMonstruo("seta_azul", p.x + 1, p.y, { x = p.x, y = p.y })
     m.hp, m.hpMax, m.agresivo, m.cds = 9999, 9999, false, { auto = 1e9 }
     -- una montura normal: se puede pegar desde ella
     p.monturas, p.montado = { "buey" }, "buey"
@@ -1431,7 +1533,7 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     local cazador = jug("Caza", "albor", nil)
     local piezas = 0
     for _ = 1, 40 do
-      local m = mundo:spawnMonstruo("troll", cazador.x + 1, cazador.y, { x = cazador.x, y = cazador.y })
+      local m = mundo:spawnMonstruo("escarabajo_ciervo", cazador.x + 1, cazador.y, { x = cazador.x, y = cazador.y })
       m.hp = 1
       mundo:danar(m, 99999, cazador)
     end
@@ -1539,7 +1641,7 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     local p = mundo:crearPersonaje({ nombre = "Polvo", faccion = "albor", clase = "guerrero", nivel = 25 })
     p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
     local function polvoDe(nivel, azar)
-      local m = mundo:spawnMonstruo("troll", p.x + 1, p.y, { x = p.x, y = p.y })
+      local m = mundo:spawnMonstruo("escarabajo_ciervo", p.x + 1, p.y, { x = p.x, y = p.y })
       m.nivel, m.hp = nivel, 1
       for _, o in pairs(mundo.entidades) do if o.kind == "loot" then o.borrar = true end end
       mundo:actualizar(0.05)
@@ -1603,7 +1705,7 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     p.cds.auto = 0
     local barra = Datos.barra[p.clase]
     local h = require("compartido.dominio.arbol").efectiva(barra[1], 1)
-    local blancoMall = mundo:spawnMonstruo("gato", p.x + 2, p.y, { x = p.x, y = p.y })
+    local blancoMall = mundo:spawnMonstruo("seta_azul", p.x + 2, p.y, { x = p.x, y = p.y })
     blancoMall.hp, blancoMall.hpMax, blancoMall.agresivo = 9999, 9999, false
     blancoMall.cds = { auto = 1e9 }
     p.objetivo = blancoMall.id
@@ -1720,7 +1822,7 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     local y = ed.y + ed.h - 0.5
     local p = mundo:crearPersonaje({ nombre = "Tras", faccion = "albor", clase = "mago", nivel = 20 })
     p.x, p.y, p.z, p.modo = ed.x - 1.5, y, 0, "mundo"
-    local m = mundo:spawnMonstruo("jabali", ed.x + ed.w + 1.5, y, { x = ed.x + ed.w + 1.5, y = y })
+    local m = mundo:spawnMonstruo("pinguino_aprendiz", ed.x + ed.w + 1.5, y, { x = ed.x + ed.w + 1.5, y = y })
     m.x, m.y = ed.x + ed.w + 1.5, y
     fallar(errores, "con la pared en medio no hay línea", not mundo:lineaLibre(p, m))
     local hp = m.hp
@@ -1928,7 +2030,7 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     mundo:actualizarMonturas(1)
     fallar(errores, "regenera sin golpes", mundo:vidaMontura(t, "buey") > 10)
     -- los golpes de criaturas también bajan primero la montura
-    local gato = mundo:spawnMonstruo("gato", t.x + 1, t.y, { x = t.x, y = t.y })
+    local gato = mundo:spawnMonstruo("seta_azul", t.x + 1, t.y, { x = t.x, y = t.y })
     t.monturaVida.buey = max
     local v2 = t.hp
     mundo:danar(t, 40, gato)
@@ -1975,7 +2077,7 @@ mundo.tiempo = 100
   paso("animación de ataque: el servidor marca cada ataque de criaturas y jugadores", function()
     local mundo = Mundo.nuevo()
     local a = mundo:crearPersonaje({ nombre = "Atq", faccion = "albor", clase = "guerrero" })
-    local m = mundo:spawnMonstruo("gato", a.x + 1, a.y, { x = a.x, y = a.y })
+    local m = mundo:spawnMonstruo("seta_azul", a.x + 1, a.y, { x = a.x, y = a.y })
     mundo.tiempo = 100
     mundo:golpear(a, m, 1)
     fallar(errores, "golpear anota el ataque con su dirección", a.atqN == 1 and a.atqX ~= nil and a.atqLejos == nil)
@@ -2463,7 +2565,7 @@ mundo.tiempo = 100
     local function monstruos(cx, cy, n)
       local lista = {}
       for i = 1, n do
-        local m = mundo:spawnMonstruo("troll", cx + (i - 2) * 0.5, cy, { x = cx, y = cy })
+        local m = mundo:spawnMonstruo("escarabajo_ciervo", cx + (i - 2) * 0.5, cy, { x = cx, y = cy })
         m.hp, m.hpMax, m.agresivo, m.cds = 99999, 99999, false, { auto = 1e9 }
         lista[#lista + 1] = m
       end
@@ -2526,7 +2628,7 @@ mundo.tiempo = 100
       p.mp, p.mpMax, p.cds, p.aturdido = 9999, 9999, {}, 0
       local ms = {}
       for i = 1, 3 do
-        local m = mundo:spawnMonstruo("troll", p.x + c.cerca + (i - 2) * 0.4, p.y, { x = p.x, y = p.y })
+        local m = mundo:spawnMonstruo("escarabajo_ciervo", p.x + c.cerca + (i - 2) * 0.4, p.y, { x = p.x, y = p.y })
         m.hp, m.hpMax, m.agresivo, m.cds = 99999, 99999, false, { auto = 1e9 }
         ms[i] = m
       end
@@ -2611,7 +2713,7 @@ mundo.tiempo = 100
     mundo:usarHabilidad(cl, 1)
     fallar(errores, "sin objetivo se cura a sí mismo", cl.hp > antes)
     -- con un enemigo elegido también se cura a sí mismo (no es aliado)
-    local gato = mundo:spawnMonstruo("gato", cl.x + 1, cl.y, { x = cl.x, y = cl.y })
+    local gato = mundo:spawnMonstruo("seta_azul", cl.x + 1, cl.y, { x = cl.x, y = cl.y })
     gato.agresivo, gato.cds = false, { auto = 1e9 }
     cl.objetivo, cl.cds, cl.hp = gato.id, {}, cl.hpMax - 40
     local hp0 = cl.hp
@@ -2629,7 +2731,7 @@ mundo.tiempo = 100
     fallar(errores, "el nodo pide nivel 5", Arbol.nodo("clerigo", "bendicion").nivel == 5)
     cinco.habilidades.bendicion = 1
     cinco.x = cl.x + 8
-    local enemigo = mundo:spawnMonstruo("troll", cinco.x + 3, cinco.y, { x = cinco.x, y = cinco.y })
+    local enemigo = mundo:spawnMonstruo("escarabajo_ciervo", cinco.x + 3, cinco.y, { x = cinco.x, y = cinco.y })
     enemigo.hp, enemigo.hpMax, enemigo.agresivo, enemigo.cds = 99999, 99999, false, { auto = 1e9 }
     cinco.objetivo, cinco.cds, cinco.mp = enemigo.id, {}, cinco.mpMax
     mundo:usarHabilidad(cinco, 2)
@@ -2751,12 +2853,12 @@ mundo.tiempo = 100
     local adm, rival, normal = jug("Admi", "albor"), jug("Otro", "umbra"), jug("Normal", "albor")
     adm.admin = true
     local function cuentaMobs(id) local n = 0 for _, m in pairs(mundo.entidades) do if m.kind == "monstruo" and m.monstruo == id then n = n + 1 end end return n end
-    mundo:decir(normal, "/admin mob gato 3")
-    fallar(errores, "un jugador normal no puede", cuentaMobs("gato") == 0)
-    mundo:decir(adm, "/admin mob gato 3 7")
-    fallar(errores, "invoca criaturas con nivel", cuentaMobs("gato") == 3)
+    mundo:decir(normal, "/admin mob seta_azul 3")
+    fallar(errores, "un jugador normal no puede", cuentaMobs("seta_azul") == 0)
+    mundo:decir(adm, "/admin mob seta_azul 3 7")
+    fallar(errores, "invoca criaturas con nivel", cuentaMobs("seta_azul") == 3)
     mundo:decir(adm, "/admin mob gato 500")
-    fallar(errores, "tope de invocación", cuentaMobs("gato") <= 3 + require("compartido.dominio.admin").MAX_CRIATURAS)
+    fallar(errores, "tope de invocación", cuentaMobs("seta_azul") <= 3 + require("compartido.dominio.admin").MAX_CRIATURAS)
     mundo:decir(adm, "/admin mob noexiste")
     mundo:decir(adm, "/admin item pocion_vida 5 Normal")
     local tiene = 0
@@ -2818,7 +2920,7 @@ mundo.tiempo = 100
     local g2 = jug("SegG2", ciudad.faccion, 12)
     en(g2, afuera.x + 9.5, afuera.y + 8.5)
     fallar(errores, "fuera de la ciudad sí hay combate", mundo:puedeDanar(fuera, g2))
-    local troll = mundo:spawnMonstruo("troll", ciudad.spawn.x + 2, ciudad.spawn.y, { x = ciudad.spawn.x, y = ciudad.spawn.y })
+    local troll = mundo:spawnMonstruo("escarabajo_ciervo", ciudad.spawn.x + 2, ciudad.spawn.y, { x = ciudad.spawn.x, y = ciudad.spawn.y })
     fallar(errores, "las criaturas no hieren dentro de la ciudad", not mundo:puedeDanar(troll, a))
     -- el buscado por robo sí puede ser perseguido
     mundo:marcarBuscado(rival, 60)
@@ -2893,8 +2995,8 @@ mundo.tiempo = 100
     mundo:invitarGrupo(a, c.id)
     mundo:responderInvitacionGrupo(c, true)
     for _, x in ipairs({ a, b, c }) do x.xp, x.oro, x.misiones = 0, 0, {} end
-    b.misiones = { q = { aceptada = true, entregada = false, monstruo = "gato", cantidad = 5, progreso = 0, titulo = "t" } }
-    local gato = mundo:spawnMonstruo("troll", a.x + 1, a.y, { x = a.x, y = a.y })
+    b.misiones = { q = { aceptada = true, entregada = false, monstruo = "seta_azul", cantidad = 5, progreso = 0, titulo = "t" } }
+    local gato = mundo:spawnMonstruo("escarabajo_ciervo", a.x + 1, a.y, { x = a.x, y = a.y })
     gato.nivel = 10
     local base = Balance.xpMonstruo(10, 10, false)
     local esperado = math.floor(base * (1 + Grupos.BONO_XP) / 3 + 0.5)
@@ -2907,7 +3009,7 @@ mundo.tiempo = 100
     -- los que están lejos no cuentan
     for _, x in ipairs({ a, b, c }) do x.xp = 0 end
     c.x = a.x + 200
-    local gato2 = mundo:spawnMonstruo("troll", a.x + 1, a.y, { x = a.x, y = a.y })
+    local gato2 = mundo:spawnMonstruo("escarabajo_ciervo", a.x + 1, a.y, { x = a.x, y = a.y })
     gato2.nivel, gato2.hp = 10, 1
     mundo:danar(gato2, 99999, a)
     local esperado2 = math.floor(base * (1 + Grupos.BONO_XP) / 2 + 0.5)
@@ -2920,7 +3022,7 @@ mundo.tiempo = 100
     -- solo (sin compañeros cerca) todo es como siempre
     local solo = jug("Solitario")
     solo.xp = 0
-    local gato3 = mundo:spawnMonstruo("troll", solo.x + 1, solo.y, { x = solo.x, y = solo.y })
+    local gato3 = mundo:spawnMonstruo("escarabajo_ciervo", solo.x + 1, solo.y, { x = solo.x, y = solo.y })
     gato3.nivel, gato3.hp = 10, 1
     mundo:danar(gato3, 99999, solo)
     fallar(errores, "sin grupo se lleva toda la experiencia", solo.xp == base, solo.xp .. " vs " .. base)
@@ -3038,7 +3140,7 @@ mundo.tiempo = 100
     local function avanzar(seg) for _ = 1, math.floor(seg / 0.1) do mundo:actualizar(0.1) end end
     local mago = mundo:crearPersonaje({ nombre = "Estado1", faccion = "albor", clase = "mago", nivel = 10 })
     mago.x, mago.y = mundo.mapas.mundo.puestos[1].x + 8.5, mundo.mapas.mundo.puestos[1].y + 8.5
-    local victima = mundo:spawnMonstruo("oso", mago.x + 2, mago.y, { x = mago.x, y = mago.y })
+    local victima = mundo:spawnMonstruo("rabano_guerrero", mago.x + 2, mago.y, { x = mago.x, y = mago.y })
     victima.hp, victima.hpMax = 5000, 5000
     victima.agresivo, victima.def, victima.mdef = false, 0, 0
     victima.cds = victima.cds or {}
@@ -3088,14 +3190,14 @@ mundo.tiempo = 100
     victima.aturdido = 0
     mundo:aplicarEstado(victima, "aturdir", 1, nil, mago)
     fallar(errores, "aturdir inmoviliza", victima.aturdido >= 1)
-    local elite = mundo:spawnMonstruo("behemot", mago.x + 8, mago.y, { x = mago.x, y = mago.y })
+    local elite = mundo:spawnMonstruo("jefe_basilisco_dorado", mago.x + 8, mago.y, { x = mago.x, y = mago.y })
     mundo:aplicarEstado(elite, "aturdir", 1, nil, mago)
     fallar(errores, "el elite resiste el aturdimiento", elite.aturdido < 0.6, tostring(elite.aturdido))
     -- morir limpia los estados
     mundo:morir(victima, mago)
     fallar(errores, "al morir se limpian", victima.estados == nil and victima.lentitud == nil)
     -- snapshot: la lista visible llega a los clientes
-    local viva = mundo:spawnMonstruo("gato", mago.x + 4, mago.y, { x = mago.x, y = mago.y })
+    local viva = mundo:spawnMonstruo("seta_azul", mago.x + 4, mago.y, { x = mago.x, y = mago.y })
     mundo:aplicarEstado(viva, "sangrar", 3, nil, mago)
     fallar(errores, "los estados visibles viajan en la foto", mundo:compactar(viva).est[1] == "sangrar")
     local foto = mundo:foto(mago.id)
@@ -3107,7 +3209,7 @@ mundo.tiempo = 100
     fallar(errores, "más rango, más probabilidad", ef.prob > Arbol.efectiva("fuego", 1).estado.prob)
     local azarOriginal = math.random
     math.random = function(a) if a then return 1 end return 0 end
-    local blanco = mundo:spawnMonstruo("gato", mago.x + 3, mago.y, { x = mago.x, y = mago.y })
+    local blanco = mundo:spawnMonstruo("seta_azul", mago.x + 3, mago.y, { x = mago.x, y = mago.y })
     blanco.hp, blanco.hpMax, blanco.agresivo = 9999, 9999, false
     mago.objetivo = blanco.id
     mago.mp, mago.cds = mago.mpMax, {}
@@ -3121,12 +3223,12 @@ mundo.tiempo = 100
     if not ok then fallar(errores, "usar bola de fuego", false, tostring(err)) err = nil end
     fallar(errores, "bola de fuego deja quemado al objetivo", err == nil and blanco.estados and blanco.estados.quemar ~= nil, tostring(err))
     -- efectos de las criaturas: golpe y poderes
-    local rata = mundo:spawnMonstruo("rata", mago.x - 3, mago.y, { x = mago.x, y = mago.y })
+    local rata = mundo:spawnMonstruo("pinguino_aprendiz", mago.x - 3, mago.y, { x = mago.x, y = mago.y })
     rata.golpe = { { tipo = "veneno", prob = 1 } }
     mago.estados = nil
     mundo:alGolpear(rata, mago)
     fallar(errores, "el golpe de la rata envenena", mago.estados and mago.estados.veneno ~= nil)
-    local espectro = mundo:spawnMonstruo("espectro", mago.x - 4, mago.y, { x = mago.x, y = mago.y })
+    local espectro = mundo:spawnMonstruo("espiritu_velo", mago.x - 4, mago.y, { x = mago.x, y = mago.y })
     espectro.cds.drenaje = 0
     mago.estados = nil
     mundo:poderesMonstruo(espectro, mago, 4)
@@ -3211,7 +3313,7 @@ mundo.tiempo = 100
     fallar(errores, "el DPS del mago supera al del clérigo", dps(m, "misil") > dps(c, "castigo") * 1.2,
       string.format("%.1f vs %.1f", dps(m, "misil"), dps(c, "castigo")))
     -- el tipo de daño elige qué se compara
-    local blanco = mundo:spawnMonstruo("gato", m.x + 1, m.y, { x = m.x, y = m.y })
+    local blanco = mundo:spawnMonstruo("seta_azul", m.x + 1, m.y, { x = m.x, y = m.y })
     blanco.hp, blanco.hpMax = 1e9, 1e9
     blanco.def, blanco.mdef = 0, 200
     local function media(origen, tipo)
@@ -3233,8 +3335,8 @@ mundo.tiempo = 100
     fallar(errores, "el básico del mago es mágico y el del guerrero físico",
       mundo:tipoDanoBasico(m) == "magico" and mundo:tipoDanoBasico(g) == "fisico" and mundo:tipoDanoBasico(c) == "magico")
     -- monstruos: físicos y mágicos con su perfil
-    local fis = mundo:spawnMonstruo("troll", m.x + 2, m.y, { x = m.x, y = m.y })
-    local mag = mundo:spawnMonstruo("liche", m.x + 3, m.y, { x = m.x, y = m.y })
+    local fis = mundo:spawnMonstruo("escarabajo_ciervo", m.x + 2, m.y, { x = m.x, y = m.y })
+    local mag = mundo:spawnMonstruo("elemental_brasas", m.x + 3, m.y, { x = m.x, y = m.y })
     fallar(errores, "un monstruo físico pega con atk y se defiende con def", fis.tipoDano == "fisico" and fis.atk > fis.matk and fis.def > fis.mdef)
     fallar(errores, "un monstruo mágico pega con matk y resiste con mdef", mag.tipoDano == "magico" and mag.matk > mag.atk and mag.mdef > mag.def)
     -- el equipo de oficios mágicos sube lo mágico
@@ -3613,7 +3715,7 @@ mundo.tiempo = 100
     local mapa = mundo.mapas.mundo
     local camps, mobs, peor = 0, 0, 0
     for _, c in ipairs(mapa.campamentos) do
-      if not c.z and not c.isla then
+      if not c.z and not c.isla and not c.jefe then
         camps = camps + 1
         mobs = mobs + c.cantidad
         local mon = Datos.monstruo(c.monstruo)
@@ -3622,6 +3724,43 @@ mundo.tiempo = 100
     end
     fallar(errores, "ninguna criatura sale en una zona de otro nivel", peor <= Mapa.TOLERANCIA_NIVEL + 1, "desajuste " .. peor)
     fallar(errores, "hay campamentos pero no una plaga de criaturas", camps > 150 and mobs < 1800, camps .. " campamentos, " .. mobs .. " criaturas")
+  end)
+  paso("jefes del mundo: cinco por continente, cada uno en su zona, solos y con su aura", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.mundo
+    local por = { [1] = {}, [2] = {} }
+    for _, j in ipairs(mapa.jefes) do
+      local k = mapa.cont[math.floor(j.x)][math.floor(j.y)]
+      fallar(errores, "el jefe " .. j.id .. " está en su continente", k == j.continente, tostring(k) .. " vs " .. tostring(j.continente))
+      por[j.continente] = por[j.continente] or {}
+      table.insert(por[j.continente], j)
+      fallar(errores, "el jefe " .. j.id .. " sale en una zona de nivel parecido", math.abs(Mapa.nivelZona(j.x, j.y) - j.nivel) <= Mapa.TOLERANCIA_NIVEL + 3, Mapa.nivelZona(j.x, j.y) .. " vs " .. j.nivel)
+      fallar(errores, "el jefe " .. j.id .. " no se mete en una ciudad", not mundo:ciudadEn(j.x, j.y))
+    end
+    fallar(errores, "cinco jefes en el continente de Albor", #por[1] == 5, tostring(#por[1]))
+    fallar(errores, "cinco jefes en el continente de Umbra", #por[2] == 5, tostring(#por[2]))
+    -- salen solos (uno por campamento), son élites y suben de nivel a lo largo del continente
+    local vivos = 0
+    for _, e in pairs(mundo.entidades) do
+      if e.kind == "monstruo" and Datos.monstruo(e.monstruo).jefeMundo then
+        vivos = vivos + 1
+        fallar(errores, "el jefe " .. e.monstruo .. " es élite", e.elite == true)
+      end
+    end
+    fallar(errores, "los diez jefes existen en el mundo", vivos == 10, tostring(vivos))
+    for c = 1, 2 do
+      local niveles = {}
+      for _, j in ipairs(por[c]) do niveles[#niveles + 1] = j.nivel end
+      table.sort(niveles)
+      fallar(errores, "los jefes del continente " .. c .. " van del 10 al 30", niveles[1] == 10 and niveles[#niveles] == 30)
+    end
+    -- cada jefe tiene su dibujo
+    local ok = true
+    for _, j in ipairs(mapa.jefes) do
+      local f = io.open("juego/arte/monstruos/" .. j.id .. "/wait.png", "rb") or io.open("../juego/arte/monstruos/" .. j.id .. "/wait.png", "rb")
+      if f then f:close() end
+    end
   end)
   paso("continentes, caminos curvos y barco entre puertos", function()
     local Mapa = require("compartido.dominio.mapa")
@@ -3827,12 +3966,12 @@ mundo.tiempo = 100
     local sin = {}
     for _, m in ipairs(Datos.monstruos) do if not Misiones.por_id["h1_" .. m.id] then sin[#sin + 1] = m.id end end
     fallar(errores, "cada criatura tiene su misión de cazar", #sin == 0, table.concat(sin, ","))
-    fallar(errores, "las élites y los jefes son más difíciles", Misiones.por_id.h1_behemot.dif == "epica" and Misiones.por_id.h1_jefe_manada.dif == "dificil"
-      and Misiones.por_id.h1_gato.dif == "normal")
+    fallar(errores, "las élites y los jefes son más difíciles", Misiones.por_id.h1_jefe_basilisco_dorado.dif == "epica" and Misiones.por_id.h1_jefe_manada.dif == "dificil"
+      and Misiones.por_id.h1_seta_azul.dif == "normal")
     -- las recompensas suben con el nivel y la dificultad
-    fallar(errores, "más nivel, más recompensa", Misiones.por_id.h1_dragon.xp > Misiones.por_id.h1_gato.xp and Misiones.por_id.h1_dragon.oro > Misiones.por_id.h1_gato.oro)
-    fallar(errores, "la repetición paga más que la primera", Misiones.por_id.h2_gato.xp > Misiones.por_id.h1_gato.xp)
-    fallar(errores, "los finales de cadena pagan mucho", Misiones.por_id.cb_6.xp > Misiones.por_id.h1_dragon.xp)
+    fallar(errores, "más nivel, más recompensa", Misiones.por_id.h1_elemental_brasas.xp > Misiones.por_id.h1_seta_azul.xp and Misiones.por_id.h1_elemental_brasas.oro > Misiones.por_id.h1_seta_azul.oro)
+    fallar(errores, "la repetición paga más que la primera", Misiones.por_id.h2_seta_azul.xp > Misiones.por_id.h1_seta_azul.xp)
+    fallar(errores, "los finales de cadena pagan mucho", Misiones.por_id.cb_6.xp > Misiones.por_id.h1_elemental_brasas.xp)
     fallar(errores, "la experiencia se ajusta al nivel de quien entrega", Misiones.factorNivel(1, 10) > 1 and Misiones.factorNivel(20, 10) < 1)
     -- cada PNJ de misiones existe en el mundo con su id y tiene encargos
     local npcs = {}
@@ -3866,7 +4005,7 @@ mundo.tiempo = 100
     fallar(errores, "no se acepta dos veces", mundo:aceptarMision(p, "q_auroria") ~= nil)
     fallar(errores, "el siguiente paso de la cadena exige el anterior", mundo:aceptarMision(p, "q_auroria_2") ~= nil)
     fallar(errores, "sin terminar no se entrega", mundo:entregarMision(p, "q_auroria") ~= nil)
-    for _ = 1, 6 do mundo:avanzarMisiones(p, "gato") end
+    for _ = 1, 6 do mundo:avanzarMisiones(p, "seta_azul") end
     fallar(errores, "al derrotar las criaturas avanza y se completa", p.misiones.q_auroria.progreso == 6 and Misiones.completa(p, Misiones.por_id.q_auroria, p.misiones.q_auroria))
     local oro0, xp0 = p.oro, p.xp
     p.x, p.y = tablon.x + 60, tablon.y
@@ -3887,11 +4026,11 @@ mundo.tiempo = 100
     cazador.x, cazador.y, cazador.modo, cazador.z = liria.x + 1, liria.y, "mundo", 0
     fallar(errores, "recolectar: se acepta", mundo:aceptarMision(cazador, "ca_1") == nil)
     math.randomseed(7)
-    for _ = 1, 60 do mundo:avanzarMisiones(cazador, "jabali") end
-    fallar(errores, "los jabalíes sueltan trofeos mientras lo pide", mundo:contarItem(cazador, "mat_jabali") >= 6, tostring(mundo:contarItem(cazador, "mat_jabali")))
-    fallar(errores, "un trofeo no se vende", Datos.item("mat_jabali").quest == true)
+    for _ = 1, 60 do mundo:avanzarMisiones(cazador, "larva_verde") end
+    fallar(errores, "las larvas sueltan trofeos mientras lo pide", mundo:contarItem(cazador, "mat_larva_verde") >= 6, tostring(mundo:contarItem(cazador, "mat_larva_verde")))
+    fallar(errores, "un trofeo no se vende", Datos.item("mat_larva_verde").quest == true)
     fallar(errores, "el avance cuenta los trofeos de la bolsa", Misiones.progreso(cazador, Misiones.por_id.ca_1, cazador.misiones.ca_1) == 6)
-    fallar(errores, "al entregar se gastan los trofeos", mundo:entregarMision(cazador, "ca_1") == nil and mundo:contarItem(cazador, "mat_jabali") == 0)
+    fallar(errores, "al entregar se gastan los trofeos", mundo:entregarMision(cazador, "ca_1") == nil and mundo:contarItem(cazador, "mat_larva_verde") == 0)
     -- entregar: el paquete viaja de un PNJ a otro
     fallar(errores, "entrega: se acepta y llevas el paquete", mundo:aceptarMision(cazador, "ca_2") == nil and mundo:contarItem(cazador, "paq_ca_2") == 1)
     fallar(errores, "entrega: no se entrega en el PNJ equivocado", mundo:entregarMision(cazador, "ca_2") ~= nil)
@@ -3966,11 +4105,11 @@ mundo.tiempo = 100
     for _, f in ipairs(Voces.FAMILIAS) do validas[f] = true end
     for _, m in ipairs(Datos.monstruos) do if not validas[Voces.de(m.id)] then sinVoz[#sinVoz + 1] = m.id end end
     fallar(errores, "todas las criaturas tienen voz", #sinVoz == 0, table.concat(sinVoz, ","))
-    fallar(errores, "el dragón ruge y el gato maúlla distinto", Voces.de("dragon") == "dragon" and Voces.de("gato") == "pequeno" and Voces.de("liche") == "no_muerto")
+    fallar(errores, "el dragón ruge y la seta chilla distinto", Voces.de("jefe_dragon_sombra") == "dragon" and Voces.de("seta_azul") == "pequeno" and Voces.de("momia") == "no_muerto")
     local a = mundo:crearPersonaje({ nombre = "Oyente", faccion = "albor", clase = "guerrero", nivel = 12 })
     local lejos = mundo:crearPersonaje({ nombre = "Lejano", faccion = "albor", clase = "guerrero", nivel = 12 })
     lejos.x, lejos.y = a.x + 120, a.y
-    local m = mundo:spawnMonstruo("jabali", a.x + 1, a.y, { x = a.x, y = a.y })
+    local m = mundo:spawnMonstruo("leon_crin", a.x + 1, a.y, { x = a.x, y = a.y })
     local function nombres(foto)
       local l = {}
       for _, ev in ipairs(foto.sonidos or {}) do l[#l + 1] = ev.n end
@@ -4019,8 +4158,8 @@ mundo.tiempo = 100
     p.x, p.y, p.modo, p.z = liria.x + 1, liria.y, "mundo", 0
     fallar(errores, "acepta recolectar y entregar", mundo:aceptarMision(p, "ca_1") == nil)
     math.randomseed(3)
-    for _ = 1, 40 do mundo:avanzarMisiones(p, "jabali") end
-    local tenia = mundo:contarItem(p, "mat_jabali")
+    for _ = 1, 40 do mundo:avanzarMisiones(p, "larva_verde") end
+    local tenia = mundo:contarItem(p, "mat_larva_verde")
     fallar(errores, "reúne trofeos", tenia >= 6)
     mundo:entregarMision(p, "ca_1")
     mundo:aceptarMision(p, "ca_2")
@@ -4035,11 +4174,11 @@ mundo.tiempo = 100
     fallar(errores, "el paquete de la entrega sigue en la bolsa", mundo:contarItem(b, "paq_ca_2") == 1)
     -- cazar a medias
     local t = mundo:crearPersonaje({ nombre = "Cazador3", faccion = "albor", clase = "guerrero", nivel = 12 })
-    t.misiones.h1_gato = { aceptada = true, entregada = false, progreso = 4 }
+    t.misiones.h1_seta_azul = { aceptada = true, entregada = false, progreso = 4 }
     local v2 = Util.jsonDec(Util.jsonEnc(mundo:exportar(t)))
     local c = mundo:crearPersonaje({ nombre = "Cazador4", faccion = "albor", clase = "guerrero", nivel = 12 })
     mundo:aplicarGuardado(c, v2)
-    fallar(errores, "el avance de cazar se conserva", c.misiones.h1_gato and c.misiones.h1_gato.progreso == 4 and c.misiones.h1_gato.aceptada)
+    fallar(errores, "el avance de cazar se conserva", c.misiones.h1_seta_azul and c.misiones.h1_seta_azul.progreso == 4 and c.misiones.h1_seta_azul.aceptada)
   end)
   paso("efectos de poderes: apuntan de quien ataca hacia su objetivo", function()
     local mundo = Mundo.nuevo()
@@ -4047,7 +4186,7 @@ mundo.tiempo = 100
     l.mp, l.mpMax = 999, 999
     mundo.tiempo = 300
     -- el enemigo ENCIMA del lancero: la estocada va de abajo arriba
-    local m = mundo:spawnMonstruo("jabali", l.x, l.y - 2, { x = l.x, y = l.y })
+    local m = mundo:spawnMonstruo("pinguino_aprendiz", l.x, l.y - 2, { x = l.x, y = l.y })
     m.hp, m.hpMax = 99999, 99999
     mundo.efectos = {}
     l.habilidades = l.habilidades or {}
@@ -4101,7 +4240,7 @@ mundo.tiempo = 100
       mundo:recalcular(p)
       p.mp = 9999
       mundo.tiempo = 500
-      local m = mundo:spawnMonstruo("jabali", p.x + math.max(0.9, math.min(2, (h.rango or 2) - 0.5)), p.y, { x = p.x, y = p.y })
+      local m = mundo:spawnMonstruo("pinguino_aprendiz", p.x + math.max(0.9, math.min(2, (h.rango or 2) - 0.5)), p.y, { x = p.x, y = p.y })
       m.hp, m.hpMax = 99999, 99999
       local aliado = (h.tipo == "aliado") and p or nil
       local slot
@@ -4187,7 +4326,7 @@ mundo.tiempo = 100
     local pu = mundo.mapas.mundo.puestos[1]
     cx, cy = pu.x + 14, pu.y + 6
     poner(cx - 6, cy + 2)
-    local gato = mundo:spawnMonstruo("gato", cx - 2.5, cy + 2.5, { x = cx - 2.5, y = cy + 2.5 })
+    local gato = mundo:spawnMonstruo("seta_azul", cx - 2.5, cy + 2.5, { x = cx - 2.5, y = cy + 2.5 })
     gato.agresivo = true
     correr(5)
     local gx, gy = mundo:casilla(gato)
@@ -4196,7 +4335,7 @@ mundo.tiempo = 100
       not (gx == jx and gy == jy) and math.max(math.abs(gx - jx), math.abs(gy - jy)) <= 2, gx .. "," .. gy .. " vs " .. jx .. "," .. jy)
     mundo:danar(gato, 99999, j)
     poner(cx - 6, cy + 2)
-    local presa = mundo:spawnMonstruo("gato", cx - 1.5, cy + 2.5, { x = cx - 1.5, y = cy + 2.5 })
+    local presa = mundo:spawnMonstruo("seta_azul", cx - 1.5, cy + 2.5, { x = cx - 1.5, y = cy + 2.5 })
     j.objetivo, j.persigue = presa.id, true
     local mato = false
     for _ = 1, 400 do
@@ -4250,7 +4389,7 @@ mundo.tiempo = 100
     fallar(errores, "xml constantes en balance", require("compartido.dominio.balance").XP_BASE == 40)
     fallar(errores, "xml mall con addons y dragon", require("compartido.dominio.mall").MONTURAS.dragon ~= nil
       and #require("compartido.dominio.mall").ORDEN_ADDONS >= 40)
-    fallar(errores, "xml mazmorras", #Datos.mazmorras == 3 and Datos.mazmorras[1].jefe.monstruo == "caballero")
+    fallar(errores, "xml mazmorras", #Datos.mazmorras == 3 and Datos.mazmorras[1].jefe.monstruo == "jefe_rey_momia")
     fallar(errores, "xml monturas: el dragon no sale en la cuadra", require("compartido.dominio.monturas").especies.dragon
       and #require("compartido.dominio.monturas").orden == 12)
   end)
@@ -4364,7 +4503,7 @@ mundo.tiempo = 100
     local pu = mundo.mapas.mundo.puestos[1]
     local function avanzar(seg) for _ = 1, math.floor(seg / 0.1) do mundo:actualizar(0.1) end end
     local function troll(x, y)
-      local m = mundo:spawnMonstruo("troll", x, y, { x = x, y = y })
+      local m = mundo:spawnMonstruo("escarabajo_ciervo", x, y, { x = x, y = y })
       m.hp, m.hpMax, m.agresivo, m.cds = 99999, 99999, false, { auto = 1e9 }
       return m
     end
@@ -4786,16 +4925,18 @@ mundo.tiempo = 100
     local b = mundo:crearPersonaje({ nombre = "AlfaDos", faccion = "umbra", clase = "guerrero", nivel = 10 })
     -- un sitio abierto fuera de las ciudades
     local x, y
-    for xx = 100, 400, 7 do
-      for yy = 100, 400, 7 do
-        if not x and Mapa_ok == nil and mapa.suelo[xx] and mapa.suelo[xx][yy] == "hierba_osc" and not mundo:ciudadEn(xx, yy) then x, y = xx, yy end
+    for xx = 30, mapa.w - 30, 7 do
+      for yy = 30, mapa.h - 30, 7 do
+        a.modo, a.z, a.x, a.y = "mundo", 0, xx + 0.5, yy + 0.5
+        local lejos = not mundo:enSantuario(a)
+        if not x and lejos and mapa.suelo[xx] and mapa.suelo[xx][yy] == "hierba_osc" and not mundo:ciudadEn(xx, yy) then x, y = xx, yy end
       end
     end
     x, y = x or 300, y or 300
     for _, e in ipairs({ a, b }) do e.modo, e.z, e.x, e.y = "mundo", 0, x + 0.5, y + 0.5 end
     fallar(errores, "sin oficio, los de la misma facción no se pegan", not mundo:puedeDanar(a, b) and not mundo:puedeDanar(b, a))
     b.job = "trader"
-    fallar(errores, "con el oficio activo se puede atacar aunque sea de tu facción", mundo:puedeDanar(a, b))
+    fallar(errores, "con el oficio activo se puede atacar aunque sea de tu facción", mundo:puedeDanar(a, b), x .. "," .. y .. " santuario=" .. tostring(mundo:enSantuario(b)))
     fallar(errores, "y el del oficio también puede atacar", mundo:puedeDanar(b, a))
     -- en una ciudad sigue siendo zona segura
     local c = mapa.ciudades[1]

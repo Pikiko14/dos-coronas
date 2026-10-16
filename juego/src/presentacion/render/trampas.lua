@@ -7,24 +7,25 @@ local T = {}
 local TILE = 32
 local Iso = require("src.presentacion.render.iso")
 
+-- La placa de la trampa es un rombo apoyado en el suelo (como las casillas isométricas), con su dibujo propio.
+local function rombo(modo, cx, cy, rx, ry)
+  love.graphics.polygon(modo, cx, cy - ry, cx + rx, cy, cx, cy + ry, cx - rx, cy)
+end
+
 local function placa(tipo, px, py)
-  love.graphics.setColor(0.07, 0.06, 0.08, 0.85)
-  love.graphics.rectangle("fill", px + 2, py + 2, TILE - 4, TILE - 4, 3, 3)
+  local cx, cy = px + TILE / 2, py + TILE / 2
+  love.graphics.setColor(0.05, 0.045, 0.06, 0.9)
+  rombo("fill", cx, cy, 21, 10.5)
+  local c = tipo == "pinchos" and { 0.36, 0.37, 0.43 } or (tipo == "fuego" and { 0.45, 0.16, 0.08 } or { 0.2, 0.36, 0.2 })
+  love.graphics.setColor(c[1], c[2], c[3], 1)
+  rombo("line", cx, cy, 21, 10.5)
+  love.graphics.setColor(c[1] * 0.55, c[2] * 0.55, c[3] * 0.55, 1)
+  rombo("fill", cx, cy, 14, 7)
   if tipo == "pinchos" then
-    love.graphics.setColor(0.32, 0.32, 0.38, 1)
-    for i = 0, 1 do
-      for j = 0, 1 do love.graphics.circle("fill", px + 10 + i * 12, py + 10 + j * 12, 2) end
+    love.graphics.setColor(c[1], c[2], c[3], 1)
+    for i = -1, 1, 2 do
+      for j = -1, 1, 2 do love.graphics.circle("fill", cx + i * 7, cy + j * 3.5, 1.6) end
     end
-  elseif tipo == "fuego" then
-    love.graphics.setColor(0.32, 0.12, 0.08, 1)
-    love.graphics.circle("fill", px + 16, py + 16, 8)
-    love.graphics.setColor(0.12, 0.06, 0.05, 1)
-    love.graphics.circle("fill", px + 16, py + 16, 5)
-  else
-    love.graphics.setColor(0.14, 0.26, 0.15, 1)
-    love.graphics.circle("fill", px + 16, py + 16, 8)
-    love.graphics.setColor(0.07, 0.12, 0.08, 1)
-    love.graphics.circle("fill", px + 16, py + 16, 4)
   end
 end
 

@@ -20,6 +20,7 @@ param(
   [int]$PuertoJuego = 30555,
   [switch]$Completo,
   [switch]$ConArte,       # el parche lleva TODA la carpeta arte (80 MB) en vez de solo lo que cambió
+  [string]$ArteBaseArchivo = "",   # lista ruta<TAB>sha256 del arte que YA tienen los jugadores (por defecto desplieguerte_base.txt)
   [switch]$SinSubir
 )
 $ErrorActionPreference = "Stop"
@@ -125,7 +126,8 @@ try {
 
 $sha = (Get-FileHash $rutaZip -Algorithm SHA256).Hash.ToLower()
 $minimo = if ($previo.ContainsKey("minimo")) { $previo["minimo"] } else { "0" }
-$manifiesto = "build=$build`nnombre=$nombre`narchivo=$nombreZip`nsha256=$sha`nminimo=$minimo`n"
+$tamanoZip = (Get-Item $rutaZip).Length
+$manifiesto = "build=$build`nnombre=$nombre`narchivo=$nombreZip`nsha256=$sha`ntamano=$tamanoZip`nminimo=$minimo`n"
 foreach ($k in @("completo", "shacompleto", "tamanocompleto")) { if ($previo.ContainsKey($k)) { $manifiesto += "$k=$($previo[$k])`n" } }
 $rutaManifiesto = Join-Path $salida "version.txt"
 [System.IO.File]::WriteAllText($rutaManifiesto, $manifiesto, (New-Object System.Text.UTF8Encoding $false))

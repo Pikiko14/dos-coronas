@@ -2,6 +2,7 @@
 -- Cada uno es un trozo de una lámina del pack nuevo (en casillas) que se recorta
 -- a sus píxeles visibles y se ancla por el centro de abajo.
 local Arte = require("src.presentacion.render.arte")
+local MapaFao = require("src.presentacion.render.mapa_fao")
 
 local O = {}
 
@@ -137,6 +138,8 @@ O.estatico = false
 
 -- Dibuja con la base en (sx, sy) (centro de abajo de la casilla). fase: desfase del vaivén de las plantas vivas.
 function O.dibujar(nombre, variante, sx, sy, tinte, alfa, fase)
+  -- el arte de mapa FAO (si hay uno para este objeto) tiene preferencia sobre las láminas anteriores
+  if MapaFao.tiene(nombre) and MapaFao.dibujar(nombre, variante, sx, sy, tinte, alfa, fase, O.estatico) then return true end
   local t = trozo(nombre, variante)
   if not t then return false end
   if tinte then love.graphics.setColor(tinte[1], tinte[2], tinte[3], alfa or 1)

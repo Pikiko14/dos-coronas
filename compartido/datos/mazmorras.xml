@@ -4,36 +4,36 @@
 -->
 <mazmorras>
   <!-- ---- datos de cada mazmorra ---- -->
-  <mazmorra id="mz1" nombre="Cripta del Olvido" desc="Un osario bajo la colina. Esqueletos, espectros y un caballero que no descansa." nivelMin="10" continente="1">
+  <mazmorra id="mz1" nombre="Cripta del Olvido" desc="Un osario bajo la colina. Esqueletos, momias, espíritus y un rey envuelto en vendas que no descansa." nivelMin="10" continente="1">
     <biomas lista="colina,senda,campos,bosque"/>
-    <jefe nombre="Señor de la Cripta" nivel="17" dano="1.7" monstruo="caballero" vida="9"/>
+    <jefe nombre="Rey Momia" nivel="17" dano="1.7" monstruo="jefe_rey_momia" vida="9"/>
     <monstruos>
       <i lista="esqueleto,13"/>
-      <i lista="espectro,12"/>
-      <i lista="gargola,14"/>
-      <i lista="alma,13"/>
+      <i lista="esqueleto_soldado,14"/>
+      <i lista="espiritu_velo,13"/>
+      <i lista="momia,14"/>
     </monstruos>
     <tinte lista="0.8,0.85,1"/>
   </mazmorra>
-  <mazmorra id="mz2" nombre="Foso de las Brasas" desc="Galerías de escoria al rojo vivo. Gólems, demonios y un titán que despierta con el calor." nivelMin="18" continente="2">
+  <mazmorra id="mz2" nombre="Foso de las Brasas" desc="Galerías de escoria al rojo vivo. Ogros, diablillos, elementales de brasas y un diablo que despierta con el calor." nivelMin="18" continente="2">
     <biomas lista="pinar,cienaga,marea,senda"/>
-    <jefe nombre="Titán del Foso" nivel="26" dano="1.7" monstruo="titan" vida="9"/>
+    <jefe nombre="Diablo de las Brasas" nivel="26" dano="1.7" monstruo="jefe_diablo_brasas" vida="9"/>
     <monstruos>
-      <i lista="golem,20"/>
-      <i lista="demonio_foso,22"/>
-      <i lista="escorpion_carmesi,23"/>
-      <i lista="dragon_brasas,24"/>
+      <i lista="ogro_hacha,20"/>
+      <i lista="diablillo_lancero,22"/>
+      <i lista="bestia_cornuda,23"/>
+      <i lista="elemental_brasas,24"/>
     </monstruos>
     <tinte lista="1,0.8,0.7"/>
   </mazmorra>
-  <mazmorra id="mz3" nombre="Santuario del Eclipse" desc="El templo donde la luz se apaga. Liches, ojos del abismo y el Behemot de guerra." nivelMin="25" continente="1">
+  <mazmorra id="mz3" nombre="Santuario del Eclipse" desc="El templo donde la luz se apaga. Reinas de los espejos, tigres espectrales, gólems de cristal y un soberano sin rostro." nivelMin="25" continente="1">
     <biomas lista="eclipse,velo,cienaga,pinar"/>
-    <jefe nombre="Behemot del Eclipse" nivel="30" dano="1.3" monstruo="behemot" vida="4"/>
+    <jefe nombre="Soberano del Eclipse" nivel="30" dano="1.3" monstruo="jefe_soberano_eclipse" vida="4"/>
     <monstruos>
-      <i lista="ojo_abismo,28"/>
-      <i lista="liche,28"/>
-      <i lista="demonio_rey,29"/>
-      <i lista="hidra_ceniza,29"/>
+      <i lista="reina_espejos,28"/>
+      <i lista="bestia_espectral,28"/>
+      <i lista="golem_cristal,29"/>
+      <i lista="troll_escarcha,29"/>
     </monstruos>
     <tinte lista="0.85,0.75,1"/>
   </mazmorra>

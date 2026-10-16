@@ -84,18 +84,23 @@ function Red.escuchar(puerto)
     for _, c in ipairs(self.clientes) do Sock.cerrar(c.sock) end
     Sock.cerrar(self.sock)
   end
+  -- id -> conexión (con miles de jugadores, recorrer la lista en cada envío sería una pérdida enorme). El mapa se mantiene al día en
+  -- actualizar(): se añade al aceptar una conexión y se reconstruye cuando alguna se cierra.
+  srv.porId = {}
+  local function conexion(self, id)
+    return self.porId[id]
+  end
   function srv:puedeEnviar(id)
-    for _, c in ipairs(self.clientes) do
-      if c.id == id then return not c.cola or #c.cola == 0 end
-    end
+    local c = conexion(self, id)
+    if c then return not c.cola or #c.cola == 0 end
     return false
   end
+  -- tabla: una tabla (se codifica a JSON) o un texto JSON ya codificado
   function srv:enviar(id, tabla)
-    for _, c in ipairs(self.clientes) do
-      if c.id == id then
-        c.cola = c.cola or {}
-        enviarRaw(c.sock, Util.jsonEnc(tabla) .. "\n", c.cola)
-      end
+    local c = conexion(self, id)
+    if c then
+      c.cola = c.cola or {}
+      enviarRaw(c.sock, (type(tabla) == "string" and tabla or Util.jsonEnc(tabla)) .. "\n", c.cola)
     end
   end
   -- Manda un último mensaje a una conexión y la cierra en cuanto se vacía su cola (o tras unos intentos).
@@ -119,7 +124,9 @@ function Red.escuchar(puerto)
       Sock.sinDemora(nuevo)
       self.seq = (self.seq or 0) + 1
       local id = "c" .. self.seq
-      self.clientes[#self.clientes + 1] = { id = id, sock = nuevo, buffer = "", cola = {} }
+      local cliente = { id = id, sock = nuevo, buffer = "", cola = {} }
+      self.clientes[#self.clientes + 1] = cliente
+      self.porId[id] = cliente
       eventos[#eventos + 1] = { tipo = "conecta", id = id }
     end
     local vivos = {}
@@ -138,6 +145,11 @@ function Red.escuchar(puerto)
         end
         vivos[#vivos + 1] = c
       end
+    end
+    if #vivos ~= #self.clientes then
+      -- alguna conexión se cerró: se rehace el mapa de id -> conexión
+      self.porId = {}
+      for _, c in ipairs(vivos) do self.porId[c.id] = c end
     end
     self.clientes = vivos
     return eventos
