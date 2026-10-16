@@ -89,6 +89,7 @@ if (Test-Path $rutaZip) { Remove-Item $rutaZip -Force }
 # arte de la última base: despliegue\arte_base.txt (ruta<TAB>sha256) lo escribe web\publicar.ps1 con cada paquete completo
 $arteBase = @{}
 $archivoBase = Join-Path $raiz "despliegue\arte_base.txt"
+if ($ArteBaseArchivo) { $archivoBase = (Resolve-Path $ArteBaseArchivo).Path }   # base alternativa (p. ej. el paquete que aún tienen los jugadores más antiguos)
 if (Test-Path $archivoBase) {
   foreach ($l in Get-Content $archivoBase) { $p = $l -split "`t"; if ($p.Count -eq 2) { $arteBase[$p[0]] = $p[1] } }
 } elseif (-not $ConArte) {

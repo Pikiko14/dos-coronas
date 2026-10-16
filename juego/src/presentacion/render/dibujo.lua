@@ -425,12 +425,27 @@ function D.escena(mundo, jugador, cam, mx, my)
       D.proyectil(e, ppx - cam.x, ppy - cam.y)
     end
   end
+  -- quien va montado: los hechizos salen y caen sobre el jinete (centrados en él), no a los pies de la montura
+  local montados
+  for _, e in pairs(mundo.entidades) do
+    if e.montado and e.vivo ~= false and (e.kind == "jugador" or e.kind == "bot") then
+      local m = Personajes.monturaDe(e.montado, e.faccion)
+      if m and (m.altura or m.vehiculo) then
+        montados = montados or {}
+        montados[#montados + 1] = { e = e, lift = m.altura or 14 }
+      end
+    end
+  end
   for _, fx in ipairs(mundo.efectos or {}) do
     if math.abs(fx.x - jugador.x) < radio and math.abs(fx.y - jugador.y) < radio then
       local epx, epy = Iso.pos(fx.x, fx.y)
       local rotE = fx.rot
       if rotE and Iso.activo() then rotE = Iso.angulo(math.cos(rotE), math.sin(rotE)) end
-      Efectos.cuadro(fx.tipo, fx.t, fx.dur, epx - cam.x, epy - cam.y + 14, nil, nil, rotE)
+      local lift = 0
+      for _, mo in ipairs(montados or {}) do
+        if math.abs(mo.e.x - fx.x) < 0.7 and math.abs(mo.e.y - fx.y) < 0.7 then lift = mo.lift break end
+      end
+      Efectos.cuadro(fx.tipo, fx.t, fx.dur, epx - cam.x, epy - cam.y + 14 - lift, nil, nil, rotE)
     end
   end
   -- apuntando un poder de area: la zona habilitada (alcance) y el area de impacto bajo el cursor
@@ -472,7 +487,7 @@ end
 local PROYECTILES = { misil = "add", fuego = "add", sagrado = "add", flecha = "alpha", sombra = "alpha", lanza = "alpha", necro = "alpha" }
 
 function D.proyectil(e, sx, sy)
-  sy = sy - 8
+  sy = sy - 17      -- sale del pecho de quien lo lanza
   local ang = Iso.angulo((e.tx or e.x) - e.x, (e.ty or e.y) - e.y)
   -- sprites generados (Animations/Proyectil_<tipo>.png: 4 cuadros de 64x64, miran a la derecha)
   if PROYECTILES[e.tipo] then
@@ -775,7 +790,7 @@ end
 local function efectoAtaque(e, st, u, sx, pies, k, def)
   local monstruo = e.kind == "monstruo"
   local c = monstruo and { 1, 0.42, 0.32 } or { 1, 0.95, 0.72 }
-  local alto = (def and def.fila and 14 or 12) * k
+  local alto = (def and def.fila and 14 or 21) * k      -- (altura del pecho: los personajes de FAO son más altos que los antiguos)
   if st.lejos then
     local cm = monstruo and { 0.85, 0.4, 1 } or { 0.62, 0.86, 1 }
     -- anillo que se abre en el suelo mientras carga y destello en el pecho al soltar
@@ -862,10 +877,11 @@ end
 
 function entidadBase(e, sx, sy, mundo, jugador)
   local pies = sy + 12
+  local elevJinete = pies      -- desde dónde salen los efectos de ataque: los pies, o el asiento si va montado
   local alto = 32
   local def = Personajes.de(e)
   love.graphics.setColor(0, 0, 0, 0.3)
-  love.graphics.ellipse("fill", sx, pies - 1, def and def.fila and ((def.celda or 64) > 64 and 26 or 20) or 11, def and def.fila and 7 or 4)
+  love.graphics.ellipse("fill", sx, pies - 1, def and def.fila and ((def.celda or 64) > 64 and 26 or 20) or (e.montado and 17 or 11), def and def.fila and 7 or (e.montado and 6 or 4))
   -- animación de ataque: la criatura (y su montura) se deforma y se mueve; la sombra se queda en el suelo
   local atq, atqU, atqPose, atqK
   if def and e.kind ~= "caravana" and e.kind ~= "cuerpo" and e.vivo ~= false then
@@ -913,6 +929,7 @@ function entidadBase(e, sx, sy, mundo, jugador)
     local piesJinete = pies
     local montaFrente
     local jineteSentado      -- montura de FAO bajo un personaje por capas: se dibuja al jinete sentado en su asiento
+    if def.fao then def.fao._faoAtq = atq and { st = atq, u = atqU } or nil end   -- (antes de la montura: ella también se gira hacia el objetivo)
 
     if e.montado then
       -- la montura va debajo y el jinete algo más arriba
@@ -941,6 +958,7 @@ function entidadBase(e, sx, sy, mundo, jugador)
         end
       end
     end
+    elevJinete = piesJinete
     -- quien lleva cristales enemigos: halo del color del cristal y los cristales flotando sobre su cabeza
     if (e.llevaCristales or 0) > 0 and (e.kind == "jugador" or e.kind == "bot") then
       local fac = e.faccion == "albor" and "umbra" or "albor"
@@ -972,13 +990,19 @@ function entidadBase(e, sx, sy, mundo, jugador)
       love.graphics.ellipse("line", sx, pies - 1, 22 + 2 * pulso, 9 + pulso)
       if (e.dir or 1) ~= 1 then Objetos.dibujar(llevaEst == "umbra" and "bandera_umbra" or "bandera_albor", 0, sx + 10, piesJinete + 4) end
     end
-    if def.fao then def.fao._faoAtq = atq and { st = atq, u = atqU } or nil end
     -- montado, la que camina es la montura: el jinete va quieto (sin mover los pies)
     if jineteSentado then
       -- El jinete va sobre su montura, en el asiento original de FAO (origen común con la altura de setting/chardef.xml, ver herramientas/generar_mobs/monturas.py)
       local tint = rojo and { 1, 0.6, 0.6 } or nil
       if require("src.presentacion.render.fao").dibujarMontado(def.fao, jineteSentado.anim, sx, pies, tint) then
         alto = 36
+        -- Montura de frente (solo de cara; de tres cuartos el jinete va sobre el lomo y no hay que taparle nada): su cabeza y su pecho quedan DELANTE del jinete. Se repinta la montura (el mismo
+        -- cuadro) solo por debajo del pecho del jinete: la cabeza y el pecho de la montura tapan su cintura y sus piernas, y el torso, la
+        -- cara y el arma siguen viéndose por encima.
+        local _, sdy, _, _, hojaM = require("src.presentacion.render.mob_anim").asiento(jineteSentado.anim, e.dir)
+        if sdy and hojaM == 0 then
+          Personajes.dibujar(jineteSentado, e.dir or 1, anda, reloj, sx, pies, nil, nil, e, true, pies + sdy - 30)
+        end
       else
         alto = Personajes.dibujar(def, e.dir or 1, anda and not e.montado, reloj, sx, piesJinete, tint)
       end
@@ -1044,10 +1068,10 @@ function entidadBase(e, sx, sy, mundo, jugador)
   end
   if atq and atqPose then
     love.graphics.pop()
-    efectoAtaque(e, atq, atqU, sx + atqPose.dx * 0.6, pies, atqK, def)
+    efectoAtaque(e, atq, atqU, sx + atqPose.dx * 0.6, elevJinete, atqK, def)
   elseif atq then
     -- criaturas con animación por cuadros: sin deformación, solo el efecto del golpe
-    efectoAtaque(e, atq, atqU, sx, pies, 1, def)
+    efectoAtaque(e, atq, atqU, sx, elevJinete, 1, def)
   end
   -- PNJ de misiones: "!" si tiene algo nuevo para ti y "?" si puedes entregarle algo
   if e.kind == "npc" and e.qid and jugador then

@@ -267,10 +267,10 @@ function P.jineteDe(e, def)
 end
 
 -- Dibuja la criatura con los pies en (sx, sy). mov: está andando; reloj: segundos.
-function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa, sujeto)
+function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa, sujeto, repetir, corteY)
   if def.anim and def.altura then
     -- montura con animación por cuadros
-    return MobAnim.dibujar(def.anim, mov and "run" or "wait", 0, sx, sy, dir or 1, tinte, 0, sujeto)
+    return MobAnim.dibujar(def.anim, mov and "run" or "wait", 0, sx, sy, dir or 1, tinte, 0, sujeto, repetir, corteY)
   end
   if def.fao then return require("src.presentacion.render.fao").dibujar(def.fao, mov, sx, sy, tinte, alfa) end
   -- las skins propias del mall se dibujan por código (render/propias.lua)

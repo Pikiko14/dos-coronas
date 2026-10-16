@@ -21,9 +21,13 @@ PAD = 3
 PASOS = {"wait": 3, "run": 6}
 BAKE = 1.0                    # tamaño del horneado respecto al original (a tamaño completo: las monturas se ven nítidas)
 ESCALA = 0.5                  # en pantalla, a zoom 2 una montura horneada a BAKE 1 se ve a la mitad de su tamaño original
-MIN_ALTO = 46                 # altura mínima en pantalla (px) de una montura: las más pequeñas (hámsteres, cerditos) se amplían hasta ella para que el
+MIN_ALTO = 1                 # altura mínima en pantalla (px) de una montura: las más pequeñas (hámsteres, cerditos) se amplían hasta ella para que el
                               # jinete, que no se reduce, no sea más grande que su montura
-MAX_AMPLIAR = 1.7             # lo máximo que se amplía una montura (se hornea más grande: no se pierde nitidez)
+MAX_AMPLIAR = 1.0             # lo máximo que se amplía una montura (se hornea más grande: no se pierde nitidez)
+PELVIS = 36                   # altura de la cadera del jinete sentado sobre su origen (px del original; medida en la hoja montada)
+CADERA_REL = 0.45             # altura a la que queda la cadera del jinete, como fracción de la altura de la montura
+HOMOGENEO = 0.8               # 1 = todas las monturas con la cadera exactamente a CADERA_REL; 0 = las alturas originales de FAO sin tocar
+MAX_CORR = 70                 # lo máximo (px horneados) que se corrige el asiento de una montura
 
 NOMBRES = {
     "001": "Corcel blanco", "002": "Gallo de monta", "005": "Burro", "006": "Lobo blanco", "007": "Hámster de cofia", "008": "Zorro rojo",
@@ -84,11 +88,33 @@ def hornear():
             # hojas del personaje montado respecto al punto de dibujo de la montura (centro y base de la casilla), subido la altura de arriba
             tira, cw, ch, alto_c, plano = fao_hojas.hornear(im, pasos, bake, PAD, anclas)
             for j in range(1, len(plano), 2):
-                plano[j] = round(plano[j] - altura * bake, 1)
+                plano[j] = round(plano[j] - altura, 1)
             asiento.setdefault(idn, {})[anim] = plano
             if anim == "wait":
                 alto = alto_c
+                alfa_t = np.asarray(tira)[:, :, 3] > 10
+                techos, suelos = [], []
+                for hoja in (2, 3, 4):                     # espalda-izquierda, izquierda y frente-izquierda
+                    for p_ in range(pasos):
+                        ys_ = np.where(alfa_t[:, (p_ * 5 + hoja) * cw:(p_ * 5 + hoja + 1) * cw].any(1))[0]
+                        if len(ys_):
+                            techos.append(ys_.min()); suelos.append(ys_.max())
+                caja = (float(np.mean(techos)), float(np.mean(suelos)), ch - PAD) if techos else None
             fao_hojas.guardar(tira, os.path.join(sal, anim + ".png"))
+        # Homogeneidad: la altura de jinete original de FAO deja la cadera entre el 15 % y el 107 % de la altura de cada montura (pájaros y alados
+        # flotando, cerditos hundidos). Se acerca la cadera de TODAS a una misma fracción de su altura (HOMOGENEO = 1 las pone todas igual;
+        # menos, conserva algo de la variación original), con la misma corrección en todos los cuadros para no perder el vaivén.
+        if caja:
+            techo, suelo, base_y = caja
+            alto_m = max(1.0, suelo - techo)
+            dys = [asiento[idn]["wait"][(p_ * 5 + h_) * 2 + 1] for h_ in (2, 3, 4) for p_ in range(PASOS["wait"])]
+            rel = (PELVIS - sum(dys) / len(dys) + (base_y - suelo)) / alto_m
+            objetivo = CADERA_REL + (1 - HOMOGENEO) * (rel - CADERA_REL)
+            corr = max(-MAX_CORR, min(MAX_CORR, (rel - objetivo) * alto_m))      # positivo = más abajo
+            for anim_ in ("wait", "run"):
+                pl = asiento[idn][anim_]
+                for j in range(1, len(pl), 2):
+                    pl[j] = round(pl[j] + corr, 1)
         pant = round(alto * ESCALA)
         datos[idn] = dict(alto=pant, altura=max(8, min(30, round(pant * 0.45))))
     with open(LUA, "w", encoding="utf-8", newline="\n") as f:

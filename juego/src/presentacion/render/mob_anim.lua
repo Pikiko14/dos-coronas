@@ -89,7 +89,7 @@ local function aura(d, sx, pies, alfa)
 end
 
 -- Dibuja un cuadro de la tira. i es el cuadro (o el paso en las criaturas con direcciones); u (0..1) elige por progreso si no se da i.
-local function dibujar(nombre, tipo, i, u, sx, pies, dir, alfa, tinte, hoja5, flip5)
+local function dibujar(nombre, tipo, i, u, sx, pies, dir, alfa, tinte, hoja5, flip5, corteY)
   local d = M.DEFS[nombre]
   if not d then return 32 end
   local t = tira(d.carpeta, tipo, d.dirs2, d.dirs5)
@@ -124,13 +124,21 @@ local function dibujar(nombre, tipo, i, u, sx, pies, dir, alfa, tinte, hoja5, fl
   if k then c = { c[1] * k[1], c[2] * k[2], c[3] * k[3] } end
   aura(d, sx, pies, alfa)
   love.graphics.setColor(c[1], c[2], c[3], alfa or 1)
+  if corteY then
+    -- solo la parte del cuadro que queda por debajo de la línea corteY (y de pantalla)
+    local suelo = t.h - (d.pad or 0)
+    local y0 = math.max(0, math.min(t.h - 1, (corteY - (pies + 2)) / e + suelo))
+    local q = love.graphics.newQuad(i * t.w, y0, t.w, t.h - y0, t.img:getDimensions())
+    love.graphics.draw(t.img, q, sx, pies + 2 + (y0 - suelo) * e, 0, voltear and -e or e, e, t.w / 2, 0)
+    return d.alto
+  end
   love.graphics.draw(t.img, cuadro(t, i), sx, pies + 2, 0, voltear and -e or e, e, t.w / 2, t.h - (d.pad or 0))
   return d.alto
 end
 
 -- Criatura viva. estado: "wait" | "run" | "att" | "hurt"; u: progreso 0..1 para ataque y daño; dir: dirección del mundo (1..4); semilla:
 -- desfase para que las del mismo tipo no se muevan a la vez. Devuelve su altura para la placa.
-function M.dibujar(nombre, estado, u, sx, pies, dir, tinte, semilla, sujeto)
+function M.dibujar(nombre, estado, u, sx, pies, dir, tinte, semilla, sujeto, repetir, corteY)
   local d = M.DEFS[nombre]
   local i
   if d and (estado == "wait" or estado == "run") then
@@ -144,17 +152,28 @@ function M.dibujar(nombre, estado, u, sx, pies, dir, tinte, semilla, sujeto)
       i = math.floor(love.timer.getTime() * VELOCIDAD[estado] + desfase) % (t and t.n or 1)
     end
   end
+  -- repetir: se vuelve a pintar el mismo cuadro que la última vez (la montura de frente se repinta sobre las piernas del jinete)
+  if repetir and ultimoPaso[nombre] and (estado == "wait" or estado == "run") then i = ultimoPaso[nombre].paso end
   -- hacia dónde mira: con el sujeto (la entidad) se usa su dirección de movimiento, con histéresis (la misma de los personajes por capas), en
   -- ocho direcciones; sin él, la dirección del mundo
   local hoja5, flip5
   if d and d.dirs5 and sujeto then
     local Fao = require("src.presentacion.render.fao")
-    hoja5, flip5 = Fao.hojaDeOctante(Fao.direccion(sujeto, nil))
+    hoja5, flip5 = Fao.hojaDeOctante(Fao.direccion(sujeto, sujeto._faoAtq and sujeto._faoAtq.st))   -- (al atacar, la montura y el jinete miran al objetivo)
+  end
+  -- Monturas de FAO: el origen del arte (el punto del suelo bajo la montura) no cae en el centro de la casilla del cuadro, y cambia con el paso y
+  -- la dirección. Se corre el dibujo para que ese punto quede exactamente en (sx, pies): así la sombra, el jinete y el objetivo coinciden con la montura.
+  local corrido = 0
+  if d and d.dirs5 and ASIENTO[nombre] and ASIENTO[nombre][estado] and i and (estado == "wait" or estado == "run") then
+    local h5, f5 = hoja5, flip5
+    if not h5 then h5, f5 = HOJA_MUNDO[dir or 1][1], HOJA_MUNDO[dir or 1][2] end
+    local dx = ASIENTO[nombre][estado][(i * 5 + h5) * 2 + 1]
+    if dx then corrido = (f5 and -dx or dx) * d.escala end
   end
   if d and (d.dirs2 or d.dirs5) and (estado == "wait" or estado == "run") then
-    ultimoPaso[nombre] = { estado = estado, paso = i, hoja = hoja5, flip = flip5 }
+    ultimoPaso[nombre] = { estado = estado, paso = i, hoja = hoja5, flip = flip5, corrido = corrido }
   end
-  return dibujar(nombre, estado, i, u, sx, pies, dir, 1, tinte, hoja5, flip5)
+  return dibujar(nombre, estado, i, u, sx - corrido, pies, dir, 1, tinte, hoja5, flip5, corteY)
 end
 
 -- Dónde cae el asiento del jinete de una montura de FAO (el origen de las hojas del personaje montado), tal como se dibujó en su último cuadro:
@@ -177,7 +196,7 @@ function M.asiento(nombre, dir)
   local dx, dy = datos[u.estado][k + 1], datos[u.estado][k + 2]
   if not dx then return nil end
   local e = d.escala
-  return (flip and -dx or dx) * e, 2 + dy * e, u.paso, u.estado, hoja, flip
+  return (flip and -dx or dx) * e - (u.corrido or 0), 2 + dy * e, u.paso, u.estado, hoja, flip
 end
 
 -- Cadáver: la animación de muerte y, al terminar, el último cuadro que se va apagando. transcurrido: segundos desde que murió.

@@ -338,31 +338,44 @@ end
 -- barra de progreso, para que los primeros pasos no tengan tirones. Devuelve true mientras dura la carga.
 local Terreno = require("src.presentacion.render.terreno")
 local RADIO_CARGA = 2
+local MAX_PRECARGA = 33      -- (menos que el límite de bloques en memoria de render/terreno.lua)
 function Juego.precargarMundo(app, w, h)
   local j, mundo = app.jugador, app.mundo
   if not j or not mundo or j.modo ~= "mundo" or (j.z or 0) ~= 0 then app.cargandoMundo = nil return false end
   local mapa = mundo.mapas.mundo
   local bx, by = math.floor((j.x or 0) / 16), math.floor((j.y or 0) / 16)
   local c = app.cargandoMundo
+  local lugar = bx .. "," .. by
   if not c then
     -- solo se abre la pantalla de carga si falta suelo bajo los pies (entrada o salto lejano), no al caminar
+    if app._cargaAbandonada == lugar then return false end
     if #Terreno.faltantes(mapa, bx, by, 1, true) == 0 then return false end
-    c = { total = #Terreno.faltantes(mapa, bx, by, RADIO_CARGA), t0 = love.timer.getTime() }
+    c = { total = math.min(MAX_PRECARGA, #Terreno.faltantes(mapa, bx, by, RADIO_CARGA)), t0 = love.timer.getTime(), hechos = 0 }
     app.cargandoMundo = c
   end
   local lista = Terreno.faltantes(mapa, bx, by, RADIO_CARGA)
-  if #lista == 0 then
-    Log.info(string.format("mundo: terreno preparado en %.2f s (%d bloques)", love.timer.getTime() - c.t0, c.total))
+  -- Cerca del agua cada casilla lleva 3 bloques (uno por cuadro de la animación): con el radio de carga pueden faltar más bloques que los que
+  -- caben en la memoria (LIMITE_BLOQUES); los más viejos se descartaban al construir los nuevos y la carga no terminaba nunca. Se precargan
+  -- como mucho MAX_PRECARGA (los demás se construyen al verlos) y, si aun así tarda de más, se abandona la pantalla de carga.
+  if #lista == 0 or c.hechos >= MAX_PRECARGA or love.timer.getTime() - c.t0 > 8 then
+    if #lista > 0 and c.hechos < MAX_PRECARGA then app._cargaAbandonada = lugar end
+    Log.info(string.format("mundo: terreno preparado en %.2f s (%d bloques)", love.timer.getTime() - c.t0, c.hechos))
     app.cargandoMundo = nil
     return false
   end
+  -- primero los bloques de suelo (cuadro 0) y, de ellos, los más cercanos
+  table.sort(lista, function(p, q)
+    if p[3] ~= q[3] then return p[3] < q[3] end
+    return (p[1] - bx) ^ 2 + (p[2] - by) ^ 2 < (q[1] - bx) ^ 2 + (q[2] - by) ^ 2
+  end)
   local t0 = love.timer.getTime()
   for _, b in ipairs(lista) do
     Terreno.construirYa(mapa, b[1], b[2], b[3])
-    if love.timer.getTime() - t0 > 0.03 then break end
+    c.hechos = c.hechos + 1
+    if love.timer.getTime() - t0 > 0.03 or c.hechos >= MAX_PRECARGA then break end
   end
-  c.total = math.max(c.total, #lista)
-  local hecho = math.max(0, c.total - #lista + 1)
+  c.total = math.max(c.total, math.min(MAX_PRECARGA, #lista))
+  local hecho = math.max(0, c.hechos)
   love.graphics.setColor(0.03, 0.04, 0.09, 1)
   love.graphics.rectangle("fill", 0, 0, w, h)
   local f = love.graphics.getFont()

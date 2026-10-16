@@ -5,6 +5,7 @@ local Arte = require("src.presentacion.render.arte")
 local E = {}
 
 local CELDA = 192
+local CUERPO_FAO = 9      -- px extra de altura de los efectos de cuerpo (ver E.cuadro)
 local COLUMNAS = 5
 
 -- tipo de efecto -> hoja, escala, desplazamiento vertical (px sobre el suelo) y mezcla.
@@ -129,7 +130,10 @@ function E.cuadro(tipo, t, dur, sx, sy, escalaExtra, alfa, rot)
   if d[4] == "add" then love.graphics.setBlendMode("add") end
   love.graphics.setColor(1, 1, 1, alfa or 1)
   local giro = (rot and d.base) and (rot - d.base) or 0
-  love.graphics.draw(h.img, h.cuadros[k], sx, sy - d[3] * (escalaExtra or 1), giro, esc, esc, CELDA / 2, CELDA / 2)
+  -- los efectos "de cuerpo" (los que se centran en quien los lanza o los recibe, de 12 px para arriba) se subieron para los personajes de FAO,
+  -- que son más altos que los antiguos: su centro queda a la altura del pecho. Los de suelo (zonas, nova...) se quedan a ras.
+  local alto = d[3] >= 12 and d[3] + CUERPO_FAO or d[3]
+  love.graphics.draw(h.img, h.cuadros[k], sx, sy - alto * (escalaExtra or 1), giro, esc, esc, CELDA / 2, CELDA / 2)
   if d[4] == "add" then love.graphics.setBlendMode("alpha") end
 end
 

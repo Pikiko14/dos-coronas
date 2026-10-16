@@ -57,5 +57,7 @@ if ($Subir) {
   "Subiendo la web a $Subir ..."
   ssh $Subir "mkdir -p /var/www/doscoronas"
   scp -r (Join-Path $PSScriptRoot "index.html") (Join-Path $PSScriptRoot "guia.html") (Join-Path $PSScriptRoot "css") (Join-Path $PSScriptRoot "js") (Join-Path $PSScriptRoot "img") (Join-Path $PSScriptRoot "descargas") "${Subir}:/var/www/doscoronas/"
+  # scp deja las carpetas nuevas solo para su dueño: nginx (www-data) devolvería 403 en css, js, img y descargas
+  ssh $Subir "chmod -R a+rX /var/www/doscoronas"
   "Subida. Revisa que nginx sirva /var/www/doscoronas (ver web\LEEME.md)."
 }
