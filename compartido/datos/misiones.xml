@@ -80,7 +80,7 @@
   <mision id="cd_4" npc="c_nox" monstruo="bestia_espectral" cantidad="5" nivel="25" dif="epica" requiere="cd_3" titulo="Bestias espectrales" siguiente="cd_5"
     dialogo="Las bestias espectrales son la última criba antes de la tormenta." texto="Derrota 5 bestias espectrales."/>
   <mision id="cd_5" npc="c_nox" monstruo="troll_escarcha" cantidad="3" nivel="26" dif="epica" factor="2" requiere="cd_4" titulo="Jinete de la tormenta"
-    premios="polvo_arcano:40,pocion_mana_grande:15" monedas="40" montura="toro_trueno"
+    premios="polvo_arcano:40,pocion_mana_grande:15" monedas="40" montura="mnt_027"
     dialogo="Tres trolls de escarcha. Si sobrevives, el toro del trueno te aceptará como jinete." texto="Derrota 3 trolls de escarcha." final="El toro te reconoce. Es tuyo."/>
 
   <!-- ======================= Cadena E (Albor): El corcel dorado. Premio: montura Corcel de fuego ======================= -->
@@ -93,6 +93,6 @@
   <mision id="ce_4" npc="c_puerto_sol" monstruo="diablillo_lancero" cantidad="4" nivel="26" dif="epica" requiere="ce_3" titulo="Diablillos lanceros" siguiente="ce_5"
     dialogo="Los diablillos lanceros guardan el último pasto. Sin ellos, el corcel baja." texto="Derrota 4 diablillos lanceros."/>
   <mision id="ce_5" npc="c_puerto_sol" monstruo="reina_espejos" cantidad="2" nivel="29" dif="epica" factor="2" requiere="ce_4" titulo="El corcel dorado"
-    premios="polvo_arcano:40,pocion_vida_grande:15" monedas="40" montura="corcel_fuego"
+    premios="polvo_arcano:40,pocion_vida_grande:15" monedas="40" montura="mnt_008"
     dialogo="La reina de los espejos es el ama de esa tierra. Derrótala dos veces y el corcel dorado será tuyo." texto="Derrota 2 reinas de los espejos." final="El corcel baja a tu encuentro. Cuídalo bien."/>
 </misiones>

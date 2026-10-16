@@ -78,7 +78,7 @@ local function hoja(cap, anim, lado)
   local h = hojas[k]
   if h == nil then
     local meta = datos.capas[cap] and datos.capas[cap][anim .. "_" .. lado]
-    local ruta = "arte/fao/" .. cap .. "/" .. datos.anims[anim].archivo .. "_" .. (lado == "f" and "f" or "b") .. ".png"
+    local ruta = "arte/fao/" .. cap .. "/" .. datos.anims[anim].archivo .. "_" .. (lado == "f" and "f" or lado == "m" and "m" or "b") .. ".png"
     if meta and love.filesystem.getInfo(ruta) then
       local img = love.graphics.newImage(ruta, { mipmaps = true })
       img:setFilter("linear", "linear")
@@ -114,15 +114,16 @@ local CADENA = {
 local CADENA_ARMA = { cast = { "cast", "wait" }, sht = { "sht", "att", "att2", "att3", "wait" } }
 
 -- Dibuja la capa `cap` en la animación `anim` (paso, dirección 0..4); es_arma elige la cadena de sustitución.
-local function capaAnim(cap, anim, paso, d5, es_arma, flip, sx, sy, k)
+local function capaAnim(cap, anim, paso, d5, es_arma, flip, sx, sy, k, lado)
+  lado = lado or "f"
   if es_arma and anim == "dead" then return end
   local cadena = (es_arma and CADENA_ARMA[anim]) or CADENA[anim] or { anim }
   for _, a in ipairs(cadena) do
-    local h = hoja(cap, a, "f")
+    local h = hoja(cap, a, lado)
     if h then
-      local meta = datos.capas[cap][a .. "_f"]
+      local meta = datos.capas[cap][a .. "_" .. lado]
       local p = math.min(paso, (meta.pasos or datos.anims[a].pasos) - 1)
-      capa(cap, a, "f", p * 5 + d5, flip, sx, sy, k)
+      capa(cap, a, lado, p * 5 + d5, flip, sx, sy, k)
       return
     end
   end
@@ -209,7 +210,13 @@ local function direccion(e, atq)
   return s.f8
 end
 
-M.direccion = direccion      -- (las pruebas lo usan para comprobar que la dirección no parpadea)
+M.direccion = direccion      -- (las pruebas lo usan para comprobar que la dirección no parpadea; también render/mob_anim.lua para PNJ y monturas)
+
+-- Hoja de dirección (0 frente ... 4 frente-izquierda) y si se voltea, para un octante de pantalla.
+function M.hojaDeOctante(oc)
+  local o = OCTANTE[oc] or OCTANTE[2]
+  return o[1], o[2]
+end
 
 -- ---------------------------------------------------------------- dibujo
 local function semilla(e)
@@ -277,6 +284,52 @@ function M.dibujar(e, mov, sx, sy, tinte, alfa, estado)
     if c[hueco] then capaAnim(c[hueco], anim, paso, d5, hueco == "arma", flip, sx, sy, k) end
   end
   return 50
+end
+
+-- ---------------------------------------------------------------- montado
+-- ¿Hay hojas del jinete sentado (<Anim>_m, herramientas/generar_personajes/hornear_equipos.py)?
+function M.tieneMontado()
+  if not M.activo() then return false end
+  local c = datos.capas[datos.cuerpo and datos.cuerpo.h or "p001b"]
+  return c ~= nil and c.wait_m ~= nil
+end
+
+-- Dibuja al jinete sentado sobre una montura de FAO (render/mob_anim.lua). La montura ya está dibujada con sus pies en (sx, pies): el jinete va
+-- en el asiento que ella indica (el origen común de las hojas de FAO, cuadro a cuadro), con su mismo paso de animación y su misma dirección,
+-- encima de ella. Devuelve false si no se puede (montura sin datos de asiento): el que llama usa entonces el dibujo de siempre.
+-- Cuando ataca o recibe daño sigue sobre el mismo cuadro de montura y usa la animación de ataque o de daño del jinete sentado.
+function M.dibujarMontado(e, nomMontura, sx, pies, tinte, alfa, subir)
+  if not M.tieneMontado() then return false end
+  local MobAnim = require("src.presentacion.render.mob_anim")
+  local dx, dy, pasoM, estadoM, hoja, flip = MobAnim.asiento(nomMontura, e.dir)
+  if not dx then return false end
+  local gen = e.gen or e.genero or "h"
+  local clase = e.clase or "guerrero"
+  local c = capasDe(clase, gen, e.equipo)
+  if not c then return false end
+  local atq = e._faoAtq
+  local anim, paso = estadoM, pasoM
+  if e.kind == "cuerpo" or e.vivo == false then
+    anim, paso = "hurt", 1
+  elseif atq then
+    local lejos = atq.st.lejos
+    if clase == "cazador" then anim = "sht"
+    elseif lejos and (clase == "mago" or clase == "clerigo" or clase == "nigromante") then anim = "cast"
+    else anim = "att" end
+    paso = math.min(datos.anims[anim].pasos - 1, math.floor(math.max(0, atq.u) * datos.anims[anim].pasos))
+  elseif (e.flash or 0) > 0 then
+    anim, paso = "hurt", math.floor(love.timer.getTime() * 8) % 2
+  end
+  local d5 = hoja         -- la misma hoja de dirección que la montura (0 frente ... 4 frente-izquierda)
+  local col = tinte or { 1, 1, 1 }
+  love.graphics.setColor(col[1], col[2], col[3], alfa or 1)
+  -- El jinete conserva siempre su tamaño original (también sobre las monturas pequeñas): lo que se ajusta es dónde se sienta (monturas.py).
+  local x, y, k = sx + dx, pies + dy - (subir or 0), ESCALA_JUEGO
+  capaAnim(c.cuerpo, anim, paso, d5, false, flip, x, y, k, "m")
+  for _, hueco in ipairs(ORDEN) do
+    if c[hueco] then capaAnim(c[hueco], anim, paso, d5, hueco == "arma", flip, x, y, k, "m") end
+  end
+  return true
 end
 
 -- Retrato estático (selección y creación de personaje): de frente, en reposo. equipo = nil -> equipo de escalón 1.

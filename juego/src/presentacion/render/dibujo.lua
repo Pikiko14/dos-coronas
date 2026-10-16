@@ -15,7 +15,6 @@ local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
 local Trampas = require("src.presentacion.render.trampas")
 local Efectos = require("src.presentacion.render.efectos")
-local MonturaFx = require("src.presentacion.render.monturas_fx")
 local Arte = require("src.presentacion.render.arte")
 
 local D = {}
@@ -349,6 +348,22 @@ function D.escena(mundo, jugador, cam, mx, my)
   for _, item in ipairs(cola) do
     item.p = item.prof or (iso and (item.x + item.y) or item.y)
   end
+  if iso then
+    -- quien está delante de una casa (al sur o al este de su huella) se dibuja después de ella: el dibujo de la casa es más grande que su
+    -- huella y, ordenado solo por su esquina de abajo, taparía a los PNJ que esperan junto a la puerta
+    for _, c in ipairs(cola) do
+      if c.tipo == "casa" then
+        local e = c.e
+        for _, it in ipairs(cola) do
+          if it.tipo == "ent" and it.p < c.p then
+            local sur = it.y >= e.y + e.h and it.y <= e.y + e.h + 3 and it.x >= e.x - 1.5 and it.x <= e.x + e.w + 1.5
+            local este = it.x >= e.x + e.w and it.x <= e.x + e.w + 3 and it.y >= e.y - 1.5 and it.y <= e.y + e.h + 1.5
+            if sur or este then it.p = c.p + 0.001 end
+          end
+        end
+      end
+    end
+  end
   table.sort(cola, function(a, b) return a.p < b.p end)
   local placas = {}
   for _, item in ipairs(cola) do
@@ -532,11 +547,31 @@ function marcarCasaPropia(mapa, jugador, cam, radio)
   end
 end
 
+-- El arma más básica de cada clase de un reino, en el orden de sus maestros.
+local armasCache = {}
+local function armasPorClase(faccion)
+  local f = faccion == "umbra" and "umbra" or "albor"
+  if armasCache[f] then return armasCache[f] end
+  local lista = {}
+  for _, c in ipairs(f == "umbra" and { "guerrero", "nigromante", "cazador", "mago", "clerigo" } or { "guerrero", "lancero", "cazador", "mago", "clerigo" }) do
+    local mejor
+    for id, it in pairs(Datos.items) do
+      if it.hueco == "arma" and it.clase == c and not it.quest and not it.mall then
+        local m = Datos.items[mejor]
+        if not mejor or (it.nivel or 1) < (m.nivel or 1) or ((it.nivel or 1) == (m.nivel or 1) and id < mejor) then mejor = id end
+      end
+    end
+    if mejor then lista[#lista + 1] = mejor end
+  end
+  armasCache[f] = lista
+  return lista
+end
+
 function marcarTiendas(mapa, jugador, cam, radio)
-  -- Lo que se ve en el letrero: la clériga, una poción; el armero, un arma; el establo, una montura.
+  -- Lo que se ve en el letrero: la enfermera, una poción; el gremio de maestros, un arma; el establo, una montura.
   local iconos = {
     mercado = { "pocion_vida" },
-    armero = { "guerrero_arma_1" },
+    maestros = { "guerrero_arma_1" },
     establo = { "montura" },
   }
   local function dibujarIcono(id, x, y, faccion)
@@ -568,13 +603,18 @@ function marcarTiendas(mapa, jugador, cam, radio)
         local dx, dy = Iso.suelo(e.puertaX + 0.5, e.puertaY + 1)
         cx, cy = dx - cam.x, dy - cam.y - 66
       end
+      -- el gremio de maestros muestra el arma de cada clase de su reino; el resto, un solo icono
+      local iconosLetrero = lista
+      if e.tienda == "maestros" then iconosLetrero = armasPorClase(e.faccion) end
+      local n = #iconosLetrero
+      local ancho = 24 * n
       love.graphics.setColor(0, 0, 0, 0.35)
-      love.graphics.rectangle("fill", cx - 11, cy - 9, 24, 24, 4, 4)
+      love.graphics.rectangle("fill", cx - ancho / 2 + 1, cy - 9, ancho, 24, 4, 4)
       love.graphics.setColor(0.36, 0.24, 0.1, 1)
-      love.graphics.rectangle("fill", cx - 12, cy - 11, 24, 22, 4, 4)
+      love.graphics.rectangle("fill", cx - ancho / 2, cy - 11, ancho, 22, 4, 4)
       love.graphics.setColor(0.85, 0.66, 0.3, 1)
-      love.graphics.rectangle("line", cx - 11.5, cy - 10.5, 23, 21, 4, 4)
-      dibujarIcono(lista[1], cx, cy, e.faccion)
+      love.graphics.rectangle("line", cx - ancho / 2 + 0.5, cy - 10.5, ancho - 1, 21, 4, 4)
+      for i, id in ipairs(iconosLetrero) do dibujarIcono(id, cx - ancho / 2 + 12 + (i - 1) * 24, cy, e.faccion) end
     end
   end
 end
@@ -850,7 +890,7 @@ function entidadBase(e, sx, sy, mundo, jugador)
   elseif e.kind == "cuerpo" and def then
     -- el cuerpo del caído: misma imagen en gris
     alto = Personajes.dibujarGris(def, e.dir or 1, sx, pies, 0.9)
-  elseif def and def.anim and e.kind == "monstruo" then
+  elseif def and def.anim and (e.kind == "monstruo" or e.kind == "npc" or e.kind == "guardia") then
     -- criatura con animación por cuadros: ataque, daño, carrera o espera
     local ahora = (mundo and mundo.tiempo) or 0
     local tinte = nil
@@ -864,7 +904,7 @@ function entidadBase(e, sx, sy, mundo, jugador)
     elseif e.mov or (math.abs(e.velx or 0) + math.abs(e.vely or 0) > 0.08) then
       estado = "run"
     end
-    alto = MobAnim.dibujar(def.anim, estado, u, sx, pies, e.dir or 1, tinte, (tonumber(e.id and tostring(e.id):match("%d+")) or 0) % 7 * 0.13)
+    alto = MobAnim.dibujar(def.anim, estado, u, sx, pies, e.dir or 1, tinte, (tonumber(e.id and tostring(e.id):match("%d+")) or 0) % 7 * 0.13, e)
   elseif def then
     def = Personajes.jineteDe(e, def)
     local reloj = (e.anim or 0) / 8
@@ -872,18 +912,23 @@ function entidadBase(e, sx, sy, mundo, jugador)
     local anda = e.mov or (math.abs(e.velx or 0) + math.abs(e.vely or 0) > 0.08)
     local piesJinete = pies
     local montaFrente
+    local jineteSentado      -- montura de FAO bajo un personaje por capas: se dibuja al jinete sentado en su asiento
 
     if e.montado then
       -- la montura va debajo y el jinete algo más arriba
       local m = Personajes.monturaDe(e.montado, e.faccion)
-      -- monturas vistosas: aura, alas y humo van antes de la montura; los brillos, después del jinete
-      MonturaFx.detras(e.montado, sx, pies, e.dir or 1, love.timer.getTime(), m and m.escala or 1)
       if m and m.vehiculo then
         local img = Arte.img("Characters/Vehicle.png")
         local fila = ({ [1] = 0, [4] = 1, [3] = 2, [2] = 3 })[e.dir or 1] or 0
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.draw(img, Arte.quad(img, 128, 128 + fila * 32, 32, 32), sx, pies, 0, 1.25, 1.25, 16, 28)
         piesJinete = pies - 14
+      elseif m and def.fao and m.anim and require("src.presentacion.render.fao").tieneMontado() then
+        -- personaje por capas sobre una montura de FAO: la montura va debajo y el jinete sentado encima, en el asiento de ese cuadro
+        -- (si la montura no tuviera datos de asiento, más abajo se dibuja el jinete de pie, a la altura de siempre)
+        Personajes.dibujar(m, e.dir or 1, anda, reloj, sx, pies, nil, nil, e)
+        piesJinete = pies - (m.altura or 10)
+        jineteSentado = m
       elseif m then
         if (e.dir or 1) == 1 then
           -- de frente la cabeza de la montura queda delante del jinete: se pinta el jinete antes
@@ -891,7 +936,7 @@ function entidadBase(e, sx, sy, mundo, jugador)
           montaFrente = m
           piesJinete = pies - (m.altura or 10) - (m.extraFrente or 8)
         else
-          Personajes.dibujar(m, e.dir or 1, anda, reloj, sx, pies)
+          Personajes.dibujar(m, e.dir or 1, anda, reloj, sx, pies, nil, nil, e)
           piesJinete = pies - (m.altura or 10)
         end
       end
@@ -929,12 +974,20 @@ function entidadBase(e, sx, sy, mundo, jugador)
     end
     if def.fao then def.fao._faoAtq = atq and { st = atq, u = atqU } or nil end
     -- montado, la que camina es la montura: el jinete va quieto (sin mover los pies)
-    alto = Personajes.dibujar(def, e.dir or 1, anda and not e.montado, reloj, sx, piesJinete, rojo and { 1, 0.6, 0.6 } or nil)
+    if jineteSentado then
+      -- El jinete va sobre su montura, en el asiento original de FAO (origen común con la altura de setting/chardef.xml, ver herramientas/generar_mobs/monturas.py)
+      local tint = rojo and { 1, 0.6, 0.6 } or nil
+      if require("src.presentacion.render.fao").dibujarMontado(def.fao, jineteSentado.anim, sx, pies, tint) then
+        alto = 36
+      else
+        alto = Personajes.dibujar(def, e.dir or 1, anda and not e.montado, reloj, sx, piesJinete, tint)
+      end
+    else
+      alto = Personajes.dibujar(def, e.dir or 1, anda and not e.montado, reloj, sx, piesJinete, rojo and { 1, 0.6, 0.6 } or nil)
+    end
     if montaFrente then Personajes.dibujar(montaFrente, 1, anda, reloj, sx, pies) end
     if llevaEst and (e.dir or 1) == 1 then Objetos.dibujar(llevaEst == "umbra" and "bandera_umbra" or "bandera_albor", 0, sx + 12, piesJinete + 4) end
     if e.montado then
-      local m = Personajes.monturaDe(e.montado, e.faccion)
-      MonturaFx.delante(e.montado, sx, pies, e.dir or 1, love.timer.getTime(), m and m.escala or 1, alto)
       alto = alto + math.max(10, pies - piesJinete)
     end
   elseif e.kind == "estatua" then

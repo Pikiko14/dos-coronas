@@ -435,6 +435,8 @@ function Entrada.manejar(app, id)
   if id == "hud_diaria" then Interfaz.panel = (Interfaz.panel ~= "diaria") and "diaria" or nil return end
   if id == "diaria_reclamar" then app.actuar("diaria_reclamar", {}) return end
   if id == "hud_montura" then app.actuar("montura_alternar", {}) return end
+  if id == "hud_mall" then Interfaz.panel = (Interfaz.panel ~= "mall") and "mall" or nil return end
+  if id == "hud_autopocion" then Interfaz.panel = (Interfaz.panel ~= "autopocion") and "autopocion" or nil return end
   if id == "hud_monturas" then Interfaz.panel = (Interfaz.panel ~= "montura") and "montura" or nil return end
   if id == "est_pag_ant" then Interfaz.establoPag = math.max(1, (Interfaz.establoPag or 1) - 1) return end
   if id == "est_pag_sig" then Interfaz.establoPag = (Interfaz.establoPag or 1) + 1 return end
@@ -450,8 +452,10 @@ function Entrada.manejar(app, id)
   if id == "aj_1600" then Ajustes.ancho, Ajustes.alto, Ajustes.completo = 1600, 900, false Ajustes.aplicarVentana() Ajustes.guardar() return end
   if id == "aj_completo" then Ajustes.completo = not Ajustes.completo Ajustes.aplicarVentana() Ajustes.guardar() return end
   if id == "aj_graficos" then require("src.presentacion.render.ambiente").siguienteNivel() Ajustes.guardar() return end
-  if id == "aj_tecla_interactuar" then Ajustes.esperando = "interactuar" return end
-  if id == "aj_tecla_bolsa" then Ajustes.esperando = "bolsa" return end
+  if id == "aj_teclado" then Interfaz.panel = "teclado" Ajustes.esperando = nil Interfaz.avisoTeclas = nil return end
+  if id == "tk_volver" then Interfaz.panel = "ajustes" Ajustes.esperando = nil Interfaz.avisoTeclas = nil return end
+  if id == "tk_restablecer" then Ajustes.restablecerTeclas() Ajustes.guardar() Ajustes.esperando = nil Interfaz.avisoTeclas = "Teclas restablecidas." return end
+  if id:sub(1, 3) == "tk_" then Ajustes.esperando = id:sub(4) Interfaz.avisoTeclas = nil return end
   if id == "salir_menu" then
     if app.rol == "cliente" then require("src.presentacion.estados.juego").soltar(app) end
     app.sesion = { cuentaId = nil, usuario = "", personajes = {}, error = "" }
@@ -610,6 +614,11 @@ function Entrada.raton(app, mx, my, boton)
       Interfaz.chatDesdeRaton(my)
       return
     end
+    if id and id:sub(1, 4) == "hab_" and estado == "juego" then
+      -- un poder de la barra: un clic corto lo lanza (al soltar); arrastrarlo a otra casilla los intercambia
+      Interfaz.arrastreHab = { slot = tonumber(id:sub(5)), movido = 0 }
+      return
+    end
     if id == "mapa_area" then
       -- puede ser el inicio de un arrastre o un clic para viajar: se decide al soltar
       Interfaz.mapaArrastre = true
@@ -649,6 +658,7 @@ function Entrada.fijarOroComercio(app)
 end
 
 function Entrada.moverRaton(app, x, y, dx, dy)
+  if Interfaz.arrastreHab then Interfaz.arrastreHab.movido = Interfaz.arrastreHab.movido + math.abs(dx or 0) + math.abs(dy or 0) end
   if Interfaz.chatArrastre then Interfaz.chatDesdeRaton(y) return end
   local g = Interfaz.mapaGeom
   if Interfaz.panel == "mapa" and Interfaz.mapaArrastre and g and Interfaz.mapaCx then
@@ -692,6 +702,18 @@ end
 
 function Entrada.soltarRaton(app, mx, my)
   Interfaz.chatArrastre = false
+  local ah = Interfaz.arrastreHab
+  Interfaz.arrastreHab = nil
+  if ah and app and app.jugador and mx then
+    local id = Interfaz.consumir(mx, my)
+    local destino = id and id:sub(1, 4) == "hab_" and tonumber(id:sub(5)) or nil
+    if ah.movido >= 6 and destino and destino ~= ah.slot then
+      Ajustes.intercambiarPoderes(app.jugador.clase, ah.slot, destino)
+      Ajustes.guardar()
+    elseif ah.movido < 6 and destino == ah.slot then
+      Entrada.lanzarHabilidad(app, ah.slot)
+    end
+  end
   local pres = Interfaz.mapaPresion
   Interfaz.mapaArrastre = false
   Interfaz.mapaPresion = nil
@@ -860,10 +882,15 @@ function Entrada.tecla(app, tecla)
       return
     end
   end
-  if app.estado == "juego" and Ajustes.esperando and tecla ~= "escape" and tecla ~= "f3" and tecla ~= "f11" then
-    Ajustes.teclas[Ajustes.esperando] = tecla
-    Ajustes.esperando = nil
-    Ajustes.guardar()
+  if app.estado == "juego" and Ajustes.esperando and tecla ~= "escape" then
+    local motivo = Ajustes.asignarTecla(Ajustes.esperando, tecla)
+    if motivo then
+      Interfaz.avisoTeclas = motivo        -- se queda esperando otra tecla
+    else
+      Interfaz.avisoTeclas = nil
+      Ajustes.esperando = nil
+      Ajustes.guardar()
+    end
     return
   end
   if tecla == "tab" and app.estado == "juego" and not Interfaz.foco then Entrada.siguienteObjetivo(app) return end
@@ -875,8 +902,8 @@ function Entrada.tecla(app, tecla)
     return
   end
   if app.estado ~= "juego" or Interfaz.foco then return end
-  local bolsa = (Ajustes.teclas and Ajustes.teclas.bolsa) or "i"
-  local interactuar = (Ajustes.teclas and Ajustes.teclas.interactuar) or "e"
+  local bolsa = Ajustes.teclas.bolsa or "i"
+  local interactuar = Ajustes.teclas.interactuar or "e"
   if tecla == bolsa then Interfaz.panel = (Interfaz.panel ~= "bolsa") and "bolsa" or nil end
   if tecla == "p" or tecla == "c" then Interfaz.panel = (Interfaz.panel ~= "equipo") and "equipo" or nil end
   if tecla == "n" then
@@ -920,11 +947,14 @@ function Entrada.tecla(app, tecla)
   if tecla == "t" then Entrada.manejar(app, "hud_comercio") end
   if tecla == "f1" then Interfaz.panel = "ayuda" end
   if tecla == "f2" then Interfaz.panel = (Interfaz.panel ~= "diaria") and "diaria" or nil end
-  if tecla == "1" or tecla == "2" or tecla == "3" or tecla == "4" or tecla == "5" or tecla == "6" then
-    Entrada.lanzarHabilidad(app, tonumber(tecla))
+  -- poderes: la tecla de cada posición de la barra (ordenada por nivel) lanza el poder que hay en ella
+  local p = app.jugador
+  local orden = p and Ajustes.orden(p.clase)
+  for i = 1, 6 do
+    if orden and tecla == Ajustes.teclas["poder" .. i] then Entrada.lanzarHabilidad(app, orden[i]) end
   end
-  if tecla == "7" then beberPocion(app, "vida") end
-  if tecla == "8" then beberPocion(app, "mana") end
+  if tecla == Ajustes.teclas.pocion_vida then beberPocion(app, "vida") end
+  if tecla == Ajustes.teclas.pocion_mana then beberPocion(app, "mana") end
 end
 
 return Entrada

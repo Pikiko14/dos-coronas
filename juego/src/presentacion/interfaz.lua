@@ -7,7 +7,6 @@ local Estados = require("compartido.dominio.estados")
 local Encanto = require("compartido.dominio.encanto")
 local Mascotas = require("compartido.dominio.mascotas")
 local Monturas = require("compartido.dominio.monturas")
-local MonturaFx = require("src.presentacion.render.monturas_fx")
 local Subastas = require("compartido.dominio.subastas")
 local Iso = require("src.presentacion.render.iso")
 local Ajustes = require("src.presentacion.ajustes")
@@ -626,7 +625,9 @@ end
 
 -- Medidas del marco de juego (en píxeles lógicos de la interfaz).
 I.LADO = 0
-I.CONSOLA = 150
+I.CONSOLA = 0          -- la vista del mundo ocupa toda la pantalla: el chat va encima, abajo a la izquierda
+I.CHAT_ALTO = 150      -- alto del chat
+I.CHAT_ANCHO = 0.30    -- ancho del chat: el 30 % de la pantalla
 
 function I.medidas()
   return I.LADO, I.CONSOLA
@@ -714,6 +715,23 @@ local function iconoItem(slot, x, y, lado, enc)
   return it
 end
 
+-- Iconos del HUD dibujados por código (arte/hud/*.png), con filtro suave.
+local ICONOS_HUD = {}
+function I.iconoHud(nombre)
+  local im = ICONOS_HUD[nombre]
+  if im == nil then
+    local ruta = "arte/hud/" .. nombre .. ".png"
+    if love.filesystem.getInfo(ruta) then
+      im = love.graphics.newImage(ruta, { mipmaps = true })
+      im:setFilter("linear", "linear")
+    else
+      im = false
+    end
+    ICONOS_HUD[nombre] = im
+  end
+  return im or nil
+end
+
 function I.hud(mundo, p, w, h)
   I.limpiar()
   I.pista = nil
@@ -745,11 +763,15 @@ function I.hud(mundo, p, w, h)
   -- Barra de poderes (sobre el mundo, abajo en el centro)
   local barraP = Datos.barra[p.clase]
   local lado_c, sep = 46, 4
+  -- la barra (6 poderes + 2 pociones) va centrada en la pantalla; los accesos (poderes, mall, monturas, autopoción) van abajo a la derecha
   local total = 8 * lado_c + 7 * sep
   local bx0 = vw / 2 - total / 2
   local by0 = vh - lado_c - 10
+  local orden = Ajustes.orden(p.clase)
+  local teclas = Ajustes.teclas
   for i = 1, 6 do
-    local hid = barraP[i]
+    local slotReal = orden[i]
+    local hid = barraP[slotReal]
     local rangoH = Arbol.rango(p, hid)
     local conocida = rangoH > 0
     local hdef = Arbol.efectiva(hid, math.max(1, rangoH))
@@ -767,13 +789,13 @@ function I.hud(mundo, p, w, h)
       local cuenta = queda < 10 and string.format("%.1f", queda) or tostring(math.ceil(queda))
       texto(cuenta, x + lado_c / 2 - f:getWidth(cuenta) / 2, by0 + lado_c / 2 - 8, { 1, 1, 1 }, f)
     end
-    texto(tostring(i), x + 4, by0 + 2, { 1, 0.9, 0.5 }, f)
+    texto(Ajustes.nombreTecla(teclas["poder" .. i]), x + 4, by0 + 2, { 1, 0.9, 0.5 }, f)
     if not conocida then
       texto("K", x + 4, by0 + lado_c - 16, { 1, 0.5, 0.4 }, f)
     elseif rangoH > 1 then
       texto(tostring(rangoH), x + lado_c - f:getWidth(tostring(rangoH)) - 3, by0 + lado_c - 16, { 1, 0.85, 0.3 }, f)
     end
-    I.registrar(x, by0, lado_c, lado_c, "hab_" .. i)
+    I.registrar(x, by0, lado_c, lado_c, "hab_" .. slotReal)
     if sobre(x, by0, lado_c, lado_c) then
       local rango = ""
       if hdef.coef then
@@ -782,25 +804,26 @@ function I.hud(mundo, p, w, h)
         rango = "Daño " .. (magico and "mágico " or "físico ") .. a .. "-" .. b .. ". "
       end
       I.pista = hdef.nombre .. (conocida and (" (rango " .. rangoH .. ")") or " — sin aprender (K)") ..
-        " — " .. (hdef.mana or 0) .. " de maná, " .. string.format("%.1f", hdef.cd or 0) .. " s. " .. rango .. (hdef.desc or "")
+        " — " .. (hdef.mana or 0) .. " de maná, " .. string.format("%.1f", hdef.cd or 0) .. " s. " .. rango .. (hdef.desc or "") .. " (Arrástralo a otra casilla para cambiarlo de sitio.)"
     end
   end
-  -- botón del árbol de poderes, a la izquierda de la barra; brilla si hay puntos por gastar
-  do
-    local x = bx0 - lado_c - sep - 6
-    local puntos = Arbol.puntos(p)
-    casilla(x, by0, lado_c)
-    if puntos > 0 and math.floor(love.timer.getTime() * 2) % 2 == 0 then
-      love.graphics.setColor(1, 0.85, 0.3, 0.35)
-      love.graphics.rectangle("fill", x, by0, lado_c, lado_c, 3, 3)
+  -- arrastre de un poder: su icono sigue al ratón y la casilla de destino se resalta
+  local ah = I.arrastreHab
+  if ah and ah.movido >= 6 then
+    local mx, my = love.mouse.getPosition()
+    local esc = I.escala or 1
+    mx, my = mx / esc, my / esc
+    for i = 1, 6 do
+      local x = bx0 + (i - 1) * (lado_c + sep)
+      if sobre(x, by0, lado_c, lado_c) and orden[i] ~= ah.slot then
+        love.graphics.setColor(1, 0.85, 0.3, 0.9)
+        love.graphics.setLineWidth(2)
+        love.graphics.rectangle("line", x, by0, lado_c, lado_c, 5, 5)
+        love.graphics.setLineWidth(1)
+      end
     end
-    love.graphics.setColor(1, 0.9, 0.55, 1)
-    love.graphics.printf("K", x, by0 + 4, lado_c, "center")
-    love.graphics.setColor(0.85, 0.8, 0.65, 1)
-    love.graphics.printf("poderes", x, by0 + 24, lado_c, "center")
-    if puntos > 0 then texto("+" .. puntos, x + lado_c - f:getWidth("+" .. puntos) - 3, by0 + 2, { 1, 0.85, 0.3 }, f) end
-    I.registrar(x, by0, lado_c, lado_c, "hud_arbol")
-    if sobre(x, by0, lado_c, lado_c) then I.pista = "Árbol de poderes (K): " .. puntos .. " punto(s) por gastar." end
+    love.graphics.setColor(1, 1, 1, 0.9)
+    Efectos.icono(barraP[ah.slot], mx - 20, my - 20, 40)
   end
   -- estados que sufres, sobre la barra de poderes, con los segundos que quedan
   do
@@ -875,54 +898,53 @@ function I.hud(mundo, p, w, h)
       I.pista = it.nombre .. " (" .. n .. " en la bolsa). Autopoción " .. estado .. ". Se configura con R."
     end
   end
-  pocion("vida", 7, "7", "poc_vida")
-  pocion("mana", 8, "8", "poc_mana")
-  -- montar / desmontar: icono a la derecha de los poderes (tecla O)
-  local libre = false
-  for _, id in ipairs(p.monturas or {}) do
-    local dm = Monturas.especies[id]
-    if dm and not dm.requiereOficio then libre = true end
-  end
-  if p.monturas and #p.monturas > 0 then
-    local x = bx0 + total + sep + 6
-    casilla(x, by0, lado_c)
-    local especie = p.montado or p.monturas[1]
-    if not p.montado then
-      -- sin oficio activo solo valen las monturas de viaje; con él, solo las de transporte
-      for _, id in ipairs(p.monturas) do
-        local dm = Monturas.especies[id]
-        if dm and (dm.requiereOficio == true) == (p.job ~= nil) then especie = id break end
+  pocion("vida", 7, Ajustes.nombreTecla(teclas.pocion_vida), "poc_vida")
+  pocion("mana", 8, Ajustes.nombreTecla(teclas.pocion_mana), "poc_mana")
+  -- accesos abajo a la derecha: poderes (K), Item Mall (L), monturas (U) y autopoción (R)
+  do
+    local lado, sepA = 44, 6
+    local ax = vw - 4 * lado - 3 * sepA - 10
+    local ay = vh - lado - 10
+    local puntos = Arbol.puntos(p)
+    local libre = false
+    for _, id in ipairs(p.monturas or {}) do
+      local dm = Monturas.especies[id]
+      if dm and not dm.requiereOficio then libre = true end
+    end
+    local accesos = {
+      { "hud_arbol", "poderes", "K", "Árbol de poderes (K): " .. puntos .. " punto(s) por gastar.", puntos > 0 },
+      { "hud_mall", "mall", "L", "Item Mall (L): monedas, addons, bonos y monturas exclusivas.", false },
+      { "hud_monturas", "monturas", "U", p.montado and "Colección de monturas (U). Montado: O para bajar." or "Colección de monturas (U). O monta y desmonta.", p.montado ~= nil },
+      { "hud_autopocion", "autopocion", "R", "Autopoción (R): bebe sola la vida o el maná al bajar de un umbral.", (p.autoPocion or p.autoMana) and true or false },
+    }
+    for i, a in ipairs(accesos) do
+      local x = ax + (i - 1) * (lado + sepA)
+      local hover = sobre(x, ay, lado, lado)
+      -- fondo de cristal redondo, como el resto de botones del HUD
+      love.graphics.setColor(0.07, 0.1, 0.22, 0.88)
+      love.graphics.circle("fill", x + lado / 2, ay + lado / 2, lado / 2)
+      local brilla = a[5]
+      local pulso = (a[1] == "hud_arbol" and brilla) and (0.5 + 0.5 * math.sin(love.timer.getTime() * 4)) or 0
+      if brilla then love.graphics.setColor(0.45 + 0.4 * pulso, 0.85, 0.5, 0.95); if a[1] == "hud_arbol" then love.graphics.setColor(1, 0.82 + 0.1 * pulso, 0.3, 0.95) end
+      else love.graphics.setColor(hover and 0.55 or 0.3, hover and 0.7 or 0.44, hover and 1 or 0.82, 0.95) end
+      love.graphics.setLineWidth(2)
+      love.graphics.circle("line", x + lado / 2, ay + lado / 2, lado / 2 - 1)
+      love.graphics.setLineWidth(1)
+      local img = I.iconoHud(a[2])
+      love.graphics.setColor(1, 1, 1, hover and 1 or 0.93)
+      if img then love.graphics.draw(img, x + lado / 2, ay + lado / 2, 0, (lado - 8) / img:getWidth(), (lado - 8) / img:getHeight(), img:getWidth() / 2, img:getHeight() / 2) end
+      texto(a[3], x + lado - 10, ay + lado - 14, { 1, 0.9, 0.5 }, f)
+      if a[1] == "hud_arbol" and puntos > 0 then texto("+" .. puntos, x + 1, ay - 2, { 1, 0.85, 0.3 }, f) end
+      if a[1] == "hud_monturas" and p.montado and p.job and p.monturaHpMax and p.monturaHpMax > 0 then
+        local frac = math.max(0, math.min(1, (p.monturaHp or 0) / p.monturaHpMax))
+        love.graphics.setColor(0, 0, 0, 0.8)
+        love.graphics.rectangle("fill", x, ay - 9, lado, 6, 3, 3)
+        love.graphics.setColor(0.95, 0.6, 0.2, 1)
+        love.graphics.rectangle("fill", x + 1, ay - 8, math.max(0, (lado - 2) * frac), 4, 2, 2)
+        if sobre(x, ay - 9, lado, 6) then I.pista = "Vida de la montura: " .. (p.monturaHp or 0) .. " / " .. p.monturaHpMax end
       end
-    end
-    local def = Personajes.monturaDe(especie, p.faccion)
-    if def and def.hoja then
-      Personajes.dibujar(def, 1, false, 0, x + lado_c / 2, by0 + lado_c - 6)
-    elseif def and def.vehiculo then
-      local img = Arte.img("Characters/Vehicle.png")
-      love.graphics.setColor(1, 1, 1)
-      love.graphics.draw(img, Arte.quad(img, 128, 128, 32, 32), x + lado_c / 2, by0 + lado_c - 4, 0, 1, 1, 16, 28)
-    end
-    if p.montado then
-      love.graphics.setColor(0.4, 0.9, 0.5, 0.9)
-      love.graphics.rectangle("line", x + 1, by0 + 1, lado_c - 2, lado_c - 2, 3, 3)
-    end
-    texto("O", x + 4, by0 + 2, { 1, 0.9, 0.5 }, f)
-    if p.montado and p.job and p.monturaHpMax and p.monturaHpMax > 0 then
-      -- vida de la montura bajo el icono: solo con el oficio activo (las monturas normales no tienen vida)
-      local frac = math.max(0, math.min(1, (p.monturaHp or 0) / p.monturaHpMax))
-      love.graphics.setColor(0, 0, 0, 0.8)
-      love.graphics.rectangle("fill", x, by0 + lado_c + 3, lado_c, 7, 3, 3)
-      love.graphics.setColor(0.95, 0.6, 0.2, 1)
-      love.graphics.rectangle("fill", x + 1, by0 + lado_c + 4, math.max(0, (lado_c - 2) * frac), 5, 2, 2)
-      if sobre(x, by0 + lado_c + 3, lado_c, 7) then I.pista = "Vida de la montura: " .. (p.monturaHp or 0) .. " / " .. p.monturaHpMax end
-    end
-    texto(p.montado and "bajar" or "montar", x + lado_c / 2 - f:getWidth(p.montado and "bajar" or "montar") / 2, by0 + lado_c - 15, { 1, 1, 1 }, f)
-    I.registrar(x, by0, lado_c, lado_c, "hud_montura")
-    I.boton(x, by0 - 24, lado_c, 20, "U", "hud_monturas")
-    if sobre(x, by0 - 24, lado_c, 20) then I.pista = "Colección de monturas (U): todas las que tienes." end
-    if sobre(x, by0, lado_c, lado_c) then
-      local d = Monturas.especies[especie]
-      I.pista = (p.montado and "Bajar de " or "Montar ") .. (d and d.nombre or "la montura") .. " (O). Alforjas: U."
+      I.registrar(x, ay, lado, lado, a[1])
+      if hover then I.pista = a[4] end
     end
   end
 
@@ -966,7 +988,7 @@ function I.hud(mundo, p, w, h)
     end
   end
 
-  I.consola(mundo, p, 0, vh, vw, consola)
+  I.consola(mundo, p, 0, vh - I.CHAT_ALTO, math.max(300, math.floor(vw * I.CHAT_ANCHO)), I.CHAT_ALTO)
   I.flotantes(mundo, p, vw, vh)
 
   -- el comercio se abre solo cuando empieza un trato y se cierra cuando termina
@@ -1005,6 +1027,7 @@ function I.hud(mundo, p, w, h)
   elseif I.panel == "casa" then I.panelCasa(p, vw, h)
   elseif I.panel == "menu" then I.jugadorMenu = p I.panelPausa(vw, h)
   elseif I.panel == "ajustes" then I.panelAjustes(vw, h)
+  elseif I.panel == "teclado" then I.panelTeclado(vw, h)
   elseif I.panel == "autopocion" then I.panelAutopocion(p, vw, h)
   end
   if I.menuJugador then I.dibujarMenuJugador(mundo, p, vw, h) end
@@ -1086,7 +1109,7 @@ function I.consola(mundo, p, x, y, w, h)
   end
   local cy = y + 26
   local ch = h - 26
-  love.graphics.setColor(0.04, 0.06, 0.13, 0.84)
+  love.graphics.setColor(0.04, 0.06, 0.13, 0.62)      -- el chat va sobre el mundo: se ve a través
   love.graphics.rectangle("fill", x, cy, w, ch)
   love.graphics.setColor(0.3, 0.44, 0.82)
   love.graphics.line(x, cy + 0.5, x + w, cy + 0.5)
@@ -1167,8 +1190,13 @@ end
 
 -- Iconos de los PNJ para los mapas: forma y color según lo que hacen.
 local ICONO_NPC = {
-  mercado = { "circulo", { 1, 0.85, 0.2 }, "Clériga (pociones)" },
-  armero = { "cuadrado", { 0.75, 0.78, 0.85 }, "Armero (armaduras y armas)" },
+  mercado = { "circulo", { 1, 0.85, 0.2 }, "Enfermera (pociones)" },
+  maestro_guerrero = { "cuadrado", { 0.75, 0.78, 0.85 }, "Maestro guerrero (equipo de guerrero)" },
+  maestro_lancero = { "cuadrado", { 0.7, 0.85, 0.95 }, "Maestro lancero (equipo de lancero)" },
+  maestro_cazador = { "cuadrado", { 0.55, 0.85, 0.45 }, "Maestro arquero (equipo de cazador)" },
+  maestro_mago = { "cuadrado", { 0.6, 0.5, 0.95 }, "Maestro mago (equipo de mago)" },
+  maestro_clerigo = { "cuadrado", { 1, 0.95, 0.6 }, "Maestro clérigo (equipo de clérigo)" },
+  maestro_nigromante = { "cuadrado", { 0.65, 0.3, 0.7 }, "Maestro nigromante (equipo de nigromante)" },
   barquero = { "rombo", { 0.4, 0.8, 1 }, "Barquero (viajes entre continentes)" },
   comercio = { "cuadrado", { 0.95, 0.55, 0.2 }, "Mercader mayor (mercancías)" },
   heraldo = { "triangulo", { 0.95, 0.3, 0.3 }, "Heraldo (guerra)" },
@@ -1185,7 +1213,7 @@ local ICONO_NPC = {
   misiones = { "rombo", { 1, 0.85, 0.2 }, "Misiones (cazar, recolectar y entregar)" },
 }
 I.ICONO_NPC = ICONO_NPC
-I.ORDEN_ICONOS = { "mercado", "armero", "establo", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "criador", "gremio", "oficios", "barquero", "capitan", "contacto", "subastas", "misiones" }
+I.ORDEN_ICONOS = { "mercado", "maestro_guerrero", "maestro_lancero", "maestro_cazador", "maestro_mago", "maestro_clerigo", "maestro_nigromante", "establo", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "criador", "gremio", "oficios", "barquero", "capitan", "contacto", "subastas", "misiones" }
 
 function I.iconoNpc(rol, x, y, r)
   local d = ICONO_NPC[rol]
@@ -1253,8 +1281,8 @@ local function minimapaLocal(mundo, p, x, y, lado)
   local k = lado / ventana
   local s = I.escala or 1
   love.graphics.setScissor(x * s, y * s, lado * s, lado * s)
-  -- en vista isométrica el minimapa se gira 45º para que coincida con lo que se ve en pantalla (arriba = arriba en la pantalla)
-  local girado = Iso.activo()
+  -- el minimapa se ve de frente (norte arriba); con DC_MINIMAPA_GIRADO=1 se gira 45º para coincidir con la pantalla isométrica
+  local girado = Iso.activo() and os.getenv("DC_MINIMAPA_GIRADO") == "1"
   if girado then
     love.graphics.push()
     love.graphics.translate(x + lado / 2, y + lado / 2)
@@ -1349,7 +1377,7 @@ local AYUDA_BOTONES = {
 }
 
 -- Elementos flotantes del HUD (el juego ocupa toda la pantalla): estado arriba a la izquierda,
--- minimapa y botones arriba a la derecha y la lista de batalla abajo a la derecha. El equipo y las
+-- minimapa y botones arriba a la derecha y el chat abajo a la izquierda. El equipo y las
 -- cifras están en el panel Personaje (C) y la mochila en la bolsa (I).
 function I.flotantes(mundo, p, vw, vh)
   local f = pequena()
@@ -1445,10 +1473,9 @@ function I.flotantes(mundo, p, vw, vh)
     I.registrar(x, cy, bww, bhh, b[1])
   end
 
-  -- lista de batalla abajo a la derecha
-  local lw, lh = 196, 132
-  I.listaBatalla(mundo, p, vw - lw - 6, vh - lh - 6, lw, lh)
-  I.registrar(vw - lw - 6, vh - lh - 6, lw, lh, "panel")
+  -- medidor de daño del jefe que peleas: a la derecha, justo debajo de los botones de mapa, ayuda, menú y diaria
+  if p.medidor then I.medidorDano(p, vw - 196 - 6, cy + bhh + 8, 196) end
+
   love.graphics.setFont(I.fuente)
 end
 
@@ -1478,57 +1505,33 @@ function I.dibujarMenuJugador(mundo, p, w, h)
   end
 end
 
--- Criaturas cercanas, ordenadas por distancia. Un clic las elige y las ataca.
-function I.listaBatalla(mundo, p, x, y, w, h)
+-- Medidor de daño de un jefe del mundo: su vida y quién ha hecho cuánto daño (el botín es del que más hace).
+function I.medidorDano(p, x, y, w)
+  local m = p.medidor
+  if not m or not m.f then return end
   local f = pequena()
+  local fila = 17
+  local h = 40 + #m.f * fila + 4
   marco(x, y, w, h, true)
-  texto("Lista de batalla", x + 8, y + 3, { 0.85, 0.78, 0.6 })
-  local lista = {}
-  for _, e in pairs(mundo.entidades) do
-    if e.vivo ~= false and e.id ~= p.id and mundo:mismoLugar(p, e)
-      and (e.kind == "monstruo" or e.kind == "jugador" or e.kind == "bot" or e.kind == "guardia") then
-      local d = math.sqrt((e.x - p.x) ^ 2 + (e.y - p.y) ^ 2)
-      if d < 11 then lista[#lista + 1] = { e = e, d = d } end
-    end
-  end
-  table.sort(lista, function(a, b) return a.d < b.d end)
-  local fila = 26
-  local maxFilas = math.floor((h - 24) / fila)
-  if #lista == 0 then
-    texto("Nadie a la vista", x + 10, y + 26, { 0.55, 0.52, 0.45 })
-  end
-  for i = 1, math.min(#lista, maxFilas) do
-    local e = lista[i].e
-    local ry = y + 22 + (i - 1) * fila
-    local elegido = p.objetivo == e.id
-    love.graphics.setColor(elegido and 0.4 or 0.12, elegido and 0.12 or 0.11, elegido and 0.1 or 0.1, 1)
-    love.graphics.rectangle("fill", x + 4, ry, w - 8, fila - 2, 2, 2)
-    if elegido then
-      love.graphics.setColor(1, 0.3, 0.25)
-      love.graphics.rectangle("line", x + 4.5, ry + 0.5, w - 9, fila - 3, 2, 2)
-    end
-    local def = Personajes.de(e)
-    if def then
-      love.graphics.push()
-      love.graphics.translate(x + 20, ry + fila - 2)
-      local esc = def.fila and ((def.celda or 64) > 64 and 0.28 or 0.4) or 0.78
-      love.graphics.scale(esc, esc)
-      Personajes.dibujar(def, 1, false, 0, 0, 0)
-      love.graphics.pop()
-    end
-    local c = { 1, 0.62, 0.45 }
-    if e.kind ~= "monstruo" then c = Datos.facciones[e.faccion] and Datos.facciones[e.faccion].color or { 1, 1, 1 } end
-    texto(e.nombre or "", x + 38, ry - 1, c)
-    local fr = (e.hp or 1) / math.max(1, e.hpMax or 1)
-    local r, g, b = Dibujo.colorVida(fr)
-    love.graphics.setColor(0, 0, 0, 0.9)
-    love.graphics.rectangle("fill", x + 38, ry + 14, w - 52, 6)
-    love.graphics.setColor(r, g, b)
-    love.graphics.rectangle("fill", x + 39, ry + 15, (w - 54) * math.max(0, math.min(1, fr)), 4)
-    I.registrar(x + 4, ry, w - 8, fila - 2, "bl_" .. e.id)
-  end
-  if #lista > maxFilas then
-    texto("+" .. (#lista - maxFilas) .. " más", x + w - 52, y + 3, { 0.7, 0.65, 0.5 })
+  I.registrar(x, y, w, h, "panel")
+  texto(m.n or "Jefe", x + 8, y + 3, { 1, 0.86, 0.5 })
+  barra(x + 8, y + 21, w - 16, 9, math.max(0, math.min(1, (m.hp or 0) / math.max(1, m.hpMax or 1))), 0.85, 0.2, 0.2)
+  texto("Daño hecho", x + 8, y + 31, { 0.75, 0.72, 0.62 })
+  local yy = y + 46
+  for i, r in ipairs(m.f) do
+    local yo = r[4] == 1
+    local pct = (r[3] or 0) / 100
+    love.graphics.setColor(yo and 0.95 or 0.4, yo and 0.7 or 0.55, yo and 0.2 or 0.85, 0.35)
+    love.graphics.rectangle("fill", x + 6, yy - 1, (w - 12) * pct, fila - 3, 3, 3)
+    local puesto = r[5] or i
+    local nombre = r[1] or "?"
+    if f:getWidth(nombre) > 76 then nombre = nombre:sub(1, 10) .. "…" end
+    local dano = r[2] or 0
+    local d = dano >= 10000 and string.format("%.1fk", dano / 1000) or tostring(dano)
+    texto(puesto .. ". " .. nombre, x + 9, yy, yo and { 1, 0.9, 0.5 } or { 0.9, 0.9, 0.95 })
+    local t = d .. "  " .. (r[3] or 0) .. "%"
+    texto(t, x + w - 9 - f:getWidth(t), yy, yo and { 1, 0.9, 0.5 } or { 0.8, 0.82, 0.9 })
+    yy = yy + fila
   end
 end
 
@@ -2312,10 +2315,14 @@ function I.panelMall(mundo, p, w, h)
       love.graphics.setScissor((px + 14) * (I.escala or 1), y * (I.escala or 1), (pw - 28) * (I.escala or 1), 110 * (I.escala or 1))
       love.graphics.push()
       love.graphics.translate(px + 70, y + 100)
-      love.graphics.scale(1.7, 1.7)
-      MonturaFx.detras(id, 0, 0, 1, love.timer.getTime(), def and def.escala or 1)
+      -- las monturas de FAO son de tamaños muy distintos: la vista previa las ajusta a la tarjeta
+      local esc = 1.7
+      if def and def.anim then
+        local dm = require("src.presentacion.render.mob_anim").DEFS[def.anim]
+        if dm then esc = math.min(1.7, 84 / math.max(1, dm.alto)) end
+      end
+      love.graphics.scale(esc, esc)
       if def then Personajes.dibujar(def, 1, true, love.timer.getTime(), 0, 0) end
-      MonturaFx.delante(id, 0, 0, 1, love.timer.getTime(), def and def.escala or 1, 0)
       love.graphics.pop()
       love.graphics.setScissor()
       love.graphics.setColor(0.98, 0.9, 0.7)
@@ -2513,6 +2520,10 @@ function I.panelEstablo(mundo, p, w, h)
     love.graphics.printf(I.establoPag .. " / " .. paginasE, px + pw - 116, py + 70, 50, "center")
     I.boton(px + pw - 62, py + 64, 34, 28, ">", "est_pag_sig", I.establoPag < paginasE)
   end
+  if #lista == 0 then
+    love.graphics.setColor(0.85, 0.82, 0.7)
+    love.graphics.printf("No hay monturas en esta lista. Hay más en el Item Mall (tecla L, pestaña Monturas).", px + 20, py + 120, pw - 40, "left")
+  end
   for k = 1, PAG_ESTABLO do
     local m = lista[(I.establoPag - 1) * PAG_ESTABLO + k]
     if not m then break end
@@ -2528,7 +2539,7 @@ function I.panelEstablo(mundo, p, w, h)
     end
     local nivelOk = (p.nivel or 1) >= m.nivel
     love.graphics.setColor(nivelOk and 0.95 or 0.6, nivelOk and 0.9 or 0.58, nivelOk and 0.75 or 0.52)
-    love.graphics.print(m.nombre .. "   " .. Ayudas.num(m.precio) .. " oro  (nv " .. m.nivel .. ")", px + 100, y + 4)
+    love.graphics.print(m.nombre .. "   " .. (m.precio > 0 and (Ayudas.num(m.precio) .. " oro") or "Gratis") .. "  (nv " .. m.nivel .. ")", px + 100, y + 4)
     love.graphics.setColor(0.72, 0.78, 0.68)
     love.graphics.printf(m.desc, px + 100, y + 22, 330, "left")
     love.graphics.setColor(0.6, 0.85, 1)
@@ -3139,7 +3150,7 @@ function I.statsTexto(it, enc)
   return pre .. table.concat(partes, "  ")
 end
 
--- La clériga vende solo pociones. El armero, armaduras y armas.
+-- La enfermera vende solo pociones. Cada maestro, el equipo de su clase (armas, armaduras, escudos, accesorios y mochilas).
 local CAT_POCIONES = { id = "pociones", nombre = "Pociones" }
 local CAT_ARMAS = { id = "armas", nombre = "Armas", huecos = { arma = true } }
 local CAT_ARMADURA = { id = "armadura", nombre = "Armadura", huecos = { cabeza = true, pecho = true, piernas = true, pies = true } }
@@ -3149,8 +3160,10 @@ local CAT_MOCHILAS = { id = "mochilas", nombre = "Mochilas", huecos = { mochila 
 local CAT_VENDER = { id = "vender", nombre = "Vender" }
 local TIENDAS = {
   mercado = { titulo = "Pociones", cats = { CAT_POCIONES, CAT_VENDER } },
-  armero = { titulo = "Armaduras y armas", cats = { CAT_ARMAS, CAT_ARMADURA, CAT_ESCUDOS, CAT_ACCESORIOS, CAT_MOCHILAS, CAT_VENDER } },
 }
+for clase, nombre in pairs({ guerrero = "guerrero", lancero = "lancero", cazador = "arquero", mago = "mago", clerigo = "clérigo", nigromante = "nigromante" }) do
+  TIENDAS["maestro_" .. clase] = { titulo = "Maestro " .. nombre, clase = clase, cats = { CAT_ARMAS, CAT_ARMADURA, CAT_ESCUDOS, CAT_ACCESORIOS, CAT_MOCHILAS, CAT_VENDER } }
+end
 
 -- Lo que vende el mercado en una categoría, para tu clase y tu nivel.
 function I.listaItemsClase(p, cat)
@@ -3179,7 +3192,8 @@ function I.listaItemsClase(p, cat)
   local lista = {}
   for id, it in pairs(Datos.items) do
     -- solo lo que ya puedes llevar o está a pocos niveles
-    if it.hueco and def.huecos[it.hueco] and (not it.clase or it.clase == p.clase) and not it.quest and (it.nivel or 1) <= (p.nivel or 1) + 4 then
+    local claseTienda = (TIENDAS[I.tienda] or {}).clase or p.clase
+    if it.hueco and def.huecos[it.hueco] and (not it.clase or it.clase == claseTienda) and not it.quest and (it.nivel or 1) <= (p.nivel or 1) + 4 then
       lista[#lista + 1] = id
     end
   end
@@ -3819,10 +3833,10 @@ function I.panelAyuda(w, h)
   I.boton(w - 200, 68, 70, 28, "Cerrar", "cerrar")
   local texto = table.concat({
     "Moverte: WASD o flechas (casilla a casilla, con diagonales) o clic en el suelo. Dos criaturas no pueden ocupar la misma casilla.",
-    "Combate: clic en un enemigo (o en la Lista de batalla) lo elige y lo persigue. Tab pasa al siguiente enemigo. Esc suelta el objetivo.",
+    "Combate: clic en un enemigo lo elige y lo persigue. Tab pasa al siguiente enemigo. Esc suelta el objetivo.",
     "Shift + clic sobre una criatura: la miras y la consola te cuenta qué es. Clic en un aliado: lo eliges para curarlo.",
     "Poderes 1-6 (se aprenden en el árbol, tecla K). 7 poción de vida, 8 poción de maná. R abre la autopoción: vida y maná, cada una con su porcentaje. El ladrón roba con B.",
-    "Pantalla: arriba a la izquierda tu vida, maná, experiencia y oro; arriba a la derecha el minimapa; abajo a la derecha la lista de batalla. C abre tu personaje (equipo y cifras), I la bolsa y K el árbol de poderes (cada nivel da un punto). En la bolsa, un clic elige, otro clic en la misma casilla equipa y otro clic en otra casilla intercambia.",
+    "Pantalla: arriba a la izquierda tu vida, maná, experiencia y oro; arriba a la derecha el minimapa; abajo a la izquierda el chat (30 % de la pantalla). C abre tu personaje (equipo y cifras), I la bolsa y K el árbol de poderes (cada nivel da un punto). En la bolsa, un clic elige, otro clic en la misma casilla equipa y otro clic en otra casilla intercambia.",
     "Clic derecho sobre otro jugador: menú para tratar con él, invitarlo a tu gremio o a tu grupo, o mirarlo. Esc abre el menú del juego (continuar, ajustes y salir); si hay un panel abierto, lo cierra.",
     "E interactúa (mercader, heraldo, mayordomo, casa, altar). M mapa, F1 ayuda, F3 medidor, F11 pantalla completa.",
     "Chat: Enter. Escribe /m para hablar al mundo y /f para hablar a tu facción. Las ciudades de tu facción son refugio.",
@@ -3954,15 +3968,40 @@ function I.panelAjustes(w, h)
   I.boton(w / 2 - 180, h / 2 - 60, 160, 32, "1280×720", "aj_1280")
   I.boton(w / 2, h / 2 - 60, 160, 32, "1600×900", "aj_1600")
   I.boton(w / 2 - 180, h / 2 - 16, 340, 32, Ajustes.completo and "Ventana" or "Pantalla completa", "aj_completo")
-  local inter = Ajustes.teclas and Ajustes.teclas.interactuar or "e"
-  local bolsa = Ajustes.teclas and Ajustes.teclas.bolsa or "i"
-  local espera = Ajustes.esperando
-  I.boton(w / 2 - 180, h / 2 + 36, 340, 32, espera == "interactuar" and "Pulsa una tecla…" or ("Interactuar: " .. inter), "aj_tecla_interactuar")
-  I.boton(w / 2 - 180, h / 2 + 78, 340, 32, espera == "bolsa" and "Pulsa una tecla…" or ("Bolsa: " .. bolsa), "aj_tecla_bolsa")
+  I.boton(w / 2 - 180, h / 2 + 36, 340, 32, "Teclado (poderes, pociones, interactuar, bolsa)…", "aj_teclado")
   local NOMBRE_GRAFICOS = { alto = "Alto (luz, reflejos, clima)", medio = "Medio", bajo = "Bajo (solo luz)", apagado = "Apagado" }
-  I.boton(w / 2 - 180, h / 2 + 120, 340, 32, "Efectos gráficos: " .. (NOMBRE_GRAFICOS[Ajustes.graficos or "alto"] or "Alto"), "aj_graficos")
+  I.boton(w / 2 - 180, h / 2 + 78, 340, 32, "Efectos gráficos: " .. (NOMBRE_GRAFICOS[Ajustes.graficos or "alto"] or "Alto"), "aj_graficos")
   love.graphics.setColor(0.75, 0.72, 0.64)
-  love.graphics.print("F11 cambia la pantalla. F3 muestra el medidor.", w / 2 - 180, h / 2 + 160)
+  love.graphics.print("F11 cambia la pantalla. F3 muestra el medidor.", w / 2 - 180, h / 2 + 124)
+end
+
+-- Teclado: la tecla de cada poder (por posición en la barra, ordenada por nivel), de las pociones, de interactuar y de la bolsa. Es de cada cuenta.
+function I.panelTeclado(w, h)
+  local n = #Ajustes.ACCIONES
+  local filas = math.ceil(n / 2)
+  local bw, bh = 520, 150 + filas * 40
+  local px, py = w / 2 - bw / 2, h / 2 - bh / 2
+  caja(px, py, bw, bh, "Teclado")
+  I.boton(px + bw - 70, py + 8, 60, 28, "Volver", "tk_volver")
+  love.graphics.setFont(pequena())
+  love.graphics.setColor(0.8, 0.78, 0.7)
+  local usuario = Ajustes.usuarioTeclas
+  love.graphics.printf("Cuenta: " .. (usuario or "(sin sesión)") .. ". Pulsa una acción y luego la tecla que quieras; si ya la usa otra acción, intercambian.",
+    px + 16, py + 44, bw - 32, "left")
+  local bwBtn, hBtn = (bw - 48) / 2, 32
+  for i, a in ipairs(Ajustes.ACCIONES) do
+    local col, fila = (i - 1) % 2, math.floor((i - 1) / 2)
+    local x = px + 16 + col * (bwBtn + 16)
+    local y = py + 92 + fila * 40
+    local esp = Ajustes.esperando == a[1]
+    I.boton(x, y, bwBtn, hBtn, esp and (a[2] .. ": pulsa una tecla…") or (a[2] .. ": " .. Ajustes.nombreTecla(Ajustes.teclas[a[1]])), "tk_" .. a[1])
+  end
+  local yb = py + 92 + filas * 40 + 6
+  I.boton(px + 16, yb, 200, 30, "Restablecer teclas", "tk_restablecer")
+  if I.avisoTeclas then
+    love.graphics.setColor(1, 0.7, 0.45)
+    love.graphics.printf(I.avisoTeclas, px + 224, yb + 6, bw - 240, "left")
+  end
 end
 
 

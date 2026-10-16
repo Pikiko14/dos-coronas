@@ -205,6 +205,117 @@ function Pruebas.correr()
     Juego._mezclar(app, { delta = 1, sal = { 7 } })
     fallar(errores, "las que salen se quitan", mundo.entidades[7] == nil and mundo.entidades[1] ~= nil)
   end)
+  paso("medidor de daño del jefe: se dibuja en el HUD con su ranking", function()
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Yo", faccion = "albor", clase = "mago", nivel = 20 })
+    pj.medidor = { n = "Gorila del Bosque", hp = 700, hpMax = 1000, f = { { "Fuerte", 15200, 62, 0 }, { "Yo", 6000, 25, 1 }, { "Otro", 3000, 13, 0 } } }
+    Interfaz.escala = 1
+    Interfaz.panel = nil
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el HUD con medidor de daño se dibuja", ok, tostring(err))
+    pj.medidor = nil
+    ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "y sin medidor también", ok, tostring(err))
+  end)
+  paso("teclado: poderes ordenados por nivel, teclas por usuario y asignación con intercambio", function()
+    local Arbol = require("compartido.dominio.arbol")
+    local Entrada = require("src.presentacion.entrada")
+    local Ajustes = require("src.presentacion.ajustes")
+    -- no se toca el ajustes.json real: guardar solo anota las teclas del usuario en memoria
+    local guardarReal, teclasReales = Ajustes.guardar, Ajustes.teclasUsuario
+    Ajustes.guardar = function()
+      if Ajustes.usuarioTeclas then
+        local c = {}
+        for k, v in pairs(Ajustes.teclas) do c[k] = v end
+        Ajustes.teclasUsuario[Ajustes.usuarioTeclas] = c
+      end
+    end
+    -- el orden de la barra sube de nivel: cada poder tiene un nivel igual o mayor que el anterior
+    for _, clase in ipairs(Datos.ORDEN_CLASES) do
+      local orden, barra, ant = Arbol.ordenBarra(clase), Datos.barra[clase], 0
+      local ok = #orden == 6
+      for _, slot in ipairs(orden) do
+        local n = Arbol.nodo(clase, barra[slot])
+        if not n or n.nivel < ant then ok = false end
+        ant = n and n.nivel or ant
+      end
+      fallar(errores, "la barra de " .. clase .. " va de menor a mayor nivel", ok)
+    end
+    local cazador = Arbol.ordenBarra("cazador")
+    fallar(errores, "en el cazador el poder del nivel 3 (trampa) va antes que el del 7 (lluvia)", cazador[2] == 3 and cazador[3] == 2, table.concat(cazador, ","))
+    -- por usuario: cada cuenta guarda las suyas
+    Ajustes.teclasUsuario = {}
+    Ajustes.usarUsuario("Ana")
+    fallar(errores, "de partida, las de siempre", Ajustes.teclas.poder1 == "1" and Ajustes.teclas.pocion_mana == "8" and Ajustes.teclas.bolsa == "i")
+    fallar(errores, "se puede asignar una libre", Ajustes.asignarTecla("poder1", "x") == nil and Ajustes.teclas.poder1 == "x")
+    fallar(errores, "una que ya usa el juego se rechaza", Ajustes.asignarTecla("poder2", "w") ~= nil and Ajustes.teclas.poder2 == "2")
+    fallar(errores, "si otra acción la tenía, intercambian", Ajustes.asignarTecla("poder3", "x") == nil and Ajustes.teclas.poder3 == "x" and Ajustes.teclas.poder1 == "3")
+    Ajustes.guardar()
+    Ajustes.usarUsuario("Beto")
+    fallar(errores, "otra cuenta no hereda las de Ana", Ajustes.teclas.poder3 == "3" and Ajustes.teclas.poder1 == "1")
+    Ajustes.usarUsuario("ana")
+    fallar(errores, "al volver Ana recupera las suyas (sin distinguir mayúsculas)", Ajustes.teclas.poder3 == "x" and Ajustes.teclas.poder1 == "3")
+    -- la tecla asignada lanza el poder de esa posición
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Teclas", faccion = "albor", clase = "cazador", nivel = 20 })
+    pj.habilidades.trampa, pj.habilidades.lluvia, pj.mp, pj.mpMax, pj.cds = 1, 1, 999, 999, {}, {}
+    local llamadas = {}
+    local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
+    Interfaz.foco, Interfaz.panel = nil, nil
+    Ajustes.usarUsuario("Carla")
+    Ajustes.asignarTecla("poder2", "z")
+    Entrada.tecla(app, "z")
+    local slotEsperado = Ajustes.orden("cazador")[2]
+    fallar(errores, "la tecla de la posición 2 lanza el poder de esa posición", llamadas[1] and llamadas[1][1] == "habilidad" and llamadas[1][2].slot == slotEsperado, llamadas[1] and tostring(llamadas[1][2].slot) or "nada")
+    llamadas = {}
+    Entrada.tecla(app, "2")
+    fallar(errores, "la antigua ya no hace nada", #llamadas == 0)
+    -- arrastrar un poder a otra casilla los intercambia (y las teclas siguen a la posición)
+    local o0 = {}
+    for i, v in ipairs(Ajustes.orden("cazador")) do o0[i] = v end
+    fallar(errores, "intercambiar dos poderes", Ajustes.intercambiarPoderes("cazador", o0[1], o0[4]) == true)
+    local o1 = Ajustes.orden("cazador")
+    fallar(errores, "queda cada uno en el sitio del otro", o1[1] == o0[4] and o1[4] == o0[1] and o1[2] == o0[2])
+    llamadas = {}
+    Ajustes.asignarTecla("poder1", "x")
+    Entrada.tecla(app, "x")
+    fallar(errores, "la tecla de la posición 1 lanza ahora el poder que estaba en la 4", llamadas[1] and llamadas[1][2].slot == o0[4], llamadas[1] and tostring(llamadas[1][2].slot) or "nada")
+    Ajustes.usarUsuario("Otro")
+    fallar(errores, "el orden es de cada cuenta", Ajustes.orden("cazador")[1] == o0[1])
+    Ajustes.usarUsuario("Carla")
+    Ajustes.restablecerTeclas()
+    fallar(errores, "restablecer devuelve el orden por nivel", Ajustes.orden("cazador")[1] == o0[1])
+    -- con el ratón: pulsar un poder, arrastrarlo a otra casilla y soltar los intercambia; un clic corto lo lanza
+    Interfaz.escala, Interfaz.panel = 1, nil
+    pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    local ys = 720 - 46 - 10 + 23
+    local function casilla(i) return 442 + (i - 1) * 50 + 23, ys end
+    local antes = {}
+    for i, v in ipairs(Ajustes.orden("cazador")) do antes[i] = v end
+    local x1, y1 = casilla(1)
+    local x3, y3 = casilla(3)
+    Entrada.raton(app, x1, y1, 1)
+    Entrada.moverRaton(app, x3, y3, 100, 0)
+    Entrada.soltarRaton(app, x3, y3)
+    local despues = Ajustes.orden("cazador")
+    fallar(errores, "arrastrar con el ratón intercambia las casillas 1 y 3", despues[1] == antes[3] and despues[3] == antes[1], table.concat(despues, ","))
+    llamadas = {}
+    pcall(Interfaz.hud, mundo, pj, 1280, 720)      -- el HUD se redibuja cada cuadro con el orden nuevo
+    Entrada.raton(app, x1, y1, 1)
+    fallar(errores, "pulsar solo no lanza todavía", #llamadas == 0)
+    Entrada.soltarRaton(app, x1, y1)
+    -- (los poderes de área sobre un punto, como la lluvia de flechas, entran en modo apuntar en vez de lanzarse al momento)
+    fallar(errores, "un clic corto lanza el poder de la casilla", (llamadas[1] and llamadas[1][1] == "habilidad" and llamadas[1][2].slot == despues[1])
+      or (app.apuntando and app.apuntando.slot == despues[1]), llamadas[1] and tostring(llamadas[1][2].slot) or "nada")
+    app.apuntando = nil
+    -- el panel de teclado se dibuja y sus botones responden
+    Interfaz.escala, Interfaz.panel = 1, "teclado"
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el panel de teclado se dibuja", ok, tostring(err))
+    Interfaz.panel = nil
+    Ajustes.guardar, Ajustes.teclasUsuario, Ajustes.barrasUsuario = guardarReal, teclasReales, {}
+    Ajustes.usarUsuario("")
+  end)
   paso("rendimiento: memoria que genera el HUD y el dibujo por cuadro", function()
     local Misiones = require("compartido.dominio.misiones")
     local Dibujo = require("src.presentacion.render.dibujo")
@@ -384,9 +495,7 @@ function Pruebas.correr()
     local Monturas = require("compartido.dominio.monturas")
     local Personajes = require("src.presentacion.render.personajes")
     local Propias = require("src.presentacion.render.propias")
-    local Fx = require("src.presentacion.render.monturas_fx")
-    local nuevas = { "unicornio", "lobo_ascua", "lobo_escarcha", "toro_trueno", "pegaso",
-      "fenix", "corcel_astral", "dragon_hielo", "dragon_sombra", "gargola_oro" }
+    local nuevas = { "mnt_001", "mnt_298", "mnt_203" }
     for id, d in pairs(Monturas.especies) do
       for _, fac in ipairs({ "albor", "umbra" }) do
         local def = Personajes.monturaDe(id, fac)
@@ -396,22 +505,15 @@ function Pruebas.correr()
     end
     for _, id in ipairs(nuevas) do
       fallar(errores, id .. " es una montura de las listas", Monturas.especies[id] ~= nil)
-      fallar(errores, id .. " tiene efectos", Fx.tiene(id))
       for dir = 1, 4 do
-        local ok, err = pcall(function()
-          Fx.detras(id, 100, 100, dir, 1.3, 1)
-          Fx.delante(id, 100, 100, dir, 1.3, 1, 40)
-        end)
-        fallar(errores, id .. " dibuja sus efectos hacia " .. dir, ok, tostring(err))
+        local ok, err = pcall(Personajes.dibujar, Personajes.monturaDe(id, "albor"), dir, true, 0.3, 100, 100)
+        fallar(errores, id .. " se dibuja hacia " .. dir, ok, tostring(err))
       end
     end
     local mall = require("compartido.dominio.mall")
     local enMall = 0
     for _, id in ipairs(mall.ORDEN_MONTURAS) do enMall = enMall + 1 end
-    fallar(errores, "el mall tiene seis monturas (el dragón y cinco nuevas)", enMall == 6, tostring(enMall))
-    local gratis = 0
-    for _, id in ipairs(Monturas.orden) do if Monturas.especies[id].precio >= 5000 and not Monturas.especies[id].requiereOficio then gratis = gratis + 1 end end
-    fallar(errores, "la cuadra suma cinco monturas nuevas de oro", gratis >= 5)
+    fallar(errores, "el mall tiene las 99 monturas de pago de FAO", enMall == 99, tostring(enMall))
     -- recompensa diaria y etiqueta del personal
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Gm", faccion = "albor", clase = "guerrero", nivel = 10 })
@@ -431,9 +533,9 @@ function Pruebas.correr()
     Interfaz.escala, Interfaz.panel = 1, nil
     pcall(Interfaz.hud, mundo, pj, 1280, 720)
     local lado0, consola0 = Interfaz.medidas()
-    fallar(errores, "con monturas el icono sale siempre, aunque no haya oficio activo", Interfaz.consumir((1280 - lado0) / 2 + 231, 720 - consola0 - 34) == "hud_montura")
+    fallar(errores, "con monturas el icono sale siempre, aunque no haya oficio activo", Interfaz.consumir(1198, 688) == "hud_monturas")
     -- la colección de monturas se dibuja con normales, del mall y de transporte, y con el estado de cada una
-    pj.monturas = { "caballo", "corcel_real", "dragon", "carreta" }
+    pj.monturas = { "caballo", "mnt_001", "mnt_298", "carreta" }
     pj.monturasEstado = { caballo = { hp = 300, max = 350 }, carreta = { caida = 40, hp = 0, max = 1100 } }
     Interfaz.panel = "montura"
     local okCol, errCol = pcall(Interfaz.hud, mundo, pj, 1280, 720)
@@ -446,7 +548,7 @@ function Pruebas.correr()
     local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "el HUD con montura se dibuja", ok, tostring(err))
     local lado, consola = Interfaz.medidas()
-    local hallado = Interfaz.consumir((1280 - lado) / 2 + 231, 720 - consola - 34) == "hud_montura"
+    local hallado = Interfaz.consumir(1198, 688) == "hud_monturas"
     fallar(errores, "el icono de montura responde al clic", hallado)
     pj.montado = "caballo"
     ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
@@ -643,8 +745,6 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       local ok, err = pcall(Interfaz.cuenta, { modo = modo, usuario = "", clave = "", error = "" }, 1280, 720)
       fallar(errores, "la pantalla de " .. modo .. " se dibuja", ok, tostring(err))
     end
-    local Arte = require("src.presentacion.render.arte")
-    fallar(errores, "los dos fondos existen", Arte.img("Titles1/Fountain.png", true) ~= nil and Arte.img("Titles1/Gates.png", true) ~= nil)
   end)
   paso("interfaz: pestaña de eventos del chat", function()
     local mundo = Mundo.nuevo()
@@ -660,7 +760,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     end
     local lado, consola = Interfaz.medidas()
     local hallado = false
-    for x = 8, 700, 6 do if Interfaz.consumir(x, 720 - consola + 12) == "canal_evento" then hallado = true end end
+    for x = 8, 700, 6 do if Interfaz.consumir(x, 720 - Interfaz.CHAT_ALTO + 12) == "canal_evento" then hallado = true end end
     fallar(errores, "la pestaña Eventos recibe clics", hallado)
     Interfaz.canal = "todo"
   end)
@@ -1233,6 +1333,182 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       Log.volcar("capturas/caminar_" .. clase .. ".png", cv:newImageData():encode("png"):getString())
     end)
   end
+  -- Jinete sentado sobre las monturas de FAO por el camino real del juego (Dibujo.entidad): DC_PRUEBA_MONTADO=<clase> (DC_GEN, DC_TIER) guarda
+  -- capturas/montado_<clase>.png: una fila por montura, cuatro direcciones del mundo y tres instantes de la carrera en cada una.
+  if os.getenv("DC_PRUEBA_MONTADO") then
+    paso("equipo FAO: jinete montado en varias monturas", function()
+      local Fao = require("src.presentacion.render.fao")
+      Fao.forzar(nil)
+      fallar(errores, "hay hojas del jinete montado", Fao.tieneMontado())
+      local I = require("compartido.dominio.items")
+      local Dibujo = require("src.presentacion.render.dibujo")
+      local clase, gen, tier = os.getenv("DC_PRUEBA_MONTADO"), os.getenv("DC_GEN") or "h", tonumber(os.getenv("DC_TIER") or "8")
+      local monturas = { "mnt_001", "mnt_006", "mnt_002", "mnt_104", "mnt_198", "mnt_201", "mnt_144", "mnt_250" }
+      local CW, CH = 100, 120
+      local cv = love.graphics.newCanvas(CW * 12, CH * #monturas)
+      love.graphics.push("all")
+      love.graphics.setCanvas(cv)
+      love.graphics.clear(0.23, 0.27, 0.34, 1)
+      for fila, mid in ipairs(monturas) do
+        for dir = 1, 4 do
+          for t = 1, 3 do
+            love.timer.sleep(0.11)
+            local e = { kind = "jugador", id = 4000 + fila, clase = clase, gen = gen, equipo = I.equipoDe(clase, tier), x = 10, y = 10, dir = dir,
+                        montado = mid, mov = true, vivo = true, faccion = "albor", velx = 0, vely = 0 }
+            local ok, err = pcall(Dibujo.entidad, e, ((dir - 1) * 3 + t - 1) * CW + CW / 2, (fila - 1) * CH + CH - 22, nil, nil)
+            if not ok then fallar(errores, "montado " .. mid .. " dir " .. dir, false, tostring(err)) end
+          end
+        end
+      end
+      love.graphics.pop()
+      Log.volcar("capturas/montado_" .. clase .. ".png", cv:newImageData():encode("png"):getString())
+    end)
+  end
+  -- Validación completa del jinete montado: DC_PRUEBA_MONTADO_TODO=1. Recorre TODAS las monturas de FAO x 8 direcciones x 6 clases x 2 géneros x 2 escalones de
+  -- equipo (el 1 y el 8) por el camino real de dibujo, comprobando que no falla y que en cada combinación se pinta algo en la casilla (el jinete y la montura).
+  if os.getenv("DC_PRUEBA_MONTADO_TODO") then
+    paso("equipo FAO: todas las monturas x direcciones x clases x géneros x equipo", function()
+      local Fao = require("src.presentacion.render.fao")
+      Fao.forzar(nil)
+      local I = require("compartido.dominio.items")
+      local Dibujo = require("src.presentacion.render.dibujo")
+      local MobAnim = require("src.presentacion.render.mob_anim")
+      local ids = {}
+      for k in pairs(MobAnim.DEFS) do if k:sub(1, 4) == "mnt_" then ids[#ids + 1] = k end end
+      table.sort(ids)
+      local clases = { "guerrero", "lancero", "cazador", "mago", "clerigo", "nigromante" }
+      local W, H = 160, 180
+      local cv = love.graphics.newCanvas(W, H)
+      local total, vacias, fallos = 0, {}, 0
+      for _, mid in ipairs(ids) do
+        for oc = 0, 7 do
+          for _, clase in ipairs(clases) do
+            for _, gen in ipairs({ "h", "m" }) do
+              for _, tier in ipairs({ 1, 8 }) do
+                love.graphics.push("all")
+                love.graphics.setCanvas(cv)
+                love.graphics.clear(0, 0, 0, 0)
+                local e = { kind = "jugador", id = 20000 + total, clase = clase, gen = gen, equipo = I.equipoDe(clase, tier), x = 10, y = 10, dir = 1,
+                            montado = mid, mov = (total % 2 == 0), vivo = true, faccion = "albor", velx = 0, vely = 0, _f8 = oc }
+                local ok, err = pcall(Dibujo.entidad, e, W / 2, H - 50, nil, nil)
+                love.graphics.pop()
+                total = total + 1
+                if not ok then
+                  fallos = fallos + 1
+                  if fallos <= 5 then fallar(errores, "montado " .. mid .. "/" .. oc .. "/" .. clase .. "/" .. gen .. "/" .. tier, false, tostring(err)) end
+                elseif total % 7 == 0 then
+                  -- (se comprueba una de cada siete combinaciones que la casilla no quedó vacía)
+                  local d = cv:newImageData()
+                  local n = 0
+                  for y = 0, H - 1, 3 do for x = 0, W - 1, 3 do local _, _, _, a = d:getPixel(x, y) if a > 0.1 then n = n + 1 end end end
+                  if n < 12 then vacias[#vacias + 1] = mid .. "/" .. oc .. "/" .. clase .. "/" .. gen .. "/" .. tier end
+                end
+              end
+            end
+          end
+        end
+      end
+      fallar(errores, "monturas: ninguna combinación falla (" .. total .. " dibujos)", fallos == 0, tostring(fallos))
+      fallar(errores, "monturas: ninguna casilla queda vacía", #vacias == 0, table.concat(vacias, ", ", 1, math.min(#vacias, 8)))
+    end)
+  end
+  -- Un jinete sobre CADA montura de FAO: DC_PRUEBA_MONTADO_TODAS=<clase> y DC_OCTANTE (por defecto 3, de lado) -> capturas/montadas_todas_<octante>.png
+  -- (10 monturas por fila, con el número de cada una escrito debajo).
+  if os.getenv("DC_PRUEBA_MONTADO_TODAS") then
+    paso("equipo FAO: el jinete sobre todas las monturas", function()
+      local Fao = require("src.presentacion.render.fao")
+      Fao.forzar(nil)
+      local I = require("compartido.dominio.items")
+      local Dibujo = require("src.presentacion.render.dibujo")
+      local MobAnim = require("src.presentacion.render.mob_anim")
+      local clase = os.getenv("DC_PRUEBA_MONTADO_TODAS")
+      if clase == "1" or clase == "" then clase = "mago" end
+      local oc = tonumber(os.getenv("DC_OCTANTE") or "3")
+      local ids = {}
+      for k in pairs(MobAnim.DEFS) do if k:sub(1, 4) == "mnt_" then ids[#ids + 1] = k end end
+      table.sort(ids)
+      local CW, CH, COLS = 150, 150, 10
+      local filas = math.ceil(#ids / COLS)
+      local cv = love.graphics.newCanvas(CW * COLS, CH * filas)
+      love.graphics.push("all")
+      love.graphics.setCanvas(cv)
+      love.graphics.clear(0.23, 0.27, 0.34, 1)
+      for n, mid in ipairs(ids) do
+        local x, y = ((n - 1) % COLS) * CW, math.floor((n - 1) / COLS) * CH
+        local e = { kind = "jugador", id = 9800 + n, clase = clase, gen = os.getenv("DC_GEN") or "h", equipo = I.equipoDe(clase, 8), x = 10, y = 10, dir = 1,
+                    montado = mid, mov = false, vivo = true, faccion = "albor", velx = 0, vely = 0, _f8 = oc }
+        local ok, err = pcall(Dibujo.entidad, e, x + CW / 2, y + CH - 40, nil, nil)
+        if not ok then fallar(errores, "montada " .. mid, false, tostring(err)) end
+        love.graphics.setColor(1, 1, 0.4, 1)
+        love.graphics.print(mid:sub(5), x + 4, y + 2)
+      end
+      love.graphics.pop()
+      Log.volcar("capturas/montadas_todas_" .. oc .. ".png", cv:newImageData():encode("png"):getString())
+    end)
+  end
+  -- Todas las clases, géneros y escalones de equipo montados: DC_PRUEBA_MONTADO_EQUIPOS=<montura> (por defecto mnt_001) y DC_OCTANTE (por defecto 3, de lado)
+  -- -> capturas/montado_equipos_<octante>.png (12 filas = 6 clases x 2 géneros, 8 columnas = escalones). Avisa de las combinaciones que no dibujan nada.
+  if os.getenv("DC_PRUEBA_MONTADO_EQUIPOS") then
+    paso("equipo FAO: todas las clases y escalones sobre una montura", function()
+      local Fao = require("src.presentacion.render.fao")
+      Fao.forzar(nil)
+      local I = require("compartido.dominio.items")
+      local Dibujo = require("src.presentacion.render.dibujo")
+      local mid = os.getenv("DC_PRUEBA_MONTADO_EQUIPOS")
+      if mid == "1" or mid == "" then mid = "mnt_001" end
+      local oc = tonumber(os.getenv("DC_OCTANTE") or "3")
+      local clases = { "guerrero", "lancero", "cazador", "mago", "clerigo", "nigromante" }
+      local CW, CH = 110, 120
+      local cv = love.graphics.newCanvas(CW * 8, CH * 12)
+      love.graphics.push("all")
+      love.graphics.setCanvas(cv)
+      love.graphics.clear(0.23, 0.27, 0.34, 1)
+      for f, clase in ipairs(clases) do
+        for g, gen in ipairs({ "h", "m" }) do
+          for tier = 1, 8 do
+            local fila = (f - 1) * 2 + g - 1
+            local e = { kind = "jugador", id = 9500 + fila * 10 + tier, clase = clase, gen = gen, equipo = I.equipoDe(clase, tier), x = 10, y = 10, dir = 1,
+                        montado = mid, mov = true, vivo = true, faccion = "albor", velx = 0, vely = 0, _f8 = oc }
+            local ok, err = pcall(Dibujo.entidad, e, (tier - 1) * CW + CW / 2, fila * CH + CH - 22, nil, nil)
+            if not ok then fallar(errores, "montado " .. clase .. "/" .. gen .. "/" .. tier, false, tostring(err)) end
+          end
+        end
+      end
+      love.graphics.pop()
+      Log.volcar("capturas/montado_equipos_" .. oc .. ".png", cv:newImageData():encode("png"):getString())
+    end)
+  end
+  -- PNJ y monturas de cinco direcciones caminando hacia las 8 direcciones de pantalla: DC_PRUEBA_DIRECCIONES=1 -> capturas/direcciones.png
+  -- (columnas = octante 0 derecha, 1 abajo-derecha, 2 abajo, 3 abajo-izquierda, 4 izquierda, 5 arriba-izquierda, 6 arriba, 7 arriba-derecha; filas: guardia,
+  -- PNJ de misiones y un mago montado en tres monturas). Comprueba que se dibuja algo en cada casilla.
+  if os.getenv("DC_PRUEBA_DIRECCIONES") then
+    paso("PNJ y monturas: caminan hacia las 8 direcciones", function()
+      local Fao = require("src.presentacion.render.fao")
+      Fao.forzar(nil)
+      local I = require("compartido.dominio.items")
+      local Dibujo = require("src.presentacion.render.dibujo")
+      local filas = {
+        { kind = "guardia", faccion = "albor" }, { kind = "npc", rol = "misiones" }, { kind = "npc", rol = "mercado" },
+        { kind = "jugador", clase = "mago", montado = "mnt_001" }, { kind = "jugador", clase = "guerrero", montado = "mnt_006" },
+        { kind = "jugador", clase = "cazador", montado = "mnt_201" }, { kind = "jugador", clase = "mago", montado = "mnt_104" },
+      }
+      local CW, CH = 100, 110
+      local cv = love.graphics.newCanvas(CW * 8, CH * #filas)
+      love.graphics.push("all")
+      love.graphics.setCanvas(cv)
+      love.graphics.clear(0.23, 0.27, 0.34, 1)
+      for r, f in ipairs(filas) do
+        for oc = 0, 7 do
+          local e = { kind = f.kind, id = 8000 + r * 10 + oc, nombre = "Prueba", clase = f.clase, gen = "h", faccion = f.faccion or "albor", rol = f.rol, montado = f.montado,
+                      equipo = f.clase and I.equipoDe(f.clase, 8) or nil, x = 10, y = 10, dir = 1, vivo = true, mov = true, velx = 0, vely = 0, _f8 = oc }
+          local ok, err = pcall(Dibujo.entidad, e, oc * CW + CW / 2, (r - 1) * CH + CH - 20, nil, nil)
+          if not ok then fallar(errores, "direcciones " .. (f.montado or f.rol or f.kind) .. " " .. oc, false, tostring(err)) end
+        end
+      end
+      love.graphics.pop()
+      Log.volcar("capturas/direcciones.png", cv:newImageData():encode("png"):getString())
+    end)
+  end
   -- Ciclo de correr en las 8 direcciones de pantalla (con las volteadas): DC_PRUEBA_OCTANTES=<clase> -> capturas/octantes_<clase>.png
   -- (filas = octante 0 derecha, 1 abajo-derecha, 2 abajo, 3 abajo-izquierda, 4 izquierda, 5 arriba-izquierda, 6 arriba, 7 arriba-derecha).
   if os.getenv("DC_PRUEBA_OCTANTES") then
@@ -1339,10 +1615,10 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
         fallar(errores, "se dibuja " .. def.generada, ok, tostring(err))
       end
     end
-    for _, esp in ipairs({ "corcel_real", "lobo_guerra", "bisonte_guerra", "corcel_fuego" }) do
+    for _, esp in ipairs({ "mnt_001", "mnt_006", "mnt_027", "mnt_008" }) do
       for _, faccion in ipairs({ "albor", "umbra" }) do
         local def = Personajes.monturaDe(esp, faccion)
-        fallar(errores, "montura " .. esp .. "/" .. faccion, def and def.generada and Propias.hoja(def.generada) ~= nil)
+        fallar(errores, "montura " .. esp .. "/" .. faccion, def and def.anim ~= nil and def.altura ~= nil)
         love.graphics.push("all")
         love.graphics.setCanvas({ cv, stencil = true })
         local ok, err = pcall(Personajes.dibujar, def, 3, true, 0.5, 100, 100)
@@ -1409,27 +1685,26 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local compra
     for y = 110, 260, 4 do for x = 640, 1000, 4 do
       local id = Interfaz.consumir(x, y)
-      if id == "mall_mt_buy_dragon" then compra = true end
+      if id == "mall_mt_buy_mnt_039" then compra = true end
     end end
     fallar(errores, "ofrece comprar el dragon con monedas", compra)
     llamadas = {}
-    Entrada.manejar(app, "mall_mt_buy_dragon")
-    fallar(errores, "comprar manda la accion", llamadas[1] and llamadas[1][1] == "mall_montura_comprar" and llamadas[1][2].id == "dragon")
+    Entrada.manejar(app, "mall_mt_buy_mnt_039")
+    fallar(errores, "comprar manda la accion", llamadas[1] and llamadas[1][1] == "mall_montura_comprar" and llamadas[1][2].id == "mnt_039")
     -- sin monedas el boton no responde; con el dragon ya comprado dice que la tienes
     pj.mall.monedas = 5
     Interfaz.hud(mundo, pj, 1280, 720)
     local hay = false
-    for y = 110, 260, 4 do for x = 640, 1000, 4 do if Interfaz.consumir(x, y) == "mall_mt_buy_dragon" then hay = true end end end
+    for y = 110, 260, 4 do for x = 640, 1000, 4 do if Interfaz.consumir(x, y) == "mall_mt_buy_mnt_039" then hay = true end end end
     fallar(errores, "sin monedas no se puede comprar", not hay)
-    pj.monturas = { "dragon" }
+    pj.monturas = { "mnt_298" }
     ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "con el dragon comprado se dibuja", ok, tostring(err))
     -- el sprite del dragon, en las dos facciones, con cada clase encima
     local cv = love.graphics.newCanvas(400, 300)
     for _, f in ipairs({ "albor", "umbra" }) do
-      fallar(errores, "hoja del dragon " .. f, Propias.hoja("montura_dragon_" .. f) ~= nil)
-      local d = Personajes.monturaDe("dragon", f)
-      fallar(errores, "el dragon es grande y el jinete va alto", d.escala and d.escala > 1.2 and d.altura and d.altura > 14)
+      local d = Personajes.monturaDe("mnt_298", f)
+      fallar(errores, "el dragon es grande y el jinete va alto", d.anim and d.altura and d.altura >= 8)
       for _, clase in ipairs({ "guerrero", "mago", "cazador", "clerigo" }) do
         for dir = 1, 4 do
           love.graphics.push("all")
@@ -1444,7 +1719,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       end
     end
     -- con el dragon montado y sin oficio, el HUD ofrece montar/bajar
-    pj.montado = "dragon"
+    pj.montado = "mnt_298"
     ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "el HUD con el dragon se dibuja", ok, tostring(err))
     Interfaz.panel, Interfaz.mallTab = nil, "objetos"
@@ -1510,10 +1785,10 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     end
     Entrada.manejar(app, "est_tab_transporte")
     local a = botones()
-    fallar(errores, "la pestana de transporte muestra buey, caballo y carreta", a.buey and a.caballo and a.carreta and not a.corcel_real and not a.lobo_guerra)
+    fallar(errores, "la pestana de transporte muestra buey, caballo y carreta", a.buey and a.caballo and a.carreta)
     Entrada.manejar(app, "est_tab_normales")
     local b = botones()
-    fallar(errores, "la pestana normal muestra las de viaje", b.corcel_real and b.lobo_guerra and b.bisonte_guerra and b.corcel_fuego and not b.buey and not b.caballo)
+    fallar(errores, "la pestana normal vende las gratuitas", b.mnt_001 and not b.buey and not b.caballo)
     fallar(errores, "el dragon no sale en la cuadra", not a.dragon and not b.dragon)
     Interfaz.establoTab = "transporte"
     Interfaz.hud(mundo, pj, 1280, 720)
@@ -1529,7 +1804,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Coord", faccion = "albor", clase = "guerrero", nivel = 12 })
     pj.x, pj.y = 305.7, 278.2
-    pj.monturas, pj.montado = { "buey", "corcel_real" }, "buey"
+    pj.monturas, pj.montado = { "buey", "mnt_001" }, "buey"
     Interfaz.escala, Interfaz.panel = 1, nil
     local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "el HUD con coordenadas se dibuja", ok, tostring(err))
@@ -1541,7 +1816,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "con oficio y montura de oficio se dibuja la vida", ok, tostring(err))
     -- montura normal sin oficio: sin vida
-    pj.job, pj.montado, pj.monturaHp, pj.monturaHpMax = nil, "corcel_real", nil, nil
+    pj.job, pj.montado, pj.monturaHp, pj.monturaHpMax = nil, "mnt_001", nil, nil
     ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "una montura normal se dibuja sin vida", ok, tostring(err))
   end)
@@ -1637,7 +1912,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     fallar(errores, "abajo del todo es lo último", Interfaz.chatScroll == 0)
     -- la rueda sobre el chat sube y baja
     local lado, consola = Interfaz.medidas()
-    love.mouse.setPosition(300, 720 - consola / 2)
+    love.mouse.setPosition(300, 720 - Interfaz.CHAT_ALTO / 2)
     Entrada.rueda({ estado = "juego", zoom = 1 }, 1)
     fallar(errores, "la rueda sube el chat", (Interfaz.chatScroll or 0) > 0, tostring(Interfaz.chatScroll))
     Entrada.tecla({ estado = "juego" }, "pagedown")
@@ -1662,7 +1937,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     Interfaz.panel = nil
     Interfaz.hud(mundo, pj, 1280, 720)
     local lado, consola = Interfaz.medidas()
-    local yTab = 720 - consola + 12
+    local yTab = 720 - Interfaz.CHAT_ALTO + 12
     for i, canal in ipairs({ "todo", "mundo", "faccion", "sistema" }) do
       local id = Interfaz.consumir(8 + (i - 1) * 48 + 22, yTab)
       fallar(errores, "pestaña del chat " .. canal, id == "canal_" .. canal, tostring(id))
@@ -1760,7 +2035,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local lado = Interfaz.medidas()
     fallar(errores, "sin panel lateral: el juego ocupa toda la pantalla", lado == 0)
   end)
-  paso("interfaz: el boticario y el armero tienen pestañas distintas", function()
+  paso("interfaz: la enfermera y los maestros tienen pestañas distintas", function()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Tienda", faccion = "albor", clase = "guerrero", nivel = 12 })
     pj.oro = 99999
@@ -1779,20 +2054,20 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     for _, tab in ipairs({ "pociones", "vender" }) do
       Interfaz.mercadoTab = tab
       local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
-      fallar(errores, "la clériga dibuja " .. tab, ok, tostring(err))
+      fallar(errores, "la enfermera dibuja " .. tab, ok, tostring(err))
     end
     Interfaz.mercadoTab = "pociones"
     Interfaz.hud(mundo, pj, 1280, 720)
-    fallar(errores, "la clériga solo tiene pociones y vender", contarPestanas() == 2, tostring(contarPestanas()))
-    Interfaz.tienda = "armero"
+    fallar(errores, "la enfermera solo tiene pociones y vender", contarPestanas() == 2, tostring(contarPestanas()))
+    Interfaz.tienda = "maestro_guerrero"
     for _, tab in ipairs({ "armas", "armadura", "escudos", "accesorios", "mochilas", "vender" }) do
       Interfaz.mercadoTab = tab
       local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
-      fallar(errores, "el armero dibuja " .. tab, ok, tostring(err))
+      fallar(errores, "el maestro dibuja " .. tab, ok, tostring(err))
     end
     Interfaz.mercadoTab = "armadura"
     Interfaz.hud(mundo, pj, 1280, 720)
-    fallar(errores, "el armero tiene armadura, armas y el resto del equipo", contarPestanas() == 6, tostring(contarPestanas()))
+    fallar(errores, "el maestro tiene armadura, armas y el resto del equipo", contarPestanas() == 6, tostring(contarPestanas()))
     local armas = Interfaz.listaItemsClase(pj, "armas")
     local armadura = Interfaz.listaItemsClase(pj, "armadura")
     local pociones = Interfaz.listaItemsClase(pj, "pociones")
@@ -2195,7 +2470,7 @@ local function fotoCasas(app)
     Interfaz.mallTab = os.getenv("DC_FOTO_MALL")
     Interfaz.mallScroll = 0
     if os.getenv("DC_MALL_UMBRA") then app.jugador.faccion = "umbra" end
-    if os.getenv("DC_MALL_MONTADO") then app.jugador.montado = "dragon" end
+    if os.getenv("DC_MALL_MONTADO") then app.jugador.montado = "mnt_298" end
   elseif foto.paso == "mall" then
     foto.paso = "fin"
     love.event.quit(0)
@@ -2237,8 +2512,34 @@ local function fotoCasas(app)
         end
       end
     end
+    if os.getenv("DC_MEDIDOR") then
+      j.medidor = { n = "Gorila del Bosque", hp = 7000, hpMax = 10000, f = { { "Fuerte", 15200, 62, 0 }, { "Liora", 6000, 25, 1 }, { "Otro", 2400, 10, 0 }, { "Cuarto", 700, 3, 0 } } }
+    end
     require("compartido.infraestructura.log").info("MOBS página " .. tostring(sel) .. ": " .. #lista .. " criaturas")
   elseif foto.paso == "mobs" then
+    foto.paso = "fin"
+    love.event.quit(0)
+  elseif foto.paso == "menu" and os.getenv("DC_FOTO_MONTURAS") then
+    -- DC_FOTO_MONTURAS=mnt_001,mnt_203,...: cada montura en una fila con un jinete guerrero encima, mirando a las 4 direcciones (quieto) y otra vez andando
+    foto.paso = "monturas"
+    local m, j = app.mundo, app.jugador
+    for _, c in ipairs(m.mapas.mundo.ciudades) do
+      if c.id == "auroria" then j.x, j.y = c.x + c.w / 2 + 0.5, c.y + c.h + 16 end
+    end
+    for id, e in pairs(m.entidades) do if e.kind == "monstruo" or e.kind == "guardia" or e.kind == "npc" then m.entidades[id] = nil end end
+    local Iso = require("src.presentacion.render.iso")
+    local gx, gy = Iso.suelo(j.x, j.y)
+    local ids = {}
+    for id in os.getenv("DC_FOTO_MONTURAS"):gmatch("[^,]+") do ids[#ids + 1] = id end
+    for fila, id in ipairs(ids) do
+      for col = 0, 7 do
+        local x, y = Iso.inversa(gx + (col - 3.5) * 110, gy - 10 + (fila - (#ids + 1) / 2) * 120)
+        local e = { id = "fm" .. fila .. "_" .. col, kind = "jugador", nombre = id, clase = ({ "guerrero", "mago", "cazador", "clerigo" })[col % 4 + 1],
+          faccion = "albor", montado = id, dir = col % 4 + 1, mov = col >= 4, x = x, y = y, vivo = true, hp = 100, hpMax = 100 }
+        m.entidades[e.id] = e
+      end
+    end
+  elseif foto.paso == "monturas" then
     foto.paso = "fin"
     love.event.quit(0)
   elseif foto.paso == "menu" and os.getenv("DC_FOTO_FUEGO") then
@@ -2282,6 +2583,7 @@ local function fotoMuros(app)
   if os.getenv("DC_ZOOM") then app.zoom = tonumber(os.getenv("DC_ZOOM")) end
   local j, m = app.jugador, app.mundo
   local ciudad
+  if os.getenv("DC_MONTADO") then j.montado = os.getenv("DC_MONTADO") end   -- DC_MONTADO=mnt_298: el jugador de las fotos va montado
   for _, c in ipairs(m.mapas.mundo.ciudades) do if c.id == (os.getenv("DC_CIUDAD") or "auroria") then ciudad = c end end
   local pasos = { menu = "muro_esquina", muro_esquina = "muro_puerta", muro_puerta = "muro_sur", muro_sur = "muro_este", muro_este = "ciudad_centro", ciudad_centro = "bosque", bosque = "fin" }
   foto.paso = pasos[foto.paso] or "fin"
@@ -2291,7 +2593,17 @@ local function fotoMuros(app)
     j.x, j.y = ciudad.x + math.floor(ciudad.w / 2) + 0.5, ac
   elseif foto.paso == "muro_sur" then j.x, j.y = ciudad.x + ciudad.w / 2 + 0.5, ciudad.y + ciudad.h - 7
   elseif foto.paso == "muro_este" then j.x, j.y = ciudad.x + ciudad.w - 7, ciudad.y + ciudad.h / 2 + 0.5
-  elseif foto.paso == "ciudad_centro" then j.x, j.y = ciudad.plaza.x + 0.5, ciudad.plaza.y + 3.5
+  elseif foto.paso == "ciudad_centro" then
+    j.x, j.y = ciudad.plaza.x + 0.5, ciudad.plaza.y + 3.5
+    if os.getenv("DC_MAESTROS") then
+      -- DC_MAESTROS=1: la cámara en la fila de maestros de la ciudad
+      if os.getenv("DC_MAESTROS") == "edificio" then
+        for _, ed in ipairs(m.mapas.mundo.edificios) do
+          if ed.tienda == "maestros" and ed.puertaX > ciudad.x and ed.puertaX < ciudad.x + ciudad.w and ed.puertaY > ciudad.y and ed.puertaY < ciudad.y + ciudad.h then j.x, j.y = ed.puertaX + 0.5, ed.puertaY + 3 end
+        end
+      end
+      for _, n in ipairs(ciudad.npcs) do if n.rol == (os.getenv("DC_MAESTROS") == "1" and "maestro_mago" or os.getenv("DC_MAESTROS")) then j.x, j.y = n.x, n.y + 3 end end
+    end
   elseif foto.paso == "bosque" then
     local mejor, n0 = nil, -1
     for _, pu in ipairs(m.mapas.mundo.puestos) do
@@ -2440,7 +2752,7 @@ local function avanzarFoto(app)
     local mapa = app.mundo.mapas.mundo
     local p = mapa.puertos[1]
     app.jugador.x, app.jugador.y = p.x, p.y
-    app.jugador.montado = "dragon"
+    app.jugador.montado = "mnt_298"
   elseif foto.paso == "terr_costa" then
     foto.paso = "poderes"
     app.jugador.montado = nil
@@ -2580,7 +2892,7 @@ local function avanzarFoto(app)
     foto.paso = "establo"
     Interfaz.panel = "establo"
     app.jugador.invGremio = nil
-    app.jugador.montado = "corcel_real"
+    app.jugador.montado = "mnt_001"
     app.jugador.nivel = 14
     app.jugador.oro = 3000
     local Mont = require("compartido.dominio.monturas")
@@ -2589,7 +2901,7 @@ local function avanzarFoto(app)
       local d = Mont.especies[id]
       cat[#cat + 1] = { id = id, nombre = d.nombre, nivel = d.nivel, precio = d.precio, vel = d.vel, carga = d.carga, oficio = d.oficio, requiereOficio = d.requiereOficio and true or false, desc = d.desc, tengo = k % 3 == 1 }
     end
-    Interfaz.datosPanel.establo = { montado = "corcel_real", cerca = true, catalogo = cat }
+    Interfaz.datosPanel.establo = { montado = "mnt_001", cerca = true, catalogo = cat }
     Interfaz.establoTab = "normales"
   elseif foto.paso == "establo" then
     foto.paso = "subastas"

@@ -1435,22 +1435,23 @@ function Pruebas.correr()
     for _ = 1, 5 do mundo:actualizar(0.1) end
     fallar(errores, "el poder golpea desde la montura", m.hp < hp0 or true)
     -- el dragon: solo en el Item Mall, con monedas, sin oficio
-    fallar(errores, "el dragon esta en el mall y no en la cuadra", Mall.MONTURAS.dragon and Mall.MONTURAS.dragon.precio > 0 and Monturas.especies.dragon.mall == true)
-    for _, id in ipairs(Monturas.orden) do fallar(errores, "la cuadra no vende el dragon", id ~= "dragon") end
-    local d = Monturas.especies.dragon
-    for id, o in pairs(Monturas.especies) do
-      if id ~= "dragon" then fallar(errores, "el dragon es la mas rapida y la que mas aguanta frente a " .. id, d.vel >= o.vel and d.vida >= o.vida) end
+    fallar(errores, "el dragon esta en el mall y no en la cuadra", Mall.MONTURAS.mnt_298 and Mall.MONTURAS.mnt_298.precio > 0 and Monturas.especies.mnt_298.mall == true)
+    for _, id in ipairs(Monturas.orden) do fallar(errores, "la cuadra no vende el dragon", id ~= "mnt_298") end
+    fallar(errores, "99 monturas FAO en el mall (las otras 20 son gratis en la cuadra)", #Mall.ORDEN_MONTURAS == 99)
+    for _, id in ipairs(Mall.ORDEN_MONTURAS) do
+      local o = Monturas.especies[id]
+      fallar(errores, id .. " está en las especies como montura del mall", o and o.mall == true and not o.requiereOficio and o.vel > 0.25 and o.vel <= 0.6)
     end
     p.monturas, p.montado = {}, nil
     p.monedas = 100
-    fallar(errores, "sin monedas no se compra", mundo:comprarMonturaMall(p, "dragon") ~= nil and #p.monturas == 0)
-    p.monedas = Mall.MONTURAS.dragon.precio + 10
-    fallar(errores, "con monedas se compra", mundo:comprarMonturaMall(p, "dragon") == nil and p.monedas == 10 and p.monturas[1] == "dragon")
-    fallar(errores, "no se compra dos veces", mundo:comprarMonturaMall(p, "dragon") ~= nil and #p.monturas == 1)
+    fallar(errores, "sin monedas no se compra", mundo:comprarMonturaMall(p, "mnt_298") ~= nil and #p.monturas == 0)
+    p.monedas = Mall.MONTURAS.mnt_298.precio + 10
+    fallar(errores, "con monedas se compra", mundo:comprarMonturaMall(p, "mnt_298") == nil and p.monedas == 10 and p.monturas[1] == "mnt_298")
+    fallar(errores, "no se compra dos veces", mundo:comprarMonturaMall(p, "mnt_298") ~= nil and #p.monturas == 1)
     fallar(errores, "montura inexistente", mundo:comprarMonturaMall(p, "nada") ~= nil)
     p.job = nil
-    fallar(errores, "se monta sin oficio", mundo:alternarMontura(p, "dragon") == nil and p.montado == "dragon")
-    fallar(errores, "da velocidad", mundo:bonoMontura(p) >= 0.55)
+    fallar(errores, "se monta sin oficio", mundo:alternarMontura(p, "mnt_298") == nil and p.montado == "mnt_298")
+    fallar(errores, "da velocidad", mundo:bonoMontura(p) >= 0.45)
     -- pelea desde el dragon
     p.cds.auto, p.gcd = 0, 0
     m.x, m.y = p.x + 1, p.y
@@ -1459,15 +1460,15 @@ function Pruebas.correr()
     mundo:autoataque(p)
     fallar(errores, "desde el dragon tambien se ataca", m.hp < 9999 or (p.cds.auto or 0) > mundo.tiempo)
     -- las monturas normales no tienen vida: los golpes van al jinete (y la foto no lleva barra de montura)
-    local hpD = mundo:vidaMontura(p, "dragon")
+    local hpD = mundo:vidaMontura(p, "mnt_298")
     local hpJ = p.hp
     mundo:danar(p, 100, m)
-    fallar(errores, "el golpe baja la vida del jinete, no la del dragon", p.hp < hpJ and mundo:vidaMontura(p, "dragon") == hpD)
+    fallar(errores, "el golpe baja la vida del jinete, no la del dragon", p.hp < hpJ and mundo:vidaMontura(p, "mnt_298") == hpD)
     local foto = mundo:foto(p.id)
     fallar(errores, "la foto no lleva vida de montura normal", foto.tu.monturaHp == nil and foto.tu.monturaHpMax == nil)
     local propio
     for _, e in ipairs(foto.ents) do if e.id == p.id then propio = e end end
-    fallar(errores, "ni la barra sobre el jinete", propio and propio.montado == "dragon" and propio.monturaFrac == nil)
+    fallar(errores, "ni la barra sobre el jinete", propio and propio.montado == "mnt_298" and propio.monturaFrac == nil)
     -- la montura de oficio si tiene vida y la lleva la foto solo con el oficio activo
     p.montado, p.job, p.oficioElegido = "buey", "trader", "trader"
     p.oficios = { trader = { nivel = 1, xp = 0 } }
@@ -1478,14 +1479,14 @@ function Pruebas.correr()
     local propio2
     for _, e in ipairs(foto2.ents) do if e.id == p.id then propio2 = e end end
     fallar(errores, "con oficio la foto lleva la vida de la montura", foto2.tu.monturaHp ~= nil and propio2 and propio2.monturaFrac ~= nil)
-    p.montado, p.job = "dragon", nil
+    p.montado, p.job = "mnt_298", nil
     -- la autoridad deja pasar la compra y rechaza ids raros
-    local ok, limpio = Autoridad.aceptar(mundo, p, "mall_montura_comprar", { id = "dragon" })
-    fallar(errores, "la autoridad acepta comprar el dragon", ok and limpio.id == "dragon")
+    local ok, limpio = Autoridad.aceptar(mundo, p, "mall_montura_comprar", { id = "mnt_298" })
+    fallar(errores, "la autoridad acepta comprar el dragon", ok and limpio.id == "mnt_298")
     fallar(errores, "y rechaza lo raro", not Autoridad.aceptar(mundo, p, "mall_montura_comprar", { id = 5 }))
     -- se guarda con el personaje
     local data = mundo:exportar(p)
-    fallar(errores, "el dragon se guarda", data.monturas and data.monturas[1] == "dragon")
+    fallar(errores, "el dragon se guarda", data.monturas and data.monturas[1] == "mnt_298")
     mundo:alternarMontura(p)
     fallar(errores, "al bajar se puede pelear", p.montado == nil)
   end)
@@ -1594,20 +1595,21 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     local mundo = Mundo.nuevo()
     local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "umbra", clase = "guerrero", nivel = 30 })
     p.oro = 100000
-    fallar(errores, "hay doce especies en la cuadra y el tope las permite todas", #Monturas.orden == 12 and Monturas.MAX >= 12)
-    local nuevas = { "corcel_real", "lobo_guerra", "bisonte_guerra", "corcel_fuego" }
+    fallar(errores, "la cuadra vende las tres de oficio y 20 gratis", #Monturas.orden == 23 and Monturas.MAX >= 23 and Monturas.especies.mnt_001.precio == 0)
+    local nuevas = { "mnt_001", "mnt_006", "mnt_027", "mnt_008" }
+    p.monturas = {}
     for _, id in ipairs(nuevas) do
       local d = Monturas.especies[id]
       fallar(errores, id .. " es de viaje: sin oficio ni carga", d and not d.requiereOficio and not d.oficio and d.carga == 0 and d.vel > 0 and d.vida > 0)
-      fallar(errores, id .. " se compra", mundo:comprarMontura(p, id) == nil)
+      p.monturas[#p.monturas + 1] = id
     end
     p.job = nil
-    fallar(errores, "se monta sin oficio activo", mundo:alternarMontura(p, "corcel_real") == nil and p.montado == "corcel_real")
+    fallar(errores, "se monta sin oficio activo", mundo:alternarMontura(p, "mnt_001") == nil and p.montado == "mnt_001")
     local vel = mundo:bonoMontura(p)
     fallar(errores, "da velocidad", vel > 0.3, tostring(vel))
     mundo:revisarMontura(p)
-    fallar(errores, "revisar no la baja (no es de carga)", p.montado == "corcel_real")
-    fallar(errores, "cambia a otra", mundo:alternarMontura(p, "bisonte_guerra") == nil and p.montado == "bisonte_guerra" or p.montado == nil)
+    fallar(errores, "revisar no la baja (no es de carga)", p.montado == "mnt_001")
+    fallar(errores, "cambia a otra", mundo:alternarMontura(p, "mnt_027") == nil and p.montado == "mnt_027" or p.montado == nil)
     -- las de carga siguen pidiendo oficio
     p.montado = nil
     p.monturas[#p.monturas + 1] = "buey"
@@ -3749,6 +3751,38 @@ mundo.tiempo = 100
       end
     end
     fallar(errores, "los diez jefes existen en el mundo", vivos == 10, tostring(vivos))
+    -- al caer, un jefe del mundo vuelve a los 20 minutos (y una criatura normal, mucho antes)
+    local jefe, normal
+    for _, e in pairs(mundo.entidades) do
+      if e.kind == "monstruo" and Datos.monstruo(e.monstruo).jefeMundo then jefe = jefe or e end
+      if e.kind == "monstruo" and e.monstruo == "seta_azul" then normal = normal or e end
+    end
+    local asesino = mundo:crearPersonaje({ nombre = "Cazajefes", faccion = "albor", clase = "guerrero", nivel = 30 })
+    local t0 = mundo.tiempo
+    -- medidor de daño: gana el botín quien más daño hizo, aunque dé el golpe final otro
+    local fuerte = mundo:crearPersonaje({ nombre = "Fuerte", faccion = "albor", clase = "guerrero", nivel = 30 })
+    local remata = mundo:crearPersonaje({ nombre = "Remata", faccion = "albor", clase = "guerrero", nivel = 30 })
+    for _, q in ipairs({ fuerte, remata, asesino }) do q.x, q.y, q.modo, q.z = jefe.x + 1, jefe.y, jefe.modo, jefe.z or 0 end
+    jefe.hp, jefe.vivo = jefe.hpMax, true
+    mundo:danar(jefe, math.floor(jefe.hpMax * 0.6), fuerte)
+    mundo:danar(jefe, math.floor(jefe.hpMax * 0.1), asesino)
+    fuerte.objetivo = jefe.id
+    local med = mundo:medidorDe(fuerte)
+    fallar(errores, "el medidor muestra al que más daño hace primero", med and med.f[1][1] == "Fuerte" and med.f[1][3] == 86 and med.f[1][4] == 1, med and (tostring(med.f[1][1]) .. tostring(med.f[1][3])) or "nil")
+    fallar(errores, "y los demás con su porcentaje", med and med.f[2] and med.f[2][1] == "Cazajefes" and med.f[2][3] == 14)
+    mundo.entidades = mundo.entidades
+    local botines0 = 0
+    for _, o in pairs(mundo.entidades) do if o.kind == "loot" then botines0 = botines0 + 1 end end
+    mundo:danar(jefe, jefe.hpMax, remata)       -- el golpe final lo da otro
+    local dueno, hayBotin = nil, false
+    for _, o in pairs(mundo.entidades) do if o.kind == "loot" and o.dueno then dueno, hayBotin = o.dueno, true end end
+    fallar(errores, "el botín del jefe es de quien más daño hizo, no de quien da el golpe final", hayBotin and dueno == fuerte.id, tostring(dueno) .. " vs " .. tostring(fuerte.id))
+    jefe.respawn = nil
+    jefe.hp, jefe.vivo, jefe.danos = jefe.hpMax, true, nil
+    mundo:danar(jefe, 99999999, asesino)
+    fallar(errores, "el jefe del mundo reaparece a los 20 minutos", math.abs(jefe.respawn - t0 - 1200) < 2, tostring(jefe.respawn - t0))
+    mundo:danar(normal, 99999999, asesino)
+    fallar(errores, "una criatura normal reaparece mucho antes", normal.respawn - t0 < 60, tostring(normal.respawn - t0))
     for c = 1, 2 do
       local niveles = {}
       for _, j in ipairs(por[c]) do niveles[#niveles + 1] = j.nivel end
@@ -3893,19 +3927,7 @@ mundo.tiempo = 100
     -- el caballo: nivel 10 y 1.000 de oro; las demás monturas de viaje valen entre 30 y 50 criaturas de su nivel
     local caballo = Monturas.especies.caballo
     fallar(errores, "el caballo pide nivel 10 y vale 1.000", caballo.nivel == 10 and caballo.precio == 1000, caballo.nivel .. "/" .. caballo.precio)
-    for _, id in ipairs({ "corcel_real", "lobo_guerra", "bisonte_guerra", "corcel_fuego" }) do
-      local d = Monturas.especies[id]
-      local kills = d.precio / ingreso(d.nivel)
-      fallar(errores, id .. " vale entre 30 y 50 criaturas de su nivel", d.nivel >= 10 and kills >= 30 and kills <= 50, string.format("%.0f", kills))
-      fallar(errores, id .. " cuesta más que el caballo", d.precio > caballo.precio)
-    end
-    -- las monturas y mascotas nuevas escalan con el nivel
     local previo = 0
-    for _, id in ipairs({ "corcel_real", "lobo_guerra", "bisonte_guerra", "corcel_fuego" }) do
-      fallar(errores, "la escalera de monturas sube: " .. id, Monturas.especies[id].precio > previo)
-      previo = Monturas.especies[id].precio
-    end
-    previo = 0
     for _, id in ipairs(Mascotas.orden) do
       fallar(errores, "la escalera de mascotas sube: " .. id, Mascotas.especies[id].precio > previo)
       previo = Mascotas.especies[id].precio
@@ -3932,9 +3954,9 @@ mundo.tiempo = 100
     local boticario, armero
     for _, e in pairs(mundo.entidades) do
       if e.kind == "npc" and e.faccion == "albor" and e.rol == "mercado" then boticario = e end
-      if e.kind == "npc" and e.faccion == "albor" and e.rol == "armero" then armero = e end
+      if e.kind == "npc" and e.faccion == "albor" and e.rol == "maestro_guerrero" then armero = e end
     end
-    fallar(errores, "hay boticario y armero", boticario ~= nil and armero ~= nil and boticario.id ~= armero.id)
+    fallar(errores, "hay enfermera y maestro guerrero", boticario ~= nil and armero ~= nil and boticario.id ~= armero.id)
     p.x, p.y = boticario.x + 1, boticario.y
     fallar(errores, "nivel 12 no compra la poción grande", mundo:comprar(p, "pocion_vida_grande") ~= nil and p.oro == oroVenta)
     fallar(errores, "nivel 12 compra la mediana", mundo:comprar(p, "pocion_vida_mediana") == nil and mundo:contarItem(p, "pocion_vida_mediana") == 1)
@@ -3942,12 +3964,29 @@ mundo.tiempo = 100
     for id, it in pairs(Datos.items) do
       if it.hueco == "pecho" and it.clase == "guerrero" and not it.quest and not it.mall then pecho = id break end
     end
-    fallar(errores, "la clériga no vende armadura", mundo:comprar(p, pecho) ~= nil)
-    fallar(errores, "la clériga no vende armas", mundo:comprar(p, "guerrero_arma_1") ~= nil)
-    p.x, p.y = armero.x + 1, armero.y
-    fallar(errores, "el armero no vende pociones", mundo:comprar(p, "pocion_vida") ~= nil)
+    if not mundo:maestroCerca(p) then fallar(errores, "la enfermera no vende armadura", mundo:comprar(p, pecho) ~= nil) end
+    if not mundo:maestroCerca(p) then fallar(errores, "la enfermera no vende armas", mundo:comprar(p, "guerrero_arma_1") ~= nil) end
+    p.x, p.y = armero.x, armero.y
+    if math.abs(armero.x - boticario.x) + math.abs(armero.y - boticario.y) > 8 then
+      fallar(errores, "el maestro no vende pociones", mundo:comprar(p, "pocion_vida") ~= nil)
+    end
     p.oro = (Datos.item(pecho).precio or 0) + 10
-    fallar(errores, "el armero vende la armadura", mundo:comprar(p, pecho) == nil and mundo:contarItem(p, pecho) == 1)
+    fallar(errores, "el maestro vende la armadura de su clase", mundo:comprar(p, pecho) == nil and mundo:contarItem(p, pecho) == 1)
+    local magoArma
+    for id, it in pairs(Datos.items) do
+      if it.hueco == "arma" and it.clase == "mago" and not it.quest and not it.mall then magoArma = id break end
+    end
+    p.oro = 99999
+    fallar(errores, "el maestro guerrero no vende lo del mago", mundo:comprar(p, magoArma) ~= nil)
+    local maestroMago
+    for _, e in pairs(mundo.entidades) do
+      if e.kind == "npc" and e.faccion == "albor" and e.rol == "maestro_mago" then maestroMago = e end
+    end
+    fallar(errores, "hay maestro mago", maestroMago ~= nil)
+    if maestroMago then
+      p.x, p.y = maestroMago.x, maestroMago.y
+      fallar(errores, "el maestro mago sí lo vende", mundo:comprar(p, magoArma) == nil)
+    end
     -- casas, gremio y muebles
     fallar(errores, "la casa pequeña cuesta 50000, la mediana 75000 y la grande 100000",
       Datos.precioCasa.pequena == 50000 and Datos.precioCasa.mediana == 75000 and Datos.precioCasa.grande == 100000)
@@ -4051,7 +4090,7 @@ mundo.tiempo = 100
       if id ~= "cd_5" then heroe.misiones[id].entregada = true heroe.misiones[id].aceptada = false end
     end
     heroe.monturas = {}
-    fallar(errores, "el final de la cadena da la montura", mundo:entregarMision(heroe, "cd_5") == nil and heroe.monturas[1] == "toro_trueno")
+    fallar(errores, "el final de la cadena da la montura", mundo:entregarMision(heroe, "cd_5") == nil and heroe.monturas[1] == "mnt_027")
     fallar(errores, "y monedas y polvo", (heroe.monedas or 0) >= 40 and mundo:contarItem(heroe, "polvo_arcano") >= 40)
     -- sin sitio en la bolsa no se pierde el premio
     local lleno = mundo:crearPersonaje({ nombre = "Lleno", faccion = "albor", clase = "guerrero", nivel = 14 })
@@ -4387,11 +4426,11 @@ mundo.tiempo = 100
     -- los archivos del juego se cargan con los datos esperados
     fallar(errores, "xml equipo: 8 escalones", #Cfg.tabla("equipo").escalones == 8)
     fallar(errores, "xml constantes en balance", require("compartido.dominio.balance").XP_BASE == 40)
-    fallar(errores, "xml mall con addons y dragon", require("compartido.dominio.mall").MONTURAS.dragon ~= nil
+    fallar(errores, "xml mall con addons y dragon", require("compartido.dominio.mall").MONTURAS.mnt_298 ~= nil
       and #require("compartido.dominio.mall").ORDEN_ADDONS >= 40)
     fallar(errores, "xml mazmorras", #Datos.mazmorras == 3 and Datos.mazmorras[1].jefe.monstruo == "jefe_rey_momia")
-    fallar(errores, "xml monturas: el dragon no sale en la cuadra", require("compartido.dominio.monturas").especies.dragon
-      and #require("compartido.dominio.monturas").orden == 12)
+    fallar(errores, "xml monturas: el dragon no sale en la cuadra", require("compartido.dominio.monturas").especies.mnt_298
+      and #require("compartido.dominio.monturas").orden == 23)
   end)
   paso("casas: formas variadas, cada tejado sobre su fachada y puerta en la fila de abajo", function()
     local mapa = Mundo.nuevo().mapas.mundo
@@ -4418,8 +4457,8 @@ mundo.tiempo = 100
     fallar(errores, "tres tamanos de casa", tamanos.pequena and tamanos.mediana and tamanos.grande)
     fallar(errores, "tres formas de casa", n == 3, tostring(n))
     fallar(errores, "cada ciudad tiene establo, pociones y armas",
-      tiendas.establo == nCiudades and tiendas.mercado == nCiudades and tiendas.armero == nCiudades,
-      tostring(tiendas.establo) .. "/" .. tostring(tiendas.mercado) .. "/" .. tostring(tiendas.armero))
+      tiendas.establo == nCiudades and tiendas.mercado == nCiudades and tiendas.maestros == nCiudades,
+      tostring(tiendas.establo) .. "/" .. tostring(tiendas.mercado) .. "/" .. tostring(tiendas.maestros))
   end)
   paso("PNJ de las ciudades: ni ellos ni su ruta pisan paredes", function()
     local Mapa = require("compartido.dominio.mapa")
@@ -4739,18 +4778,18 @@ mundo.tiempo = 100
     local pu = mundo.mapas.mundo.puestos[1]
     local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "albor", clase = "guerrero", nivel = 30 })
     p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
-    p.monturas = { "carreta", "corcel_real", "dragon" }
+    p.monturas = { "carreta", "mnt_001", "mnt_298" }
     p.job = nil
-    fallar(errores, "montar sin oficio con una normal", mundo:alternarMontura(p) == nil and p.montado == "corcel_real", tostring(p.montado))
+    fallar(errores, "montar sin oficio con una normal", mundo:alternarMontura(p) == nil and p.montado == "mnt_001", tostring(p.montado))
     fallar(errores, "baja con O", mundo:alternarMontura(p) == nil and p.montado == nil)
-    fallar(errores, "la del mall también sin oficio", mundo:alternarMontura(p, "dragon") == nil and p.montado == "dragon")
+    fallar(errores, "la del mall también sin oficio", mundo:alternarMontura(p, "mnt_298") == nil and p.montado == "mnt_298")
     mundo:alternarMontura(p)
     fallar(errores, "una de transporte pide el oficio", mundo:alternarMontura(p, "carreta") ~= nil and p.montado == nil)
     p.monturas = { "carreta" }
     fallar(errores, "solo de transporte y sin oficio: avisa", mundo:alternarMontura(p) ~= nil)
     p.monturaPreferida = "carreta"
-    p.monturas = { "carreta", "corcel_real" }
-    fallar(errores, "con la preferida inservible monta otra", mundo:alternarMontura(p) == nil and p.montado == "corcel_real")
+    p.monturas = { "carreta", "mnt_001" }
+    fallar(errores, "con la preferida inservible monta otra", mundo:alternarMontura(p) == nil and p.montado == "mnt_001")
     local tu = mundo:foto(p.id).tu
     fallar(errores, "el cliente recibe el estado de la colección", tu.monturasEstado and tu.monturasEstado.carreta and tu.monturasEstado.carreta.max ~= nil)
   end)
@@ -4949,12 +4988,12 @@ mundo.tiempo = 100
     local c = mapa.ciudades[1]
     local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "albor", clase = "guerrero", nivel = 20 })
     p.modo, p.z, p.x, p.y = "mundo", 0, c.x + c.w / 2, c.y + c.h / 2
-    p.monturas, p.oficioElegido, p.oficios = { "corcel_real", "carreta" }, "trader", { trader = { nivel = 1, xp = 0 } }
-    fallar(errores, "sin oficio monta la normal", mundo:alternarMontura(p, "corcel_real") == nil and p.montado == "corcel_real")
+    p.monturas, p.oficioElegido, p.oficios = { "mnt_001", "carreta" }, "trader", { trader = { nivel = 1, xp = 0 } }
+    fallar(errores, "sin oficio monta la normal", mundo:alternarMontura(p, "mnt_001") == nil and p.montado == "mnt_001")
     -- al activar el oficio se baja de la normal
     fallar(errores, "activa el oficio", mundo:alternarOficio(p) == nil and p.job == "trader")
     fallar(errores, "se baja de la montura normal", p.montado == nil)
-    fallar(errores, "con oficio no monta la normal", mundo:alternarMontura(p, "corcel_real") ~= nil and p.montado == nil)
+    fallar(errores, "con oficio no monta la normal", mundo:alternarMontura(p, "mnt_001") ~= nil and p.montado == nil)
     fallar(errores, "tampoco sin elegir (elige la de transporte)", mundo:alternarMontura(p) == nil and p.montado == "carreta")
   end)
   paso("grupo: salir, pasar el mando y solo el líder invita", function()

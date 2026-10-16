@@ -10,7 +10,7 @@ los pies) y regenera juego/src/presentacion/render/fao_datos.lua (qué capas lle
 Orden de los cuadros de una hoja (comprobado contra los nombres de las 3.314 hojas): para una animación de P pasos, los cuadros van
   paso 1 con las direcciones 4, 5, 6, 7; paso 2 con 3, 4, 5, 6, 7; ... paso P con 3..7; y al final el cuadro que falta, paso 1 dirección 3.
 Se recolocan como indice = (paso - 1) * 5 + (direccion - 3), es decir cuadro = paso * 5 + hoja de dirección, con las hojas: 0 frente, 1 espalda,
-2 espalda-izquierda, 3 izquierda, 4 frente-izquierda (las otras tres direcciones del juego se obtienen volteando 4, 3 y 2). Las capas con código +5000 (35xxx, 85xxx...) son del personaje montado: no se usan.
+2 espalda-izquierda, 3 izquierda, 4 frente-izquierda (las otras tres direcciones del juego se obtienen volteando 4, 3 y 2). Las capas con código +5000 (35xxx, 85xxx...) y el cuerpo montado (1050 / 1150) son del personaje sentado sobre una montura: se hornean aparte como <Anim>_m.png (el origen es el mismo que el de las monturas).
 
 Escalones del juego (1 a 8) -> etapas FAO (1 a 5): 1->1, 2->2, 3->2, 4->3, 5->3, 6->4, 7->4, 8->5."""
 import json, math, os, re, sys
@@ -100,6 +100,19 @@ for c in capas:
         capas[c] = codigo_delantero(c)
 print("capas distintas:", len(capas))
 
+# animaciones que se hornean también con el jinete sentado (la montura solo tiene espera y carrera; el resto las usa el jinete al atacar)
+ANIMS_MONTADO = ("wait", "run", "att", "att2", "att3", "cast", "sht", "hurt")
+CUERPO_MONTADO = {"p001b": 1050, "p001g": 1150}
+
+
+def codigo_montado(cap, cod):
+    """Código de la capa del jinete montado: el cuerpo base tiene el suyo; en las piezas es el delantero + 5000."""
+    if cap in CUERPO_MONTADO:
+        return CUERPO_MONTADO[cap]
+    return cod + 5000 if cod is not None else None
+
+
+
 # ---------------------------------------------------------------- hornear cada hoja
 if os.path.isdir(SALIDA):
     for r, _, fs in os.walk(SALIDA, topdown=False):
@@ -109,53 +122,56 @@ if os.path.isdir(SALIDA):
 os.makedirs(SALIDA, exist_ok=True)
 meta_capas = {}
 total = 0
-for cap, cod in sorted(capas.items()):
+for cap, cod_f in sorted(capas.items()):
     meta_capas[cap] = {}
-    for anim in ANIMS:
-        arch = archivo_de(cap, cod, anim)
-        if not arch:
-            continue
-        clave = f"{carpetas[cap]}/{arch}"
-        a = anclas.get(clave)
-        if not a:
-            continue
-        frames = a["frames"]
-        pasos = len(frames) // 5
-        validos = [fr for fr in frames if fr.get("w")]
-        if not validos or pasos < 1:
-            continue
-        izq = max(fr["ox"] for fr in validos)
-        der = max(fr["w"] - fr["ox"] for fr in validos)
-        arr = max(fr["oy"] for fr in validos)
-        aba = max(fr["h"] - fr["oy"] for fr in validos)
-        cw = math.ceil((izq + der) * ESC) + 2
-        ch = math.ceil((arr + aba) * ESC) + 2
-        orx, ory = math.ceil(izq * ESC) + 1, math.ceil(arr * ESC) + 1
-        hoja = Image.open(os.path.join(FUENTE, "sprites_piezas", clave)).convert("RGBA")
-        cw0 = a["cell"][0]
-        salida = Image.new("RGBA", (cw * pasos * 5, ch), (0, 0, 0, 0))
-        n = len(frames)
-        for i, fr in enumerate(frames):
-            if not fr.get("w"):
+    for sufijo, cod in (("f", cod_f), ("m", codigo_montado(cap, cod_f))):
+        for anim in ANIMS:
+            if sufijo == "m" and (cod is None or anim not in ANIMS_MONTADO):
                 continue
-            # posición de este cuadro: ver la cabecera del archivo (el último es el paso 1, dirección 3)
-            if i == n - 1:
-                j = 0                                   # el cuadro que falta: paso 1, dirección 3
-            elif i < 4:
-                j = i + 1                               # paso 1, direcciones 4 a 7
-            else:
-                k = i - 4
-                j = (1 + k // 5) * 5 + k % 5            # pasos 2.., direcciones 3 a 7
-            recorte = hoja.crop((i * cw0, 0, i * cw0 + fr["w"], fr["h"]))
-            x = j * cw + max(0, round(orx - fr["ox"] * ESC))
-            y = max(0, round(ory - fr["oy"] * ESC))
-            salida.alpha_composite(recorte, (x, y))
-        carpeta = os.path.join(SALIDA, cap)
-        os.makedirs(carpeta, exist_ok=True)
-        ruta = os.path.join(carpeta, ANIMS[anim][0] + "_f.png")
-        salida.quantize(colors=128, method=Image.FASTOCTREE, dither=Image.NONE).save(ruta, optimize=True)
-        total += os.path.getsize(ruta)
-        meta_capas[cap][anim + "_f"] = {"w": cw, "h": ch, "x": orx, "y": ory, "pasos": pasos}
+            arch = archivo_de(cap, cod, anim)
+            if not arch:
+                continue
+            clave = f"{carpetas[cap]}/{arch}"
+            a = anclas.get(clave)
+            if not a:
+                continue
+            frames = a["frames"]
+            pasos = len(frames) // 5
+            validos = [fr for fr in frames if fr.get("w")]
+            if not validos or pasos < 1:
+                continue
+            izq = max(fr["ox"] for fr in validos)
+            der = max(fr["w"] - fr["ox"] for fr in validos)
+            arr = max(fr["oy"] for fr in validos)
+            aba = max(fr["h"] - fr["oy"] for fr in validos)
+            cw = math.ceil((izq + der) * ESC) + 2
+            ch = math.ceil((arr + aba) * ESC) + 2
+            orx, ory = math.ceil(izq * ESC) + 1, math.ceil(arr * ESC) + 1
+            hoja = Image.open(os.path.join(FUENTE, "sprites_piezas", clave)).convert("RGBA")
+            cw0 = a["cell"][0]
+            salida = Image.new("RGBA", (cw * pasos * 5, ch), (0, 0, 0, 0))
+            n = len(frames)
+            for i, fr in enumerate(frames):
+                if not fr.get("w"):
+                    continue
+                # posición de este cuadro: ver la cabecera del archivo (el último es el paso 1, dirección 3)
+                if i == n - 1:
+                    j = 0                                   # el cuadro que falta: paso 1, dirección 3
+                elif i < 4:
+                    j = i + 1                               # paso 1, direcciones 4 a 7
+                else:
+                    k = i - 4
+                    j = (1 + k // 5) * 5 + k % 5            # pasos 2.., direcciones 3 a 7
+                recorte = hoja.crop((i * cw0, 0, i * cw0 + fr["w"], fr["h"]))
+                x = j * cw + max(0, round(orx - fr["ox"] * ESC))
+                y = max(0, round(ory - fr["oy"] * ESC))
+                salida.alpha_composite(recorte, (x, y))
+            carpeta = os.path.join(SALIDA, cap)
+            os.makedirs(carpeta, exist_ok=True)
+            ruta = os.path.join(carpeta, ANIMS[anim][0] + "_" + sufijo + ".png")
+            salida.quantize(colors=128, method=Image.FASTOCTREE, dither=Image.NONE).save(ruta, optimize=True)
+            total += os.path.getsize(ruta)
+            meta_capas[cap][anim + "_" + sufijo] = {"w": cw, "h": ch, "x": orx, "y": ory, "pasos": pasos}
 print("tamaño total", total // 1024, "KB")
 
 

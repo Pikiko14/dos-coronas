@@ -5,6 +5,7 @@ local Entrada = require("src.presentacion.entrada")
 local Red = require("compartido.infraestructura.red")
 local Datos = require("compartido.dominio.datos")
 local Config = require("src.infraestructura.config")
+local Ajustes = require("src.presentacion.ajustes")
 local Log = require("compartido.infraestructura.log")
 local Eco = require("src.presentacion.eco")
 
@@ -429,6 +430,7 @@ function Juego.esperar(app, dt)
         cuentaId = msg.cuenta, usuario = msg.usuario or "",
         personajes = msg.personajes or {}, error = "", token = msg.token,
       }
+      Ajustes.usarUsuario(msg.usuario)   -- las teclas son de cada cuenta
       if app.espera == "mundo" then
         local pid = tonumber(msg.creado) or app.personajeRed
         if not pid then

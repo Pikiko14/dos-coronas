@@ -183,7 +183,7 @@ function E.correr()
     love.graphics.setCanvas({ cv, stencil = true })
     love.graphics.clear(0.3, 0.42, 0.55, 1)
     for lado, fac in ipairs({ "albor", "umbra" }) do
-      local def = Personajes.monturaDe("fenix", fac)
+      local def = Personajes.monturaDe("mnt_298", fac)
       for dir = 1, 4 do
         for k, t in ipairs({ 0.0, 0.0, 0.25 }) do
           love.graphics.push()
@@ -209,7 +209,7 @@ function E.correr()
     love.graphics.clear(0.3, 0.42, 0.55, 1)
     for k, par in ipairs({ { "guerrero", "albor" }, { "mago", "umbra" } }) do
       for dir = 1, 4 do
-        local e = { id = "fj" .. k .. dir, kind = "jugador", clase = par[1], faccion = par[2], montado = "fenix", dir = dir, vivo = true, hp = 10, hpMax = 10, nivel = 5 }
+        local e = { id = "fj" .. k .. dir, kind = "jugador", clase = par[1], faccion = par[2], montado = "mnt_298", dir = dir, vivo = true, hp = 10, hpMax = 10, nivel = 5 }
         love.graphics.push()
         love.graphics.translate((dir - 1) * C * E2 + 30 * E2, (k - 1) * C * E2 + 42 * E2)
         love.graphics.scale(E2, E2)

@@ -418,6 +418,7 @@ local function estamparCiudad(mapa, ciudad)
       estilo = rol == "establo" and "establo" or nil,
     }
     local iy = frente == "norte" and (puertaY - 1) or (puertaY + 1)
+    if rol ~= "maestros" then   -- el gremio de maestros no lleva PNJ: los maestros están repartidos por las avenidas
     ciudad.npcs[#ciudad.npcs + 1] = {
       x = puertaX + 0.5, y = iy + 0.5,
       rol = rol, nombre = nombre, faccion = ciudad.faccion,
@@ -426,6 +427,7 @@ local function estamparCiudad(mapa, ciudad)
         { x = puertaX + 1 + 0.5, y = iy + 0.5 },
       },
     }
+    end
     -- el establo: pacas de heno a los lados de la puerta grande
     if rol == "establo" then
       for _, sx in ipairs({ -2, 2 }) do
@@ -437,8 +439,8 @@ local function estamparCiudad(mapa, ciudad)
   local altoLocal = 3
   local eyLocal = (cy - 3) - (altoLocal - 1)
   local anchoTienda = 5
-  tienda((cx - prx) - anchoTienda - 1, eyLocal, anchoTienda, altoLocal, "mercado", "Clériga de " .. ciudad.nombre, "Pociones")
-  tienda(cx + prx + 2, eyLocal, anchoTienda, altoLocal, "armero", "Armero de " .. ciudad.nombre, "Armas")
+  tienda((cx - prx) - anchoTienda - 1, eyLocal, anchoTienda, altoLocal, "mercado", "Enfermera de " .. ciudad.nombre, "Pociones")
+  tienda(cx + prx + 2, eyLocal, anchoTienda, altoLocal, "maestros", "Maestros de " .. ciudad.nombre, "Maestros")
   -- El establo, en la misma fila al oeste de la clériga, con el tejado arriba y la puerta a la avenida.
   tienda(3, eyLocal, 9, altoLocal, "establo", "Establo de " .. ciudad.nombre, "Establo")
   -- detrás del establo no se construyen casas: queda un patio despejado
@@ -680,8 +682,25 @@ local function estamparCiudad(mapa, ciudad)
     local nx, ny = en(dx, dy)
     npc(nx, ny, rol, nombre)
   end
-  npcEn(11, 0, "heraldo", "Heraldo")
-  npcEn(-7, 0, "comercio", "Mercader mayor")
+  npc(cx + 2, cy, "heraldo", "Heraldo")   -- al lado de la estatua de la plaza
+  do
+    local clases = ciudad.faccion == "umbra" and { "guerrero", "nigromante", "cazador", "mago", "clerigo" }
+      or { "guerrero", "lancero", "cazador", "mago", "clerigo" }
+    local NOMBRES = { guerrero = "Guerrero", lancero = "Lancero", cazador = "Arquero", mago = "Mago", clerigo = "Clérigo", nigromante = "Nigromante" }
+    local FEM = { guerrero = "Guerrera", lancero = "Lancera", cazador = "Arquera", mago = "Maga", clerigo = "Clériga", nigromante = "Nigromante" }
+    -- repartidos por los extremos de las avenidas, lejos unos de otros: { horizontal?, fracción del largo, desvío en la avenida }
+    local SITIOS = { { true, -0.85, 1 }, { true, 0.85, -1 }, { false, -0.8, 1 }, { false, 0.8, -1 }, { true, 0.45, 1 } }
+    for i, c in ipairs(clases) do
+      local mujer = (i + (ciudad.faccion == "umbra" and 1 or 0)) % 2 == 0
+      local st = SITIOS[i]
+      local nx, ny
+      if st[1] then nx, ny = medio + math.floor(st[2] * (medio - 6)), cy + st[3]
+      else nx, ny = medio + st[3], cy + math.floor(st[2] * (cy - 5)) end
+      npc(nx, ny, "maestro_" .. c, (mujer and "Maestra " .. FEM[c] or "Maestro " .. NOMBRES[c]) .. " de " .. ciudad.nombre)
+    end
+  end
+  -- el mercader mayor, en la esquina oeste de la plaza (junto a la acera, lejos de la estatua)
+  npc(cx - prx + 1, cy + pry - 1, "comercio", "Mercader mayor")
   npcEn(-2, -9, "mayordomo", "Mayordomo")
   npcEn(2, -9, "encargos", "Tablón de encargos")
   npcEn(-2, 9, "encantador", "Maestro de encantos")
@@ -717,6 +736,47 @@ local function estamparCiudad(mapa, ciudad)
         nombre = NOMBRES_VECINOS[(i + semilla) % #NOMBRES_VECINOS + 1], faccion = ciudad.faccion,
         ruta = { { x = x0 + a.x + 0.5, y = y0 + a.y + 0.5 }, { x = x0 + b.x + 0.5, y = y0 + b.y + 0.5 } },
       }
+    end
+  end
+  -- Ningún edificio ha de tapar a un PNJ: una casa dibujada delante (al sur o al este) esconde a quien está detrás. Quien quede a la
+  -- sombra de una casa se corre a la casilla de avenida o plaza más cercana que esté a la vista.
+  local function tapado(wx, wy)
+    for _, b in ipairs(mapa.edificios) do
+      for a = 0, 3 do
+        for c = 0, 3 do
+          if math.abs(a - c) <= 1 then
+            local px, py = math.floor(wx) + a, math.floor(wy) + c
+            if px >= b.x and px < b.x + b.w and py >= b.y and py < b.y + b.h then return true end
+          end
+        end
+      end
+    end
+    return false
+  end
+  local ocupadas = {}
+  for _, n in ipairs(ciudad.npcs) do ocupadas[#ocupadas + 1] = n end
+  for _, n in ipairs(ciudad.npcs) do
+    if n.rol ~= "guardia" and (tapado(n.x, n.y) or M.bloqueado(mapa, n.x, n.y)) then
+      local mejor, md = nil, 1e9
+      for dy = -7, 7 do
+        for dx = -7, 7 do
+          local wx, wy = math.floor(n.x) + dx + 0.5, math.floor(n.y) + dy + 0.5
+          local lx, ly = wx - x0, wy - y0
+          local d = dx * dx + dy * dy
+          if d < md and (avenida(lx, ly) or enPlaza(lx, ly)) and not M.bloqueado(mapa, wx, wy) and not tapado(wx, wy) then
+            local libre = true
+            for _, o in ipairs(ocupadas) do
+              if o ~= n and math.abs(o.x - wx) < 1.2 and math.abs(o.y - wy) < 1.2 then libre = false break end
+            end
+            if libre then mejor, md = { wx, wy }, d end
+          end
+        end
+      end
+      if mejor then
+        local ddx, ddy = mejor[1] - n.x, mejor[2] - n.y
+        n.x, n.y = mejor[1], mejor[2]
+        for _, r in ipairs(n.ruta or {}) do r.x, r.y = r.x + ddx, r.y + ddy end
+      end
     end
   end
 end

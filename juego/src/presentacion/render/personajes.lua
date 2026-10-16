@@ -141,6 +141,44 @@ P.npc = {
   },
 }
 
+-- Los PNJ se dibujan con los personajes de FAO (arte/monstruos/npc_*, render/mob_anim.lua): sprite por rol. Los que traen dos variantes
+-- (hombre y mujer) o varias (vecinos) eligen según el nombre y el id.
+local FAO_NPC = {
+  mercado = "enfermera",
+  maestro_guerrero = { "maestro_guerrero", "maestra_guerrera" }, maestro_lancero = { "maestro_lancero", "maestra_lancera" },
+  maestro_cazador = { "maestro_arquero", "maestra_arquera" }, maestro_mago = { "maestro_mago", "maestra_maga" },
+  maestro_clerigo = { "maestro_clerigo", "maestra_clerigo" }, maestro_nigromante = { "maestro_nigromante", "maestra_nigromante" },
+  heraldo = { "mensajero", "mensajera" }, mayordomo = { "consejero_real", "noble" }, encargos = { "escriba", "bibliotecaria" },
+  encantador = { "encantador", "encantadora" }, criador = { "vendedor_de_mascotas", "cuidadora_de_mascotas" },
+  gremio = { "bibliotecario", "bibliotecaria" }, oficios = { "maestro_herrero", "sastra" }, comercio = { "mercader_viajero", "tendera" },
+  subastas = { "subastador", "subastadora" }, barquero = { "pescador", "pescadora" }, establo = { "maestro_de_establos", "granjera" },
+  capitan = { "pirata", "pirata_f" }, contacto = { "ninja_informante", "ninja_informante" },
+  misiones = { "explorador", "exploradora", "cazador_veterano", "cazadora" },
+  aldeano = { "granjero", "granjera", "lenador", "florista", "minero", "bardo", "bardo_f", "sastre", "sastra", "pescador", "pescadora" },
+}
+local GUARDIA_FAO = { albor = { "guardia_de_la_ciudad", "guardia_de_la_ciudad_f" }, umbra = { "general", "generala" } }
+local function suma(e)
+  local s = 0
+  local t = tostring(e.id or "")
+  for i = 1, #t do s = s + t:byte(i) end
+  return s
+end
+local function esFemenino(e)
+  local n = (e.nombre or ""):lower()
+  return n:find("maestra", 1, true) or n:find("vecina", 1, true) or n:find("aldeana", 1, true) or n:find("panadera", 1, true)
+    or n:find("niña", 1, true) or n:find("enfermera", 1, true) or false
+end
+-- Sprite FAO de un PNJ o guardia, o nil si no tiene.
+function P.npcFao(e)
+  local v = e.kind == "guardia" and GUARDIA_FAO[e.faccion or "albor"] or FAO_NPC[e.rol or "mercado"]
+  if not v then return nil end
+  local id
+  if type(v) == "string" then id = v
+  elseif #v == 2 and e.rol ~= "misiones" then id = v[esFemenino(e) and 2 or 1]
+  else id = v[suma(e) % #v + 1] end
+  return "npc_" .. id
+end
+
 -- Mascotas (compartido/dominio/mascotas.lua): la hoja y la casilla de cada especie.
 P.mascotas = {
   gatito = { hoja = "Characters/Animal.png", idx = 1 },
@@ -156,25 +194,14 @@ P.monturas = {
   buey = { hoja = "Characters/Animal.png", idx = 4 },
   caballo = { hoja = "Characters/Animal.png", idx = 5 },
   carreta = { vehiculo = true },
-  -- las cuatro monturas nuevas se dibujan por codigo con la paleta de la facción del jinete
-  corcel_real = { porFaccion = "montura_corcel" },
-  lobo_guerra = { porFaccion = "montura_lobo" },
-  bisonte_guerra = { porFaccion = "montura_bisonte" },
-  corcel_fuego = { porFaccion = "montura_fuego" },
-  -- el dragon del Item Mall es mas grande: se dibuja a escala y el jinete va mas alto
-  dragon = { porFaccion = "montura_dragon", escala = 1.35, altura = 20, extraFrente = 14 },
-  -- monturas vistosas de la cuadra y del Item Mall (efectos en render/monturas_fx.lua)
-  unicornio = { porFaccion = "montura_unicornio" },
-  lobo_ascua = { porFaccion = "montura_lobo_ascua" },
-  lobo_escarcha = { porFaccion = "montura_lobo_escarcha" },
-  toro_trueno = { porFaccion = "montura_toro_trueno" },
-  pegaso = { porFaccion = "montura_pegaso" },
-  fenix = { porFaccion = "montura_fenix", escala = 1.4, altura = 18, extraFrente = 12 },
-  corcel_astral = { porFaccion = "montura_corcel_astral" },
-  dragon_hielo = { porFaccion = "montura_dragon_hielo", escala = 1.35, altura = 20, extraFrente = 14 },
-  dragon_sombra = { porFaccion = "montura_dragon_sombra", escala = 1.35, altura = 20, extraFrente = 14 },
-  gargola_oro = { porFaccion = "montura_gargola_oro", escala = 1.25, altura = 16, extraFrente = 12 },
 }
+-- Monturas del Item Mall: las de FAO (arte/monstruos/mnt_*, render/mob_anim.lua). El jinete va a la altura del asiento de cada una.
+do
+  local datos = require("src.presentacion.render.montura_anim_datos")
+  for id, d in pairs(datos) do
+    P.monturas[id] = { anim = id, hoja = "Characters/Animal.png", idx = 5, altura = d.altura, extraFrente = 6 }
+  end
+end
 
 -- Dibujo de una montura para un jinete de esa facción.
 local cacheMonturas = {}
@@ -205,6 +232,8 @@ function P.de(e)
     if require("src.presentacion.render.fao").activo() then return { fao = e } end
     local c = P.clases[e.clase or "guerrero"] or P.clases.guerrero
     return c[e.faccion or "albor"] or c.albor
+  elseif (k == "guardia" or k == "npc") and P.npcFao(e) and MobAnim.existe(P.npcFao(e)) then
+    return { anim = P.npcFao(e), hoja = "Characters/Animal.png", idx = 1 }
   elseif k == "guardia" then
     return P.npc.guardia[e.faccion or "albor"] or P.npc.guardia.albor
   elseif k == "npc" then
@@ -238,7 +267,11 @@ function P.jineteDe(e, def)
 end
 
 -- Dibuja la criatura con los pies en (sx, sy). mov: está andando; reloj: segundos.
-function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa)
+function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa, sujeto)
+  if def.anim and def.altura then
+    -- montura con animación por cuadros
+    return MobAnim.dibujar(def.anim, mov and "run" or "wait", 0, sx, sy, dir or 1, tinte, 0, sujeto)
+  end
   if def.fao then return require("src.presentacion.render.fao").dibujar(def.fao, mov, sx, sy, tinte, alfa) end
   -- las skins propias del mall se dibujan por código (render/propias.lua)
   local img = def.generada and require("src.presentacion.render.propias").hoja(def.generada) or Arte.img(def.hoja)

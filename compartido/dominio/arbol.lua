@@ -33,6 +33,25 @@ function A.nombre(n)
   return n.nombre
 end
 
+-- Orden en que se muestran los 6 poderes de la barra: de menor a mayor nivel requerido (a igual nivel, el orden del XML). Devuelve la lista de
+-- posiciones de Datos.barra[clase] (el servidor sigue recibiendo la posición original).
+function A.ordenBarra(clase)
+  A._orden = A._orden or {}
+  local o = A._orden[clase]
+  if o then return o end
+  local barra = Datos.barra[clase] or {}
+  o = {}
+  for i = 1, #barra do o[i] = i end
+  table.sort(o, function(a, b)
+    local na, nb = A.nodo(clase, barra[a]), A.nodo(clase, barra[b])
+    local la, lb = na and na.nivel or 99, nb and nb.nivel or 99
+    if la ~= lb then return la < lb end
+    return a < b
+  end)
+  A._orden[clase] = o
+  return o
+end
+
 -- Rangos con los que empieza un personaje: el poder inicial a rango 1.
 function A.iniciales(clase)
   local r = {}

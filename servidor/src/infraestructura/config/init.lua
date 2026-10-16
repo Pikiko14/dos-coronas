@@ -60,7 +60,7 @@ return {
     fotos_por_segundo = numero("DOSCORONAS_FOTOS_POR_SEGUNDO", 15, 2, 60),
     simulacion_hz = numero("DOSCORONAS_SIMULACION_HZ", 30, 10, 240),
     -- segundos sin ninguna acción tras los que se desconecta a un jugador (0 = nunca)
-    inactividad_segundos = entero("DOSCORONAS_INACTIVIDAD_SEG", 60, 0, 86400),
+    inactividad_segundos = entero("DOSCORONAS_INACTIVIDAD_SEG", 900, 0, 86400),
   },
   -- Eventos de guerra que lanza el servidor (ver programacion.lua).
   eventos = {
@@ -102,6 +102,7 @@ return {
     nivelPaso = numero("DOSCORONAS_DIFERENCIA_NIVEL", 0.04, 0, 0.2),
     respawnMonstruo = numero("DOSCORONAS_RESPAWN_MONSTRUO_SEG", 22, 1, 3600),
     respawnElite = numero("DOSCORONAS_RESPAWN_ELITE_SEG", 90, 1, 86400),
+    respawnJefeMundo = numero("DOSCORONAS_RESPAWN_JEFE_MUNDO_SEG", 1200, 1, 86400),
     -- subastas
     subastaComision = numero("DOSCORONAS_SUBASTA_COMISION", 0.05, 0, 0.5),
     subastaImpuesto = numero("DOSCORONAS_SUBASTA_IMPUESTO", 0.08, 0, 0.5),

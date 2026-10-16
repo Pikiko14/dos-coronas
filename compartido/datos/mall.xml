@@ -96,10 +96,103 @@
   <addon id="skin_centinela" nombre="Centinela verde" desc="Yelmo verde y mirada fija." precio="350"/>
   <addon id="skin_caballero_oscuro" nombre="Caballero oscuro" desc="Armadura negra con cuernos." precio="500"/>
   <!-- ---- monturas exclusivas ---- -->
-  <montura id="dragon" nombre="Dragón" desc="Exclusiva: dorado en el Alba y violeta en el Ocaso. La más rápida y resistente; sin oficio y se pelea montado." precio="1500"/>
-  <montura id="fenix" nombre="Fénix" desc="Exclusiva: un caballo de fuego con alas de llamas y una estela de ascuas. Sin oficio; se pelea montado." precio="1400"/>
-  <montura id="corcel_astral" nombre="Corcel astral" desc="Exclusiva: noche estrellada, un halo de luz sobre el jinete y estrellas que lo rodean." precio="1100"/>
-  <montura id="dragon_hielo" nombre="Dragón de hielo" desc="Exclusiva: escamas de cristal y una nevada que lo sigue a todas partes." precio="1500"/>
-  <montura id="dragon_sombra" nombre="Dragón de sombra" desc="Exclusiva: humo oscuro y destellos violeta; nadie lo ve llegar." precio="1500"/>
-  <montura id="gargola_oro" nombre="Gárgola de oro" desc="Exclusiva: una gárgola dorada que va dejando destellos como monedas." precio="1000"/>
+  <montura id="mnt_039" nombre="Hámster tostado" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +38%." precio="700"/>
+  <montura id="mnt_040" nombre="Caballo de crin oscura" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +38%." precio="700"/>
+  <montura id="mnt_103" nombre="Tortuga viajera" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="750"/>
+  <montura id="mnt_104" nombre="León dorado" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="750"/>
+  <montura id="mnt_105" nombre="Autómata azul" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="750"/>
+  <montura id="mnt_143" nombre="Escarabajo real" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="700"/>
+  <montura id="mnt_144" nombre="Escarabajo de acero" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="700"/>
+  <montura id="mnt_145" nombre="Foca blanca" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="700"/>
+  <montura id="mnt_146" nombre="Foca madre" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="700"/>
+  <montura id="mnt_167" nombre="Mono frutal" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="700"/>
+  <montura id="mnt_176" nombre="Vagoneta dorada" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="800"/>
+  <montura id="mnt_197" nombre="Avestruz gris" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +44%." precio="800"/>
+  <montura id="mnt_198" nombre="Avestruz violeta" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="800"/>
+  <montura id="mnt_199" nombre="Genio de oro" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="800"/>
+  <montura id="mnt_200" nombre="Genio dorado" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="750"/>
+  <montura id="mnt_201" nombre="Barco de nubes" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +44%." precio="800"/>
+  <montura id="mnt_202" nombre="Tiburón submarino" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +44%." precio="800"/>
+  <montura id="mnt_203" nombre="Águila parda" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +44%." precio="800"/>
+  <montura id="mnt_204" nombre="Águila blanca" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +44%." precio="800"/>
+  <montura id="mnt_225" nombre="Oca gigante" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +48%." precio="900"/>
+  <montura id="mnt_226" nombre="Espíritus de la noche" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +46%." precio="850"/>
+  <montura id="mnt_227" nombre="Oso polar" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +48%." precio="900"/>
+  <montura id="mnt_239" nombre="Centauro dorado" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="750"/>
+  <montura id="mnt_250" nombre="Carnero lanudo" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +50%." precio="900"/>
+  <montura id="mnt_253" nombre="Carro de guerra" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="750"/>
+  <montura id="mnt_260" nombre="Behemot rojizo" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +46%." precio="850"/>
+  <montura id="mnt_261" nombre="Pterodáctilo verde" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +44%." precio="800"/>
+  <montura id="mnt_264" nombre="Lobo de carga" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +44%." precio="800"/>
+  <montura id="mnt_269" nombre="Tortuga estrella" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +46%." precio="850"/>
+  <montura id="mnt_270" nombre="Raptor rojo" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +44%." precio="800"/>
+  <montura id="mnt_271" nombre="Raptor carmesí" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +46%." precio="850"/>
+  <montura id="mnt_284" nombre="Oso boxeador" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +44%." precio="800"/>
+  <montura id="mnt_294" nombre="Dragoncito azul" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +50%." precio="900"/>
+  <montura id="mnt_295" nombre="Dragón negro y azul" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +50%." precio="900"/>
+  <montura id="mnt_296" nombre="Alpaca rosa" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +52%." precio="950"/>
+  <montura id="mnt_297" nombre="Alpaca navideña" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +44%." precio="800"/>
+  <montura id="mnt_298" nombre="Dragón dorado" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +48%." precio="900"/>
+  <montura id="mnt_299" nombre="Dragón de jade" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +48%." precio="900"/>
+  <montura id="mnt_300" nombre="Mantarraya blanca" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +48%." precio="800"/>
+  <montura id="mnt_301" nombre="Mantarraya real" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +46%." precio="850"/>
+  <montura id="mnt_306" nombre="Pingüino viajero" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +48%." precio="900"/>
+  <montura id="mnt_308" nombre="Pez globo buceador" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +46%." precio="850"/>
+  <montura id="mnt_309" nombre="Pez globo acorazado" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +48%." precio="900"/>
+  <montura id="mnt_310" nombre="Elefante naval" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +48%." precio="900"/>
+  <montura id="mnt_311" nombre="Elefante real" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +50%." precio="900"/>
+  <montura id="mnt_312" nombre="Hámster soldado" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1000"/>
+  <montura id="mnt_313" nombre="Hámster aviador" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="950"/>
+  <montura id="mnt_314" nombre="Luciérnaga" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1000"/>
+  <montura id="mnt_335" nombre="Nave dorada" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +46%." precio="850"/>
+  <montura id="mnt_356" nombre="Mapache" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +46%." precio="850"/>
+  <montura id="mnt_357" nombre="Mapache de cristal" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +52%." precio="900"/>
+  <montura id="mnt_358" nombre="Husky gris" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1000"/>
+  <montura id="mnt_359" nombre="Husky festivo" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +52%." precio="950"/>
+  <montura id="mnt_373" nombre="Delfín azul" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="900"/>
+  <montura id="mnt_374" nombre="Delfín capitán" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +53%." precio="900"/>
+  <montura id="mnt_375" nombre="Sandía guerrera" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1100"/>
+  <montura id="mnt_376" nombre="Conejo del bosque" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1100"/>
+  <montura id="mnt_377" nombre="Peluche gris" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1000"/>
+  <montura id="mnt_378" nombre="Peluche de feria" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1100"/>
+  <montura id="mnt_392" nombre="Peluche rosa" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +51%." precio="850"/>
+  <montura id="mnt_393" nombre="Peluche de caramelo" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +46%." precio="850"/>
+  <montura id="mnt_403" nombre="Cerdo alado" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1200"/>
+  <montura id="mnt_404" nombre="Cerdo platillo" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1200"/>
+  <montura id="mnt_405" nombre="Cerdo de fuego" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1200"/>
+  <montura id="mnt_406" nombre="Cerdo nabo" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1200"/>
+  <montura id="mnt_407" nombre="Cerdo turquesa" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1200"/>
+  <montura id="mnt_416" nombre="Gato buhonero" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1000"/>
+  <montura id="mnt_445" nombre="Cabra montesa" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="500"/>
+  <montura id="mnt_448" nombre="Ciervo rosa" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1300"/>
+  <montura id="mnt_449" nombre="Oveja dorada" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1350"/>
+  <montura id="mnt_450" nombre="Oveja florida" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +30%." precio="500"/>
+  <montura id="mnt_451" nombre="Lobo de espinas" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +30%." precio="500"/>
+  <montura id="mnt_452" nombre="Bestia de lava" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1300"/>
+  <montura id="mnt_472" nombre="Pollito blanco" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1400"/>
+  <montura id="mnt_473" nombre="Pollito mago" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1450"/>
+  <montura id="mnt_474" nombre="Yeti" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +30%." precio="500"/>
+  <montura id="mnt_475" nombre="Yeti nevado" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +30%." precio="500"/>
+  <montura id="mnt_476" nombre="Cachorro refrescante" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1400"/>
+  <montura id="mnt_477" nombre="Perro aviador" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1450"/>
+  <montura id="mnt_494" nombre="Gato de ensueño" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +52%." precio="1000"/>
+  <montura id="mnt_495" nombre="Gata hechicera" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +52%." precio="1000"/>
+  <montura id="mnt_496" nombre="Orbe rojo" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +52%." precio="1000"/>
+  <montura id="mnt_497" nombre="Orbe violeta" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1000"/>
+  <montura id="mnt_498" nombre="Jabalí del nido" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1000"/>
+  <montura id="mnt_499" nombre="Jabalí del nido violeta" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="900"/>
+  <montura id="mnt_571" nombre="Mecha azul" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1500"/>
+  <montura id="mnt_572" nombre="Mecha cañón" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1550"/>
+  <montura id="mnt_573" nombre="Espíritu de hielo" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +38%." precio="500"/>
+  <montura id="mnt_574" nombre="Pingüino rey" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1050"/>
+  <montura id="mnt_584" nombre="Gato morado" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1000"/>
+  <montura id="mnt_619" nombre="Cangrejo ermitaño" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1500"/>
+  <montura id="mnt_620" nombre="Cangrejo turquesa" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1500"/>
+  <montura id="mnt_621" nombre="Burro azul" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1200"/>
+  <montura id="mnt_622" nombre="Burro sheriff" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1750"/>
+  <montura id="mnt_649" nombre="Conejo orejudo" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="900"/>
+  <montura id="mnt_650" nombre="Conejo explorador" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="850"/>
+  <montura id="mnt_651" nombre="Búfalo azul" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1000"/>
+  <montura id="mnt_652" nombre="Búfalo de hielo" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +56%." precio="1000"/>
+  <montura id="mnt_734" nombre="Tortuga turquesa" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +54%." precio="1800"/>
 </mall>

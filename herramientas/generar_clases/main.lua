@@ -42,23 +42,6 @@ function love.load()
 
   local ok, Iconos = pcall(require, "iconos")
   if ok then Iconos.generar(RAIZ, guardar) end
-  -- alas de las monturas voladoras (3 cuadros de 64 x 64 en fila)
-  local Alas = require("alas")
-  local previaAlas = love.graphics.newCanvas(192 * 4 + 40, 64 * 4 * 2 + 30)
-  love.graphics.setCanvas(previaAlas)
-  love.graphics.clear(0.4, 0.6, 0.85, 1)
-  for k, nombre in ipairs({ "pegaso", "fenix" }) do
-    local datos = Alas[nombre]()
-    guardar(datos, carpeta .. "Alas_" .. nombre .. ".png")
-    local img = love.graphics.newImage(datos)
-    img:setFilter("nearest", "nearest")
-    love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.draw(img, 20, 10 + (k - 1) * 280, 0, 4, 4)
-  end
-  love.graphics.setCanvas()
-  local fa = io.open(os.getenv("TEMP") .. "/alas_previa.png", "wb")
-  fa:write(previaAlas:newImageData():encode("png"):getString())
-  fa:close()
   require("hud").generar(RAIZ, guardar)
   love.event.quit()
 end

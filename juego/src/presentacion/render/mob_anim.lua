@@ -11,11 +11,18 @@ local VELOCIDAD = { wait = 10, run = 26, att = 28, hurt = 22, dead = 18 }   -- c
 local PASOS = { wait = 2.6, run = 7.5, dead = 4.5 }                          -- pasos por segundo (criaturas con direcciones)
 
 M.DEFS = require("src.presentacion.render.mob_anim_datos")
+-- PNJ de FAO (herramientas/generar_mobs/npcs.py): mismo formato, con 3 pasos de espera y 6 de carrera
+for k, d in pairs(require("src.presentacion.render.npc_anim_datos")) do M.DEFS[k] = d end
+-- monturas de FAO (herramientas/generar_mobs/monturas.py)
+for k, d in pairs(require("src.presentacion.render.montura_anim_datos")) do M.DEFS[k] = d end
 for _, d in pairs(M.DEFS) do d.mira = d.mira or "izq" end
+-- asiento del jinete de cada montura de FAO por cuadro (herramientas/generar_mobs/monturas.py)
+local ASIENTO = require("src.presentacion.render.montura_asiento_datos")
+local ultimoPaso = {}       -- nombre -> { estado, paso } del último cuadro dibujado (para colocar al jinete)
 
 local cache = {}
 
-local function tira(carpeta, tipo, dirs2)
+local function tira(carpeta, tipo, dirs2, dirs5)
   local k = carpeta .. "/" .. tipo
   local t = cache[k]
   if t == nil then
@@ -24,7 +31,7 @@ local function tira(carpeta, tipo, dirs2)
       local img = love.graphics.newImage(ruta, { mipmaps = true })
       img:setFilter("linear", "linear")
       img:setMipmapFilter("linear", 0)
-      local n = dirs2 and (CUADROS[tipo] * 2 / 5) or CUADROS[tipo]
+      local n = dirs2 and (CUADROS[tipo] * 2 / 5) or CUADROS[tipo]       -- (con dirs5 la tira trae los cuadros de las cinco direcciones: paso * 5 + hoja)
       t = { img = img, n = n, w = img:getWidth() / n, h = img:getHeight(), quads = {} }
     else
       t = false
@@ -47,6 +54,10 @@ function M.existe(nombre) return M.DEFS[nombre] ~= nil end
 
 -- Hoja (0 espalda-izquierda, 1 frente-izquierda) y si se voltea, según la dirección del mundo de la criatura (1 y+, 2 y-, 3 x+, 4 x-): en la
 -- vista isométrica y+ baja a la izquierda, y- sube a la derecha, x+ baja a la derecha y x- sube a la izquierda.
+-- Con las cinco direcciones (dirs5) las hojas son las de los personajes por capas: 0 frente, 1 espalda, 2 espalda-izquierda, 3 izquierda,
+-- 4 frente-izquierda (las de la derecha, volteadas). Sin saber hacia dónde camina, se usa la dirección del mundo de la criatura (diagonales).
+local HOJA_MUNDO = { [1] = { 4, false }, [2] = { 2, true }, [3] = { 4, true }, [4] = { 2, false } }
+
 local function hojaDe(dir)
   if dir == 1 then return 1, false end        -- hacia abajo-izquierda: frente-izquierda
   if dir == 2 then return 0, true end         -- hacia arriba-derecha: espalda-izquierda volteada
@@ -78,13 +89,24 @@ local function aura(d, sx, pies, alfa)
 end
 
 -- Dibuja un cuadro de la tira. i es el cuadro (o el paso en las criaturas con direcciones); u (0..1) elige por progreso si no se da i.
-local function dibujar(nombre, tipo, i, u, sx, pies, dir, alfa, tinte)
+local function dibujar(nombre, tipo, i, u, sx, pies, dir, alfa, tinte, hoja5, flip5)
   local d = M.DEFS[nombre]
   if not d then return 32 end
-  local t = tira(d.carpeta, tipo, d.dirs2)
+  local t = tira(d.carpeta, tipo, d.dirs2, d.dirs5)
+  if not t and tipo ~= "wait" and (d.dirs5 or d.dirs2) then      -- (sin la animación pedida -- ataque, daño -- se queda en la pose de espera)
+    t, i = tira(d.carpeta, "wait", d.dirs2, d.dirs5), 0
+  end
   if not t then return d.alto end
   local voltear
-  if d.dirs2 then
+  if d.dirs5 then
+    local pasos = math.floor(t.n / 5)
+    if not i then i = math.floor((u or 0) * pasos) end
+    i = math.max(0, math.min(pasos - 1, i))
+    local hoja, flip = hoja5, flip5
+    if not hoja then hoja, flip = HOJA_MUNDO[dir or 1][1], HOJA_MUNDO[dir or 1][2] end
+    voltear = flip
+    i = i * 5 + hoja
+  elseif d.dirs2 then
     local pasos = math.floor(t.n / 2)
     if not i then i = math.floor((u or 0) * pasos) end
     i = math.max(0, math.min(pasos - 1, i))
@@ -108,19 +130,54 @@ end
 
 -- Criatura viva. estado: "wait" | "run" | "att" | "hurt"; u: progreso 0..1 para ataque y daño; dir: dirección del mundo (1..4); semilla:
 -- desfase para que las del mismo tipo no se muevan a la vez. Devuelve su altura para la placa.
-function M.dibujar(nombre, estado, u, sx, pies, dir, tinte, semilla)
+function M.dibujar(nombre, estado, u, sx, pies, dir, tinte, semilla, sujeto)
   local d = M.DEFS[nombre]
   local i
   if d and (estado == "wait" or estado == "run") then
-    local t = tira(d.carpeta, estado, d.dirs2)
+    local t = tira(d.carpeta, estado, d.dirs2, d.dirs5)
     local desfase = (semilla or 0) * 3.7
-    if d.dirs2 then
+    if d.dirs5 then
+      i = math.floor(love.timer.getTime() * PASOS[estado] + desfase) % math.max(1, math.floor((t and t.n or 5) / 5))
+    elseif d.dirs2 then
       i = math.floor(love.timer.getTime() * PASOS[estado] + desfase) % math.max(1, math.floor((t and t.n or 2) / 2))
     else
       i = math.floor(love.timer.getTime() * VELOCIDAD[estado] + desfase) % (t and t.n or 1)
     end
   end
-  return dibujar(nombre, estado, i, u, sx, pies, dir, 1, tinte)
+  -- hacia dónde mira: con el sujeto (la entidad) se usa su dirección de movimiento, con histéresis (la misma de los personajes por capas), en
+  -- ocho direcciones; sin él, la dirección del mundo
+  local hoja5, flip5
+  if d and d.dirs5 and sujeto then
+    local Fao = require("src.presentacion.render.fao")
+    hoja5, flip5 = Fao.hojaDeOctante(Fao.direccion(sujeto, nil))
+  end
+  if d and (d.dirs2 or d.dirs5) and (estado == "wait" or estado == "run") then
+    ultimoPaso[nombre] = { estado = estado, paso = i, hoja = hoja5, flip = flip5 }
+  end
+  return dibujar(nombre, estado, i, u, sx, pies, dir, 1, tinte, hoja5, flip5)
+end
+
+-- Dónde cae el asiento del jinete de una montura de FAO (el origen de las hojas del personaje montado), tal como se dibujó en su último cuadro:
+-- devuelve dx, dy (píxeles de pantalla respecto a los pies con que se dibujó la montura), el paso de la animación, la hoja de dirección
+-- (en las monturas de cinco direcciones, la de los personajes por capas: 0 frente ... 4 frente-izquierda; si no, 0 espalda-izquierda y 1 frente-izquierda) y si va volteada. Hay que llamarla justo después de M.dibujar, para que jinete y montura compartan cuadro.
+function M.asiento(nombre, dir)
+  local d, u = M.DEFS[nombre], ultimoPaso[nombre]
+  local datos = ASIENTO[nombre]
+  if not (d and u and datos and datos[u.estado]) then return nil end
+  local hoja, flip
+  local k
+  if d.dirs5 then
+    hoja, flip = u.hoja, u.flip
+    if not hoja then hoja, flip = HOJA_MUNDO[dir or 1][1], HOJA_MUNDO[dir or 1][2] end
+    k = (u.paso * 5 + hoja) * 2
+  else
+    hoja, flip = hojaDe(dir or 1)
+    k = (u.paso * 2 + hoja) * 2
+  end
+  local dx, dy = datos[u.estado][k + 1], datos[u.estado][k + 2]
+  if not dx then return nil end
+  local e = d.escala
+  return (flip and -dx or dx) * e, 2 + dy * e, u.paso, u.estado, hoja, flip
 end
 
 -- Cadáver: la animación de muerte y, al terminar, el último cuadro que se va apagando. transcurrido: segundos desde que murió.

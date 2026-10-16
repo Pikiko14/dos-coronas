@@ -361,6 +361,7 @@ function Mundo:spawnMonstruo(idMon, x, y, hogar, nivel)
     respawn = 0,
     golpe = def.golpe, poderes = def.poderes, bandido = def.bandido,
     categoria = def.categoria, xpMul = def.xpMul,
+    medidor = def.jefeMundo and true or nil,   -- los jefes del mundo cuentan el daño de cada jugador (el botín es de quien más hace)
   }
   -- que no lancen todos sus poderes a la vez al aparecer
   for _, id in ipairs(def.poderes or {}) do
@@ -378,7 +379,7 @@ function Mundo:poblar()
         id = self:idNuevo(), kind = n.rol == "guardia" and "guardia" or "npc",
         nombre = n.nombre, rol = n.rol, faccion = n.faccion, qid = n.rol == "encargos" and ("c_" .. c.id) or nil,
         x = n.x, y = n.y, modo = "mundo", dir = 1, vivo = true,
-        clase = ({ mercado = "clerigo", armero = "guerrero", heraldo = "clerigo", mayordomo = "guerrero", encargos = "cazador", guardia = "guerrero", encantador = "mago", criador = "cazador", gremio = "guerrero", oficios = "guerrero", comercio = "guerrero", establo = "cazador", subastas = "mago" })[n.rol] or "guerrero",
+        clase = ({ mercado = "clerigo", maestro_guerrero = "guerrero", maestro_lancero = "lancero", maestro_cazador = "cazador", maestro_mago = "mago", maestro_clerigo = "clerigo", maestro_nigromante = "nigromante", heraldo = "clerigo", mayordomo = "guerrero", encargos = "cazador", guardia = "guerrero", encantador = "mago", criador = "cazador", gremio = "guerrero", oficios = "guerrero", comercio = "guerrero", establo = "cazador", subastas = "mago" })[n.rol] or "guerrero",
         nivel = 12, hp = 400, hpMax = 400, atk = 28, def = 14, matk = 8, mdef = 7, spd = 3.2, rango = 1.4,
         cds = {},
         equipo = { arma = "guerrero_arma_2", pecho = "guerrero_pecho_2", cabeza = "guerrero_cabeza_2" },
@@ -929,6 +930,18 @@ function Mundo:danar(objetivo, cantidad, origen, critico, color)
       return
     end
   end
+  if objetivo.medidor and origen then
+    -- medidor de daño: cuenta lo que hace cada jugador (también sus esbirros y mascotas, que llegan aquí con su dueño como origen)
+    local autor = origen
+    if autor.dueno and self.entidades[autor.dueno] then autor = self.entidades[autor.dueno] end
+    if autor.kind == "jugador" then
+      objetivo.danos = objetivo.danos or {}
+      objetivo.danoNombres = objetivo.danoNombres or {}
+      objetivo.danos[autor.id] = (objetivo.danos[autor.id] or 0) + math.min(cantidad, math.max(0, objetivo.hp))
+      objetivo.danoNombres[autor.id] = autor.nombre
+      autor.jefeAtacado, autor.jefeAtacadoT = objetivo.id, self.tiempo
+    end
+  end
   objetivo.hp = objetivo.hp - cantidad
   objetivo.ultimoGolpe = self.tiempo
   objetivo.flashHasta = self.tiempo + 0.12   -- destello rojo de daño: dura un instante y se apaga solo
@@ -1000,6 +1013,70 @@ function Mundo:dejarEnSuelo(pieza, x, y, modo, z)
   return pieza
 end
 
+-- Ranking de daño de un jefe: lista { id, nombre, dano, pct } de mayor a menor.
+function Mundo:rankingDano(e)
+  local lista, total = {}, 0
+  for id, d in pairs(e.danos or {}) do
+    lista[#lista + 1] = { id = id, nombre = e.danoNombres and e.danoNombres[id] or "?", dano = d }
+    total = total + d
+  end
+  table.sort(lista, function(a, b) if a.dano ~= b.dano then return a.dano > b.dano end return a.id < b.id end)
+  for _, f in ipairs(lista) do f.pct = total > 0 and (f.dano / total) or 0 end
+  return lista, total
+end
+
+Mundo.DANO_MINIMO_JEFE = 0.02    -- quien hace menos de este % del daño total no recibe experiencia ni oro
+
+-- Cae un jefe con medidor de daño: la experiencia y el oro se reparten en proporción al daño, y el BOTÍN es de quien hizo más (y de su grupo).
+function Mundo:repartirJefe(e)
+  local ranking = self:rankingDano(e)
+  if #ranking == 0 then return end
+  local oroTotal = math.floor((e.oro or 5) * 0.3)
+  local ganador
+  for _, f in ipairs(ranking) do
+    local p = self.entidades[f.id]
+    if p and (p.kind == "jugador") and not p.borrar then
+      ganador = ganador or p
+      if f.pct >= Mundo.DANO_MINIMO_JEFE then
+        local exp = Balance.xpMonstruo(p.nivel or 1, e.nivel or 1, e.elite) * (e.xpMul or 1) * f.pct * (1 + 0.1 * (math.min(#ranking, 5) - 1))   -- el grupo da un pequeño extra sobre el total
+        exp = math.floor(exp * self:bonoGremio(p) + 0.5)
+        if exp > 0 then self:ganarXp(p, exp) self:mascotaGanaXp(p, exp) end
+        p.oro = (p.oro or 0) + math.floor(oroTotal * f.pct)
+      end
+      p.caceria = p.caceria or {}
+      p.caceria[e.monstruo] = (p.caceria[e.monstruo] or 0) + 1
+      self:avanzarMisiones(p, e.monstruo)
+    end
+  end
+  e.ganadorBotin = ganador and ganador.id or nil
+  if ganador then self:soltarBotin(e, ganador) end
+  -- aviso al servidor: quién ganó el jefe y los tres que más daño hicieron
+  local partes = {}
+  for i = 1, math.min(3, #ranking) do partes[#partes + 1] = string.format("%s %d%%", ranking[i].nombre, math.floor(ranking[i].pct * 100 + 0.5)) end
+  self:avisoEvento("mundo", "", "¡" .. e.nombre .. " ha caído! Más daño: " .. table.concat(partes, ", ") .. ".", nil)
+end
+
+-- Datos del medidor de daño que ve el jugador p: el jefe que tiene como objetivo o el último que atacó (unos segundos), con su ranking.
+function Mundo:medidorDe(p)
+  local e = p.objetivo and self.entidades[p.objetivo]
+  if not (e and e.medidor and e.danos and e.vivo) then
+    e = p.jefeAtacado and self.entidades[p.jefeAtacado]
+    if not (e and e.medidor and e.danos and e.vivo and (self.tiempo - (p.jefeAtacadoT or -99)) < 20) then return nil end
+  end
+  local ranking = self:rankingDano(e)
+  local filas, yoDentro = {}, false
+  for i, f in ipairs(ranking) do
+    if i <= 6 then
+      filas[#filas + 1] = { f.nombre, f.dano, math.floor(f.pct * 100 + 0.5), f.id == p.id and 1 or 0 }
+      if f.id == p.id then yoDentro = true end
+    elseif f.id == p.id then
+      filas[#filas + 1] = { f.nombre, f.dano, math.floor(f.pct * 100 + 0.5), 1, i }
+      yoDentro = true
+    end
+  end
+  return { n = e.nombre, hp = e.hp, hpMax = e.hpMax, f = filas }
+end
+
 function Mundo:soltarBotin(m, asesino)
   if not asesino or asesino.kind == "bot" then
     if asesino and asesino.kind == "bot" then asesino.oro = (asesino.oro or 0) + m.oro end
@@ -1068,7 +1145,9 @@ function Mundo:morir(e, origen)
   end
   if e.kind == "monstruo" then
     self:sonar("muerte_" .. Voces.de(e.monstruo), e)
-    if origen and origen.kind == "jugador" and origen.grupoId and self:recompensaGrupo(e, origen) then
+    if e.medidor and e.danos and next(e.danos) then
+      self:repartirJefe(e)
+    elseif origen and origen.kind == "jugador" and origen.grupoId and self:recompensaGrupo(e, origen) then
       -- recompensa repartida entre el grupo
     elseif origen and (origen.kind == "jugador" or origen.kind == "bot") then
       local exp = Balance.xpMonstruo(origen.nivel or 1, e.nivel or 1, e.elite) * (e.xpMul or 1)
@@ -1084,18 +1163,15 @@ function Mundo:morir(e, origen)
       if origen.kind == "jugador" then self:soltarBotin(e, origen) end
     end
     e.respawn = self.tiempo + (e.elite and Datos.RESPAWN_ELITE or Datos.RESPAWN_MONSTRUO)
+    -- los jefes del mundo vuelven 20 minutos después de caer (RESPAWN_JEFE_MUNDO)
+    local defRes = Datos.monstruo(e.monstruo)
+    if defRes and defRes.jefeMundo then e.respawn = self.tiempo + (Datos.RESPAWN_JEFE_MUNDO or 1200) end
     -- en las mazmorras las criaturas no reaparecen una a una: todas vuelven cuando reaparece el jefe
     if e.mz and not e.jefeMz then e.respawn = 1e12 end
     if e.efimero then e.borrar = true end
     if e.jefeMz then self:jefeMazmorraCae(e, origen) end
     if e.elite and not e.jefeMz then
       self:mensaje("sistema", "", e.nombre .. " ha caído.", origen)
-    end
-    -- los jefes del mundo (uno por zona) son noticia: lo oye todo el servidor
-    local defJefe = Datos.monstruo(e.monstruo)
-    if defJefe and defJefe.jefeMundo then
-      local quien = origen and (origen.kind == "jugador" or origen.kind == "bot") and origen.nombre or "alguien"
-      self:avisoEvento("mundo", "", "¡" .. e.nombre .. " ha sido derrotado por " .. quien .. "!", nil)
     end
   elseif e.kind == "jugador" or e.kind == "bot" then
     self:sonar("muerte_jugador", e)
@@ -1222,6 +1298,7 @@ function Mundo:revivir(e)
   e.tramo = nil
   e.objetivo = nil
   if e.kind == "monstruo" then
+    e.danos, e.danoNombres = nil, nil
     e.x, e.y = e.hogarx, e.hogary
     e.hp = e.hpMax
     if e.jefeMz then self:reiniciarMazmorra(e.mz) end
@@ -2487,13 +2564,27 @@ function Mundo:configurarAutopocion(p, datos)
   self:marcarProgreso(p)
 end
 
+-- Quién vende cada cosa: la enfermera, las pociones; cada maestro, el equipo de su clase (y lo que no es de ninguna clase, todos).
 function Mundo:puestoDe(it)
-  if it.hueco == "arma" then return "armero" end
-  if it.hueco == "cabeza" or it.hueco == "pecho" or it.hueco == "piernas" or it.hueco == "pies"
+  if it.hueco == "arma" or it.hueco == "cabeza" or it.hueco == "pecho" or it.hueco == "piernas" or it.hueco == "pies"
     or it.hueco == "escudo" or it.hueco == "anillo" or it.hueco == "amuleto" or it.hueco == "mochila" then
-    return "armero"
+    return it.clase and ("maestro_" .. it.clase) or "maestro"
   end
   if (it.cura or it.mana or it.teletransporte) and not it.hueco then return "mercado" end
+end
+
+-- ¿El maestro más cercano (a la vista) es de esa clase, o de cualquiera si no se da clase? Los maestros están en fila y varios caen a la
+-- vista a la vez: se compra al que tienes al lado.
+function Mundo:maestroCerca(p, clase)
+  local mejor, md = nil, 4
+  for _, e in pairs(self.entidades) do
+    if e.kind == "npc" and e.rol and e.rol:sub(1, 8) == "maestro_" and self:mismoLugar(p, e) then
+      local d = Util.dist(p.x, p.y, e.x, e.y)
+      if d <= md then mejor, md = e, d end
+    end
+  end
+  if not mejor then return false end
+  return clase == nil or mejor.rol == "maestro_" .. clase
 end
 
 function Mundo:comprar(p, itemId)
@@ -2502,8 +2593,11 @@ function Mundo:comprar(p, itemId)
   if not it or it.quest or it.mall then return "No está a la venta." end
   if (it.cura or it.mana) and it.nivel and (p.nivel or 1) < it.nivel then return "Necesitas nivel " .. it.nivel .. "." end
   local puesto = self:puestoDe(it)
-  if puesto == "mercado" and not self:npcCerca(p, "mercado") then return "Las pociones se compran a la clériga." end
-  if puesto == "armero" and not self:npcCerca(p, "armero") then return "Eso se compra al armero." end
+  if puesto == "mercado" and not self:npcCerca(p, "mercado") then return "Las pociones se compran a la enfermera." end
+  if puesto == "maestro" and not self:maestroCerca(p) then return "Eso se compra a un maestro." end
+  if puesto and puesto:sub(1, 8) == "maestro_" and not self:maestroCerca(p, it.clase) then
+    return "Eso lo vende el maestro de su clase."
+  end
   if p.oro < it.precio then return "Oro insuficiente." end
   if not self:darItem(p, itemId, 1) then return "Bolsa llena." end
   p.oro = p.oro - it.precio
@@ -2966,7 +3060,7 @@ function Mundo:interactuar(p)
   end
   if mejor then
     if mejor.rol == "mercado" then return { panel = "mercado", tienda = "mercado" } end
-    if mejor.rol == "armero" then return { panel = "mercado", tienda = "armero" } end
+    if mejor.rol:sub(1, 8) == "maestro_" then return { panel = "mercado", tienda = mejor.rol } end
     if mejor.rol == "heraldo" then return { panel = "guerra" } end
     if mejor.rol == "barquero" then return { panel = "viaje" } end
     if mejor.rol == "encantador" then return { panel = "encantar" } end
@@ -3498,6 +3592,7 @@ function Mundo:construirTu(p)
     tu.grupo = self:resumenGrupo(p)
     tu.mall = self:resumenMall(p)
     tu.cdPociones = p.cdPociones
+    tu.medidor = self:medidorDe(p)
     tu.autoPocion = p.autoPocion and true or false
     tu.autoPocionUmbral = p.autoPocionUmbral or Mundo.AUTOPOCION_UMBRAL
     tu.autoMana = p.autoMana and true or false
