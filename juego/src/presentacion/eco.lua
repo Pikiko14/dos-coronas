@@ -80,7 +80,27 @@ function Eco.lanzar(app, datos)
     app._ecoGcd = t0 + 0.35
     local ex = objetivo and objetivo.x or p.x
     local ey = objetivo and objetivo.y or p.y
-    if h.proyectil and objetivo then
+    if Mundo.PODERES_FAO[idh] then
+      -- poder con efecto de capas de FAO: un solo efecto (el vuelo del proyectil va dentro de él); mismas posiciones que pone el servidor
+      local X, Y, rot = ex, ey, (objetivo and objetivo ~= p) and math.atan2(ey - p.y, ex - p.x) or nil
+      if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" or h.tipo == "invocar" then
+        X, Y, rot = p.x, p.y, Mundo.ANGULO_DIR[p.dir or 1]
+      elseif h.tipo == "punto" then
+        rot = nil
+        local px, py = datos.x or (objetivo and objetivo.x), datos.y or (objetivo and objetivo.y)
+        if not px then
+          local d = math.min(h.rango or 5, 4)
+          local mx = ({ [1] = 0, [2] = 0, [3] = 1, [4] = -1 })[p.dir or 1] or 0
+          local my = ({ [1] = 1, [2] = -1, [3] = 0, [4] = 0 })[p.dir or 1] or 0
+          px, py = p.x + mx * d, p.y + my * d
+        end
+        local d = dist(p.x, p.y, px, py)
+        local alcance = (h.rango or 6) + 0.3
+        if d > alcance then px, py = p.x + (px - p.x) * alcance / d, p.y + (py - p.y) * alcance / d end
+        X, Y = px, py
+      end
+      nuevoEfecto(app, idh, X, Y, Mundo.DURACION_EFECTO[idh], rot, 2.5, p.x, p.y)
+    elseif h.proyectil and objetivo then
       local e = estado(app)
       e.n = e.n + 1
       local pr = {

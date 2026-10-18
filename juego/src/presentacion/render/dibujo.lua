@@ -463,7 +463,7 @@ function D.escena(mundo, jugador, cam, mx, my)
     end
   end
   for _, e in pairs(mundo.entidades) do
-    if e.kind == "proyectil" and mundo:mismoLugar(jugador, e) then
+    if e.kind == "proyectil" and not e.oculto and mundo:mismoLugar(jugador, e) then
       local ppx, ppy = Iso.pos(e.x, e.y)
       D.proyectil(e, ppx - cam.x, ppy - cam.y)
     end

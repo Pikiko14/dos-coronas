@@ -25,6 +25,7 @@ local Misiones = require("compartido.dominio.misiones")
 local Voces = require("compartido.dominio.voces")
 local Mazmorras = require("compartido.dominio.mazmorras")
 local MapasFao = require("compartido.dominio.mapas_fao")
+local PoderesFao = require("compartido.datos.efectos_fao_poderes")       -- efectos de capas de FAO de los poderes (duración, capas): el servidor solo usa la duración
 local Viaje = require("compartido.dominio.viaje")
 
 local Mundo = {}
@@ -150,6 +151,8 @@ Mundo.ANGULO_DIR = { [1] = math.pi / 2, [2] = -math.pi / 2, [3] = 0, [4] = math.
 -- (estocada, embestida): el cliente gira la animación para que vaya de quien ataca hacia su objetivo.
 -- Duración (s) de los efectos que se alargan más que un golpe: la pantera corre hasta el enemigo y estalla; la ventisca de la nova cae en varias oleadas.
 Mundo.DURACION_EFECTO = { pantera = 0.95, nova = 1.4, tajo = 1.0, golpe = 0.85 }
+Mundo.PODERES_FAO = PoderesFao
+for id, p in pairs(PoderesFao) do Mundo.DURACION_EFECTO[id] = p.dur end
 
 -- (x0, y0): de dónde sale, para los efectos que viajan (la pantera).
 function Mundo:efecto(tipo, x, y, dur, rot, x0, y0)
@@ -1523,7 +1526,15 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
   self:sonar(Mundo.SONIDO_PODER[idh] or "magia", p)
   local ex = objetivo and objetivo.x or p.x
   local ey = objetivo and objetivo.y or p.y
-  if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" or h.tipo == "invocar" then
+  if PoderesFao[idh] then
+    -- poder con efecto de capas de FAO: un solo efecto con toda la animación (el proyectil del servidor viaja sin dibujarse); x, y = objetivo o punto; x0, y0 = lanzador
+    local X, Y, rot = ex, ey, (objetivo and objetivo ~= p) and math.atan2(ey - p.y, ex - p.x) or nil
+    if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" or h.tipo == "invocar" then
+      X, Y, rot = p.x, p.y, Mundo.ANGULO_DIR[p.dir or 1]       -- (los de alrededor se abren hacia donde mira el personaje)
+    elseif h.tipo == "punto" then X, Y, rot = p.impactoX or tx or ex, p.impactoY or ty or ey, nil end
+    self:efecto(idh, X, Y, Mundo.DURACION_EFECTO[idh], rot, p.x, p.y)
+    p.impactoX, p.impactoY = nil, nil
+  elseif h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" or h.tipo == "invocar" then
     -- los de alrededor (el barrido) se abren hacia donde mira el personaje
     self:efecto(idh, p.x, p.y, Mundo.DURACION_EFECTO[idh] or 0.5, Mundo.ANGULO_DIR[p.dir or 1])
   elseif h.tipo == "punto" then
@@ -1586,7 +1597,7 @@ function Mundo:proyectil(origen, objetivo, h)
     x = origen.x, y = origen.y, modo = origen.modo, casaId = origen.casaId,
     objetivo = objetivo.id, tx = objetivo.x, ty = objetivo.y,
     dueno = origen.id, coef = h.coef or 1, aoe = h.aoe, tipo = h.proyectil, dano = h.dano, estado = h.estado,
-    vivo = true, vida = 1.4,
+    vivo = true, vida = 1.4, oculto = (h.id and PoderesFao[h.id]) and true or nil,   -- (oculto: el efecto de FAO del poder ya dibuja el vuelo y el impacto)
   }
 end
 
@@ -1994,7 +2005,7 @@ function Mundo:actualizarProyectil(p, dt)
       end
     end
     p.borrar = true
-    self:efecto(p.tipo or "misil", p.x, p.y, 0.32)
+    if not p.oculto then self:efecto(p.tipo or "misil", p.x, p.y, 0.32) end
     return
   end
   local nx, ny = p.x + dx / d * 11 * dt, p.y + dy / d * 11 * dt
@@ -2003,7 +2014,7 @@ function Mundo:actualizarProyectil(p, dt)
   if (p.z or 0) == 0 and mapaP and mapaP.bloque and Mundo.casillaOpaca(mapaP, nx, ny, duenoP and duenoP.faccion)
     and not (obj and math.floor(nx) == math.floor(obj.x) and math.floor(ny) == math.floor(obj.y)) then
     p.borrar = true
-    self:efecto(p.tipo or "misil", p.x, p.y, 0.32)
+    if not p.oculto then self:efecto(p.tipo or "misil", p.x, p.y, 0.32) end
     return
   end
   p.x, p.y = nx, ny
@@ -2384,14 +2395,14 @@ function Mundo:usarPergamino(p, index)
   end
   c = c or self:ciudadPropiaCerca(p, p.x, p.y)
   if not c or not c.spawn then return "No hay adónde ir." end
-  self:efecto("consagrar", p.x, p.y, 0.7)
+  self:efecto("nivel", p.x, p.y, 0.7)
   self:sonar("cura", p)
   p.x, p.y = c.spawn.x, c.spawn.y
   p.camino, p.tramo, p.objetivo, p.persigue = nil, nil, nil, nil
   p.cds.pergamino = self.tiempo + 30
   slot.cant = (slot.cant or 1) - 1
   if slot.cant <= 0 then table.remove(p.bolsa, index) end
-  self:efecto("consagrar", p.x, p.y, 0.7)
+  self:efecto("nivel", p.x, p.y, 0.7)
   self:sonar("cura", p)
   self:marcarProgreso(p)
   self:mensaje("sistema", "", "El pergamino se deshace y apareces en " .. c.nombre .. ".", p)
@@ -3502,7 +3513,7 @@ local function r0(v) return v and math.floor(v + 0.5) or nil end
 
 function Mundo:compactar(e)
   return {
-    id = e.id, kind = e.kind, nombre = e.nombre, faccion = e.faccion, clase = e.clase, gen = e.genero,
+    id = e.id, kind = e.kind, nombre = e.nombre, oculto = e.oculto, faccion = e.faccion, clase = e.clase, gen = e.genero,
     monstruo = e.monstruo, x = r2(e.x), y = r2(e.y), z = e.z or 0, dir = e.dir or 1, vivo = e.vivo ~= false,
     modo = e.modo, hp = r0(e.hp), hpMax = r0(e.hpMax), mp = r0(e.mp), mpMax = r0(e.mpMax),
     nivel = e.nivel, hoja = e.hoja, base = e.base, cuadros = e.cuadros,

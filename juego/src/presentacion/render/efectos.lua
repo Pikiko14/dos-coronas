@@ -2,6 +2,7 @@
 -- con celdas de 192x192; los cuadros se reproducen en orden de lectura.
 local Arte = require("src.presentacion.render.arte")
 local EfectosFao = require("src.presentacion.render.efectos_fao")
+local EfectosCapas = require("src.presentacion.render.efectos_fao_capas")
 
 local E = {}
 
@@ -89,6 +90,11 @@ E.def = {
   necro_invocar = { "Necro_invocar", 0.85, 6 },
 }
 
+-- Poderes con efecto compuesto de capas de FAO (compartido/datos/efectos_fao_poderes.lua): sustituyen a los efectos de arriba del mismo nombre.
+for id in pairs(EfectosCapas.poderes) do
+  E.def[id] = { "", 1, 0, fao = true, capas = true, suelo = EfectosCapas.tieneSuelo(id) or nil }
+end
+
 local hojas = {}
 
 local function celdaVacia(datos, cx, cy)
@@ -127,6 +133,10 @@ end
 -- rot: ángulo hacia donde debe apuntar (si el efecto tiene dirección: d.base es hacia dónde apunta el dibujo original).
 function E.cuadro(tipo, t, dur, sx, sy, escalaExtra, alfa, rot, fx)
   local d = E.def[tipo] or E.def.misil
+  if d.capas then
+    EfectosCapas.dibujar(tipo, fx or { x = 0, y = 0 }, t, sx, sy - 6, "cuerpo")
+    return
+  end
   if d.fao then
     -- compuesto de varias capas con sprites de FAO: necesita el efecto (de dónde sale y adónde va); sin él (vista previa) se dibuja en el sitio
     EfectosFao.dibujar[tipo](fx or { x = 0, y = 0, x0 = -1, y0 = 0 }, t, sx, sy - 6)
@@ -152,11 +162,13 @@ end
 function E.suelo(tipo, fx, sx, sy)
   local f = EfectosFao.suelo[tipo]
   if f then f(fx, fx.t, sx, sy - 6) end
+  if E.def[tipo] and E.def[tipo].capas then EfectosCapas.dibujar(tipo, fx, fx.t, sx, sy - 6, "suelo") end
 end
 
 function E.icono(tipo, x, y, lado)
   local d = E.def[tipo]
   if not d then return end
+  if d.capas then return EfectosCapas.icono(tipo, x, y, lado) end
   if d.fao then return EfectosFao.icono(tipo, x, y, lado) end
   local h = hoja(d[1])
   local n = #h.cuadros

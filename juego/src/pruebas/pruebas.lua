@@ -2426,6 +2426,82 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     if vista then Log.volcar("capturas/portal_fao_mapa.png", pan:newImageData():encode("png"):getString()) end
     Interfaz.panel = nil
   end)
+  -- Efectos de capas de FAO de los poderes de guerrero, lancero, cazador, clérigo y nigromante: cada poder se lanza por el servidor y se dibuja en una escena real en cuatro instantes. Con
+  -- DC_PRUEBA_PODERES_FAO=1 guarda juego/capturas/poderes_fao_<clase>.png (una fila por poder).
+  paso("efectos de FAO de las demás clases: los 27 poderes se lanzan y se dibujan", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local Mapa = require("compartido.dominio.mapa")
+    local Efectos = require("src.presentacion.render.efectos")
+    local Poderes = require("compartido.datos.efectos_fao_poderes")
+    local vista = os.getenv("DC_PRUEBA_PODERES_FAO") ~= nil
+    local CW, CH = 520, 300
+    local cv = love.graphics.newCanvas(1280, 720)
+    local total = 0
+    for _, clase in ipairs({ "guerrero", "lancero", "cazador", "clerigo", "nigromante" }) do
+      local mosaico = vista and love.graphics.newCanvas(CW * 4, CH * 6) or nil
+      for fila, id in ipairs(Datos.barra[clase]) do
+        if Poderes[id] then
+          total = total + 1
+          local mundo = Mundo.nuevo()
+          local pj = mundo:crearPersonaje({ nombre = "Lanzador", faccion = "albor", clase = clase, nivel = 30 })
+          local c = mundo.mapas.mundo.ciudades[1]
+          pj.x, pj.y = c.spawn.x, c.spawn.y
+          local mapa0 = mundo.mapas.mundo
+          for r = 14, 60, 2 do
+            local hallado
+            for dx = -r, r, 2 do
+              for _, dy in ipairs({ -r, r }) do
+                local x, y = math.floor(c.spawn.x + dx), math.floor(c.spawn.y + dy)
+                local libre = x > 8 and y > 8 and x < mapa0.w - 8 and y < mapa0.h - 8
+                for i = -6, 6, 2 do for j = -6, 6, 2 do
+                  if libre and not (Mapa.transitable(mapa0, x + i, y + j) and mapa0.suelo[x + i][y + j] == "hierba") then libre = false end
+                end end
+                if libre then hallado = { x + 0.5, y + 0.5 } break end
+              end
+              if hallado then break end
+            end
+            if hallado then pj.x, pj.y = hallado[1], hallado[2] break end
+          end
+          local dd = math.min(4, ((Datos.habilidades[id] and Datos.habilidades[id].rango) or 4) * 0.85)
+          local rival = { id = 900, kind = "monstruo", faccion = "bestia", nombre = "Rival", x = pj.x + dd * 0.95, y = pj.y + dd * 0.3, vivo = true, hp = 1e7, hpMax = 1e7, modo = "mundo", z = 0, nivel = 1 }
+          mundo.entidades[900] = rival
+          pj.habilidades = pj.habilidades or {}
+          pj.habilidades[id] = 1
+          pj.hp, pj.hpMax, pj.mp, pj.mpMax, pj.objetivo, pj.cds = 99999, 99999, 9999, 9999, 900, {}
+          local res = mundo:usarHabilidad(pj, fila, rival.x, rival.y)
+          fallar(errores, id .. " se lanza (" .. tostring(res) .. ")", res == nil or res == "Te acercas.")
+          local fx
+          for _, e in ipairs(mundo.efectos) do if e.tipo == id then fx = e end end
+          fallar(errores, id .. " crea su efecto de FAO con su duración", fx ~= nil and math.abs(fx.dur - Poderes[id].dur) < 0.01, fx and tostring(fx.dur) or "sin efecto")
+          fallar(errores, id .. " tiene definición en el cliente", Efectos.def[id] and Efectos.def[id].capas == true)
+          local ok0, err0 = pcall(Efectos.icono, id, 0, 0, 40)
+          fallar(errores, "miniatura de " .. id, ok0, tostring(err0))
+          if fx then
+            local dur = Poderes[id].dur
+            for k, frac in ipairs({ 0.12, 0.25, 0.4, 0.65 }) do
+              fx.t = dur * frac
+              love.graphics.push("all")
+              love.graphics.setCanvas({ cv, stencil = true })
+              love.graphics.clear(0, 0, 0, 1)
+              local cam = Dibujo.camara(pj, 2, mundo:mapaDe(pj))
+              local ok, err = pcall(Dibujo.escena, mundo, pj, cam, 0, 0)
+              love.graphics.pop()
+              fallar(errores, "la escena con " .. id .. " se dibuja en t=" .. string.format("%.2f", fx.t), ok, tostring(err))
+              if mosaico then
+                love.graphics.push("all")
+                love.graphics.setCanvas(mosaico)
+                love.graphics.setColor(1, 1, 1, 1)
+                love.graphics.draw(cv, love.graphics.newQuad(640 - 120, 360 - 130, CW, CH, 1280, 720), (k - 1) * CW, (fila - 1) * CH)
+                love.graphics.pop()
+              end
+            end
+          end
+        end
+      end
+      if mosaico then Log.volcar("capturas/poderes_fao_" .. clase .. ".png", mosaico:newImageData():encode("png"):getString()) end
+    end
+    fallar(errores, "se probaron los 27 poderes de las cinco clases", total == 27, tostring(total))
+  end)
   paso("sprites de hechizos: cada poder de cada clase tiene su hoja generada", function()
     local Efectos = require("src.presentacion.render.efectos")
     local Dibujo = require("src.presentacion.render.dibujo")
