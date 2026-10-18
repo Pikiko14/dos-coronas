@@ -1256,6 +1256,18 @@ function I.iconoMazmorra(x, y, r)
   arco("fill", 0.55)
 end
 
+-- Portal a un mapa de FAO (extensión del mundo): un remolino azul.
+function I.iconoPortal(x, y, r)
+  love.graphics.setColor(0, 0, 0, 0.9)
+  love.graphics.circle("fill", x, y, r * 1.35, 16)
+  love.graphics.setColor(0.35, 0.65, 1, 1)
+  love.graphics.circle("fill", x, y, r, 16)
+  love.graphics.setColor(0.85, 0.95, 1, 1)
+  love.graphics.setLineWidth(math.max(1, r * 0.3))
+  love.graphics.arc("line", "open", x, y, r * 0.55, 0.3, 4.2)
+  love.graphics.setLineWidth(1)
+end
+
 -- ¿Queda el punto dentro de lo que enseña el minimapa? (girado, la zona visible es un círculo que cubre el cuadrado)
 local function dentroMini(ex, ey, x, y, lado, m)
   if Iso.activo() then
@@ -1374,6 +1386,11 @@ local function minimapaLocal(mundo, p, x, y, lado)
   for _, z in ipairs(mundo.mapas.mundo.mazmorras or {}) do
     local ex, ey = x + (z.x - x0) * k, y + (z.y - y0) * k
     if dentroMini(ex, ey, x, y, lado, 4) then I.iconoMazmorra(ex, ey, 3) end
+  end
+  -- portales a los mapas de FAO (se ven aunque estén lejos)
+  for _, pt in ipairs(mundo.portalesFao or {}) do
+    local ex, ey = x + (pt.x - x0) * k, y + (pt.y - y0) * k
+    if pt.faccion == (p.faccion or pt.faccion) and dentroMini(ex, ey, x, y, lado, 4) then I.iconoPortal(ex, ey, 3) end
   end
   -- compañeros de grupo (se ven aunque estén lejos)
   for _, m in ipairs(p.grupo and p.grupo.miembros or {}) do
@@ -3712,6 +3729,20 @@ function I.panelMapa(mundo, p, w, h)
       love.graphics.print(c.nombre, x0 + 2, y0 + 2)
     end
   end
+  -- portales a los mapas de FAO del continente del jugador, con el nombre del mapa al que llevan
+  for _, pt in ipairs(mundo.portalesFao or {}) do
+    if pt.faccion == (p.faccion or pt.faccion) then
+      local x0, y0 = aP(pt.x, pt.y)
+      I.iconoPortal(x0, y0, math.min(7, 3 + I.mapaZoom * 0.6))
+      if I.mapaZoom >= 1.2 then
+        local nombreMapa = pt.nombre:gsub("^Portal: ", "")
+        love.graphics.setColor(0, 0, 0, 0.7)
+        love.graphics.print("▸ " .. nombreMapa, x0 + 9, y0 - 6)
+        love.graphics.setColor(0.6, 0.85, 1, 1)
+        love.graphics.print("▸ " .. nombreMapa, x0 + 8, y0 - 7)
+      end
+    end
+  end
   for _, n in ipairs(mundoMapa.npcsMapa or {}) do
     local x0, y0 = aP(n.x, n.y)
     I.iconoNpc(n.rol, x0, y0, math.min(6, 2.2 + I.mapaZoom * 0.5))
@@ -3871,6 +3902,17 @@ function I.panelMapa(mundo, p, w, h)
     I.iconoMazmorra(lx + 6, ly + 8, 4)
     love.graphics.setColor(0.88, 0.84, 0.72)
     love.graphics.print("Puerta de mazmorra", lx + 22, ly)
+    ly = ly + 22
+    I.iconoPortal(lx + 6, ly + 8, 4)
+    love.graphics.setColor(0.88, 0.84, 0.72)
+    love.graphics.print("Portal a un mapa de FAO (extensión del mundo)", lx + 22, ly)
+    ly = ly + 20
+    local nombresPortales = {}
+    for _, pt in ipairs(mundo.portalesFao or {}) do
+      if pt.faccion == (p.faccion or pt.faccion) then nombresPortales[#nombresPortales + 1] = (pt.nombre:gsub("^Portal: ", "")) end
+    end
+    love.graphics.setColor(0.6, 0.85, 1, 1)
+    love.graphics.printf(table.concat(nombresPortales, "  ·  "), lx + 22, ly, 300, "left")
   end
 
   -- detalle de la zona bajo el ratón

@@ -140,9 +140,10 @@ function M.instalar(Mundo)
               for _, u in ipairs(usados) do d = math.min(d, math.abs(u[1] - camp.x) + math.abs(u[2] - camp.y)) end
               ordenados[#ordenados + 1] = { camp = camp, d = d, k = (k * 7 + i * 13) % (#camps + 1) }
             end
+            local function rango(d) return d >= 30 and 0 or (d >= 15 and 1 or 2) end     -- primero los campamentos lejos de otros portales
             table.sort(ordenados, function(a, b)
-              local ra, rb = a.d >= 12, b.d >= 12
-              if ra ~= rb then return ra end
+              if rango(a.d) ~= rango(b.d) then return rango(a.d) < rango(b.d) end
+              if a.d ~= b.d and rango(a.d) == 0 then return a.d > b.d end
               return a.k < b.k
             end)
             for _, o in ipairs(ordenados) do

@@ -2408,6 +2408,23 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     fallar(errores, "dentro del mapa de FAO sigue montado", pj.montado == "mnt_001")
     foto(2)
     if mosaico then Log.volcar("capturas/portal_fao.png", mosaico:newImageData():encode("png"):getString()) end
+    -- el mapa principal (M) y el minimapa muestran los portales con el nombre del mapa al que llevan
+    mundo:salirMapaFao(pj)
+    pj.x, pj.y = portal.x - 4, portal.y
+    local Interfaz = require("src.presentacion.interfaz")
+    Interfaz.escala, Interfaz.panel, Interfaz.mapaZoom, Interfaz.mapaTab = 1, "mapa", 2, "pnj"
+    local pan = love.graphics.newCanvas(1280, 720)
+    love.graphics.push("all")
+    love.graphics.setCanvas({ pan, stencil = true })
+    love.graphics.clear(0.1, 0.1, 0.12, 1)
+    local okm, errm = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    love.graphics.pop()
+    fallar(errores, "el panel del mapa con los portales se dibuja: " .. tostring(errm), okm)
+    local propios = 0
+    for _, pt in ipairs(mundo.portalesFao) do if pt.faccion == pj.faccion then propios = propios + 1 end end
+    fallar(errores, "el mundo tiene los portales del continente del jugador para el mapa", propios >= 5, tostring(propios))
+    if vista then Log.volcar("capturas/portal_fao_mapa.png", pan:newImageData():encode("png"):getString()) end
+    Interfaz.panel = nil
   end)
   paso("sprites de hechizos: cada poder de cada clase tiene su hoja generada", function()
     local Efectos = require("src.presentacion.render.efectos")
