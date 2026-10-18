@@ -68,7 +68,7 @@ function X.leer(fuente, nombre)
   local function leerElemento()
     if fuente:sub(pos, pos) ~= "<" then fallo("se esperaba '<'") end
     local lineaIni = linea
-    local _, e, tag = fuente:find("^<([%a_][%w_%.%-:]*)", pos)
+    local _, e, tag = fuente:find("^<([%a_\128-\255][%w_%.%-:\128-\255]*)", pos)   -- (los bytes altos son UTF-8: los .mpc de FAO traen etiquetas en chino)
     if not tag then fallo("nombre de elemento no válido") end
     avanzar(e + 1)
     local el = { tag = tag, attrs = {}, orden = {}, hijos = {}, linea = lineaIni }
@@ -86,7 +86,7 @@ function X.leer(fuente, nombre)
       elseif c == "" then
         fallo("el elemento <" .. tag .. "> no se cierra", lineaIni)
       else
-        local _, e2, nom = fuente:find("^([%a_][%w_%.%-:]*)", pos)
+        local _, e2, nom = fuente:find("^([%a_\128-\255][%w_%.%-:\128-\255]*)", pos)
         if not nom then fallo("atributo no válido dentro de <" .. tag .. ">") end
         avanzar(e2 + 1)
         saltarEspacios()
@@ -121,7 +121,7 @@ function X.leer(fuente, nombre)
         texto[#texto + 1] = fuente:sub(pos + 9, e3 - 3)
         avanzar(e3 + 1)
       elseif fuente:sub(pos, pos + 1) == "</" then
-        local _, e3, cierre = fuente:find("^</([%a_][%w_%.%-:]*)%s*>", pos)
+        local _, e3, cierre = fuente:find("^</([%a_\128-\255][%w_%.%-:\128-\255]*)%s*>", pos)
         if not cierre then fallo("cierre no válido") end
         if cierre ~= tag then fallo("se cierra </" .. cierre .. "> pero estaba abierto <" .. tag .. ">") end
         avanzar(e3 + 1)

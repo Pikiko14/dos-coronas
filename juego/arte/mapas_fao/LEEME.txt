@@ -1,0 +1,1 @@
+Atlas del suelo y de los objetos de los mapas de Free Angels Online (horneados por herramientas/generar_mapa/hornear_mpc.py). MATERIAL DE UN JUEGO AJENO (FAO): prototipo, no publicar sin sustituirlo.

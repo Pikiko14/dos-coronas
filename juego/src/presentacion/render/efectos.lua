@@ -1,6 +1,7 @@
 -- Animaciones de poderes. Cada hoja de "Animations" es una rejilla de 5 columnas
 -- con celdas de 192x192; los cuadros se reproducen en orden de lectura.
 local Arte = require("src.presentacion.render.arte")
+local EfectosFao = require("src.presentacion.render.efectos_fao")
 
 local E = {}
 
@@ -13,17 +14,21 @@ local COLUMNAS = 5
 -- herramientas/generar_hechizos, 15 cuadros de 192x192 como las del pack).
 E.def = {
   -- guerrero
-  golpe = { "Hechizo_golpe", 0.55, 20, "add" },
-  tajo = { "Hechizo_tajo", 0.95, 14, "add", base = math.pi / 6 },
+  -- Slicing Chop de FAO: medias lunas de espada sobre el enemigo (efectos_fao.lua)
+  golpe = { "", 1, 0, fao = true },
+  -- Revolving Swords de FAO: anillo de aire en el suelo y espadas girando sobre el guerrero (efectos_fao.lua)
+  tajo = { "", 1, 0, fao = true, suelo = true },
   grito = { "Hechizo_grito", 0.9, 10, "add" },
-  desgarro = { "Hechizo_desgarro", 0.7, 18, base = -math.pi / 4 },
+  -- Panther Killing de FAO: una pantera de fuego corre hasta el enemigo (efectos_fao.lua)
+  pantera = { "", 1, 0, fao = true },
   furia = { "Hechizo_furia", 0.62, 8, "add" },
   carga = { "Hechizo_carga", 0.7, 20, "add", base = 0 },
   -- mago
   misil = { "Hechizo_misil", 0.55, 20, "add" },
   fuego = { "Hechizo_fuego", 0.8, 14, "add" },
   escudo = { "Hechizo_escudo", 0.7, 20, "add" },
-  nova = { "Hechizo_nova", 1.25, 6, "add" },
+  -- Blizzard Burst de FAO: cristales de hielo sobre el área (efectos_fao.lua)
+  nova = { "", 1, 0, fao = true },
   sombra = { "Hechizo_sombra", 0.8, 14 },
   meteoro = { "Hechizo_meteoro", 0.95, 8 },
   -- cazador
@@ -120,8 +125,13 @@ end
 
 -- Dibuja el cuadro que toca a los 't' segundos de una animación de 'dur'.
 -- rot: ángulo hacia donde debe apuntar (si el efecto tiene dirección: d.base es hacia dónde apunta el dibujo original).
-function E.cuadro(tipo, t, dur, sx, sy, escalaExtra, alfa, rot)
+function E.cuadro(tipo, t, dur, sx, sy, escalaExtra, alfa, rot, fx)
   local d = E.def[tipo] or E.def.misil
+  if d.fao then
+    -- compuesto de varias capas con sprites de FAO: necesita el efecto (de dónde sale y adónde va); sin él (vista previa) se dibuja en el sitio
+    EfectosFao.dibujar[tipo](fx or { x = 0, y = 0, x0 = -1, y0 = 0 }, t, sx, sy - 6)
+    return
+  end
   local h = hoja(d[1])
   local n = #h.cuadros
   if n == 0 then return end
@@ -138,9 +148,16 @@ function E.cuadro(tipo, t, dur, sx, sy, escalaExtra, alfa, rot)
 end
 
 -- Miniatura del primer cuadro bonito de una animación (para la barra de poderes).
+-- Capa de suelo de los compuestos de FAO (la que va bajo los personajes): el dibujo la llama antes de la cola de entidades.
+function E.suelo(tipo, fx, sx, sy)
+  local f = EfectosFao.suelo[tipo]
+  if f then f(fx, fx.t, sx, sy - 6) end
+end
+
 function E.icono(tipo, x, y, lado)
   local d = E.def[tipo]
   if not d then return end
+  if d.fao then return EfectosFao.icono(tipo, x, y, lado) end
   local h = hoja(d[1])
   local n = #h.cuadros
   if n == 0 then return end

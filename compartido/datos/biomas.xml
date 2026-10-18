@@ -16,4 +16,6 @@
   <bioma id="altiplano" nombre="Altiplano" suelo="roca"/>
   <bioma id="ventisca" nombre="Ventisca" suelo="nieve"/>
   <bioma id="islote" nombre="Islote desierto" suelo="hierba"/>
+  <!-- mapas aparte con arte y datos de Free Angels Online (compartido/dominio/mapa_mpc.lua): prototipo -->
+  <bioma id="riprap" nombre="Costa de Riprap" suelo="arena"/>
 </biomas>

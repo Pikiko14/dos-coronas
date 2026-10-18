@@ -24,6 +24,7 @@ local Mall = require("compartido.dominio.mall")
 local Misiones = require("compartido.dominio.misiones")
 local Voces = require("compartido.dominio.voces")
 local Mazmorras = require("compartido.dominio.mazmorras")
+local MapasFao = require("compartido.dominio.mapas_fao")
 local Viaje = require("compartido.dominio.viaje")
 
 local Mundo = {}
@@ -72,9 +73,11 @@ function Mundo.nuevo()
     casaMediana = Mapa.casa(18, 13),
   }
   self:crearMapasMazmorras()
+  self:crearMapasFao()
   Misiones.preparar(self.mapas.mundo)
   self:poblar()
   self:poblarMazmorras()
+  self:poblarMapasFao()           -- (después de poblar el mundo: no cambia el azar ni las criaturas de los continentes)
   -- el mundo se genera con semilla fija; después el azar del juego vuelve a ser libre
   math.randomseed(os.time() + math.floor((os.clock() * 1000) % 100000))
   return self
@@ -104,7 +107,7 @@ end
 function Mundo:enRutas(e)
   if e.modo == "mundo" then return (e.z or 0) == 0 end
   local m = self.mapas[e.modo]
-  return m ~= nil and m.mazmorra ~= nil
+  return m ~= nil and (m.mazmorra ~= nil or m.fao == true)
 end
 
 function Mundo:ciudadEn(x, y)
@@ -144,9 +147,13 @@ Mundo.ANGULO_DIR = { [1] = math.pi / 2, [2] = -math.pi / 2, [3] = 0, [4] = math.
 
 -- rot: hacia dónde apunta el efecto (ángulo en radianes, 0 = derecha, positivo = hacia abajo); lo usan los poderes con dirección
 -- (estocada, embestida): el cliente gira la animación para que vaya de quien ataca hacia su objetivo.
-function Mundo:efecto(tipo, x, y, dur, rot)
+-- Duración (s) de los efectos que se alargan más que un golpe: la pantera corre hasta el enemigo y estalla; la ventisca de la nova cae en varias oleadas.
+Mundo.DURACION_EFECTO = { pantera = 0.95, nova = 1.4, tajo = 1.0, golpe = 0.85 }
+
+-- (x0, y0): de dónde sale, para los efectos que viajan (la pantera).
+function Mundo:efecto(tipo, x, y, dur, rot, x0, y0)
   self.efectos[#self.efectos + 1] = {
-    tipo = tipo, x = x, y = y, t = 0, dur = dur or 0.42, rot = rot,
+    tipo = tipo, x = x, y = y, t = 0, dur = dur or 0.42, rot = rot, x0 = x0, y0 = y0,
   }
 end
 
@@ -1307,8 +1314,8 @@ function Mundo:revivir(e)
     if e.modo == "batalla" or e.modo == "estandarte" then
       local sp = self.mapas[e.modo].spawns[e.faccion]
       e.x, e.y = sp.x, sp.y
-    elseif self:enMazmorra(e) then
-      -- muere en una mazmorra: vuelve al punto de reaparición del mundo
+    elseif self:enMazmorra(e) or self:enMapaFao(e) then
+      -- muere en una mazmorra o en un mapa aparte de FAO: vuelve al punto de reaparición del mundo
       e.modo, e.z, e.zona = "mundo", 0, nil
       e.x, e.y = v.x, v.y
     else
@@ -1383,7 +1390,7 @@ Mundo.SONIDO_PODER = {
   misil = "magia", fuego = "fuego", escudo = "magia", nova = "hielo",
   disparo = "flecha", lluvia = "flecha", preciso = "flecha", trampa = "flecha",
   curar = "cura", bendicion = "sagrado", castigo = "sagrado", consagrar = "sagrado",
-  desgarro = "corte", furia = "grito", sombra = "magia", meteoro = "fuego",
+  pantera = "fuego", furia = "grito", sombra = "magia", meteoro = "fuego",
   flecha_veneno = "flecha", paso_agil = "flecha", sanacion = "cura", juicio = "sagrado",
   estocada = "lanza", barrido = "lanza", embestida = "lanza", jabalina = "flecha", tormenta_lanzas = "lanza",
   muro_lanzas = "grito", toque_necro = "oscuro", espinas = "oscuro", maldecir = "oscuro", alzar_esqueletos = "oscuro",
@@ -1461,6 +1468,7 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
     for _, o in pairs(self.entidades) do
       if o.vivo and self:mismoLugar(p, o) and self:puedeDanar(p, o) and Util.dist(px, py, o.x, o.y) <= (h.aoe or 2) then
         golpe(o, h.coef)
+        if h.lentitud and o.vivo then self:aplicarEstado(o, "lentitud", 3, h.lentitud, p) end
       end
     end
   elseif h.tipo == "aliado" then
@@ -1516,14 +1524,14 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
   local ey = objetivo and objetivo.y or p.y
   if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" or h.tipo == "invocar" then
     -- los de alrededor (el barrido) se abren hacia donde mira el personaje
-    self:efecto(idh, p.x, p.y, 0.5, Mundo.ANGULO_DIR[p.dir or 1])
+    self:efecto(idh, p.x, p.y, Mundo.DURACION_EFECTO[idh] or 0.5, Mundo.ANGULO_DIR[p.dir or 1])
   elseif h.tipo == "punto" then
-    self:efecto(idh, p.impactoX or tx or ex, p.impactoY or ty or ey, 0.55)
+    self:efecto(idh, p.impactoX or tx or ex, p.impactoY or ty or ey, Mundo.DURACION_EFECTO[idh] or 0.55)
     p.impactoX, p.impactoY = nil, nil
   elseif not h.proyectil then
     -- con objetivo, el efecto mira de quien ataca hacia él (si estás debajo del enemigo, la estocada sube)
     local rot = (objetivo and objetivo ~= p) and math.atan2(ey - p.y, ex - p.x) or nil
-    self:efecto(idh, ex, ey, 0.4, rot)
+    self:efecto(idh, ex, ey, Mundo.DURACION_EFECTO[idh] or 0.4, rot, p.x, p.y)
   end
   p.habilidadPendiente = nil
   return nil
@@ -1606,7 +1614,10 @@ function Mundo:autoataque(p)
 end
 
 function Mundo:actualizarJugador(e, dt)
-  if e.modo ~= "mundo" and e.modo ~= "casa" then self:trampasMazmorra(e) end
+  if e.modo ~= "mundo" and e.modo ~= "casa" then
+    self:trampasMazmorra(e)
+    if self.mapas[e.modo] and self.mapas[e.modo].fao then self:vigilarSalidaFao(e) end
+  end
   if not e.vivo then
     if self.tiempo >= (e.respawn or 0) then self:revivir(e) end
     return
@@ -2359,7 +2370,7 @@ function Mundo:usarPergamino(p, index)
   if not slot then return "No hay objeto." end
   if not p.vivo then return "No puedes actuar." end
   if p.modo ~= "mundo" or (p.z or 0) > 0 then return "Aquí no funciona: sal primero al mundo." end
-  if self:enMazmorra(p) then return "Aquí no funciona: sal primero de la mazmorra." end
+  if self:enMazmorra(p) or self:enMapaFao(p) then return "Aquí no funciona: sal primero de la mazmorra." end
   if (p.ultimoGolpe or 0) + 6 > self.tiempo then return "No se puede usar en combate." end
   if (p.cds.pergamino or 0) > self.tiempo then return "El pergamino aún se enfría." end
   local v = p.vinculo or {}
@@ -2371,14 +2382,14 @@ function Mundo:usarPergamino(p, index)
   end
   c = c or self:ciudadPropiaCerca(p, p.x, p.y)
   if not c or not c.spawn then return "No hay adónde ir." end
-  self:efecto("nova", p.x, p.y, 0.7)
+  self:efecto("consagrar", p.x, p.y, 0.7)
   self:sonar("cura", p)
   p.x, p.y = c.spawn.x, c.spawn.y
   p.camino, p.tramo, p.objetivo, p.persigue = nil, nil, nil, nil
   p.cds.pergamino = self.tiempo + 30
   slot.cant = (slot.cant or 1) - 1
   if slot.cant <= 0 then table.remove(p.bolsa, index) end
-  self:efecto("nova", p.x, p.y, 0.7)
+  self:efecto("consagrar", p.x, p.y, 0.7)
   self:sonar("cura", p)
   self:marcarProgreso(p)
   self:mensaje("sistema", "", "El pergamino se deshace y apareces en " .. c.nombre .. ".", p)
@@ -3629,7 +3640,7 @@ function Mundo:efectosCercanos(p)
   if p then
     for _, fx in ipairs(self.efectos) do
       if Util.dist(p.x, p.y, fx.x, fx.y) < 30 then
-        efectos[#efectos + 1] = { tipo = fx.tipo, x = fx.x, y = fx.y, t = fx.t, dur = fx.dur, rot = fx.rot and math.floor(fx.rot * 100) / 100 or nil }
+        efectos[#efectos + 1] = { tipo = fx.tipo, x = fx.x, y = fx.y, t = fx.t, dur = fx.dur, rot = fx.rot and math.floor(fx.rot * 100) / 100 or nil, x0 = fx.x0, y0 = fx.y0 }
       end
     end
     for _, n in ipairs(self.numeros) do
@@ -4097,6 +4108,7 @@ Admin.instalar(Mundo)
 Comercio.instalar(Mundo)
 Mall.instalar(Mundo)
 Mazmorras.instalar(Mundo)
+MapasFao.instalar(Mundo)
 Viaje.instalar(Mundo)
 
 return Mundo

@@ -225,7 +225,7 @@ function E.correr()
   do
     local Efectos = require("src.presentacion.render.efectos")
     local C, E2 = 150, 1
-    local TIPOS = { "estocada", "embestida", "tajo", "barrido", "corte", "desgarro", "carga" }
+    local TIPOS = { "estocada", "embestida", "tajo", "barrido", "corte", "pantera", "carga" }
     local cv = love.graphics.newCanvas(8 * C, #TIPOS * C)
     love.graphics.push("all")
     love.graphics.setCanvas({ cv, stencil = true })

@@ -6,6 +6,7 @@
 --   /admin oro|xp|nivel|monedas <n> [jugador]  da oro, experiencia, monedas del mall o fija el nivel
 --   /admin curar|revivir [jugador]       restaura vida y maná / revive
 --   /admin tp <x> <y> | tp <jugador> | traer <jugador> | ciudad <id>
+--   /admin mapa <nombre|salir>           (nombres: ver MapasFao.MAPAS) entra en un mapa aparte de Free Angels Online (prueba) o vuelve al mundo
 --   /admin limpiar [radio]               quita las criaturas cercanas
 --   /admin evento <estandarte|batalla> <iniciar|fin|estado> [todos]
 --   /admin anuncio <texto>               aviso a todo el mundo
@@ -29,7 +30,7 @@ local AYUDA = {
   "Admin: /admin mob <id> [cant] [nivel] | mobs",
   "/admin item <id> [cant] [jugador] | items [texto]",
   "/admin oro|xp|nivel|monedas <n> [jugador] | curar|revivir [jugador]",
-  "/admin tp <x> <y> | tp <jugador> | traer <jugador> | ciudad <id>",
+  "/admin tp <x> <y> | tp <jugador> | traer <jugador> | ciudad <id> | mapa <nombre|salir>",
   "/admin limpiar [radio] | anuncio <texto> | dios | jugadores",
   "/admin evento <estandarte|batalla> <iniciar|fin|estado> [todos]",
   "/admin kick <jugador> [motivo] | silenciar <jugador> <min> | ban <usuario> <30m|2h|3d|perm> <motivo> | desban <usuario> | baneos",
@@ -39,7 +40,7 @@ local AYUDA = {
 -- Comandos que solo puede usar un GM; el resto también los puede usar un CM.
 local SOLO_GM = {
   mob = true, mobs = true, item = true, items = true, oro = true, xp = true, nivel = true, monedas = true,
-  dios = true, rol = true,
+  dios = true, rol = true, mapa = true,
 }
 M.SOLO_GM = SOLO_GM
 M.MAX_BAN_CM = 72 * 3600
@@ -205,6 +206,16 @@ function M.instalar(Mundo)
     if e.modo ~= "mundo" then return decir(self, p, e.nombre .. " no está en el mundo abierto.") end
     mover(self, p, e.x, e.y)
     decir(self, p, "Junto a " .. e.nombre .. ".")
+  end
+
+  function comandos.mapa(self, p, a)
+    local nombre = a[1]
+    if nombre == "salir" then
+      if not self:enMapaFao(p) then return decir(self, p, "No estás en un mapa de FAO.") end
+      return self:salirMapaFao(p)
+    end
+    local err = nombre and self:entrarMapaFao(p, nombre)
+    if not nombre or err then return decir(self, p, err or ("Uso: /admin mapa <" .. table.concat(require("compartido.dominio.mapas_fao").nombres(), "|") .. "|salir>")) end
   end
 
   function comandos.traer(self, p, a)

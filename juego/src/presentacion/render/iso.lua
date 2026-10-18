@@ -9,7 +9,10 @@ I.HW, I.HH = 24, 12          -- medio rombo: 48 x 24 píxeles por casilla
 I.PIES = 12                  -- los personajes se dibujan con los pies 12 px por debajo de la posición que devuelve I.pos
 
 local activo
+local forzado        -- nil: lo que diga la configuración; false: vista cenital (los mapas de FAO, que ya vienen en vista cenital)
+function I.forzar(v) forzado = v end
 function I.activo()
+  if forzado ~= nil then return forzado end
   if activo == nil then
     local env = os.getenv("DC_ISO")
     if env == "0" then activo = false

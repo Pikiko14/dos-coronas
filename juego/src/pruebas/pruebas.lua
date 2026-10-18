@@ -57,7 +57,7 @@ function Pruebas.correr()
     end
     fallar(errores, "hay efectos", n >= 20)
     for _, id in ipairs({ "golpe", "tajo", "grito", "carga", "misil", "fuego", "escudo", "nova", "disparo",
-      "lluvia", "trampa", "preciso", "curar", "bendicion", "castigo", "consagrar", "desgarro", "furia", "sombra",
+      "lluvia", "trampa", "preciso", "curar", "bendicion", "castigo", "consagrar", "pantera", "furia", "sombra",
       "meteoro", "flecha_veneno", "paso_agil", "sanacion", "juicio",
       "estocada", "barrido", "muro_lanzas", "embestida", "jabalina", "tormenta_lanzas",
       "toque_necro", "espinas", "maldecir", "alzar_esqueletos", "drenar", "espectro" }) do
@@ -146,7 +146,7 @@ function Pruebas.correr()
     fallar(errores, "el maná y el enfriamiento se adelantan", pj.cds.nova and pj.cds.nova > mundo.tiempo)
     fallar(errores, "en enfriamiento no hay eco", Eco.lanzar(app, { slot = slotDe("nova") }) == false)
     -- llega la foto con el efecto del servidor: se descarta (no se ve doble) y cuenta como confirmación
-    mundo.efectos = { { tipo = "nova", x = pj.x + 0.1, y = pj.y, t = 0.1, dur = 0.5 } }
+    mundo.efectos = { { tipo = "nova", x = mob.x + 0.1, y = mob.y, t = 0.1, dur = 1.4 } }
     Eco.actualizar(app, 0.016)
     local propios, ajenos = 0, 0
     for _, fx in ipairs(mundo.efectos) do if fx._eco then propios = propios + 1 else ajenos = ajenos + 1 end end
@@ -963,7 +963,8 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
     local function slotDe(id) for i, h in ipairs(Datos.barra.mago) do if h == id then return i end end end
     Entrada.lanzarHabilidad(app, slotDe("nova"))
-    fallar(errores, "la nova se lanza al momento", llamadas[1] and llamadas[1][1] == "habilidad" and llamadas[1][2].x == nil and app.apuntando == nil)
+    fallar(errores, "la nova (ventisca) se apunta en una zona sin lanzarse", #llamadas == 0 and app.apuntando and app.apuntando.slot == slotDe("nova") and app.apuntando.aoe > 2)
+    app.apuntando = nil
     llamadas = {}
     Entrada.lanzarHabilidad(app, slotDe("meteoro"))
     fallar(errores, "el meteoro entra en modo apuntar sin lanzarse", #llamadas == 0 and app.apuntando and app.apuntando.slot == slotDe("meteoro")
@@ -1853,6 +1854,522 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     fallar(errores, "y Centrar es el de mas a la derecha", hallados.mapa_centrar and hallados.mapa_centrar > hallados.mapa_menos and hallados.mapa_menos > hallados.mapa_mas)
     Interfaz.panel = nil
   end)
+  -- Mapa de FAO (.mpc) en el cliente: carga y dibujo del suelo/objetos, sin errores y con tiempos razonables. Con DC_PRUEBA_MAPA_FAO=1 además guarda juego/capturas/mapa_fao.png con zonas
+  -- del mapa (costa, bosque, camino de tierra) dibujadas con el personaje FAO de pie y caminando, y un mapa completo con las casillas bloqueadas marcadas (mapa_fao_bloqueo.png).
+  paso("mapa de FAO (.mpc): el cliente lo dibuja (suelo y objetos) y la memoria y el tiempo son razonables", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local Terreno = require("src.presentacion.render.terreno")
+    local MapaMpc = require("src.presentacion.render.mapa_mpc")
+    local Mapa = require("compartido.dominio.mapa")
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.riprap
+    local m = mapa.mpc
+    local pj = mundo:crearPersonaje({ nombre = "Isleño", faccion = "albor", clase = "guerrero", nivel = 10 })
+    mundo:entrarMapaFao(pj, "riprap")
+    -- zonas: costa (arena transitable con agua profunda a 5 casillas al oeste), bosque (hierba con muchos objetos que bloquean cerca), camino (tierra)
+    local function contar(x, y, r, sub)
+      local n = 0
+      for _, o in ipairs(m.objetos) do
+        local d = m.defs[o.id]
+        if d and d.b and math.abs(o.x / 64 - x) < r and math.abs(o.y / 64 - y) < r and (not sub or d.n:find(sub, 1, true)) then n = n + 1 end
+      end
+      return n
+    end
+    local zonas = {}
+    for y = 10, mapa.h - 10 do
+      for x = 10, mapa.w - 10 do
+        local libre = Mapa.transitable(mapa, x, y)
+        local ts = m.tilesets[m.ts[(y * 2) * m.fw + x * 2 + 1]]
+        if libre and not zonas.costa and mapa.suelo[x][y] ~= "agua" and mapa.bloque[x - 2] and mapa.bloque[x - 2][y] and mapa.suelo[x - 2][y] == "agua" then zonas.costa = { x, y } end
+        if libre and not zonas.palmeral and mapa.suelo[x][y] == "hierba" and contar(x, y, 6, "椰子樹") >= 3 then zonas.palmeral = { x, y } end
+        if libre and not zonas.rocas and contar(x, y, 4, "礁岩") >= 2 then zonas.rocas = { x, y } end
+        if libre and not zonas.camino and ts and ts.color[1] > 236 and ts.color[2] < 204 and ts.color[3] < 138 and mapa.suelo[x + 2][y] == "tierra" then zonas.camino = { x, y } end
+      end
+    end
+    fallar(errores, "hay costa, palmeral y camino donde dibujar", zonas.costa and zonas.palmeral and zonas.camino, "costa=" .. tostring(zonas.costa) .. " palmeral=" .. tostring(zonas.palmeral) .. " camino=" .. tostring(zonas.camino))
+    local CW, CH = 560, 360
+    local vista = os.getenv("DC_PRUEBA_MAPA_FAO") ~= nil
+    local orden = {}
+    for _, n in ipairs({ "costa", "palmeral", "rocas", "camino" }) do if zonas[n] then orden[#orden + 1] = n end end
+    local cv = love.graphics.newCanvas(CW * 2, CH * #orden)
+    local celda = love.graphics.newCanvas(CW, CH)
+    local memAntes = love.graphics.getStats().texturememory
+    local t0 = love.timer.getTime()
+    local primero
+    for fila, nombre in ipairs(orden) do
+      local z = zonas[nombre]
+      if z then
+        for col = 1, 2 do
+          pj.x, pj.y = z[1] + 0.5, z[2] + 0.5
+          pj.mov, pj.dir, pj.anim = col == 2, 3, col * 3
+          pj.velx, pj.vely = col == 2 and 0.5 or 0, 0
+          love.graphics.push("all")
+          love.graphics.setCanvas({ celda, stencil = true })
+          love.graphics.clear(0, 0, 0, 1)
+          Dibujo.fijarVista(0, 0, CW, CH)
+          local cam = Dibujo.camara(pj, 1.6, mapa)
+          local tt = love.timer.getTime()
+          local ok, err = pcall(Dibujo.escena, mundo, pj, cam, -1, -1)
+          primero = primero or (love.timer.getTime() - tt)
+          if col == 2 then
+            -- casillas bloqueadas por objetos (rojo) y por el agua (azul oscuro) sobre la escena, para comprobar a ojo que las colisiones coinciden con lo que se ve
+            love.graphics.push()
+            love.graphics.translate(0, 0)
+            love.graphics.scale(cam.zoom, cam.zoom)
+            local Iso = require("src.presentacion.render.iso")
+            Iso.empujar(cam)
+            for x = math.floor(pj.x) - 14, math.floor(pj.x) + 14 do
+              for y = math.floor(pj.y) - 14, math.floor(pj.y) + 14 do
+                if mapa.bloque[x] and mapa.bloque[x][y] then
+                  if mapa.suelo[x][y] == "agua" then love.graphics.setColor(0, 0, 0.4, 0.35) else love.graphics.setColor(1, 0.1, 0.1, 0.55) end
+                  love.graphics.rectangle("fill", x * 32, y * 32, 32, 32)
+                end
+              end
+            end
+            Iso.sacar()
+            love.graphics.pop()
+          end
+          Dibujo.fijarVista(nil)
+          love.graphics.pop()
+          fallar(errores, "se dibuja la escena en " .. nombre .. ": " .. tostring(err), ok)
+          love.graphics.push("all")
+          love.graphics.setCanvas(cv)
+          love.graphics.setColor(1, 1, 1, 1)
+          love.graphics.draw(celda, (col - 1) * CW, (fila - 1) * CH)
+          love.graphics.pop()
+        end
+      end
+    end
+    local seg = love.timer.getTime() - t0
+    local img = love.graphics.getStats().texturememory - memAntes
+    Log.info(string.format("mapa FAO: %d objetos dibujables; primera escena %.0f ms, todas %.0f ms, memoria de texturas añadida %.0f MB", #m.objetos, (primero or 0) * 1000, seg * 1000, img / 1048576))
+    fallar(errores, "las escenas del mapa de FAO se hornean y dibujan en menos de 6 s (medido " .. string.format("%.2f", seg) .. " s)", seg < 6)
+    fallar(errores, "la memoria de texturas que añade el mapa no se dispara (< 400 MB, medido " .. string.format("%.0f", img / 1048576) .. " MB)", img < 400 * 1048576)
+    -- DC_PRUEBA_MAPA_FAO=grid: 12 puntos repartidos por todo el mapa (la misma vista del juego, zoom 1,6) para revisar el renderizado en conjunto
+    if os.getenv("DC_PRUEBA_MAPA_FAO") == "grid" then
+      local puntos = {}
+      -- puntos de interés: junto a los riscos (tilesets 0x35 / 0x36), bosques densos, la isla del noroeste, el borde del mapa y el puente
+      local function buscar(cond)
+        for y = 3, mapa.h - 4, 3 do
+          for x = 3, mapa.w - 4, 3 do
+            if Mapa.transitable(mapa, x, y) and cond(x, y) and not (puntos._v and puntos._v[x .. "," .. y]) then return x, y end
+          end
+        end
+      end
+      local function junto(x, y, ts)
+        for dx = -3, 3 do for dy = -3, 3 do
+          local cx, cy = math.max(0, math.min(mapa.w - 1, x + dx)), math.max(0, math.min(mapa.h - 1, y + dy))
+          if m.ts[cy * mapa.w + cx + 1] == ts then return true end
+        end end
+        return false
+      end
+      local function lista(cond, n)
+        local hechos, out = {}, {}
+        for y = 3, mapa.h - 4, 4 do
+          for x = 3, mapa.w - 4, 4 do
+            if #out < n and Mapa.transitable(mapa, x, y) and cond(x, y) then
+              local lejos = true
+              for _, o in ipairs(out) do if math.abs(o[1] - x) < 25 and math.abs(o[2] - y) < 25 then lejos = false end end
+              if lejos then out[#out + 1] = { x, y } end
+            end
+          end
+        end
+        return out
+      end
+      for _, p in ipairs(lista(function(x, y) return junto(x, y, 0x35) or junto(x, y, 0x36) end, 3)) do puntos[#puntos + 1] = { p[1] / mapa.w, p[2] / mapa.h } end
+      for _, p in ipairs(lista(function(x, y) return contar(x, y, 7) >= 8 end, 4)) do puntos[#puntos + 1] = { p[1] / mapa.w, p[2] / mapa.h } end
+      for _, p in ipairs(lista(function(x, y) return x < 90 and y < 40 end, 2)) do puntos[#puntos + 1] = { p[1] / mapa.w, p[2] / mapa.h } end
+      for _, p in ipairs(lista(function(x, y) return x > mapa.w - 10 or y > mapa.h - 10 or y < 8 end, 3)) do puntos[#puntos + 1] = { p[1] / mapa.w, p[2] / mapa.h } end
+      local GW, GH = 420, 300
+      local grid = love.graphics.newCanvas(GW * 4, GH * 3)
+      local celdaG = love.graphics.newCanvas(GW, GH)
+      for k, fr in ipairs(puntos) do
+        local bx, by = math.floor(fr[1] * mapa.w), math.floor(fr[2] * mapa.h)
+        local hallado
+        for r = 0, 20 do
+          for dy = -r, r do for dx = -r, r do
+            if not hallado and Mapa.transitable(mapa, bx + dx, by + dy) then hallado = { bx + dx, by + dy } end
+          end end
+          if hallado then break end
+        end
+        if hallado then
+          pj.x, pj.y, pj.mov, pj.velx = hallado[1] + 0.5, hallado[2] + 0.5, false, 0
+          love.graphics.push("all")
+          love.graphics.setCanvas({ celdaG, stencil = true })
+          love.graphics.clear(0, 0, 0, 1)
+          Dibujo.fijarVista(0, 0, GW, GH)
+          local cam = Dibujo.camara(pj, 1.6, mapa)
+          pcall(Dibujo.escena, mundo, pj, cam, -1, -1)
+          Dibujo.fijarVista(nil)
+          love.graphics.pop()
+          love.graphics.push("all")
+          love.graphics.setCanvas(grid)
+          love.graphics.setColor(1, 1, 1, 1)
+          love.graphics.draw(celdaG, ((k - 1) % 4) * GW, math.floor((k - 1) / 4) * GH)
+          love.graphics.setColor(1, 1, 0.4)
+          love.graphics.print(hallado[1] .. "," .. hallado[2], ((k - 1) % 4) * GW + 4, math.floor((k - 1) / 4) * GH + 4)
+          love.graphics.pop()
+        end
+      end
+      Log.volcar("capturas/mapa_fao_grid.png", grid:newImageData():encode("png"):getString())
+    end
+    -- DC_PRUEBA_MAPA_FAO=catalogo: todos los tipos de objeto del mapa (primer cuadro) con su id, para revisar uno a uno cómo se dibujan
+    if os.getenv("DC_PRUEBA_MAPA_FAO") == "catalogo" then
+      local ids = {}
+      for id in pairs(m.defs) do ids[#ids + 1] = id end
+      table.sort(ids)
+      local CW2, CH2, COLS = 150, 150, 10
+      local filas2 = math.ceil(#ids / COLS)
+      local cat = love.graphics.newCanvas(CW2 * COLS, CH2 * filas2)
+      love.graphics.push("all")
+      love.graphics.setCanvas({ cat, stencil = true })
+      love.graphics.clear(0.30, 0.45, 0.30, 1)
+      for k, id in ipairs(ids) do
+        local cx, cy = ((k - 1) % COLS) * CW2, math.floor((k - 1) / COLS) * CH2
+        love.graphics.push()
+        love.graphics.setScissor(cx, cy, CW2, CH2)
+        love.graphics.setColor(0.25, 0.4, 0.25, 1)
+        love.graphics.rectangle("line", cx + 0.5, cy + 0.5, CW2 - 1, CH2 - 1)
+        MapaMpc.dibujarObjeto(mapa, { id = id, x = 0, y = 0 }, cx + CW2 / 2, cy + CH2 - 30, 0)
+        love.graphics.setColor(1, 1, 0.4)
+        love.graphics.print(id .. (m.defs[id].mezcla == "add" and " +" or "") .. (m.defs[id].b and " B" or ""), cx + 3, cy + 3)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.print(string.sub(m.defs[id].c, 1, 22) .. " x" .. #m.defs[id].f, cx + 3, cy + CH2 - 14)
+        love.graphics.setScissor()
+        love.graphics.pop()
+      end
+      love.graphics.pop()
+      Log.volcar("capturas/mapa_fao_catalogo.png", cat:newImageData():encode("png"):getString())
+    end
+    -- el minimapa del HUD funciona dentro del mapa de FAO (antes ponía "sin mapa")
+    do
+      local Interfaz = require("src.presentacion.interfaz")
+      pj.x, pj.y = zonas.costa[1] + 0.5, zonas.costa[2] + 0.5
+      local mini = love.graphics.newCanvas(900, 300)
+      love.graphics.push("all")
+      love.graphics.setCanvas({ mini, stencil = true })
+      love.graphics.clear(0.2, 0.25, 0.3, 1)
+      local okm, errm = pcall(Interfaz.flotantes, mundo, pj, 900, 300)
+      love.graphics.pop()
+      fallar(errores, "el HUD con el minimapa se dibuja dentro del mapa de FAO: " .. tostring(errm), okm)
+      if vista then Log.volcar("capturas/mapa_fao_minimapa.png", mini:newImageData():encode("png"):getString()) end
+    end
+    if vista then
+      Log.info("mapa FAO capturas: " .. #m.objetos)
+      Log.volcar("capturas/mapa_fao.png", cv:newImageData():encode("png"):getString())
+      -- mapa completo con el bloqueo: 4 px por casilla; rojo = bloqueada por el agua profunda, amarillo = por un objeto
+      local S = 8
+      local datos = love.image.newImageData(mapa.w * S, mapa.h * S)
+      for x = 0, mapa.w - 1 do
+        for y = 0, mapa.h - 1 do
+          local c = m.tilesets[m.ts[(y * 2) * m.fw + x * 2 + 1]].color
+          local r, g, b = c[1] / 255, c[2] / 255, c[3] / 255
+          if mapa.bloque[x][y] then r, g, b = r * 0.5 + 0.5, g * 0.4, b * 0.4 end
+          for dx = 0, S - 1 do for dy = 0, S - 1 do datos:setPixel(x * S + dx, y * S + dy, r, g, b, 1) end end
+        end
+      end
+      Log.volcar("capturas/mapa_fao_bloqueo.png", datos:encode("png"):getString())
+    end
+  end)
+  -- Efectos de FAO de la pantera (guerrero) y la nova (mago): se lanzan por el servidor y se dibujan en una escena real. Con DC_PRUEBA_EFECTOS_FAO=1 guarda
+  -- juego/capturas/efectos_fao.png (pantera arriba, nova abajo, cuatro instantes cada una).
+  paso("efectos de FAO: pantera y nova se lanzan y se dibujan en la escena", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local Iso = require("src.presentacion.render.iso")
+    local Mapa = require("compartido.dominio.mapa")
+    local vista = os.getenv("DC_PRUEBA_EFECTOS_FAO") ~= nil
+    local mosaico = vista and love.graphics.newCanvas(1920, 810) or nil
+    for fila, caso in ipairs({ { clase = "guerrero", poder = "pantera", dist = 5, ts = { 0.15, 0.3, 0.5, 0.7 } }, { clase = "guerrero", poder = "tajo", dist = 1.6, ts = { 0.1, 0.3, 0.6, 0.9 }, extra = { { 2.2, -1 }, { -1.5, 1.2 } }, fuera = { { 3.6, 0.5 }, { -3.2, -2 } } },
+      { clase = "mago", poder = "nova", dist = 4, ts = { 0.3, 0.6, 0.9, 1.2 } } }) do
+      local mundo = Mundo.nuevo()
+      local pj = mundo:crearPersonaje({ nombre = "Lanzador", faccion = "albor", clase = caso.clase, nivel = 30 })
+      local c = mundo.mapas.mundo.ciudades[1]
+      pj.x, pj.y = c.spawn.x, c.spawn.y
+      -- un claro de hierba lejos de las ciudades (que no haya muros ni guardias en la foto)
+      local mapa0 = mundo.mapas.mundo
+      for r = 14, 60, 2 do
+        local hallado
+        for dx = -r, r, 2 do
+          for _, dy in ipairs({ -r, r }) do
+            local x, y = math.floor(c.spawn.x + dx), math.floor(c.spawn.y + dy)
+            local libre = x > 8 and y > 8 and x < mapa0.w - 8 and y < mapa0.h - 8
+            for i = -6, 6, 2 do for j = -6, 6, 2 do
+              if libre and not (Mapa.transitable(mapa0, x + i, y + j) and mapa0.suelo[x + i][y + j] == "hierba") then libre = false end
+            end end
+            if libre then hallado = { x + 0.5, y + 0.5 } break end
+          end
+          if hallado then break end
+        end
+        if hallado then pj.x, pj.y = hallado[1], hallado[2] break end
+      end
+      local rival = { id = 900, kind = "monstruo", faccion = "bestia", nombre = "Rival", x = pj.x + caso.dist, y = pj.y + (caso.dist > 0 and 1.5 or 2),
+        vivo = true, hp = 100000, hpMax = 100000, modo = "mundo", z = 0, nivel = 1 }
+      mundo.entidades[900] = rival
+      -- tajo: enemigos dentro y fuera del radio real (rango en habilidades.xml), para comprobar que el anillo dibujado coincide con a quién golpea
+      local dentro, fuera = { rival }, {}
+      for i, o in ipairs(caso.extra or {}) do
+        local m = { id = 910 + i, kind = "monstruo", faccion = "bestia", nombre = "Dentro", x = pj.x + o[1], y = pj.y + o[2], vivo = true, hp = 100000, hpMax = 100000, modo = "mundo", z = 0, nivel = 1 }
+        mundo.entidades[m.id] = m
+        dentro[#dentro + 1] = m
+      end
+      for i, o in ipairs(caso.fuera or {}) do
+        local m = { id = 920 + i, kind = "monstruo", faccion = "bestia", nombre = "Fuera", x = pj.x + o[1], y = pj.y + o[2], vivo = true, hp = 100000, hpMax = 100000, modo = "mundo", z = 0, nivel = 1 }
+        mundo.entidades[m.id] = m
+        fuera[#fuera + 1] = m
+      end
+      local slot
+      for i, id in ipairs(Datos.barra[caso.clase]) do if id == caso.poder then slot = i end end
+      fallar(errores, caso.poder .. " está en la barra de " .. caso.clase, slot ~= nil)
+      pj.habilidades = pj.habilidades or {}
+      pj.habilidades[caso.poder] = 1
+      pj.mp, pj.mpMax = 999, 999
+      pj.objetivo = rival.id
+      local res = mundo:usarHabilidad(pj, slot or 1)
+      fallar(errores, caso.poder .. " se lanza sin error", res == nil, tostring(res))
+      local fx
+      for _, e in ipairs(mundo.efectos) do if e.tipo == caso.poder then fx = e end end
+      fallar(errores, caso.poder .. " crea su efecto", fx ~= nil)
+      if caso.poder == "tajo" then
+        local golpeados, intactos = 0, 0
+        for _, m in ipairs(dentro) do if m.hp < m.hpMax then golpeados = golpeados + 1 end end
+        for _, m in ipairs(fuera) do if m.hp == m.hpMax then intactos = intactos + 1 end end
+        fallar(errores, "el tajo golpea a los " .. #dentro .. " enemigos dentro del radio", golpeados == #dentro, golpeados .. "/" .. #dentro)
+        fallar(errores, "y no a los " .. #fuera .. " de fuera", intactos == #fuera, intactos .. "/" .. #fuera)
+      end
+      if fx then
+        fallar(errores, caso.poder .. " dura lo que su animación", fx.dur >= 0.9, tostring(fx.dur))
+        if caso.poder == "pantera" then
+          fallar(errores, "la pantera sabe de dónde sale (y adónde va)", fx.x0 == pj.x and fx.y0 == pj.y and fx.x == rival.x and fx.y == rival.y)
+          local snap = mundo:efectosCercanos(pj)
+          local visto
+          for _, e in ipairs(snap) do if e.tipo == "pantera" then visto = e end end
+          fallar(errores, "el efecto llega al cliente con su origen", visto and visto.x0 == pj.x)
+        end
+      end
+      Interfaz.escala = 1
+      local cv = love.graphics.newCanvas(1280, 720)
+      for k, tt in ipairs(caso.ts) do
+        if fx then fx.t = tt end
+        love.graphics.push("all")
+        love.graphics.setCanvas({ cv, stencil = true })
+        love.graphics.clear(0, 0, 0, 1)
+        local cam = Dibujo.camara(pj, 2, mundo:mapaDe(pj))
+        local ok, err = pcall(Dibujo.escena, mundo, pj, cam, 0, 0)
+        love.graphics.pop()
+        fallar(errores, "la escena con " .. caso.poder .. " se dibuja en t=" .. tt, ok, tostring(err))
+        if mosaico then
+          love.graphics.push("all")
+          love.graphics.setCanvas(mosaico)
+          love.graphics.setColor(1, 1, 1, 1)
+          love.graphics.draw(cv, love.graphics.newQuad(400, 225, 480, 270, 1280, 720), (k - 1) * 480, (fila - 1) * 270)
+          love.graphics.pop()
+        end
+      end
+    end
+    if mosaico then Log.volcar("capturas/efectos_fao.png", mosaico:newImageData():encode("png"):getString()) end
+  end)
+  -- Golpe (Slicing Chop): el guerrero golpea a un enemigo desde las 8 direcciones; con DC_PRUEBA_EFECTOS_FAO=1 guarda juego/capturas/efectos_golpe.png (una fila por dirección, cuatro instantes).
+  paso("efectos de FAO: el golpe se dibuja orientado en las 8 direcciones", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local Mapa = require("compartido.dominio.mapa")
+    local vista = os.getenv("DC_PRUEBA_EFECTOS_FAO") ~= nil
+    local CW, CH = 260, 190
+    local mosaico = vista and love.graphics.newCanvas(CW * 4, CH * 8) or nil
+    local dirs = { { 1, 0 }, { 1, 1 }, { 0, 1 }, { -1, 1 }, { -1, 0 }, { -1, -1 }, { 0, -1 }, { 1, -1 } }
+    local cv = love.graphics.newCanvas(1280, 720)
+    for fila, d in ipairs(dirs) do
+      local mundo = Mundo.nuevo()
+      local pj = mundo:crearPersonaje({ nombre = "Lanzador", faccion = "albor", clase = "guerrero", nivel = 30 })
+      local c = mundo.mapas.mundo.ciudades[1]
+      pj.x, pj.y = c.spawn.x, c.spawn.y
+      local mapa0 = mundo.mapas.mundo
+      for r = 14, 60, 2 do
+        local hallado
+        for dx = -r, r, 2 do
+          for _, dy in ipairs({ -r, r }) do
+            local x, y = math.floor(c.spawn.x + dx), math.floor(c.spawn.y + dy)
+            local libre = x > 8 and y > 8 and x < mapa0.w - 8 and y < mapa0.h - 8
+            for i = -4, 4, 2 do for j = -4, 4, 2 do
+              if libre and not (Mapa.transitable(mapa0, x + i, y + j) and mapa0.suelo[x + i][y + j] == "hierba") then libre = false end
+            end end
+            if libre then hallado = { x + 0.5, y + 0.5 } break end
+          end
+          if hallado then break end
+        end
+        if hallado then pj.x, pj.y = hallado[1], hallado[2] break end
+      end
+      local largo = math.sqrt(d[1] * d[1] + d[2] * d[2])
+      local rival = { id = 900, kind = "monstruo", faccion = "bestia", nombre = "Rival", x = pj.x + d[1] / largo * 1.2, y = pj.y + d[2] / largo * 1.2,
+        vivo = true, hp = 100000, hpMax = 100000, modo = "mundo", z = 0, nivel = 1 }
+      mundo.entidades[900] = rival
+      pj.mp, pj.mpMax, pj.objetivo = 999, 999, 900
+      local res = mundo:usarHabilidad(pj, 1)
+      fallar(errores, "el golpe se lanza sin error desde la dirección " .. fila, res == nil, tostring(res))
+      local fx
+      for _, e in ipairs(mundo.efectos) do if e.tipo == "golpe" then fx = e end end
+      fallar(errores, "el golpe crea su efecto con el origen del atacante", fx ~= nil and fx.x0 == pj.x and fx.dur >= 0.8)
+      fallar(errores, "el golpe hizo daño", rival.hp < rival.hpMax)
+      for k, tt in ipairs({ 0.05, 0.2, 0.35, 0.6 }) do
+        if fx then fx.t = tt end
+        love.graphics.push("all")
+        love.graphics.setCanvas({ cv, stencil = true })
+        love.graphics.clear(0, 0, 0, 1)
+        local cam = Dibujo.camara(pj, 2, mundo:mapaDe(pj))
+        local ok, err = pcall(Dibujo.escena, mundo, pj, cam, 0, 0)
+        love.graphics.pop()
+        fallar(errores, "la escena con el golpe se dibuja", ok, tostring(err))
+        if mosaico then
+          love.graphics.push("all")
+          love.graphics.setCanvas(mosaico)
+          love.graphics.setColor(1, 1, 1, 1)
+          love.graphics.draw(cv, love.graphics.newQuad(640 - CW / 2, 340 - CH / 2, CW, CH, 1280, 720), (k - 1) * CW, (fila - 1) * CH)
+          love.graphics.pop()
+        end
+      end
+    end
+    if mosaico then Log.volcar("capturas/efectos_golpe.png", mosaico:newImageData():encode("png"):getString()) end
+  end)
+  -- Criaturas de los campamentos del editor dentro de los mapas de FAO: el cliente las dibuja con su animación de siempre. Con DC_PRUEBA_CRIATURAS_FAO=1 guarda juego/capturas/criaturas_fao.png
+  -- (una fila por mapa: llegada, pelea, muerte y reaparición).
+  paso("criaturas en mapas de FAO: se dibujan, pelean y reaparecen dentro del mapa", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local vista = os.getenv("DC_PRUEBA_CRIATURAS_FAO") ~= nil
+    local CW, CH = 480, 300
+    local mosaico = vista and love.graphics.newCanvas(CW * 4, CH * 2) or nil
+    local cv = love.graphics.newCanvas(1280, 720)
+    local function foto(mundo, pj, col, fila)
+      love.graphics.push("all")
+      love.graphics.setCanvas({ cv, stencil = true })
+      love.graphics.clear(0, 0, 0, 1)
+      local cam = Dibujo.camara(pj, 2, mundo:mapaDe(pj))
+      local ok, err = pcall(Dibujo.escena, mundo, pj, cam, 0, 0)
+      love.graphics.pop()
+      fallar(errores, "la escena del mapa de FAO con criaturas se dibuja", ok, tostring(err))
+      if mosaico then
+        love.graphics.push("all")
+        love.graphics.setCanvas(mosaico)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(cv, love.graphics.newQuad(640 - CW / 2, 360 - CH / 2, CW, CH, 1280, 720), (col - 1) * CW, (fila - 1) * CH)
+        love.graphics.pop()
+      end
+    end
+    for fila, nombre in ipairs({ "granja_de_pinchos", "pozo_sin_fondo" }) do
+      local mundo = Mundo.nuevo()
+      local pj = mundo:crearPersonaje({ nombre = "Cazador", faccion = "albor", clase = "guerrero", nivel = 3 })
+      pj.hp, pj.hpMax, pj.mp, pj.mpMax = 99999, 99999, 999, 999
+      mundo:entrarMapaFao(pj, nombre)
+      local mapa = mundo.mapas[nombre]
+      local camp = mapa.campamentos[3]
+      pj.x, pj.y = camp.x - 2.5, camp.y
+      local mob
+      for _, e in pairs(mundo.entidades) do
+        if e.kind == "monstruo" and e.modo == nombre and (not mob or Util.dist(e.x, e.y, camp.x, camp.y) < Util.dist(mob.x, mob.y, camp.x, camp.y)) then mob = e end
+      end
+      fallar(errores, nombre .. ": hay criaturas junto al campamento", mob ~= nil)
+      if mob then
+        mob.agresivo = true
+        local visibles = 0
+        for _, e in ipairs(mundo:visibles(pj)) do if e.kind == "monstruo" then visibles = visibles + 1 end end
+        fallar(errores, nombre .. ": el servidor manda las criaturas del mapa al jugador de dentro", visibles >= camp.cantidad, tostring(visibles))
+        foto(mundo, pj, 1, fila)
+        pj.x, pj.y = mob.x - 1, mob.y
+        pj.objetivo = mob.id
+        mob.hp, mob.hpMax = 1e7, 1e7
+        for _ = 1, 25 do mundo:actualizar(0.1) end
+        foto(mundo, pj, 2, fila)
+        mob.hp = 1
+        pj.cds = {}
+        mundo:usarHabilidad(pj, 1)
+        mundo:actualizar(0.05)
+        fallar(errores, nombre .. ": muere", not mob.vivo)
+        foto(mundo, pj, 3, fila)
+        mob.respawn = mundo.tiempo + 0.2
+        pj.objetivo = nil
+        for _ = 1, 15 do mundo:actualizar(0.1) end
+        fallar(errores, nombre .. ": reaparece", mob.vivo)
+        foto(mundo, pj, 4, fila)
+      end
+    end
+    if mosaico then Log.volcar("capturas/criaturas_fao.png", mosaico:newImageData():encode("png"):getString()) end
+  end)
+  -- Mapa 257 (Mariam Waterway) en el cliente: el jugador sobre los tablones se dibuja encima de ellos, la barca y las mesas bloquean y los objetos altos se atenúan si tapan al personaje.
+  -- Con DC_PRUEBA_BARCA=1 guarda juego/capturas/mapa_fao_barca.png (arriba: en 29,34 sobre los tablones; en medio: junto a la barca, parado por ella; abajo: detrás de un objeto alto).
+  paso("mapa de FAO 257: tablones bajo el jugador, la barca lo detiene y el objeto alto se atenúa", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local Mapa = require("compartido.dominio.mapa")
+    local MapaMpc = require("src.presentacion.render.mapa_mpc")
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.canal_mariam
+    local pj = mundo:crearPersonaje({ nombre = "Marinero", faccion = "albor", clase = "guerrero", nivel = 10 })
+    pj.hp, pj.hpMax = 99999, 99999
+    mundo:entrarMapaFao(pj, "canal_mariam")
+    local vista = os.getenv("DC_PRUEBA_BARCA") ~= nil
+    local CW, CH = 640, 400
+    local mosaico = vista and love.graphics.newCanvas(CW * 2, CH * 2) or nil
+    local cv = love.graphics.newCanvas(1280, 720)
+    local function foto(col, fila)
+      love.graphics.push("all")
+      love.graphics.setCanvas({ cv, stencil = true })
+      love.graphics.clear(0, 0, 0, 1)
+      local cam = Dibujo.camara(pj, 2, mundo:mapaDe(pj))
+      local ok, err = pcall(Dibujo.escena, mundo, pj, cam, 0, 0)
+      love.graphics.pop()
+      fallar(errores, "la escena del mapa 257 se dibuja", ok, tostring(err))
+      if mosaico then
+        love.graphics.push("all")
+        love.graphics.setCanvas(mosaico)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(cv, love.graphics.newQuad(640 - CW / 2, 360 - CH / 2, CW, CH, 1280, 720), (col - 1) * CW, (fila - 1) * CH)
+        love.graphics.pop()
+      end
+    end
+    -- 1. sobre los tablones de 29,34 (el jugador tiene que verse entero, no tapado)
+    pj.x, pj.y = 29.5, 34.5
+    foto(1, 1)
+    -- 2. caminando hacia la barca desde el norte hasta que lo detiene
+    local barca
+    for _, o in ipairs(mapa.mpc.objetos) do if o.id == 10756 then barca = o end end
+    local gx, gy = math.floor(barca.x / 64), math.floor((barca.y - 1) / 64)
+    pj.x, pj.y, pj.camino = gx + 0.5, gy - 2.5, nil
+    pj.deseoX, pj.deseoY = 0, 1
+    for _ = 1, 60 do mundo:actualizar(0.1) end
+    pj.deseoX, pj.deseoY = 0, 0
+    fallar(errores, "el jugador queda parado delante de la barca, no encima", not Mapa.bloqueado(mapa, pj.x, pj.y) and pj.y < barca.y / 64, string.format("%.1f,%.1f barca y=%.1f", pj.x, pj.y, barca.y / 64))
+    foto(2, 1)
+    -- 3. detrás de un objeto alto con z (barca u objeto grande): se atenúa y se ve al jugador
+    local tapado = 0
+    local m = require("src.presentacion.render.iso")
+    pj.x, pj.y = barca.x / 64, barca.y / 64 - 1.6
+    local sx, sy = barca.x / 64 * 0, 0
+    for _, o in ipairs(mapa.mpc.objetos) do
+      local d = mapa.mpc.defs[o.id]
+      if d and d.z and not d.p and d.f[1][4] >= 80 then
+        local jx, jy = o.x / 64, o.y / 64 - 1.2
+        -- el torso del personaje (en píxeles de pantalla cenitales, 32 por casilla) dentro del sprite del objeto
+        local px, py = jx * 32, jy * 32 - 20
+        if MapaMpc.tapa(mapa, o, o.x / 64 * 32, o.y / 64 * 32, px, py) then tapado = tapado + 1 end
+      end
+    end
+    fallar(errores, "los objetos altos con z atenúan cuando tapan al personaje", tapado > 20, tostring(tapado))
+    local suelo = 0
+    for _, o in ipairs(mapa.mpc.objetos) do
+      local d = mapa.mpc.defs[o.id]
+      if d and d.p and MapaMpc.tapa(mapa, o, o.x / 64 * 32, o.y / 64 * 32, o.x / 64 * 32, o.y / 64 * 32 - 20) then suelo = suelo + 1 end
+    end
+    fallar(errores, "las piezas de suelo nunca atenúan ni tapan", suelo == 0, tostring(suelo))
+    foto(1, 2)
+    -- 4. una mesa/puesto: bloquea
+    local mesa
+    for _, o in ipairs(mapa.mpc.objetos) do if o.id == 7523 or (mapa.mpc.defs[o.id] and mapa.mpc.defs[o.id].n:find("攤位", 1, true)) then mesa = o break end end
+    fallar(errores, "hay un puesto/mesa en el mapa 257 y sus casillas están bloqueadas", mesa ~= nil and mapa.bloque[math.floor(mesa.x / 64)][math.floor((mesa.y - 1) / 64)])
+    pj.x, pj.y = (mesa and mesa.x / 64 or 26) , (mesa and mesa.y / 64 + 1.5 or 36)
+    foto(2, 2)
+    if mosaico then Log.volcar("capturas/mapa_fao_barca.png", mosaico:newImageData():encode("png"):getString()) end
+    -- los demás mapas siguen cargando
+    for nombre in pairs(require("compartido.dominio.mapas_fao").MAPAS) do
+      fallar(errores, "el mapa " .. nombre .. " carga", mundo.mapas[nombre] ~= nil and mundo.mapas[nombre].fao == true)
+    end
+  end)
   paso("sprites de hechizos: cada poder de cada clase tiene su hoja generada", function()
     local Efectos = require("src.presentacion.render.efectos")
     local Dibujo = require("src.presentacion.render.dibujo")
@@ -1862,9 +2379,12 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     for _, clase in ipairs({ "guerrero", "mago", "cazador", "clerigo" }) do
       for _, id in ipairs(Datos.barra[clase]) do
         local d = Efectos.def[id]
-        fallar(errores, id .. " (" .. clase .. ") usa una hoja de hechizo propia", d and d[1] == "Hechizo_" .. id, d and d[1] or "sin efecto")
-        local img = Arte.img("Animations/Hechizo_" .. id .. ".png", true)
-        fallar(errores, "la hoja de " .. id .. " mide 5x3 cuadros de 192", img:getWidth() == 960 and img:getHeight() == 576)
+        -- la pantera y la nova (ventisca) son compuestos con sprites de FAO (efectos_fao.lua); el resto usa una hoja de hechizo propia
+        fallar(errores, id .. " (" .. clase .. ") usa una hoja de hechizo propia", d and (d.fao or d[1] == "Hechizo_" .. id), d and d[1] or "sin efecto")
+        if not (d and d.fao) then
+          local img = Arte.img("Animations/Hechizo_" .. id .. ".png", true)
+          fallar(errores, "la hoja de " .. id .. " mide 5x3 cuadros de 192", img:getWidth() == 960 and img:getHeight() == 576)
+        end
         for _, tt in ipairs({ 0, 0.2, 0.5, 0.8, 1 }) do
           love.graphics.push("all")
           love.graphics.setCanvas({ cv, stencil = true })

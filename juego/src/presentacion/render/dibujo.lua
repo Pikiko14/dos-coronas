@@ -15,6 +15,7 @@ local Personajes = require("src.presentacion.render.personajes")
 local Objetos = require("src.presentacion.render.objetos")
 local Trampas = require("src.presentacion.render.trampas")
 local Efectos = require("src.presentacion.render.efectos")
+local MapaMpc = require("src.presentacion.render.mapa_mpc")
 local Arte = require("src.presentacion.render.arte")
 
 local D = {}
@@ -40,6 +41,8 @@ function D.dentroVista(mx, my)
 end
 
 function D.camara(jugador, zoom, mapa)
+  -- los mapas de FAO (.mpc) se ven en vista cenital, como en FAO (su minimapa lo demuestra: en isométrica los puentes y los muros de piedra se desarman)
+  if mapa and mapa.mpc then Iso.forzar(false) else Iso.forzar(nil) end
   local vx, vy, vw, vh = vista()
   zoom = zoom or Datos.ZOOM
   local gx, gy = Iso.suelo(jugador.x, jugador.y)
@@ -317,6 +320,15 @@ function D.escena(mundo, jugador, cam, mx, my)
       end
     end
   end
+  local objetosMpc
+  if mapa.mpc then
+    -- mapa de FAO (.mpc): sus árboles, rocas y plantas se ordenan con los personajes por su punto de apoyo (y sus sombras van antes, en el suelo)
+    objetosMpc = MapaMpc.visibles(mapa, jugador.x, jugador.y, radio + 4)
+    for _, o in ipairs(objetosMpc) do
+      local d = mapa.mpc.defs[o.id]
+      if not (d and d.p) then cola[#cola + 1] = { tipo = "objfao", x = o.x / 64, y = o.y / 64, o = o } end
+    end
+  end
   if pz == 0 and MapaFao.murosActivo() then
     for _, m in ipairs(MapaFao.lista(mapa)) do
       if math.abs(m.x - jugador.x) < radio and math.abs(m.y - jugador.y) < radio then
@@ -365,6 +377,31 @@ function D.escena(mundo, jugador, cam, mx, my)
     end
   end
   table.sort(cola, function(a, b) return a.p < b.p end)
+  if objetosMpc then
+    -- piezas planas (tableros de puentes, bordes, césped): en el suelo, bajo los personajes, de atrás hacia delante
+    local planos = {}
+    for _, o in ipairs(objetosMpc) do
+      local d = mapa.mpc.defs[o.id]
+      if d and d.p then planos[#planos + 1] = o end
+    end
+    table.sort(planos, function(a, b) if a.y ~= b.y then return a.y < b.y end return a.x < b.x end)
+    for _, o in ipairs(planos) do
+      local gx, gy = Iso.suelo(o.x / 64, o.y / 64)
+      MapaMpc.dibujarObjeto(mapa, o, gx - cam.x, gy - cam.y + (Iso.activo() and Iso.PIES or 0), mundo.tiempo)
+    end
+    for _, o in ipairs(objetosMpc) do
+      local gx, gy = Iso.suelo(o.x / 64, o.y / 64)
+      MapaMpc.dibujarSombra(mapa, o, gx - cam.x, gy - cam.y)
+    end
+  end
+  -- capa de suelo de los efectos de FAO compuestos (el anillo del tajo): bajo los personajes
+  for _, fx in ipairs(mundo.efectos or {}) do
+    local d = Efectos.def[fx.tipo]
+    if d and d.suelo and math.abs(fx.x - jugador.x) < radio and math.abs(fx.y - jugador.y) < radio then
+      local epx, epy = Iso.pos(fx.x, fx.y)
+      Efectos.suelo(fx.tipo, fx, epx - cam.x, epy - cam.y + 14)
+    end
+  end
   local placas = {}
   for _, item in ipairs(cola) do
     local px, py = Iso.pos(item.x, item.y)
@@ -403,6 +440,12 @@ function D.escena(mundo, jugador, cam, mx, my)
         -- arte nuevo de las ciudades
       elseif Objetos.personalizados and Objetos.personalizados[p.tipo] then Objetos.personalizados[p.tipo](p, px0, py0)
       else Objetos.dibujar(p.tipo, variante, px0, py0, tint, alfa, p.x * 0.35 + p.y * 0.2 + hash(p.x, p.y) * 0.9) end
+    elseif item.tipo == "objfao" then
+      local sy0 = sy + (Iso.activo() and Iso.PIES or 0)
+      -- objeto alto delante del personaje que lo tapa: se atenúa (como los árboles); las piezas de suelo ya van debajo de todo
+      local jx, jy = Iso.pos(jugador.x, jugador.y)
+      local alfaO = (item.y > jugador.y and MapaMpc.tapa(mapa, item.o, sx, sy0, jx - cam.x, jy - cam.y - 20)) and 0.45 or 1
+      MapaMpc.dibujarObjeto(mapa, item.o, sx, sy0, mundo.tiempo, alfaO)
     elseif item.tipo == "muro" then
       local m = item.m
       local gx, gy = Iso.suelo(m.x + 0.5, m.y + 0.5)
@@ -445,7 +488,7 @@ function D.escena(mundo, jugador, cam, mx, my)
       for _, mo in ipairs(montados or {}) do
         if math.abs(mo.e.x - fx.x) < 0.7 and math.abs(mo.e.y - fx.y) < 0.7 then lift = mo.lift break end
       end
-      Efectos.cuadro(fx.tipo, fx.t, fx.dur, epx - cam.x, epy - cam.y + 14 - lift, nil, nil, rotE)
+      Efectos.cuadro(fx.tipo, fx.t, fx.dur, epx - cam.x, epy - cam.y + 14 - lift, nil, nil, rotE, fx)
     end
   end
   -- apuntando un poder de area: la zona habilitada (alcance) y el area de impacto bajo el cursor

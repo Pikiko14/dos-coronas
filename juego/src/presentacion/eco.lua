@@ -40,9 +40,9 @@ local function distSegmento(px, py, ax, ay, bx, by)
   return dist(px, py, ax + dx * t, ay + dy * t)
 end
 
-local function nuevoEfecto(app, tipo, x, y, dur, rot, tol)
+local function nuevoEfecto(app, tipo, x, y, dur, rot, tol, x0, y0)
   local e, t0 = estado(app), ahora()
-  local fx = { tipo = tipo, x = x, y = y, t = 0, dur = dur, rot = rot, _eco = true, nace = t0 }
+  local fx = { tipo = tipo, x = x, y = y, t = 0, dur = dur, rot = rot, x0 = x0, y0 = y0, _eco = true, nace = t0 }
   e.fx[#e.fx + 1] = fx
   e.sup[#e.sup + 1] = { tipo = tipo, x = x, y = y, tol = tol or 1.5, hasta = t0 + dur + limite(app) + 0.3, limite = t0 + limite(app), fx = fx }
   return fx
@@ -93,7 +93,7 @@ function Eco.lanzar(app, datos)
         limite = t0 + limite(app), pr = pr,
       }
     elseif h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" or h.tipo == "invocar" then
-      nuevoEfecto(app, idh, p.x, p.y, 0.5, Mundo.ANGULO_DIR[p.dir or 1])
+      nuevoEfecto(app, idh, p.x, p.y, Mundo.DURACION_EFECTO[idh] or 0.5, Mundo.ANGULO_DIR[p.dir or 1])
     elseif h.tipo == "punto" then
       local px, py = datos.x or (objetivo and objetivo.x), datos.y or (objetivo and objetivo.y)
       if not px then
@@ -106,10 +106,10 @@ function Eco.lanzar(app, datos)
       local d = dist(p.x, p.y, px, py)
       local alcance = (h.rango or 6) + 0.3
       if d > alcance then px, py = p.x + (px - p.x) * alcance / d, p.y + (py - p.y) * alcance / d end
-      nuevoEfecto(app, idh, px, py, 0.55, nil, 2.5)
+      nuevoEfecto(app, idh, px, py, Mundo.DURACION_EFECTO[idh] or 0.55, nil, 2.5)
     else
       local rot = (objetivo and objetivo ~= p) and math.atan2(ey - p.y, ex - p.x) or nil
-      nuevoEfecto(app, idh, ex, ey, 0.4, rot)
+      nuevoEfecto(app, idh, ex, ey, Mundo.DURACION_EFECTO[idh] or 0.4, rot, nil, p.x, p.y)
     end
     -- el sonido también se adelanta; el del servidor se descarta al llegar
     local nombre = Mundo.SONIDO_PODER[idh] or "magia"

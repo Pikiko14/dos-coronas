@@ -2574,11 +2574,11 @@ mundo.tiempo = 100
       return lista
     end
     local function slotDe(id) for i, h in ipairs(Datos.barra.mago) do if h == id then return i end end end
-    -- nova: golpea y ralentiza a todos los que están alrededor
+    -- nova (ventisca): cae en el punto elegido, golpea y ralentiza a todos los de esa zona
     local cerca = monstruos(mago.x + 1.5, mago.y, 4)
     local lejos = monstruos(mago.x + 12, mago.y, 1)[1]
     mago.cds = {}
-    mundo:usarHabilidad(mago, slotDe("nova"))
+    mundo:usarHabilidad(mago, slotDe("nova"), mago.x + 1.5, mago.y)
     local golpeados, lentos = 0, 0
     for _, m in ipairs(cerca) do
       if m.hp < m.hpMax then golpeados = golpeados + 1 end
@@ -2621,7 +2621,7 @@ mundo.tiempo = 100
       { clase = "guerrero", poder = "tajo", punto = false, cerca = 1.3 },
       { clase = "cazador", poder = "lluvia", punto = true, cerca = 5 },
       { clase = "clerigo", poder = "consagrar", punto = false, cerca = 1.5 },
-      { clase = "mago", poder = "nova", punto = false, cerca = 1.5 },
+      { clase = "mago", poder = "nova", punto = true, cerca = 1.5 },
     }
     for _, c in ipairs(casos) do
       local p = mundo:crearPersonaje({ nombre = "AoE" .. c.clase, faccion = "albor", clase = c.clase, nivel = 25 })
@@ -3745,7 +3745,7 @@ mundo.tiempo = 100
     -- salen solos (uno por campamento), son élites y suben de nivel a lo largo del continente
     local vivos = 0
     for _, e in pairs(mundo.entidades) do
-      if e.kind == "monstruo" and Datos.monstruo(e.monstruo).jefeMundo then
+      if e.kind == "monstruo" and e.modo == "mundo" and Datos.monstruo(e.monstruo).jefeMundo then
         vivos = vivos + 1
         fallar(errores, "el jefe " .. e.monstruo .. " es élite", e.elite == true)
       end
@@ -5120,6 +5120,313 @@ mundo.tiempo = 100
       end
     end
     Cuentas.borrarUsuario(usuario)
+  end)
+  paso("mapa de FAO (.mpc): map002 se lee, sus colisiones son coherentes y se puede caminar", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local Mpc = require("compartido.dominio.mapa_mpc")
+    Mpc.olvidar()
+    local t0 = os.clock()
+    local mapa = Mpc.cargar(2)
+    local seg = os.clock() - t0
+    local m = mapa.mpc
+    fallar(errores, "el .mpc es de 300 x 186 celdas y el mapa del juego de 150 x 93 casillas (2 x 2 celdas cada una)", m.fw == 300 and m.fh == 186 and mapa.w == 150 and mapa.h == 93)
+    fallar(errores, "la cuadrícula tiene 55800 celdas", #m.ts == 55800 and #m.tile == 55800)
+    fallar(errores, "todos los tiles del mapa están en los datos horneados (19 tilesets)", m.sinTile == 0, "sin tile: " .. tostring(m.sinTile))
+    fallar(errores, "lee las 6 rutas y los 29 registros de puntos", #m.rutas == 6 and #m.puntos == 29, #m.rutas .. "/" .. #m.puntos)
+    fallar(errores, "dos salidas (los triángulos 1 y 2) y 13 zonas", #m.salidas == 2 and #m.zonas == 13, #m.salidas .. "/" .. #m.zonas)
+    local ev1, ev2 = mapa.eventos[1], mapa.eventos[2]
+    fallar(errores, "los eventos 1 y 2 de FAO se leen (saltos a otros mapas), inertes", ev1 and ev2 and ev1.disparadores[1].acciones[1].id == 3 and ev1.disparadores[1].acciones[1].params[1] == 4 and ev2.disparadores[1].acciones[1].params[1] == 5)
+    fallar(errores, "los diálogos de FAO se leen", mapa.dialogos[10011] and mapa.dialogos[10011].mensaje == 10227)
+    -- colisiones: el byte 1 de cada celda del .mpc es el atributo del terreno (0 libre, 1 obstáculo, 2 agua o risco, 3 y 10 casos sueltos). Una casilla del juego (2 x 2 celdas) se cierra si
+    -- tiene un obstáculo (1, 3 o 10) o dos o más celdas de agua/risco (2); si sus cuatro celdas son 0 queda libre
+    local libres, libresBloq, cerradas, cerradasBloq = 0, 0, 0, 0
+    for gx = 0, mapa.w - 1 do
+      for gy = 0, mapa.h - 1 do
+        local obst, agua = 0, 0
+        for dx = 0, 1 do
+          for dy = 0, 1 do
+            local fx, fy = gx * 2 + dx, gy * 2 + dy
+            if fx < m.fw and fy < m.fh then
+              local a = m.tile[fy * m.fw + fx + 1]
+              if a == 2 then agua = agua + 1 elseif a ~= 0 then obst = obst + 1 end
+            end
+          end
+        end
+        if obst == 0 and agua == 0 then libres = libres + 1 if mapa.bloque[gx][gy] then libresBloq = libresBloq + 1 end
+        elseif obst > 0 or agua >= 2 then cerradas = cerradas + 1 if mapa.bloque[gx][gy] then cerradasBloq = cerradasBloq + 1 end end
+      end
+    end
+    fallar(errores, "toda casilla con un obstáculo o con 2+ celdas de agua/risco está bloqueada", cerradas > 3000 and cerradasBloq == cerradas, cerradasBloq .. "/" .. cerradas)
+    fallar(errores, "las casillas totalmente libres se pueden pisar", libres > 5000 and libresBloq <= mapa.mpc.cerradosPorObjetos, libresBloq .. "/" .. libres .. " (cerradas por objetos: " .. mapa.mpc.cerradosPorObjetos .. ")")
+    fallar(errores, "el punto de entrada es transitable", Mapa.transitable(mapa, math.floor(mapa.entrada.x), math.floor(mapa.entrada.y)))
+    -- caminos: entre dos puntos del mayor continente hay camino, sin pisar casillas bloqueadas; hasta el mar no
+    local lejos
+    for x = mapa.w - 8, 1, -1 do
+      for y = 1, mapa.h - 2 do
+        if mapa.comp[y * mapa.w + x] == mapa.continente.id then lejos = { x = x, y = y } break end
+      end
+      if lejos then break end
+    end
+    local cam = Mapa.buscar(mapa, math.floor(mapa.entrada.x), math.floor(mapa.entrada.y), lejos.x, lejos.y)
+    fallar(errores, "hay camino de la entrada al otro extremo del mapa", cam ~= nil and #cam > 60, cam and #cam or "nil")
+    local limpio = cam ~= nil
+    for _, p in ipairs(cam or {}) do
+      if Mapa.bloqueado(mapa, p.x, p.y) then limpio = false end
+    end
+    fallar(errores, "el camino no atraviesa casillas bloqueadas (agua ni objetos)", limpio)
+    local mar
+    for x = 0, mapa.w - 1 do if mapa.bloque[x][mapa.h - 3] and mapa.suelo[x][mapa.h - 3] == "agua" then mar = x break end end
+    fallar(errores, "el mar no es alcanzable", mar ~= nil and Mapa.buscar(mapa, math.floor(mapa.entrada.x), math.floor(mapa.entrada.y), mar, mapa.h - 3) == nil)
+    fallar(errores, "el .mpc se lee en menos de 2 s (medido: " .. string.format("%.2f", seg) .. " s)", seg < 2)
+  end)
+  paso("criaturas en los mapas de FAO: campamentos del editor, aisladas del mundo, pelean, reaparecen y no cambian el mundo", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local MapaMpc = require("compartido.dominio.mapa_mpc")
+    local MapasFao = require("compartido.dominio.mapas_fao")
+    local function contar(mundo, modo)
+      local n = 0
+      for _, e in pairs(mundo.entidades) do if e.kind == "monstruo" and e.modo == modo then n = n + 1 end end
+      return n
+    end
+    -- (f) el mundo normal tiene las mismas criaturas con y sin mapas de FAO: se compara con los mapas retirados
+    local original = {}
+    for nombre, num in pairs(MapasFao.MAPAS) do original[nombre] = num end
+    for nombre in pairs(original) do MapasFao.MAPAS[nombre] = nil end
+    local t1 = os.clock()
+    local sin = Mundo.nuevo()
+    local tSin = os.clock() - t1
+    for nombre, num in pairs(original) do MapasFao.MAPAS[nombre] = num end
+    MapaMpc.olvidar()
+    local t0 = os.clock()
+    local mundo = Mundo.nuevo()
+    local tNuevo = os.clock() - t0
+    fallar(errores, "el mundo tiene exactamente las mismas criaturas con y sin los mapas de FAO", contar(mundo, "mundo") == contar(sin, "mundo") and contar(mundo, "mundo") > 100, contar(mundo, "mundo") .. " vs " .. contar(sin, "mundo"))
+    Log.info(string.format("mapas FAO: Mundo.nuevo con 5 mapas y sus criaturas %.2f s (sin ellos %.2f s); criaturas del mundo %d con y %d sin; granja %d, pozo %d, minas %d", tNuevo, tSin,
+      contar(mundo, "mundo"), contar(sin, "mundo"), contar(mundo, "granja_de_pinchos"), contar(mundo, "pozo_sin_fondo"), contar(mundo, "minas_de_la_muerte")))
+    -- (a) cada mapa con archivo de campamentos crea sus campamentos y criaturas en el modo del mapa
+    local esperados = { granja_de_pinchos = 31, pozo_sin_fondo = 22, minas_de_la_muerte = 23 }
+    for nombre, n in pairs(esperados) do
+      local mapa = mundo.mapas[nombre]
+      fallar(errores, nombre .. ": " .. n .. " campamentos", mapa and #mapa.campamentos == n, mapa and tostring(#mapa.campamentos) or "sin mapa")
+      local total, ok = 0, true
+      for _, c in ipairs(mapa.campamentos) do
+        total = total + c.cantidad
+        if not Mapa.transitable(mapa, math.floor(c.x), math.floor(c.y)) then ok = false end
+      end
+      fallar(errores, nombre .. ": criaturas = suma de las cantidades, todas con modo = el mapa", contar(mundo, nombre) == total and total >= n, contar(mundo, nombre) .. "/" .. total)
+      fallar(errores, nombre .. ": todos los campamentos están en casillas transitables", ok)
+      for _, e in pairs(mundo.entidades) do
+        if e.kind == "monstruo" and e.modo == nombre and not Mapa.transitable(mapa, math.floor(e.x), math.floor(e.y)) then ok = false end
+      end
+      fallar(errores, nombre .. ": ninguna criatura nace sobre una casilla bloqueada", ok)
+    end
+    -- (e) sin archivo de campamentos: como hoy
+    fallar(errores, "riprap y canal_mariam siguen sin criaturas", contar(mundo, "riprap") == 0 and contar(mundo, "canal_mariam") == 0 and #mundo.mapas.riprap.campamentos == 0)
+    -- (b) un jugador dentro las ve, pelea y recibe sus golpes; (c) y no ve las del mundo
+    local p = mundo:crearPersonaje({ nombre = "Cazador", faccion = "albor", clase = "guerrero", nivel = 3 })
+    local mundoAntes = contar(mundo, "mundo")
+    p.hp, p.hpMax, p.mp, p.mpMax = 99999, 99999, 999, 999
+    mundo:entrarMapaFao(p, "granja_de_pinchos")
+    local mapa = mundo.mapas.granja_de_pinchos
+    local camp = mapa.campamentos[1]
+    p.x, p.y = camp.x, camp.y
+    local vistos, ajenos = 0, 0
+    for _, e in ipairs(mundo:visibles(p)) do
+      if e.kind == "monstruo" then
+        if e.modo == "granja_de_pinchos" then vistos = vistos + 1 else ajenos = ajenos + 1 end
+      end
+    end
+    fallar(errores, "dentro del mapa se ven sus criaturas y ninguna del mundo", vistos >= camp.cantidad and ajenos == 0, vistos .. "/" .. ajenos)
+    local objetivo, md
+    for _, e in pairs(mundo.entidades) do
+      if e.kind == "monstruo" and e.modo == "granja_de_pinchos" then
+        local d = Util.dist(e.x, e.y, p.x, p.y)
+        if not md or d < md then objetivo, md = e, d end
+      end
+    end
+    objetivo.agresivo = true
+    p.x, p.y = objetivo.x - 1, objetivo.y
+    p.objetivo = objetivo.id
+    objetivo.hp, objetivo.hpMax = 1e7, 1e7
+    local hp0 = p.hp
+    for _ = 1, 60 do mundo:actualizar(0.1) end
+    fallar(errores, "la criatura del mapa pelea con el jugador de dentro", p.hp < hp0, p.hp .. "/" .. hp0)
+    p.cds = {}
+    objetivo.hp = 1e7
+    p.objetivo = objetivo.id
+    local errp = mundo:usarHabilidad(p, 1)
+    mundo:actualizar(0.05)
+    fallar(errores, "el jugador la golpea (poder golpe)", errp == nil and objetivo.hp < 1e7, tostring(errp) .. " hp=" .. objetivo.hp)
+    -- experiencia al matarla; reaparece en su campamento
+    objetivo.hp = 1
+    p.cds = {}
+    local xp0 = p.xp or 0
+    mundo:usarHabilidad(p, 1)
+    mundo:actualizar(0.05)
+    fallar(errores, "la criatura muere y el jugador gana experiencia", not objetivo.vivo and (p.xp or 0) > xp0, tostring(objetivo.vivo) .. " xp " .. xp0 .. "->" .. (p.xp or 0))
+    objetivo.respawn = mundo.tiempo + 0.2
+    p.x, p.y = camp.x, camp.y
+    for _ = 1, 10 do mundo:actualizar(0.1) end
+    fallar(errores, "reaparece en su campamento con su modo", objetivo.vivo and objetivo.modo == "granja_de_pinchos" and Util.dist(objetivo.x, objetivo.y, objetivo.hogarx, objetivo.hogary) < 2, tostring(objetivo.vivo) .. " " .. Util.dist(objetivo.x, objetivo.y, objetivo.hogarx, objetivo.hogary))
+    fallar(errores, "las criaturas del mundo siguen siendo las mismas", contar(mundo, "mundo") == mundoAntes)
+    -- (c, al revés) quien está en el mundo no ve las del mapa de FAO
+    local q = mundo:crearPersonaje({ nombre = "Mundano", faccion = "albor", clase = "guerrero", nivel = 20 })
+    local ve = 0
+    for _, e in ipairs(mundo:visibles(q)) do if e.kind == "monstruo" and e.modo ~= "mundo" then ve = ve + 1 end end
+    fallar(errores, "quien está en el mundo no ve criaturas de un mapa de FAO", ve == 0, tostring(ve))
+    mundo:salirMapaFao(p)
+    ve = 0
+    for _, e in ipairs(mundo:visibles(p)) do if e.kind == "monstruo" and e.modo ~= "mundo" then ve = ve + 1 end end
+    fallar(errores, "al salir del mapa de FAO ya no se ven sus criaturas", p.modo == "mundo" and ve == 0)
+    -- (d) campamentos inválidos fallan con mensaje claro (archivo y campo)
+    package.loaded["compartido.datos.mapas_fao.map002_campamentos"] = { { monstruo = "no_existe_jamas", cantidad = 1, radio = 1, x = 100.5, y = 90.5 } }
+    MapaMpc.olvidar()
+    local ok, err = pcall(MapaMpc.cargar, 2)
+    fallar(errores, "un monstruo inexistente falla con archivo y campo", not ok and tostring(err):find("map002_campamentos.lua", 1, true) and tostring(err):find("monstruo", 1, true) and tostring(err):find("no_existe_jamas", 1, true), tostring(err))
+    for _, malo in ipairs({
+      { { monstruo = "seta_azul", cantidad = "dos", radio = 1, x = 100.5, y = 90.5 }, "cantidad" },
+      { { monstruo = "seta_azul", cantidad = 1, radio = 1, x = 9999, y = 90.5 }, "fuera del mapa" },
+      { { monstruo = "seta_azul", cantidad = 1, radio = "x", x = 100.5, y = 90.5 }, "radio" },
+    }) do
+      package.loaded["compartido.datos.mapas_fao.map002_campamentos"] = { malo[1] }
+      MapaMpc.olvidar()
+      local ok2, err2 = pcall(MapaMpc.cargar, 2)
+      fallar(errores, "campamento inválido (" .. malo[2] .. ") falla con mensaje claro", not ok2 and tostring(err2):find(malo[2], 1, true) ~= nil, tostring(err2))
+    end
+    package.loaded["compartido.datos.mapas_fao.map002_campamentos"] = nil
+    MapaMpc.olvidar()
+    local otro = Mundo.nuevo()
+    -- índice de mapas del editor: lo bueno se registra solo y lo malo falla con mensaje claro
+    fallar(errores, "el índice registra los mapas enviados desde el editor y respeta los escritos a mano", MapasFao.MAPAS.granja_de_pinchos == 6 and MapasFao.MAPAS.canal_mariam == 257 and MapasFao.MAPAS.riprap == 2)
+    local guardado = package.loaded["compartido.dominio.mapas_fao"]
+    local indiceOriginal = package.loaded["compartido.datos.mapas_fao.indice"]
+    local function conIndice(tabla)
+      package.loaded["compartido.datos.mapas_fao.indice"] = tabla
+      package.loaded["compartido.dominio.mapas_fao"] = nil
+      local ok3, res = pcall(require, "compartido.dominio.mapas_fao")
+      return ok3, res
+    end
+    local ok4, nuevoMod = conIndice({ pinchos_extra = 6, riprap = 31 })
+    fallar(errores, "un nombre nuevo del índice se añade sin tocar código y lo escrito a mano manda", ok4 and nuevoMod.MAPAS.pinchos_extra == 6 and nuevoMod.MAPAS.riprap == 2, tostring(nuevoMod))
+    for _, malo in ipairs({
+      { { ["Mal Nombre"] = 6 }, "nombre" },
+      { { salir = 6 }, "nombre" },
+      { { uno = 6.5 }, "entero" },
+      { { dos = 999 }, "falta" },
+    }) do
+      local ok5, err5 = conIndice(malo[1])
+      fallar(errores, "índice inválido (" .. malo[2] .. ") falla con mensaje claro", not ok5 and tostring(err5):find("indice.lua", 1, true) and tostring(err5):find(malo[2], 1, true), tostring(err5))
+    end
+    package.loaded["compartido.datos.mapas_fao.indice"] = indiceOriginal
+    package.loaded["compartido.dominio.mapas_fao"] = guardado
+    fallar(errores, "tras los errores el mapa vuelve a cargarse bien", #otro.mapas.riprap.campamentos == 0 and #otro.mapas.granja_de_pinchos.campamentos == 31)
+  end)
+  -- Colisión de objetos sin marca en el terreno (barcas, mesas, puestos...) y suelo que no bloquea: informe por mapa y comprobaciones en el mapa 257 (Mariam Waterway).
+  paso("mapas de FAO: las barcas y las mesas bloquean, los tablones y pilotes no", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local MapaMpc = require("compartido.dominio.mapa_mpc")
+    local MapasFao = require("compartido.dominio.mapas_fao")
+    local mundo = Mundo.nuevo()
+    for nombre, num in pairs(MapasFao.MAPAS) do
+      local mapa = mundo.mapas[nombre]
+      local bloquean, suelo = {}, {}
+      for _, o in ipairs(mapa.mpc.objetos) do
+        local d = mapa.mpc.defs[o.id]
+        local ancho = MapaMpc.huellaObjeto(o.id, d, nil)
+        if ancho then bloquean[d.n] = true elseif d.p then suelo[d.n] = true end
+      end
+      local nb, ns = 0, 0
+      for _ in pairs(bloquean) do nb = nb + 1 end
+      for _ in pairs(suelo) do ns = ns + 1 end
+      local lista = {}
+      for k in pairs(bloquean) do lista[#lista + 1] = k end
+      table.sort(lista)
+      Log.info(string.format("mapa FAO %s (%d): %d tipos de objeto bloquean (%s), %d tipos son suelo, %d casillas cerradas por objetos", nombre, num, nb, table.concat(lista, " "), ns, mapa.mpc.cerradosPorObjetos))
+      for k in pairs(suelo) do fallar(errores, nombre .. ": " .. k .. " (suelo) no bloquea", not bloquean[k]) end
+    end
+    local mapa = mundo.mapas.canal_mariam
+    -- la barca 泰國船16 (id 10756, en 30,0 / 35,9) cierra las casillas de su casco; los tablones de al lado (木板橋) no
+    local barca
+    for _, o in ipairs(mapa.mpc.objetos) do if o.id == 10756 then barca = o end end
+    fallar(errores, "la barca 10756 está en el mapa 257", barca ~= nil)
+    if barca then
+      local gx, gy = math.floor(barca.x / 64), math.floor((barca.y - 1) / 64)
+      fallar(errores, "las casillas del casco de la barca están bloqueadas", mapa.bloque[gx][gy] and mapa.bloque[gx - 1][gy] and mapa.bloque[gx + 1][gy])
+      -- un jugador que camina hacia ella se detiene: nunca pisa una casilla bloqueada
+      local p = mundo:crearPersonaje({ nombre = "Marinero", faccion = "albor", clase = "guerrero", nivel = 10 })
+      mundo:entrarMapaFao(p, "canal_mariam")
+      local x0, y0
+      for dy = -6, -1 do
+        for dx = -4, 4 do
+          local tx, ty = gx + dx, gy + dy
+          if not x0 and Mapa.transitable(mapa, tx, ty) then x0, y0 = tx, ty end
+        end
+      end
+      fallar(errores, "hay una casilla libre al norte de la barca para empezar", x0 ~= nil)
+      if x0 then
+        p.x, p.y, p.camino = x0 + 0.5, y0 + 0.5, nil
+        p.deseoX, p.deseoY = 0, 1
+        local malo = 0
+        for _ = 1, 80 do
+          mundo:actualizar(0.1)
+          if Mapa.bloqueado(mapa, p.x, p.y) then malo = malo + 1 end
+        end
+        p.deseoX, p.deseoY = 0, 0
+        fallar(errores, "caminando hacia la barca no se atraviesa", malo == 0, tostring(malo))
+      end
+    end
+  end)
+  paso("mapa de FAO como mapa aparte: entrar, moverse sin saltarse el agua ni los objetos, y salir por los triángulos", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local Autoridad = require("servidor.src.dominio.autoridad")
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.riprap
+    fallar(errores, "el mapa 2 está registrado junto a los demás (mundo.mapas.riprap)", mapa ~= nil and mapa.fao == true and mundo.mapas.mundo ~= mapa and mapa.w == 150)
+    local p = mundo:crearPersonaje({ nombre = "Isleño", faccion = "albor", clase = "guerrero", nivel = 10 })
+    local ox, oy = p.x, p.y
+    fallar(errores, "se entra con /admin mapa (aquí: entrarMapaFao)", mundo:entrarMapaFao(p, "riprap") == nil and p.modo == "riprap")
+    fallar(errores, "se aparece en la entrada, que es transitable", p.x == mapa.entrada.x and p.y == mapa.entrada.y and Mapa.transitable(mapa, math.floor(p.x), math.floor(p.y)))
+    fallar(errores, "el mapa de quien está dentro es el de FAO", mundo:mapaDe(p) == mapa and mundo:enMapaFao(p) == mapa and mundo:enRutas(p))
+    -- caminar en todas direcciones durante mucho rato (hay mar): nunca se pisa una casilla bloqueada
+    local malo = 0
+    for _, dir in ipairs({ { -1, 0 }, { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 1 }, { 1, -1 } }) do
+      p.x, p.y = mapa.entrada.x, mapa.entrada.y
+      p.camino = nil
+      p.deseoX, p.deseoY = dir[1], dir[2]
+      for _ = 1, 120 do
+        mundo:actualizar(0.1)
+        if p.modo ~= "riprap" then break end
+        if Mapa.bloqueado(mapa, p.x, p.y) then malo = malo + 1 end
+      end
+    end
+    p.deseoX, p.deseoY = 0, 0
+    fallar(errores, "andando en todas direcciones no se atraviesa agua ni objetos", malo == 0, tostring(malo))
+    -- trampas de red: un destino dentro del mar no deja a nadie sobre casillas bloqueadas
+    if p.modo ~= "riprap" then mundo:entrarMapaFao(p, "riprap") end
+    p.x, p.y = mapa.entrada.x, mapa.entrada.y
+    local mar
+    for x = 1, mapa.w - 2 do if mapa.bloque[x][mapa.h - 4] and mapa.suelo[x][mapa.h - 4] == "agua" then mar = x break end end
+    local ok, limpio = Autoridad.aceptar(mundo, p, "destino", { x = mar + 0.5, y = mapa.h - 3.5 })
+    mundo:accion(p.id, "destino", limpio or { x = mar + 0.5, y = mapa.h - 3.5 })
+    local dentro = true
+    for _ = 1, 400 do
+      mundo:actualizar(0.1)
+      if Mapa.bloqueado(mapa, p.x, p.y) then dentro = false end
+    end
+    fallar(errores, "un destino dentro del mar no lo cruza (no se pisa ninguna casilla bloqueada)", dentro)
+    -- salir: pisar el triángulo 1
+    local tri = mapa.mpc.salidas[1].puntos
+    local cx, cy = (tri[1].x + tri[2].x + tri[3].x) / 3 / 64, (tri[1].y + tri[2].y + tri[3].y) / 3 / 64
+    p.x, p.y = cx, cy
+    mundo:actualizar(0.1)
+    fallar(errores, "pisar uno de los triángulos del borde devuelve al mundo, al sitio de donde se entró", p.modo == "mundo" and math.abs(p.x - ox) < 0.01 and math.abs(p.y - oy) < 0.01, p.modo)
+    -- morir dentro: reaparece en el mundo
+    mundo:entrarMapaFao(p, "riprap")
+    fallar(errores, "no se entra otra vez desde dentro", mundo:entrarMapaFao(p, "riprap") ~= nil)
+    p.hp = 0
+    mundo:danar(p, 99999, nil, false)
+    for _ = 1, 400 do mundo:actualizar(0.1) end
+    fallar(errores, "al morir en el mapa de FAO se reaparece en el mundo", p.modo == "mundo" and p.vivo, p.modo)
   end)
   local texto = (#errores == 0) and "OK\n" or ("FALLOS " .. #errores .. "\n" .. table.concat(errores, "\n"))
   Log.volcar("prueba_resultado.txt", texto)

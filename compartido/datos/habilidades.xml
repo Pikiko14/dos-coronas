@@ -16,8 +16,8 @@
   </habilidad>
   <habilidad id="grito" nombre="Grito de guerra" clase="guerrero" tipo="buff_alrededor" buff="grito" cd="16" desc="Aumenta el ataque de los aliados cercanos." dur="8" mana="18" rango="4.5"/>
   <habilidad id="carga" nombre="Carga" clase="guerrero" tipo="enemigo" aturde="0.8" cd="11" coef="0.75" dash="true" desc="Te lanzas al objetivo y lo aturdes un instante." mana="12" rango="5.5"/>
-  <habilidad id="desgarro" nombre="Desgarro" clase="guerrero" tipo="enemigo" cd="9" coef="1.6" desc="Un tajo profundo que abre una herida." mana="20" rango="1.45">
-    <estado tipo="sangrar" dur="6" prob="0.85"/>
+  <habilidad id="pantera" nombre="Pantera asesina" clase="guerrero" tipo="enemigo" cd="9" coef="1.7" desc="Lanzas una pantera de fuego que embiste al enemigo y lo prende." mana="22" rango="6">
+    <estado tipo="quemar" prob="0.6"/>
   </habilidad>
   <habilidad id="furia" nombre="Furia" clase="guerrero" tipo="propio" buff="furia" cd="32" desc="Tu ataque crece mucho durante un rato." dur="10" mana="28">
     <efecto atk="0.3"/>
@@ -30,7 +30,7 @@
     <estado tipo="quemar" prob="0.4"/>
   </habilidad>
   <habilidad id="escudo" nombre="Escudo arcano" clase="mago" tipo="propio" buff="escudo" cd="15" desc="Absorbe parte del daño." dur="9" mana="50"/>
-  <habilidad id="nova" nombre="Nova de hielo" clase="mago" tipo="alrededor" cd="8" coef="1.5" dano="magico" desc="Hiela y ralentiza alrededor." lentitud="0.45" mana="50" rango="40"/>
+  <habilidad id="nova" nombre="Ventisca" clase="mago" tipo="punto" aoe="3" cd="8" coef="1.5" dano="magico" desc="Eliges una zona: una ventisca de cristales de hielo cae sobre ella, la daña y ralentiza." lentitud="0.45" mana="50" rango="8"/>
   <habilidad id="sombra" nombre="Descarga de sombras" clase="mago" tipo="enemigo" cd="5" coef="1.3" dano="magico" desc="Una descarga oscura que drena vida." mana="40" proyectil="sombra" rango="7">
     <estado tipo="drenar_vida" prob="0.5"/>
   </habilidad>
@@ -97,7 +97,7 @@
   <barra>
     <cazador lista="disparo,lluvia,trampa,preciso,flecha_veneno,paso_agil"/>
     <clerigo lista="curar,bendicion,castigo,consagrar,sanacion,juicio"/>
-    <guerrero lista="golpe,tajo,grito,carga,desgarro,furia"/>
+    <guerrero lista="golpe,tajo,grito,carga,pantera,furia"/>
     <mago lista="misil,fuego,escudo,nova,sombra,meteoro"/>
     <lancero lista="estocada,barrido,muro_lanzas,embestida,jabalina,tormenta_lanzas"/>
     <nigromante lista="toque_necro,espinas,maldecir,alzar_esqueletos,drenar,espectro"/>

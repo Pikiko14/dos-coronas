@@ -91,7 +91,7 @@
       <i id="carga" nivel="7" tipo="activa" slot="4">
         <requiere lista="golpe,2"/>
       </i>
-      <i id="desgarro" nivel="15" tipo="activa" slot="5">
+      <i id="pantera" nivel="15" tipo="activa" slot="5">
         <requiere lista="golpe,3"/>
       </i>
       <i id="furia" nivel="20" tipo="activa" slot="6">
@@ -235,7 +235,7 @@
     <castigo cd="0.03" pot="0.1"/>
     <consagrar cd="0.05" mana="0.03" pot="0.1"/>
     <curar cd="0.03" mana="0.03" pot="0.12"/>
-    <desgarro cd="0.04" mana="0.03" pot="0.1"/>
+    <pantera cd="0.04" mana="0.03" pot="0.1"/>
     <disparo cd="0.03" pot="0.1"/>
     <escudo cd="0.04" dur="1" pot="0.15"/>
     <flecha_veneno cd="0.04" mana="0.03" pot="0.1"/>

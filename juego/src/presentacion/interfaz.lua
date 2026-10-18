@@ -1265,8 +1265,72 @@ local function dentroMini(ex, ey, x, y, lado, m)
   return ex > x + m and ex < x + lado - m and ey > y + m and ey < y + lado - m
 end
 
+-- Minimapa de un mapa aparte de FAO (.mpc): una imagen con el color medio del tileset de cada casilla del juego (más oscuro donde hay obstáculos o agua), la ventana de 96 casillas alrededor del
+-- jugador, las salidas (triángulos amarillos) y los demás jugadores. Se hornea una vez por mapa.
+local miniFao = {}
+local function minimapaFao(mundo, p, mapa, x, y, lado)
+  local m = mapa.mpc
+  local img = miniFao[m.id]
+  if not img then
+    local datos = love.image.newImageData(mapa.w, mapa.h)
+    for ty = 0, mapa.h - 1 do
+      for tx = 0, mapa.w - 1 do
+        local t = m.tilesets[m.ts[(ty * 2) * m.fw + tx * 2 + 1]]
+        local c = t and t.color or { 40, 40, 40 }
+        local k = (mapa.bloque[tx] and mapa.bloque[tx][ty]) and 0.72 or 1
+        datos:setPixel(tx, ty, c[1] / 255 * k, c[2] / 255 * k, c[3] / 255 * k, 1)
+      end
+    end
+    img = love.graphics.newImage(datos)
+    img:setFilter("nearest", "nearest")
+    miniFao[m.id] = img
+  end
+  local ventana = 96
+  local px, py = p.x, p.y
+  local x0 = math.max(0, math.min(math.max(0, mapa.w - ventana), px - ventana / 2))
+  local y0 = math.max(0, math.min(math.max(0, mapa.h - ventana), py - ventana / 2))
+  local k = lado / ventana
+  local s = I.escala or 1
+  love.graphics.setScissor(x * s, y * s, lado * s, lado * s)
+  love.graphics.setColor(0.04, 0.05, 0.07)
+  love.graphics.rectangle("fill", x, y, lado, lado)
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.draw(img, -x0 * k + x, -y0 * k + y, 0, k, k)
+  for _, sal in ipairs(m.salidas or {}) do
+    local pt = sal.puntos
+    local cx, cy = 0, 0
+    for _, q in ipairs(pt) do cx, cy = cx + q.x / 64, cy + q.y / 64 end
+    cx, cy = cx / #pt, cy / #pt
+    local ex, ey = x + (cx - x0) * k, y + (cy - y0) * k
+    if dentroMini(ex, ey, x, y, lado, 4) then
+      love.graphics.setColor(0, 0, 0, 0.9)
+      love.graphics.polygon("fill", ex, ey - 5, ex + 5, ey + 4, ex - 5, ey + 4)
+      love.graphics.setColor(1, 0.85, 0.2)
+      love.graphics.polygon("fill", ex, ey - 3.5, ex + 3.5, ey + 2.5, ex - 3.5, ey + 2.5)
+    end
+  end
+  for _, e in pairs(mundo.entidades) do
+    if e.vivo ~= false and e.id ~= p.id and e.modo == p.modo and (e.kind == "jugador" or e.kind == "bot") then
+      local ex, ey = x + (e.x - x0) * k, y + (e.y - y0) * k
+      if dentroMini(ex, ey, x, y, lado, 0) then
+        local c = Datos.facciones[e.faccion] and Datos.facciones[e.faccion].color or { 1, 1, 1 }
+        love.graphics.setColor(c[1], c[2], c[3])
+        love.graphics.rectangle("fill", ex - 1.5, ey - 1.5, 3, 3)
+      end
+    end
+  end
+  local ex, ey = x + (px - x0) * k, y + (py - y0) * k
+  love.graphics.setColor(0, 0, 0)
+  love.graphics.rectangle("fill", ex - 3, ey - 3, 6, 6)
+  love.graphics.setColor(1, 1, 1)
+  love.graphics.rectangle("fill", ex - 2, ey - 2, 4, 4)
+  love.graphics.setScissor()
+end
+
 local function minimapaLocal(mundo, p, x, y, lado)
   marco(x - 3, y - 3, lado + 6, lado + 6, true)
+  local fao = mundo:enMapaFao(p)
+  if fao then return minimapaFao(mundo, p, fao, x, y, lado) end
   if p.modo ~= "mundo" then
     love.graphics.setColor(0.05, 0.05, 0.06)
     love.graphics.rectangle("fill", x, y, lado, lado)

@@ -9,6 +9,7 @@ local Detalle = require("src.presentacion.render.casas")
 local CasasIso = require("src.presentacion.render.casas_iso")
 local Iso = require("src.presentacion.render.iso")
 local InteriorCasa = require("src.presentacion.render.interior_casa")
+local MapaMpc = require("src.presentacion.render.mapa_mpc")
 
 local T = {}
 
@@ -613,6 +614,7 @@ local function sueloMazmorra(mapa, x, y, px, py, tipo)
 end
 
 function T.dibujarSuelo(mapa, x, y, px, py, cuadroAgua)
+  if mapa.mpc and MapaMpc.suelo(mapa, x, y, px, py) then return end
   local tipo = suelo(mapa, x, y)
   if not tipo then
     love.graphics.setColor(0.04, 0.05, 0.07, 1)
@@ -766,6 +768,7 @@ end
 local function clave(cx, cy, cuadro) return cx .. "," .. cy .. "," .. cuadro end
 
 local function tieneAgua(mapa, cx, cy)
+  if mapa.mpc then return false end      -- (el agua de los mapas de FAO es un tile más: sin variantes animadas)
   local clavec = cx .. "," .. cy
   mapa._aguaBloque = mapa._aguaBloque or {}
   local v = mapa._aguaBloque[clavec]
@@ -784,7 +787,7 @@ end
 local function construir(mapa, cx, cy, cuadro)
   -- una casilla de margen por cada lado: al proyectar en isométrico (filtro lineal) no quedan costuras entre bloques
   local canvas = love.graphics.newCanvas((BLOQUE + 2) * TILE * ESC_BLOQUE, (BLOQUE + 2) * TILE * ESC_BLOQUE)
-  if Iso.activo() then canvas:setFilter("linear", "linear") else canvas:setFilter("nearest", "nearest") end
+  if Iso.activo() or mapa.mpc then canvas:setFilter("linear", "linear") else canvas:setFilter("nearest", "nearest") end
   local previo = { love.graphics.getCanvas() }
   love.graphics.push("all")
   -- sin el recorte de la vista del juego: si no, el bloque nuevo se hornea recortado y deja huecos negros en pantalla
@@ -851,8 +854,10 @@ local function bloquesVisibles(mapa, camX, camY, vw, vh, margen)
     x0, y0, x1, y1 = camX / TILE, camY / TILE, (camX + vw) / TILE, (camY + vh) / TILE
   end
   local maxX, maxY = math.floor((mapa.w - 1) / BLOQUE), math.floor((mapa.h - 1) / BLOQUE)
-  return math.max(0, math.floor(x0 / BLOQUE) - margen), math.max(0, math.floor(y0 / BLOQUE) - margen),
-    math.min(maxX, math.floor(x1 / BLOQUE) + margen), math.min(maxY, math.floor(y1 / BLOQUE) + margen)
+  -- los mapas de FAO (.mpc) siguen unos bloques más allá del borde (repiten la casilla del borde): así la vista no acaba en negro
+  local fuera = mapa.mpc and 2 or 0
+  return math.max(-fuera, math.floor(x0 / BLOQUE) - margen), math.max(-fuera, math.floor(y0 / BLOQUE) - margen),
+    math.min(maxX + fuera, math.floor(x1 / BLOQUE) + margen), math.min(maxY + fuera, math.floor(y1 / BLOQUE) + margen)
 end
 
 -- Dibuja el suelo visible. (camX, camY) en píxeles de mundo (o de pantalla isométrica); la escala la
@@ -877,7 +882,7 @@ function T.dibujar(mapa, camX, camY, vw, vh, tiempo, alfa)
         love.graphics.draw(canvas, 0, 0)
         love.graphics.pop()
       else
-        love.graphics.draw(canvas, cx * BLOQUE * TILE - camX - TILE, cy * BLOQUE * TILE - camY - TILE)
+        love.graphics.draw(canvas, cx * BLOQUE * TILE - camX - TILE, cy * BLOQUE * TILE - camY - TILE, 0, 1 / ESC_BLOQUE, 1 / ESC_BLOQUE)
       end
     end
   end
