@@ -1057,6 +1057,28 @@ function entidadBase(e, sx, sy, mundo, jugador)
     if e.montado then
       alto = alto + math.max(10, pies - piesJinete)
     end
+  elseif e.kind == "portal" then
+    -- portal a un mapa de FAO: dos anillos de luz que giran sobre el suelo y un haz que sube
+    local t = (mundo.tiempo or 0)
+    local aplastado = Iso.activo() and 0.5 or 1
+    love.graphics.setBlendMode("add")
+    for k = 0, 2 do
+      local u = (t * 0.6 + k / 3) % 1
+      love.graphics.setColor(0.4, 0.7, 1, (1 - u) * 0.9)
+      love.graphics.setLineWidth(3)
+      love.graphics.ellipse("line", sx, pies - 2, (10 + 26 * u) , (10 + 26 * u) * aplastado)
+    end
+    love.graphics.setColor(0.35, 0.6, 1, 0.35 + 0.15 * math.sin(t * 3))
+    love.graphics.ellipse("fill", sx, pies - 2, 16, 16 * aplastado)
+    for k = 1, 8 do
+      local ph = (t * 0.9 + k * 0.125) % 1
+      local a = k * 0.785 + t * 1.5
+      love.graphics.setColor(0.7, 0.9, 1, (1 - ph) * 0.9)
+      love.graphics.circle("fill", sx + math.cos(a) * 14 * (1 - ph * 0.5), pies - 2 - ph * 46, 2.2)
+    end
+    love.graphics.setLineWidth(1)
+    love.graphics.setBlendMode("alpha")
+    alto = 54
   elseif e.kind == "estatua" then
     Objetos.dibujar(e.faccion == "umbra" and "estatua_umbra" or "estatua_albor", 0, sx, pies)
     alto = 64

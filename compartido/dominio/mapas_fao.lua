@@ -97,6 +97,113 @@ function M.instalar(Mundo)
     return nil
   end
 
+  -- Portales de los continentes: en cada continente hay un portal por cada mapa de FAO (se crean solos con los mapas de M.MAPAS: un mapa nuevo del editor tiene su portal sin tocar código).
+  -- Cada portal sale junto a los campamentos del continente que tienen las criaturas de la configuración de ese mapa (sus campamentos): el portal de la Granja de pinchos, entre setas y larvas;
+  -- así los portales quedan repartidos por el continente, no juntos. Un mapa sin campamentos (o sin esas criaturas en el continente) usa un sitio en su dirección alrededor de la capital.
+  -- Pisar el portal entra en el mapa; al salir se vuelve junto a él (a unos pasos, y con unos segundos sin volver a entrar). Se puede entrar montado.
+  local RADIO_PORTAL = 0.9
+  function Mundo:crearPortalesFao()
+    self.portalesFao = {}
+    local mundo = self.mapas.mundo
+    local nombres = M.nombres()
+    local usados = {}
+    local function contDe(x, y) return mundo.cont[math.floor(x)] and mundo.cont[math.floor(x)][math.floor(y)] end
+    local function libreParaPortal(x, y, cont, sep)
+      if not (x > 3 and y > 3 and x < mundo.w - 3 and y < mundo.h - 3) or self:ciudadEn(x + 0.5, y + 0.5) then return false end
+      for dx = -1, 1 do for dy = -1, 1 do
+        if not (Mapa.transitable(mundo, x + dx, y + dy) and mundo.suelo[x + dx][y + dy] ~= "agua") then return false end
+      end end
+      if contDe(x, y) ~= cont then return false end
+      for _, u in ipairs(usados) do if math.abs(u[1] - x) < sep and math.abs(u[2] - y) < sep then return false end end
+      return true
+    end
+    for _, faccion in ipairs({ "albor", "umbra" }) do
+      local capital
+      for _, c in ipairs(mundo.ciudades) do if c.faccion == faccion and c.spawn and not capital then capital = c end end
+      if capital then
+        local cont = contDe(capital.spawn.x, capital.spawn.y)
+        for i, nombre in ipairs(nombres) do
+          local hallado
+          -- campamentos del continente con criaturas del mapa (ordenados para que el reparto sea siempre el mismo)
+          local suyas = {}
+          for _, c in ipairs(self.mapas[nombre].campamentos or {}) do suyas[c.monstruo] = true end
+          local camps = {}
+          for _, camp in ipairs(mundo.campamentos or {}) do
+            if suyas[camp.monstruo] and not camp.z and contDe(camp.x, camp.y) == cont and not self:ciudadEn(camp.x, camp.y) then camps[#camps + 1] = camp end
+          end
+          table.sort(camps, function(a, b) if a.x ~= b.x then return a.x < b.x end return a.y < b.y end)
+          if #camps > 0 then
+            -- se elige un campamento repartido (sin los más cercanos a otro portal) y un sitio libre a 2-6 casillas de él
+            local ordenados = {}
+            for k, camp in ipairs(camps) do
+              local d = 1e9
+              for _, u in ipairs(usados) do d = math.min(d, math.abs(u[1] - camp.x) + math.abs(u[2] - camp.y)) end
+              ordenados[#ordenados + 1] = { camp = camp, d = d, k = (k * 7 + i * 13) % (#camps + 1) }
+            end
+            table.sort(ordenados, function(a, b)
+              local ra, rb = a.d >= 12, b.d >= 12
+              if ra ~= rb then return ra end
+              return a.k < b.k
+            end)
+            for _, o in ipairs(ordenados) do
+              for r = 2, 6 do
+                for g = 0, 11 do
+                  local ang = g / 12 * math.pi * 2 + i
+                  local x, y = math.floor(o.camp.x + math.cos(ang) * r), math.floor(o.camp.y + math.sin(ang) * r)
+                  if libreParaPortal(x, y, cont, 6) then hallado = { x + 0.5, y + 0.5 } break end
+                end
+                if hallado then break end
+              end
+              if hallado then break end
+            end
+          end
+          if not hallado then
+            -- sin campamentos: en su dirección alrededor de la capital, o en direcciones vecinas y radios mayores
+            local ang0 = (i - 0.5) / #nombres * math.pi * 2
+            for _, giro in ipairs({ 0, 0.25, -0.25, 0.5, -0.5, 0.75, -0.75, 1.0, -1.0, 1.5, -1.5, 2.0, -2.0, 3.0 }) do
+              for r = 14, 60 do
+                local ang = ang0 + giro
+                local x, y = math.floor(capital.spawn.x + math.cos(ang) * r), math.floor(capital.spawn.y + math.sin(ang) * r)
+                if libreParaPortal(x, y, cont, 4) then hallado = { x + 0.5, y + 0.5 } break end
+              end
+              if hallado then break end
+            end
+          end
+          if hallado then
+            usados[#usados + 1] = hallado
+            local e = {
+              id = self:idNuevo(), kind = "portal", nombre = "Portal: " .. (self.mapas[nombre].nombre or nombre), mapaFao = nombre, faccion = faccion,
+              x = hallado[1], y = hallado[2], modo = "mundo", z = 0, vivo = true, dir = 1,
+            }
+            self.entidades[e.id] = e
+            self.portalesFao[#self.portalesFao + 1] = e
+          end
+        end
+      end
+    end
+  end
+
+  function Mundo:vigilarPortalesFao(p)
+    if not p.vivo or (p.portalHasta or 0) > self.tiempo then return end
+    for _, pt in ipairs(self.portalesFao or {}) do
+      if math.abs(pt.x - p.x) < RADIO_PORTAL and math.abs(pt.y - p.y) < RADIO_PORTAL then
+        if (p.ultimoGolpe or -99) + 6 > self.tiempo then
+          p.portalHasta = self.tiempo + 3
+          self:mensaje("sistema", "", "No puedes cruzar el portal en combate.", p)
+          return
+        end
+        -- vuelta: unos pasos al lado del portal, hacia de donde venías
+        local dx, dy = p.x - pt.x, p.y - pt.y
+        local l = math.max(0.1, math.sqrt(dx * dx + dy * dy))
+        local rx, ry = pt.x + dx / l * 2.5, pt.y + dy / l * 2.5
+        if not Mapa.transitable(self.mapas.mundo, math.floor(rx), math.floor(ry)) then rx, ry = p.x, p.y end
+        local err = self:entrarMapaFao(p, pt.mapaFao)
+        if not err then p.retorno = { x = rx, y = ry, modo = "mundo" } end
+        return
+      end
+    end
+  end
+
   function Mundo:salirMapaFao(p)
     local m = self:enMapaFao(p)
     if not m then return end
@@ -105,6 +212,7 @@ function M.instalar(Mundo)
     p.x, p.y = r.x, r.y
     p.objetivo, p.camino, p.persigue = nil, nil, false
     p.zona = nil
+    p.portalHasta = self.tiempo + 3
     self:mensaje("sistema", "", "Sales de " .. m.nombre .. ".", p)
   end
 

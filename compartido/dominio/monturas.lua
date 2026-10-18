@@ -144,7 +144,7 @@ function Mundo:comprarMontura(p, especie)
     local tiene = false
     for _, t in ipairs(lista) do if t == especie then tiene = true end end
     if not d or not tiene then return "No tienes monturas: compra una en la cuadra." end
-    if p.modo ~= "mundo" then return "Aquí no se puede montar." end
+    if p.modo ~= "mundo" and not self:enMapaFao(p) then return "Aquí no se puede montar." end
     if (p.z or 0) > 0 then return "No se monta en las alturas." end
     if d.oficio and p.job ~= d.oficio then return "Solo para el oficio de comerciante." end
     if d.requiereOficio and not p.job then return "Las monturas solo se usan con el oficio activo (activa tu oficio en el menú o con Y)." end

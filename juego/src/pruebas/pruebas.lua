@@ -2370,6 +2370,45 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       fallar(errores, "el mapa " .. nombre .. " carga", mundo.mapas[nombre] ~= nil and mundo.mapas[nombre].fao == true)
     end
   end)
+  -- Portal de un continente a un mapa de FAO y montura dentro del mapa. Con DC_PRUEBA_PORTAL=1 guarda juego/capturas/portal_fao.png (portal en el mundo, montado dentro del mapa de FAO).
+  paso("portales: el portal se dibuja en el continente y la montura se ve dentro del mapa de FAO", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local mundo = Mundo.nuevo()
+    local portal
+    for _, e in pairs(mundo.entidades) do if e.kind == "portal" and e.faccion == "albor" and e.mapaFao == "granja_de_pinchos" then portal = e end end
+    fallar(errores, "hay un portal de Albor a la granja de pinchos", portal ~= nil)
+    local pj = mundo:crearPersonaje({ nombre = "Jinete", faccion = "albor", clase = "guerrero", nivel = 20 })
+    pj.monturas = { "mnt_001" }
+    pj.x, pj.y = portal.x - 2.5, portal.y + 0.5
+    mundo:alternarMontura(pj, "mnt_001")
+    local vista = os.getenv("DC_PRUEBA_PORTAL") ~= nil
+    local CW, CH = 640, 400
+    local mosaico = vista and love.graphics.newCanvas(CW * 2, CH) or nil
+    local cv = love.graphics.newCanvas(1280, 720)
+    local function foto(col)
+      love.graphics.push("all")
+      love.graphics.setCanvas({ cv, stencil = true })
+      love.graphics.clear(0, 0, 0, 1)
+      local cam = Dibujo.camara(pj, 2, mundo:mapaDe(pj))
+      local ok, err = pcall(Dibujo.escena, mundo, pj, cam, 0, 0)
+      love.graphics.pop()
+      fallar(errores, "la escena con el portal / el jinete se dibuja", ok, tostring(err))
+      if mosaico then
+        love.graphics.push("all")
+        love.graphics.setCanvas(mosaico)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.draw(cv, love.graphics.newQuad(640 - CW / 2, 360 - CH / 2, CW, CH, 1280, 720), (col - 1) * CW, 0)
+        love.graphics.pop()
+      end
+    end
+    for _ = 1, 3 do mundo:actualizar(0.1) end
+    foto(1)
+    mundo:entrarMapaFao(pj, "granja_de_pinchos")
+    for _ = 1, 20 do mundo:actualizar(0.1) end
+    fallar(errores, "dentro del mapa de FAO sigue montado", pj.montado == "mnt_001")
+    foto(2)
+    if mosaico then Log.volcar("capturas/portal_fao.png", mosaico:newImageData():encode("png"):getString()) end
+  end)
   paso("sprites de hechizos: cada poder de cada clase tiene su hoja generada", function()
     local Efectos = require("src.presentacion.render.efectos")
     local Dibujo = require("src.presentacion.render.dibujo")

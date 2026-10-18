@@ -5376,6 +5376,77 @@ mundo.tiempo = 100
       end
     end
   end)
+  -- Portales de los continentes a los mapas de FAO: uno por mapa y continente, se entra pisándolos (también montado) y se vuelve junto a ellos sin rebotar.
+  paso("portales a los mapas de FAO desde los continentes, también montado", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local MapasFao = require("compartido.dominio.mapas_fao")
+    local mundo = Mundo.nuevo()
+    local nombres = MapasFao.nombres()
+    local porCont = { albor = {}, umbra = {} }
+    for _, e in pairs(mundo.entidades) do
+      if e.kind == "portal" then
+        porCont[e.faccion][e.mapaFao] = e
+        fallar(errores, "el portal " .. e.nombre .. " está en una casilla transitable fuera de las ciudades", Mapa.transitable(mundo.mapas.mundo, math.floor(e.x), math.floor(e.y)) and not mundo:ciudadEn(e.x, e.y))
+      end
+    end
+    for _, f in ipairs({ "albor", "umbra" }) do
+      local n = 0
+      for _, nombre in ipairs(nombres) do if porCont[f][nombre] then n = n + 1 end end
+      fallar(errores, "el continente de " .. f .. " tiene un portal por cada mapa de FAO", n == #nombres and n >= 5, n .. "/" .. #nombres)
+    end
+    -- cada portal está cerca de campamentos del continente con criaturas de la configuración de su mapa, y los portales quedan repartidos
+    local cercaDeSuyas, conCamps, lista = 0, 0, {}
+    for _, f in ipairs({ "albor", "umbra" }) do
+      for _, nombre in ipairs(nombres) do
+        local pt = porCont[f][nombre]
+        local suyas, hay = {}, false
+        for _, c in ipairs(mundo.mapas[nombre].campamentos) do suyas[c.monstruo] = true hay = true end
+        if pt and hay then
+          conCamps = conCamps + 1
+          for _, camp in ipairs(mundo.mapas.mundo.campamentos) do
+            if suyas[camp.monstruo] and not camp.z and Util.dist(camp.x, camp.y, pt.x, pt.y) <= 9 then cercaDeSuyas = cercaDeSuyas + 1 break end
+          end
+        end
+        if pt then lista[#lista + 1] = pt end
+      end
+    end
+    fallar(errores, "los portales de mapas con criaturas salen junto a campamentos con esas criaturas", conCamps >= 6 and cercaDeSuyas >= conCamps - 2, cercaDeSuyas .. "/" .. conCamps)
+    local minimo = 1e9
+    for i = 1, #lista do for j = i + 1, #lista do minimo = math.min(minimo, Util.dist(lista[i].x, lista[i].y, lista[j].x, lista[j].y)) end end
+    fallar(errores, "los portales no se amontonan", minimo >= 3, string.format("%.1f", minimo))
+    Log.info(string.format("portales FAO: %d, separación mínima %.1f, junto a sus criaturas %d/%d", #lista, minimo, cercaDeSuyas, conCamps))
+    local p = mundo:crearPersonaje({ nombre = "Viajero", faccion = "albor", clase = "guerrero", nivel = 20 })
+    local portal = porCont.albor.granja_de_pinchos
+    p.monturas = { "mnt_001" }
+    p.x, p.y = portal.x + 3, portal.y
+    fallar(errores, "se puede montar en el mundo", mundo:alternarMontura(p, "mnt_001") == nil and p.montado == "mnt_001")
+    -- caminar hacia el portal: entra solo
+    p.deseoX, p.deseoY = -1, 0
+    for _ = 1, 60 do
+      mundo:actualizar(0.1)
+      if p.modo ~= "mundo" then break end
+    end
+    p.deseoX, p.deseoY = 0, 0
+    fallar(errores, "pisar el portal entra en el mapa de FAO", p.modo == "granja_de_pinchos", tostring(p.modo))
+    fallar(errores, "entra montado y sigue montado dentro del mapa", p.montado == "mnt_001")
+    mundo:actualizar(0.1)
+    fallar(errores, "dentro del mapa se mantiene la montura tras actualizar", p.montado == "mnt_001")
+    local v = mundo:bonoMontura(p)
+    fallar(errores, "la montura da su velocidad en el mapa de FAO", v > 0, tostring(v))
+    fallar(errores, "se puede bajar y volver a montar dentro", mundo:alternarMontura(p, "mnt_001") == nil and p.montado == nil and mundo:alternarMontura(p, "mnt_001") == nil and p.montado == "mnt_001")
+    -- salir: vuelve al mundo junto al portal y no rebota
+    mundo:salirMapaFao(p)
+    fallar(errores, "al salir se vuelve al mundo junto al portal (a unos pasos)", p.modo == "mundo" and Util.dist(p.x, p.y, portal.x, portal.y) > 1.5 and Util.dist(p.x, p.y, portal.x, portal.y) < 4, string.format("%.1f", Util.dist(p.x, p.y, portal.x, portal.y)))
+    for _ = 1, 20 do mundo:actualizar(0.1) end
+    fallar(errores, "tras salir no vuelve a entrar solo", p.modo == "mundo")
+    fallar(errores, "sigue montado al volver al mundo", p.montado == "mnt_001")
+    -- en combate no se cruza
+    p.ultimoGolpe = mundo.tiempo
+    p.portalHasta = 0
+    p.x, p.y = portal.x, portal.y
+    mundo:actualizar(0.1)
+    fallar(errores, "en combate el portal no deja pasar", p.modo == "mundo")
+  end)
   paso("mapa de FAO como mapa aparte: entrar, moverse sin saltarse el agua ni los objetos, y salir por los triángulos", function()
     local Mapa = require("compartido.dominio.mapa")
     local Autoridad = require("servidor.src.dominio.autoridad")

@@ -82,6 +82,23 @@ def sprites_de(d):
     return out
 
 
+def sin_costura(t):
+    """Hace repetible una textura HxWx3 (float32): mezcla con ella misma desplazada medio periodo, con una ventana sen^2 que vale 1 en el centro y 0 en los bordes, así los bordes opuestos coinciden."""
+    H, W = t.shape[:2]
+    w = lambda n: np.sin(np.pi * (np.arange(n) + .5) / n) ** 2
+    M = (w(H)[:, None] * w(W)[None, :])[..., None]
+    R = np.roll(t, (H // 2, W // 2), (0, 1))
+    return M * t + (1 - M) * R
+
+
+def costura(t):
+    """Medida de la costura (H, V): |última columna - primera| medio / diferencia media entre columnas vecinas (y lo mismo en filas)."""
+    t = t.astype(np.float32)
+    h = np.abs(t[:, -1] - t[:, 0]).mean() / max(1e-6, np.abs(np.diff(t, axis=1)).mean())
+    v = np.abs(t[-1] - t[0]).mean() / max(1e-6, np.abs(np.diff(t, axis=0)).mean())
+    return h, v
+
+
 def hornear(num):
     ruta = os.path.join(MAPAS, "map%03d.mpc" % num)
     if not os.path.exists(ruta):          # (mapas enviados desde el editor: ya están junto a los datos del juego)
@@ -107,13 +124,14 @@ def hornear(num):
     for k, t in enumerate(usados):
         pal, px = mpc.tileset(t, pak)
         lado_tiles = int(round(len(px) ** 0.5))
-        tex = pal[px.reshape(lado_tiles, lado_tiles, 32, 32).transpose(0, 2, 1, 3).reshape(lado_tiles * 32, lado_tiles * 32)]
+        tex0 = pal[px.reshape(lado_tiles, lado_tiles, 32, 32).transpose(0, 2, 1, 3).reshape(lado_tiles * 32, lado_tiles * 32)]
+        tex = np.clip(sin_costura(tex0.astype(np.float32)) + 0.5, 0, 255).astype(np.uint8)     # repetible: sus bordes opuestos no coinciden en el original
         reps = LADO // tex.shape[0]
         tex = np.tile(tex, (reps, reps, 1))                         # (la de 8x8 se repite 2x2: el periodo sigue dividiendo a 16)
         marco = np.pad(tex, ((borde, borde), (borde, borde), (0, 0)), mode="wrap")     # borde del lado contrario: sin costuras al filtrar
         x, y = (k % cols) * celda_at, (k // cols) * celda_at
         atlas.paste(Image.fromarray(marco, "RGB"), (x, y))
-        medio = tex.reshape(-1, 3).mean(0)
+        medio = tex0.reshape(-1, 3).mean(0)                          # (la clase y el color salen de la textura original)
         clase, _ = R.clase_tile(medio)
         tilesets[t] = dict(clase=clase, color=[int(v) for v in medio], x=x + borde, y=y + borde)
     atlas.convert("RGB").save(os.path.join(ARTE, "map%03d_suelo.png" % num), optimize=True)

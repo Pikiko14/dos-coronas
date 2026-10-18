@@ -1,0 +1,284 @@
+-- GENERADO por el editor de mapas (fao-editor-mapas): campamentos de criaturas del mapa "map021".
+-- Lista de { monstruo (id de monstruos.xml), cantidad, radio (casillas), x, y (casillas, centro de la casilla = .5), jefe? }.
+return {
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 272.5,
+    y = 162.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 257.5,
+    y = 142.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 233.5,
+    y = 152.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 234.5,
+    y = 133.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 249.5,
+    y = 131.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 231.5,
+    y = 121.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 204.5,
+    y = 113.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 189.5,
+    y = 108.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 198.5,
+    y = 114.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 174.5,
+    y = 100.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 164.5,
+    y = 85.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 187.5,
+    y = 97.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 158.5,
+    y = 119.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 135.5,
+    y = 113.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 104.5,
+    y = 113.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 90.5,
+    y = 136.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 114.5,
+    y = 155.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 131.5,
+    y = 162.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 163.5,
+    y = 165.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 184.5,
+    y = 167.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 200.5,
+    y = 169.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 190.5,
+    y = 158.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 155.5,
+    y = 141.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 139.5,
+    y = 135.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 101.5,
+    y = 64.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 87.5,
+    y = 57.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 107.5,
+    y = 48.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 171.5,
+    y = 47.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 198.5,
+    y = 48.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 219.5,
+    y = 67.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 268.5,
+    y = 46.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 247.5,
+    y = 43.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 273.5,
+    y = 54.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 279.5,
+    y = 60.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 260.5,
+    y = 16.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 209.5,
+    y = 14.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 179.5,
+    y = 8.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 123.5,
+    y = 17.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 83.5,
+    y = 23.5
+  },
+  {
+    monstruo = "larva_espinosa",
+    cantidad = 1,
+    radio = 4,
+    x = 67.5,
+    y = 22.5
+  }
+}

@@ -78,6 +78,7 @@ function Mundo.nuevo()
   self:poblar()
   self:poblarMazmorras()
   self:poblarMapasFao()           -- (después de poblar el mundo: no cambia el azar ni las criaturas de los continentes)
+  self:crearPortalesFao()
   -- el mundo se genera con semilla fija; después el azar del juego vuelve a ser libre
   math.randomseed(os.time() + math.floor((os.clock() * 1000) % 100000))
   return self
@@ -1614,6 +1615,7 @@ function Mundo:autoataque(p)
 end
 
 function Mundo:actualizarJugador(e, dt)
+  if e.modo == "mundo" and e.kind == "jugador" and (e.z or 0) == 0 then self:vigilarPortalesFao(e) end
   if e.modo ~= "mundo" and e.modo ~= "casa" then
     self:trampasMazmorra(e)
     if self.mapas[e.modo] and self.mapas[e.modo].fao then self:vigilarSalidaFao(e) end
@@ -1652,7 +1654,7 @@ function Mundo:actualizarJugador(e, dt)
   if e.llevaBandera then mul = mul * 0.85 end
   mul = mul * self:buffMul(e, "vel")
   -- montura y carga: la montura acelera y ir cargado frena
-  if e.montado and (e.modo ~= "mundo" or (e.z or 0) > 0) then
+  if e.montado and ((e.modo ~= "mundo" and not self:enMapaFao(e)) or (e.z or 0) > 0) then
     e.montado = nil
     self:recalcularCarga(e)
   end

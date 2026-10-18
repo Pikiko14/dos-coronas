@@ -2108,7 +2108,7 @@ function I.panelMontura(mundo, p, w, h)
     if d.requiereOficio and not p.job then return "Las monturas de transporte piden el oficio activo (Y)." end
     if p.job and not d.requiereOficio then return "Con el oficio activo solo valen las monturas de transporte." end
     if d.oficio and p.job ~= d.oficio then return "Solo para el oficio de comerciante." end
-    if p.modo ~= "mundo" then return "Aquí no se puede montar." end
+    if p.modo ~= "mundo" and not mundo:enMapaFao(p) then return "Aquí no se puede montar." end
     return nil
   end
 
