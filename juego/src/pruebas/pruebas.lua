@@ -2509,7 +2509,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       end
       if mosaico then Log.volcar("capturas/poderes_fao_" .. clase .. ".png", mosaico:newImageData():encode("png"):getString()) end
     end
-    fallar(errores, "se probaron los 36 poderes (las seis clases, con los 10 del mago)", total == 36, tostring(total))
+    fallar(errores, "se probaron los 37 poderes (las seis clases, con los 10 del mago)", total == 37, tostring(total))
   end)
   -- Asedio (MOBA) en el cliente: se dibujan nexos, torres, esbirros y el marcador, el panel de guerra tiene su botón y el minimapa los marca. Con DC_PRUEBA_MOBA=1 guarda juego/capturas/moba.png
   -- (escena junto a una torre con esbirros, y el panel de guerra con el asedio).

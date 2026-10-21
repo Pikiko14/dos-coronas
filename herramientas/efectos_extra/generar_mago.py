@@ -103,3 +103,19 @@ escribir("escudo", "Escudo arcano", secs, [L("cupula", "C", 0.0, 0.09, 1.2, "onc
 secs = dict(giro=guardar("torbellino", "giro", cuadros("torbellino_arcano", range(7, 11), True), 0.15), fin=guardar("torbellino", "fin", cuadros("torbellino_arcano", [11]), 0.3))
 escribir("torbellino", "Torbellino arcano", secs, [L("giro", "GT", 0.0, 0.15, 1.1, "loop", t1=1.3, off=[0, -6]), L("fin", "GT", 1.3, 0.3, 1.1, "once")], 1.6, [0.45, 0.8, 1.15, 1.5], "torbellino_arcano: el torbellino gira (cuadros 7-10, los completos) y se deshace; el servidor golpea 4 veces.")
 print("ok")
+
+# bola de fuego <- bola_fuego (0-4 carga, 5-8 orbe con estela, 9-11 estallido)
+secs = dict(carga=guardar("fuego", "carga", cuadros("bola_fuego", range(0, 5)), 0.06),
+            estela=guardar("fuego", "estela", cuadros("bola_fuego", range(5, 9), True), 0.05, recorte=True),
+            impacto=guardar("fuego", "impacto", cuadros("bola_fuego", range(9, 12)), 0.08))
+escribir("fuego", "Bola de fuego", secs, [L("carga", "C", 0.0, 0.06, 0.8), L("estela", "T", 0.3, 0.05, 0.9, "estela", t1=0.56), L("impacto", "T", 0.55, 0.08, 1.4)], 0.85, [0.55], "bola_fuego: carga, estela de la mano al objetivo y estallido.")
+
+# meteoro <- meteoro (0-5 cae, 6-11 impacto y llamas)
+secs = dict(caida=guardar("meteoro", "caida", cuadros("meteoro", range(0, 6)), 0.1),
+            impacto=guardar("meteoro", "impacto", cuadros("meteoro", range(6, 12)), 0.12))
+escribir("meteoro", "Meteoro", secs, [L("caida", "T", 0.0, 0.1, 1.2, "caida", t1=0.5, off=[-90, -300]), L("impacto", "GT", 0.5, 0.12, 1.5, "once", off=[0, -10])], 1.3, [0.5], "meteoro: cae en diagonal y estalla en llamas sobre la zona.")
+
+# ventisca (nova) <- nova_hielo (sin el cuadro 3, que trae dos dibujos)
+secs = dict(hielo=guardar("nova", "hielo", cuadros("nova_hielo", [0, 1, 2, 4, 5, 6, 7, 8, 9, 10]), 0.09))
+escribir("nova", "Ventisca", secs, [L("hielo", "GT", 0.0, 0.09, 1.4, "once", off=[0, -6])], 0.95, [0.35], "nova_hielo: el anillo de hielo se abre en cristales sobre la zona.")
+print("ok2")

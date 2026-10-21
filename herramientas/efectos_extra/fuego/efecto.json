@@ -2,64 +2,51 @@
  "id_dos_coronas": "fuego",
  "clase": "mago",
  "nombre": "Bola de fuego",
- "poder_fao": "(secuencia propia)",
+ "poder_fao": "(secuencia propia: paquete del mago)",
  "secuencias": {
   "carga": {
    "sheet": "sheets/carga.png",
-   "frames": 8,
+   "frames": 5,
    "cell": [
-    250,
-    150
+    128,
+    128
    ],
    "origin": [
-    125,
-    75
+    64,
+    64
    ],
-   "ms_per_frame": 40.0
+   "ms_per_frame": 60.0
   },
-  "inicio": {
-   "sheet": "sheets/inicio.png",
-   "frames": 1,
+  "estela": {
+   "sheet": "sheets/estela.png",
+   "frames": 4,
    "cell": [
-    250,
-    84
+    111,
+    128
    ],
    "origin": [
-    125,
-    42
+    0,
+    64
    ],
-   "ms_per_frame": 100.0
-  },
-  "tray": {
-   "sheet": "sheets/tray.png",
-   "frames": 7,
-   "cell": [
-    250,
-    84
-   ],
-   "origin": [
-    4,
-    42
-   ],
-   "ms_per_frame": 35.0
+   "ms_per_frame": 50.0
   },
   "impacto": {
    "sheet": "sheets/impacto.png",
-   "frames": 8,
+   "frames": 3,
    "cell": [
-    250,
-    163
+    128,
+    128
    ],
    "origin": [
-    125,
-    81
+    64,
+    64
    ],
-   "ms_per_frame": 60.0
+   "ms_per_frame": 80.0
   }
  },
  "composicion": {
   "inferida": true,
-  "duracion_s": 1.03,
+  "duracion_s": 0.85,
   "golpes_s": [
    0.55
   ],
@@ -68,44 +55,31 @@
     "s": "carga",
     "w": "C",
     "t0": 0.0,
-    "ms": 0.04,
-    "sc": 0.7,
+    "ms": 0.06,
+    "sc": 0.8,
     "a": 1.0,
     "modo": "once"
    },
    {
-    "s": "inicio",
-    "w": "C",
-    "t0": 0.3,
-    "ms": 0.1,
-    "sc": 0.7,
-    "a": 1.0,
-    "modo": "once"
-   },
-   {
-    "s": "tray",
+    "s": "estela",
     "w": "T",
     "t0": 0.3,
-    "t1": 0.56,
-    "ms": 0.035,
-    "sc": 0.55,
+    "ms": 0.05,
+    "sc": 0.9,
     "a": 1.0,
-    "modo": "estela"
+    "modo": "estela",
+    "t1": 0.56
    },
    {
     "s": "impacto",
     "w": "T",
     "t0": 0.55,
-    "ms": 0.06,
-    "sc": 1.0,
+    "ms": 0.08,
+    "sc": 1.4,
     "a": 1.0,
-    "modo": "once",
-    "off": [
-     0,
-     26
-    ]
+    "modo": "once"
    }
   ]
  },
- "nota": "Secuencia de la bola de fuego a partir de origen.webp (carga, trayectoria e impacto). La trayectoria se estira de la mano al objetivo (modo estela)."
+ "nota": "bola_fuego: carga, estela de la mano al objetivo y estallido."
 }
