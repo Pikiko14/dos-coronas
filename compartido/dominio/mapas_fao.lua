@@ -79,6 +79,7 @@ function M.instalar(Mundo)
 
   -- El mapa de FAO en el que está e (o nil).
   function Mundo:enMapaFao(e)
+    if e and e.modo == "moba" then self:asegurarArenaMoba() end
     local m = e and self.mapas[e.modo]
     return m and m.fao and m or nil
   end
@@ -220,7 +221,7 @@ function M.instalar(Mundo)
   -- Cada tick de un jugador: si pisa una de las salidas (los triángulos de los puntos 1 y 2 del .mpc), sale.
   function Mundo:vigilarSalidaFao(p)
     local m = self:enMapaFao(p)
-    if not m or not p.vivo then return end
+    if not m or not p.vivo or p.modo == "moba" then return end        -- (en el asedio se sale con el evento)
     local px, py = p.x * MapaMpc.CELDA, p.y * MapaMpc.CELDA          -- (los triángulos del .mpc están en píxeles de FAO)
     for _, s in ipairs(m.mpc.salidas) do
       if MapaMpc.puntoEnPoligono(s.puntos, px, py) then self:salirMapaFao(p) return end

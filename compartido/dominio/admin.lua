@@ -8,7 +8,7 @@
 --   /admin tp <x> <y> | tp <jugador> | traer <jugador> | ciudad <id>
 --   /admin mapa <nombre|salir>           (nombres: ver MapasFao.MAPAS) entra en un mapa aparte de Free Angels Online (prueba) o vuelve al mundo
 --   /admin limpiar [radio]               quita las criaturas cercanas
---   /admin evento <estandarte|batalla> <iniciar|fin|estado> [todos]
+--   /admin evento <estandarte|batalla|moba> <iniciar|fin|estado> [todos]
 --   /admin anuncio <texto>               aviso a todo el mundo
 --   /admin dios                          invulnerable (activar/desactivar)
 --   /admin jugadores                     quién está conectado
@@ -32,7 +32,7 @@ local AYUDA = {
   "/admin oro|xp|nivel|monedas <n> [jugador] | curar|revivir [jugador]",
   "/admin tp <x> <y> | tp <jugador> | traer <jugador> | ciudad <id> | mapa <nombre|salir>",
   "/admin limpiar [radio] | anuncio <texto> | dios | jugadores",
-  "/admin evento <estandarte|batalla> <iniciar|fin|estado> [todos]",
+  "/admin evento <estandarte|batalla|moba> <iniciar|fin|estado> [todos]",
   "/admin kick <jugador> [motivo] | silenciar <jugador> <min> | ban <usuario> <30m|2h|3d|perm> <motivo> | desban <usuario> | baneos",
   "/admin rol <usuario> <gm|cm|ninguno> | roles   (solo GM)",
 }
@@ -279,8 +279,8 @@ function M.instalar(Mundo)
 
   function comandos.evento(self, p, a)
     local modo, accion = a[1], a[2] or "estado"
-    if modo ~= "estandarte" and modo ~= "batalla" then
-      return decir(self, p, "Uso: /admin evento <estandarte|batalla> <iniciar|fin|estado> [todos]")
+    if modo ~= "estandarte" and modo ~= "batalla" and modo ~= "moba" then
+      return decir(self, p, "Uso: /admin evento <estandarte|batalla|moba> <iniciar|fin|estado> [todos]")
     end
     local inst = self.instancia[modo]
     local activo = inst.activa and not inst.fin

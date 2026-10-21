@@ -279,6 +279,60 @@ function Pruebas.correr()
     end
     for _ = 1, 5 do mundo:actualizar(0.05) end
   end)
+  -- Captura del estandarte: matar a alguien no termina el evento (el caído reaparece en su base del campo); solo se sale cuando un equipo consigue 3 capturas.
+  paso("estandarte: las bajas no sacan a nadie del evento, que termina solo con 3 capturas", function()
+    local mundo = Mundo.nuevo()
+    local equipo = { albor = {}, umbra = {} }
+    for i = 1, 3 do
+      for _, f in ipairs({ "albor", "umbra" }) do
+        local p = mundo:crearPersonaje({ nombre = f .. i, faccion = f, clase = "guerrero", nivel = 20 })
+        p.ultimoGolpe = -99
+        p.hp, p.hpMax = 5000, 5000
+        equipo[f][i] = p
+        mundo:entrarGuerra(p, "estandarte")
+      end
+    end
+    local inst = mundo.instancia.estandarte
+    local a1, u1 = equipo.albor[1], equipo.umbra[1]
+    fallar(errores, "con tres por equipo empieza el estandarte", inst.activa and not inst.fin and a1.modo == "estandarte" and u1.modo == "estandarte")
+    local spawn = mundo.mapas.estandarte.spawns.umbra
+    -- varias bajas seguidas: nadie sale del campo, el evento sigue y los puntos (capturas) no se mueven
+    for _ = 1, 4 do
+      u1.vivo, u1.hp = true, 5000
+      mundo:danar(u1, 99999, a1)
+      fallar(errores, "el rival cae en combate", not u1.vivo)
+      fallar(errores, "el evento sigue en marcha tras la baja", inst.activa and not inst.fin and a1.modo == "estandarte" and u1.modo == "estandarte", tostring(inst.fin))
+      fallar(errores, "matar no suma capturas", inst.puntos.albor == 0 and inst.puntos.umbra == 0, inst.puntos.albor .. "/" .. inst.puntos.umbra)
+      for _ = 1, 80 do mundo:actualizar(0.1) end
+      fallar(errores, "el caído reaparece en la zona de aparición de su equipo en el campo", u1.vivo and u1.modo == "estandarte" and Util.dist(u1.x, u1.y, spawn.x, spawn.y) < 1.5, string.format("%s %s %.1f", tostring(u1.vivo), u1.modo, Util.dist(u1.x, u1.y, spawn.x, spawn.y)))
+    end
+    -- quien lleva la bandera enemiga y cae, la suelta (vuelve a su sitio) y sigue en el evento
+    local bandera
+    for _, e in pairs(mundo.entidades) do if e.kind == "bandera" and e.faccion == "umbra" then bandera = e end end
+    a1.x, a1.y = bandera.x, bandera.y
+    mundo:tocarBandera(a1)
+    fallar(errores, "toma la bandera enemiga", a1.llevaBandera == "umbra")
+    mundo:danar(a1, 99999, u1)
+    fallar(errores, "al caer suelta la bandera y sigue dentro", a1.llevaBandera == nil and bandera.portador == nil and a1.modo == "estandarte" and inst.activa)
+    for _ = 1, 80 do mundo:actualizar(0.1) end
+    -- tres capturas de Albor: solo entonces termina y todos vuelven al mundo
+    local propia
+    for _, e in pairs(mundo.entidades) do if e.kind == "bandera" and e.faccion == "albor" then propia = e end end
+    for k = 1, 3 do
+      fallar(errores, "antes de la captura " .. k .. " el evento sigue", inst.activa and not inst.fin)
+      a1.vivo, a1.hp = true, 5000
+      a1.x, a1.y = bandera.x, bandera.y
+      mundo:tocarBandera(a1)
+      a1.x, a1.y = propia.origenx, propia.origeny
+      mundo:tocarBandera(a1)
+      fallar(errores, "la captura " .. k .. " suma un punto", inst.puntos.albor == k, tostring(inst.puntos.albor))
+    end
+    fallar(errores, "con tres capturas gana Albor y el evento se cierra", inst.fin == "albor" and not inst.activa, tostring(inst.fin))
+    mundo:actualizar(0.1)
+    local fuera = true
+    for _, f in ipairs({ "albor", "umbra" }) do for _, p in ipairs(equipo[f]) do if p.modo ~= "mundo" then fuera = false end end end
+    fallar(errores, "al terminar todos vuelven al mundo", fuera)
+  end)
   paso("cuentas", function()
     fallar(errores, "sha256", Cuentas.sha256("abc") == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", Cuentas.sha256("abc"))
     local vector = Cuentas.pbkdf2("password", "salt", 1)
@@ -5417,6 +5471,10 @@ mundo.tiempo = 100
     Log.info(string.format("portales FAO: %d, separación mínima %.1f, junto a sus criaturas %d/%d", #lista, minimo, cercaDeSuyas, conCamps))
     local p = mundo:crearPersonaje({ nombre = "Viajero", faccion = "albor", clase = "guerrero", nivel = 20 })
     local portal = porCont.albor.granja_de_pinchos
+    -- (los portales salen junto a criaturas: se apartan las de alrededor para que no hieran al viajero y le impidan cruzar «en combate»)
+    for id, e in pairs(mundo.entidades) do
+      if e.kind == "monstruo" and Util.dist(e.x, e.y, portal.x, portal.y) < 16 then mundo.entidades[id] = nil end
+    end
     p.monturas = { "mnt_001" }
     p.x, p.y = portal.x + 3, portal.y
     fallar(errores, "se puede montar en el mundo", mundo:alternarMontura(p, "mnt_001") == nil and p.montado == "mnt_001")
@@ -5446,6 +5504,176 @@ mundo.tiempo = 100
     p.x, p.y = portal.x, portal.y
     mundo:actualizar(0.1)
     fallar(errores, "en combate el portal no deja pasar", p.modo == "mundo")
+  end)
+  -- Asedio (MOBA): arena en un mapa de FAO, cola de dos equipos, nexos con torres, oleadas de esbirros, fuente, reaparición y victoria al destruir el nexo.
+  paso("asedio (MOBA): tres carriles, nivel 1 a 18 con poderes que se desbloquean, torres, esbirros, protección del nexo y victoria", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local Moba = require("compartido.dominio.moba")
+    local mundo = Mundo.nuevo()
+    local t0 = os.clock()
+    fallar(errores, "la arena del asedio se prepara bajo demanda", mundo.mapas.moba == nil and mundo:asegurarArenaMoba() == true)
+    local tArena = os.clock() - t0
+    local arena = mundo.mapas.moba
+    fallar(errores, "el asedio tiene su arena (un mapa de FAO)", arena ~= nil and arena.fao == true and mundo.moba ~= nil)
+    if not arena then return end
+    local car = mundo.moba.carriles
+    fallar(errores, "hay tres carriles largos", #car == 3 and #car[1].ruta >= 40 and #car[2].ruta >= 40 and #car[3].ruta >= 40)
+    -- los carriles son distintos: el superior y el inferior no van por el centro (a mitad de camino)
+    local function medio(ruta) local c = ruta[math.floor(#ruta / 2)] return c.x, c.y end
+    local x1, y1 = medio(car[1].ruta)
+    local x2, y2 = medio(car[2].ruta)
+    local x3, y3 = medio(car[3].ruta)
+    fallar(errores, "el carril superior y el inferior quedan separados del central", Util.dist(x1, y1, x2, y2) > 8 and Util.dist(x3, y3, x2, y2) > 8, string.format("%.1f %.1f (puntuación %.1f)", Util.dist(x1, y1, x2, y2), Util.dist(x3, y3, x2, y2), mundo.moba.puntuacion))
+    Log.info(string.format("asedio: arena en %.2f s, puntuación de los carriles %.1f, largo %d/%d/%d", tArena, mundo.moba.puntuacion, #car[1].ruta, #car[2].ruta, #car[3].ruta))
+    for _, f in ipairs({ "albor", "umbra" }) do
+      local sp = arena.spawns[f]
+      fallar(errores, "la base de " .. f .. " reaparece en una casilla transitable", sp and Mapa.transitable(arena, math.floor(sp.x), math.floor(sp.y)))
+    end
+    local function contar(modo, kind)
+      local n = 0
+      for _, e in pairs(mundo.entidades) do if e.modo == modo and (not kind or e.kind == kind) and not e.borrar then n = n + 1 end end
+      return n
+    end
+    local mundoAntes = contar("mundo", "monstruo")
+    -- cuatro jugadores equipados y de nivel alto se apuntan: empieza con dos por equipo, todos a nivel 1
+    local equipo = { albor = {}, umbra = {} }
+    local reales = {}
+    for i = 1, 2 do
+      for _, f in ipairs({ "albor", "umbra" }) do
+        local p = mundo:crearPersonaje({ nombre = f .. i, faccion = f, clase = i == 1 and "guerrero" or "mago", nivel = 20 })
+        p.ultimoGolpe = -99          -- (el mundo recién creado tiene el reloj en 0)
+        reales[p.id] = { nivel = p.nivel, hpMax = p.hpMax, atk = p.atk }
+        equipo[f][i] = p
+        local err = mundo:entrarGuerra(p, "moba")
+        fallar(errores, "se apunta al asedio sin error (" .. tostring(err) .. ")", err == nil)
+      end
+    end
+    local inst = mundo.instancia.moba
+    fallar(errores, "con dos jugadores por equipo el asedio empieza", inst.activa and not inst.fin)
+    local a1, u1, a2 = equipo.albor[1], equipo.umbra[1], equipo.albor[2]
+    for _, f in ipairs({ "albor", "umbra" }) do
+      for _, p in ipairs(equipo[f]) do
+        fallar(errores, p.nombre .. " está en el campo del asedio, junto a su base", p.modo == "moba" and Util.dist(p.x, p.y, arena.spawns[f].x, arena.spawns[f].y) < 1)
+        fallar(errores, p.nombre .. " empieza en el nivel 1, sin experiencia y más débil que antes", p.nivel == 1 and p.xp == 0 and p.hpMax < reales[p.id].hpMax and p.atk < reales[p.id].atk, p.nivel .. "/" .. p.hpMax .. "/" .. reales[p.id].hpMax)
+      end
+    end
+    -- poderes: al principio solo el primero; se desbloquean con el nivel de la partida
+    local barra = Datos.barra.guerrero
+    local function conocidos(p) local n = 0 for _, id in ipairs(Datos.barra[p.clase]) do if (p.habilidades[id] or 0) > 0 then n = n + 1 end end return n end
+    fallar(errores, "a nivel 1 solo hay un poder desbloqueado", conocidos(a1) == 1 and (a1.habilidades[barra[1]] or 0) == 1 and (a1.habilidades[barra[4]] or 0) == 0)
+    fallar(errores, "los poderes no desbloqueados no se pueden usar", mundo:usarHabilidad(a1, 4) ~= nil)
+    -- lo real queda a salvo: aunque el servidor guarde en mitad de la partida, se guarda el nivel de verdad
+    local datos = mundo:exportar(a1)
+    fallar(errores, "al guardar durante el asedio se guarda lo real (nivel y poderes de la cuenta)", datos.nivel == 20 and datos.habilidades ~= a1.habilidades)
+    -- subir de nivel: experiencia con el tiempo y por hechos; desbloquea poderes y mejora los rangos
+    mundo:xpMoba(a1, Moba.xpPara(1))
+    fallar(errores, "con la experiencia justa sube al nivel 2", a1.nivel == 2)
+    mundo:xpMoba(a1, Moba.xpPara(2))
+    fallar(errores, "al nivel 3 se desbloquea el segundo poder", a1.nivel == 3 and conocidos(a1) == 2 and (a1.habilidades[barra[2]] or 0) == 1)
+    local hpA2, matkA2 = a2.hpMax, a2.matk
+    mundo:xpMoba(a2, 100000)
+    fallar(errores, "el nivel máximo de la partida es 18 y con él todos los poderes (ya con rango)", a2.nivel == Moba.NIVEL_MAX and conocidos(a2) == 6 and a2.xp == 0 and (a2.habilidades[Datos.barra.mago[1]] or 0) >= 3, tostring(a2.nivel))
+    fallar(errores, "más experiencia no pasa del 18", (function() mundo:xpMoba(a2, 5000) return a2.nivel == 18 end)())
+    fallar(errores, "al subir de nivel crecen las estadísticas", a2.hpMax > hpA2 and a2.matk > matkA2, hpA2 .. "->" .. a2.hpMax)
+    fallar(errores, "el jugador sabe qué nivel desbloquea cada poder (para la barra)", mundo:construirTu(a2).mobaMax == 18 and mundo:construirTu(a2).mobaNiveles[2] == 3)
+    fallar(errores, "no se puede montar en el asedio", mundo:alternarMontura(a1, "mnt_001") ~= nil)
+    -- estructuras: un nexo por equipo y dos torres por carril
+    local nexos, torres = {}, { albor = {}, umbra = {} }
+    for _, e in pairs(mundo.entidades) do
+      if e.moba and e.nexo then nexos[e.faccion] = e end
+      if e.moba and e.torre then torres[e.faccion][#torres[e.faccion] + 1] = e end
+    end
+    fallar(errores, "hay un nexo por equipo y seis torres cada uno (dos por carril)", nexos.albor and nexos.umbra and #torres.albor == 6 and #torres.umbra == 6, #torres.albor .. "/" .. #torres.umbra)
+    fallar(errores, "el nexo empieza protegido", nexos.albor.invulnerable == true and nexos.umbra.invulnerable == true)
+    -- oleadas: salen esbirros de los dos equipos por los tres carriles y avanzan hacia el otro nexo
+    for _ = 1, 150 do mundo:actualizar(0.1) end
+    local esb = { albor = {}, umbra = {} }
+    local carriles = {}
+    for _, e in pairs(mundo.entidades) do
+      if e.moba and e.kind == "monstruo" and e.vivo then esb[e.faccion][#esb[e.faccion] + 1] = e carriles[e.carril] = true end
+    end
+    fallar(errores, "salen esbirros de los dos equipos por los tres carriles", #esb.albor >= 6 and #esb.umbra >= 6 and carriles[1] and carriles[2] and carriles[3], #esb.albor .. "/" .. #esb.umbra)
+    local sumaA, sumaU = 0, 0
+    for _, e in ipairs(esb.albor) do sumaA = sumaA + e.x end
+    for _, e in ipairs(esb.umbra) do sumaU = sumaU + e.x end
+    fallar(errores, "los esbirros avanzan hacia la base rival", sumaA / #esb.albor > arena.spawns.albor.x + 4 and sumaU / #esb.umbra < arena.spawns.umbra.x - 4)
+    -- reglas de daño
+    fallar(errores, "no se daña a un esbirro del propio equipo", not mundo:puedeDanar(a1, esb.albor[1]) and not mundo:puedeDanar(esb.albor[1], a1))
+    fallar(errores, "sí al del equipo rival", mundo:puedeDanar(a1, esb.umbra[1]) and mundo:puedeDanar(esb.umbra[1], a1))
+    fallar(errores, "las torres no dañan a los suyos pero sí a los rivales", not mundo:puedeDanar(torres.albor[1], a1) and mundo:puedeDanar(torres.albor[1], u1))
+    -- esbirros abatidos dan experiencia de la partida
+    local xp0 = a1.xp + a1.nivel * 10000
+    local victima = esb.umbra[1]
+    mundo:danar(victima, 99999, a1)
+    fallar(errores, "abatir un esbirro da experiencia de la partida", a1.xp + a1.nivel * 10000 > xp0)
+    -- una torre dispara al rival que se le acerca
+    local torre = torres.albor[1]
+    u1.x, u1.y = torre.x + 3, torre.y
+    for _, e in pairs(mundo.entidades) do if e.moba and e.kind == "monstruo" then e.borrar = true end end
+    mundo:actualizar(0.05)
+    local hp0 = u1.hp
+    for _ = 1, 40 do mundo:actualizar(0.1) end
+    fallar(errores, "la torre dispara al jugador rival que se acerca", u1.hp < hp0 or not u1.vivo, tostring(u1.hp) .. "/" .. tostring(hp0))
+    -- la fuente cura a los suyos cerca de su nexo
+    a2.x, a2.y = nexos.albor.x + 1.5, nexos.albor.y
+    a2.hp = 100
+    for _ = 1, 30 do mundo:actualizar(0.1) end
+    fallar(errores, "la fuente de la base cura a los de su equipo", a2.hp > 160, tostring(a2.hp))
+    -- morir en el asedio: reaparece en su base
+    u1.vivo, u1.hp = true, u1.hpMax
+    mundo:danar(u1, 99999, a1)
+    fallar(errores, "el jugador rival cae", not u1.vivo)
+    fallar(errores, "la baja cuenta para su equipo y para quien la hizo", inst.bajas.albor == 1 and a1.eventoStats.bajas == 1 and u1.eventoStats.muertes == 1, tostring(inst.bajas.albor))
+    fallar(errores, "el registro del evento apunta lo ocurrido (oleadas y bajas)", inst.registro and #inst.registro >= 2 and inst.oleadaEn ~= nil)
+    local tu = mundo:construirTu(u1)
+    fallar(errores, "el jugador caído recibe la cuenta atrás para reaparecer y sus estadísticas", tu.respawnResta ~= nil and tu.respawnResta > 0 and tu.eventoStats.muertes == 1, tostring(tu.respawnResta))
+    for _ = 1, 80 do mundo:actualizar(0.1) end
+    fallar(errores, "y reaparece en su base tras unos segundos", u1.vivo and u1.modo == "moba" and Util.dist(u1.x, u1.y, arena.spawns.umbra.x, arena.spawns.umbra.y) < 3)
+    -- el nexo no cae hasta abrir dos carriles: con un solo carril abierto sigue invulnerable
+    local function derribarCarril(ci)
+      for _, t in ipairs(torres.umbra) do if t.carril == ci then mundo:danar(t, 99999, a1) end end
+    end
+    mundo:danar(nexos.umbra, 99999, a1)
+    fallar(errores, "con todas las torres en pie el nexo es invulnerable", nexos.umbra.hp == nexos.umbra.hpMax)
+    derribarCarril(1)
+    mundo:actualizar(0.1)
+    mundo:danar(nexos.umbra, 99999, a1)
+    fallar(errores, "con un carril abierto el nexo sigue protegido", nexos.umbra.vivo and nexos.umbra.invulnerable and inst.carriles.umbra == 1, tostring(inst.carriles and inst.carriles.umbra))
+    derribarCarril(2)
+    mundo:actualizar(0.1)
+    fallar(errores, "con dos carriles abiertos el nexo queda al descubierto", not nexos.umbra.invulnerable and inst.carriles.umbra == 2)
+    mundo:danar(nexos.umbra, 99999, a1)
+    fallar(errores, "al caer el nexo gana el equipo atacante", inst.fin == "albor" and not inst.activa, tostring(inst.fin))
+    mundo:actualizar(0.1)
+    local fuera = true
+    for _, f in ipairs({ "albor", "umbra" }) do for _, p in ipairs(equipo[f]) do if p.modo ~= "mundo" then fuera = false end end end
+    fallar(errores, "al terminar todos vuelven al mundo", fuera)
+    -- cada uno recupera su nivel, su experiencia y sus poderes
+    local recuperado = true
+    for _, f in ipairs({ "albor", "umbra" }) do
+      for _, p in ipairs(equipo[f]) do
+        local r = reales[p.id]
+        if not (p.nivel == r.nivel and p.hpMax == r.hpMax and p.mobaOrig == nil and (p.habilidades[Datos.barra[p.clase][4]] or 0) == (p.habilidades[Datos.barra[p.clase][4]] or 0)) then recuperado = false end
+      end
+    end
+    fallar(errores, "al terminar recuperan su nivel y sus estadísticas reales", recuperado and a2.nivel == 20 and a2.atk == reales[a2.id].atk)
+    fallar(errores, "el asedio no deja entidades en la arena", contar("moba") == 0, tostring(contar("moba")))
+    fallar(errores, "las criaturas del mundo no cambian", contar("mundo", "monstruo") == mundoAntes, contar("mundo", "monstruo") .. " vs " .. mundoAntes)
+    -- salir a mitad de partida o por un comando también devuelve lo suyo
+    local p3 = mundo:crearPersonaje({ nombre = "extra", faccion = "albor", clase = "guerrero", nivel = 12 })
+    p3.ultimoGolpe = -99
+    local real3 = { nivel = p3.nivel, hpMax = p3.hpMax }
+    mundo:reiniciarInstancia("moba")
+    mundo:meterEnCampo(p3, "moba")
+    fallar(errores, "otra edición vuelve a crear nexos y torres", contar("moba", "altar") == 2 and contar("moba", "estatua") == 12 and p3.nivel == 1)
+    mundo:salirGuerra(p3)
+    fallar(errores, "abandonar el campo devuelve el nivel real", p3.nivel == real3.nivel and p3.hpMax == real3.hpMax and p3.modo == "mundo")
+    mundo:meterEnCampo(p3, "moba")
+    p3.modo = "mundo"                       -- (como haría un comando o un teletransporte)
+    mundo:actualizar(0.1)
+    fallar(errores, "si sale del asedio por otra vía, recupera lo suyo al siguiente tick", p3.nivel == real3.nivel and p3.mobaOrig == nil)
+    mundo:cerrarInstancia("moba", nil)
+    fallar(errores, "cerrar sin ganador (tiempo) también limpia", contar("moba") == 0)
   end)
   paso("mapa de FAO como mapa aparte: entrar, moverse sin saltarse el agua ni los objetos, y salir por los triángulos", function()
     local Mapa = require("compartido.dominio.mapa")

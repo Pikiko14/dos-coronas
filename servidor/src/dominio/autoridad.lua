@@ -197,7 +197,7 @@ function A.aceptar(mundo, pj, nombre, datos)
     return true, { id = datos.id }
   end
   if nombre == "guerra" then
-    if datos.modo ~= "batalla" and datos.modo ~= "estandarte" then return false end
+    if datos.modo ~= "batalla" and datos.modo ~= "estandarte" and datos.modo ~= "moba" then return false end
     -- solo se ingresa hablando con el Heraldo de una ciudad (o en el portal de la Cicatriz)
     local m = mundo and mundo.mapas and mundo.mapas.mundo
     local cerca = mundo and mundo.npcCerca and mundo:npcCerca(pj, "heraldo")

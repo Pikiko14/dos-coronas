@@ -163,9 +163,37 @@ function M.dibujar(id, fx, t, sx, sy, pasada)
             if u <= (c.dur or 0.05) then k = 0 end
           elseif modo == "proj" then
             if t <= (c.t1 or c.t0 + 0.3) then k = 0 end
+          elseif modo == "caida" then
+            -- cae desde el desplazamiento `off` (arriba, en el cielo) hasta el suelo del objetivo, acelerando; los cuadros van creciendo
+            local fin = c.t1 or c.t0 + 0.5
+            if t <= fin then
+              k = math.min(d.n - 1, math.floor(u / ((fin - c.t0) / d.n)))
+              alfa = alfa * math.min(1, u / 0.05)
+            end
+          elseif modo == "estela" then
+            -- una estela de brasas que va de la mano al objetivo (los cuadros parpadean); entra y sale suave
+            if t <= (c.t1 or c.t0 + 0.3) then
+              k = math.floor(u / c.ms) % d.n
+              alfa = alfa * math.min(1, u / 0.04) * (1 - seg(t, (c.t1 or c.t0 + 0.3) - 0.07, c.t1 or c.t0 + 0.3))
+            end
           end
         end
-        if k then
+        if k and modo == "estela" then
+          -- estirada de la mano (pecho del lanzador) al pecho del objetivo: gira hacia él y su largo es la distancia; el grosor sigue la escala
+          local x0, y0, x1, y1 = cx, cy - PECHO, sx, sy - PECHO * 0.62       -- (acaba en el centro del cuerpo del objetivo, más bajo que el pecho de un personaje: las criaturas son bajas)
+          local largo = math.sqrt((x1 - x0) ^ 2 + (y1 - y0) ^ 2)
+          if c.mezcla == "add" then love.graphics.setBlendMode("add") end
+          love.graphics.setColor(1, 1, 1, limitar(alfa, 0, 1))
+          love.graphics.draw(img, quad(c.s, k), x0, y0, math.atan2(y1 - y0, x1 - x0), largo / math.max(1, d.vw), K * c.sc, d.ox, d.oy)
+          if c.mezcla == "add" then love.graphics.setBlendMode("alpha") end
+        elseif k and modo == "caida" then
+          local uu = limitar((t - c.t0) / math.max(0.01, (c.t1 or c.t0 + 0.5) - c.t0), 0, 1) ^ 1.6
+          local ox, oy = (c.off and c.off[1] or 0) * K, (c.off and c.off[2] or -300) * K
+          if c.mezcla == "add" then love.graphics.setBlendMode("add") end
+          love.graphics.setColor(1, 1, 1, limitar(alfa, 0, 1))
+          love.graphics.draw(img, quad(c.s, k), sx + ox * (1 - uu), sy - 8 + oy * (1 - uu), 0, K * c.sc, K * c.sc, d.ox, d.oy)
+          if c.mezcla == "add" then love.graphics.setBlendMode("alpha") end
+        elseif k then
           -- posición base
           local bx, by, esc = sx, sy, K * c.sc
           if c.w == "C" then bx, by = cx, cy - PECHO

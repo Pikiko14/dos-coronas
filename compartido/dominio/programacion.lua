@@ -64,7 +64,7 @@ function M.instalar(Mundo)
 
   -- La edición en curso (si el evento está en marcha) o la siguiente.
   function Mundo:claveEdicion(modo)
-    if not self.horarioEventos then return modo end
+    if not self.horarioEventos or modo == "moba" then return modo end
     local ev = estado(self, modo)
     local inst = self.instancia[modo]
     if ev.activa and inst and inst.activa and not inst.fin then return ev.activa end
@@ -73,7 +73,7 @@ function M.instalar(Mundo)
 
   -- Datos de la próxima edición para el panel.
   function Mundo:programaDe(modo)
-    if not self.horarioEventos then return nil end
+    if not self.horarioEventos or modo == "moba" then return nil end         -- (el asedio no tiene horario: empieza cuando hay jugadores)
     local ev = estado(self, modo)
     return { proxima = ev.proxima, hora = os.date("%H:%M", ev.proxima), restan = math.max(0, ev.proxima - self:reloj()) }
   end

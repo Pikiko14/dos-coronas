@@ -48,6 +48,14 @@ def visible(ruta, n, w, h):
 
 def main():
     poderes = json.load(open(os.path.join(FUENTE, "poderes.json"), encoding="utf-8"))
+    # poderes con secuencias propias (no de FAO): herramientas/efectos_extra/<id>/efecto.json (con sheets/); mismo formato que los de fao-clases-dc
+    extras = os.path.join(RAIZ, "herramientas", "efectos_extra")
+    if os.path.isdir(extras):
+        for nombre in sorted(os.listdir(extras)):
+            f = os.path.join(extras, nombre, "efecto.json")
+            if os.path.exists(f):
+                e = json.load(open(f, encoding="utf-8"))
+                poderes = [q for q in poderes if q["id"] != e["id_dos_coronas"]] + [dict(id=e["id_dos_coronas"], clase=e["clase"], carpeta=os.path.abspath(os.path.dirname(f)))]
     arte = os.path.join(RAIZ, "juego", "arte", "fao_efectos")
     secs, datos = {}, {}
     for p in poderes:

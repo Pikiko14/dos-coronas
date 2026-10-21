@@ -791,7 +791,15 @@ function I.hud(mundo, p, w, h)
     end
     texto(Ajustes.nombreTecla(teclas["poder" .. i]), x + 4, by0 + 2, { 1, 0.9, 0.5 }, f)
     if not conocida then
-      texto("K", x + 4, by0 + lado_c - 16, { 1, 0.5, 0.4 }, f)
+      if p.mobaNiveles and p.modo == "moba" then
+        -- asedio: el poder se desbloquea con el nivel de la partida
+        love.graphics.setColor(0, 0, 0, 0.5)
+        love.graphics.rectangle("fill", x + 1, by0 + 1, lado_c - 2, lado_c - 2, 4, 4)
+        local t = "Nv " .. (p.mobaNiveles[slotReal] or "?")
+        texto(t, x + lado_c / 2 - f:getWidth(t) / 2, by0 + lado_c / 2 - 7, { 1, 0.82, 0.4 }, f)
+      else
+        texto("K", x + 4, by0 + lado_c - 16, { 1, 0.5, 0.4 }, f)
+      end
     elseif rangoH > 1 then
       texto(tostring(rangoH), x + lado_c - f:getWidth(tostring(rangoH)) - 3, by0 + lado_c - 16, { 1, 0.85, 0.3 }, f)
     end
@@ -803,7 +811,7 @@ function I.hud(mundo, p, w, h)
         local a, b = Balance.rangoDano(magico and (p.matk or 0) or (p.atk or 0), 0, hdef.coef)
         rango = "Daño " .. (magico and "mágico " or "físico ") .. a .. "-" .. b .. ". "
       end
-      I.pista = hdef.nombre .. (conocida and (" (rango " .. rangoH .. ")") or " — sin aprender (K)") ..
+      I.pista = hdef.nombre .. (conocida and (" (rango " .. rangoH .. ")") or ((p.mobaNiveles and p.modo == "moba") and (" — se desbloquea en el nivel " .. (p.mobaNiveles[slotReal] or "?") .. " de la partida") or " — sin aprender (K)")) ..
         " — " .. (hdef.mana or 0) .. " de maná, " .. string.format("%.1f", hdef.cd or 0) .. " s. " .. rango .. (hdef.desc or "") .. " (Arrástralo a otra casilla para cambiarlo de sitio.)"
     end
   end
@@ -949,15 +957,7 @@ function I.hud(mundo, p, w, h)
   end
 
   -- Avisos de guerra (centro arriba)
-  if p.colaGuerra and p.modo ~= "batalla" and p.modo ~= "estandarte" then
-    local r = mundo:resumenEvento(p.colaGuerra)
-    local min = Datos.JUGADORES_EVENTO
-    local titulo = mundo:nombreEvento(p.colaGuerra)
-    marco(vw / 2 - 230, 78, 460, 28, true)
-    love.graphics.setFont(f)
-    love.graphics.setColor(0.95, 0.9, 0.7)
-    love.graphics.printf(string.format("%s en cola   Albor %d/%d   Umbra %d/%d", titulo, r.cola.albor, min, r.cola.umbra, min), vw / 2 - 224, 84, 448, "center")
-  end
+  if p.colaGuerra and p.modo ~= "batalla" and p.modo ~= "estandarte" and p.modo ~= "moba" then I.hudCola(mundo, p, vw) end
   -- oficio, carga, montura y búsqueda
   I.estadoOficio(mundo, p, 8, 98)
   I.marquesina(mundo, p, vw, love.timer.getDelta())
@@ -973,20 +973,7 @@ function I.hud(mundo, p, w, h)
   end
   -- marco del grupo y su invitación
   I.estadoGrupo(mundo, p, vw - 198, 176)
-  if p.modo == "batalla" or p.modo == "estandarte" then
-    local inst = mundo.instancia[p.modo]
-    local titulo = p.modo == "batalla" and "Batalla por cristales" or "Captura el estandarte"
-    marco(vw / 2 - 160, 78, 320, 44, true)
-    texto(titulo, vw / 2 - f:getWidth(titulo) / 2, 82, { 0.95, 0.9, 0.7 }, f)
-    texto("Albor " .. inst.puntos.albor, vw / 2 - 140, 100, Datos.facciones.albor.color, f)
-    texto("Umbra " .. inst.puntos.umbra, vw / 2 - 30, 100, Datos.facciones.umbra.color, f)
-    texto(math.ceil(inst.duracion - inst.tiempo) .. " s", vw / 2 + 90, 100, { 1, 1, 1 }, f)
-    if p.modo == "batalla" and (p.llevaCristales or 0) > 0 then
-      local t = "Llevas " .. p.llevaCristales .. (p.llevaCristales == 1 and " cristal" or " cristales") .. ": llévalos al altar de tu base"
-      marco(vw / 2 - f:getWidth(t) / 2 - 10, 126, f:getWidth(t) + 20, 24, true)
-      texto(t, vw / 2 - f:getWidth(t) / 2, 130, { 0.55, 0.9, 1 }, f)
-    end
-  end
+  if p.modo == "batalla" or p.modo == "estandarte" or p.modo == "moba" then I.hudEvento(mundo, p, vw, vh) end
 
   I.consola(mundo, p, 0, vh - I.CHAT_ALTO, math.max(300, math.floor(vw * I.CHAT_ANCHO)), I.CHAT_ALTO)
   I.flotantes(mundo, p, vw, vh)
@@ -1308,7 +1295,7 @@ local function minimapaFao(mundo, p, mapa, x, y, lado)
   love.graphics.rectangle("fill", x, y, lado, lado)
   love.graphics.setColor(1, 1, 1)
   love.graphics.draw(img, -x0 * k + x, -y0 * k + y, 0, k, k)
-  for _, sal in ipairs(m.salidas or {}) do
+  for _, sal in ipairs(p.modo == "moba" and {} or (m.salidas or {})) do         -- (en el asedio no hay salidas del mapa)
     local pt = sal.puntos
     local cx, cy = 0, 0
     for _, q in ipairs(pt) do cx, cy = cx + q.x / 64, cy + q.y / 64 end
@@ -1328,6 +1315,35 @@ local function minimapaFao(mundo, p, mapa, x, y, lado)
         local c = Datos.facciones[e.faccion] and Datos.facciones[e.faccion].color or { 1, 1, 1 }
         love.graphics.setColor(c[1], c[2], c[3])
         love.graphics.rectangle("fill", ex - 1.5, ey - 1.5, 3, 3)
+      end
+    end
+  end
+  -- asedio: los tres carriles (líneas tenues), nexos y torres (cuadrados grandes del color de su equipo) y esbirros (puntos)
+  if p.modo == "moba" then
+    for _, c in ipairs(mundo.moba and mundo.moba.carriles or {}) do
+      local linea = {}
+      for i = 1, #c.ruta, 4 do
+        linea[#linea + 1] = x + (c.ruta[i].x - x0) * k
+        linea[#linea + 1] = y + (c.ruta[i].y - y0) * k
+      end
+      if #linea >= 4 then
+        love.graphics.setColor(1, 1, 1, 0.28)
+        love.graphics.setLineWidth(2)
+        love.graphics.line(linea)
+        love.graphics.setLineWidth(1)
+      end
+    end
+    for _, e in pairs(mundo.entidades) do
+      if e.moba and e.vivo ~= false and e.modo == "moba" then
+        local ex, ey = x + (e.x - x0) * k, y + (e.y - y0) * k
+        if dentroMini(ex, ey, x, y, lado, 0) then
+          local c = Datos.facciones[e.faccion] and Datos.facciones[e.faccion].color or { 1, 1, 1 }
+          local r = e.kind == "altar" and 5 or (e.kind == "estatua" and 3.5 or 1.5)
+          love.graphics.setColor(0, 0, 0, 0.85)
+          love.graphics.rectangle("fill", ex - r - 1, ey - r - 1, r * 2 + 2, r * 2 + 2)
+          love.graphics.setColor(c[1], c[2], c[3])
+          love.graphics.rectangle("fill", ex - r, ey - r, r * 2, r * 2)
+        end
       end
     end
   end
@@ -3557,47 +3573,266 @@ function I.panelComercio(mundo, p, w, h)
     px + 256, yb - 2, pw - 276, "left")
 end
 
+-- ------------------------------------------------------------------------------------------------------------------------------ eventos de guerra (panel, cola y marcador)
+local EV_UI = {
+  batalla = {
+    nombre = "Batalla por cristales", cuando = "Una vez al día", color = { 0.36, 0.62, 1.0 }, meta = 500,
+    lema = "Derriba estatuas y puertas enemigas, recoge el cristal del núcleo y llévalo al altar de tu base. Gana quien suma más puntos.",
+  },
+  estandarte = {
+    nombre = "Captura del estandarte", cuando = "Cada pocas horas", color = { 1.0, 0.76, 0.3 }, meta = 3,
+    lema = "Roba la bandera enemiga y tráela a la tuya sin que te la quiten. Tres capturas ganan.",
+  },
+  moba = {
+    nombre = "Asedio", cuando = "Sin horario: empieza con jugadores de los dos equipos", color = { 0.72, 0.5, 1.0 },
+    lema = "Derriba las torres y destruye el nexo rival. Oleadas de esbirros avanzan solas, la fuente de tu base te cura y puedes reaparecer y volver.",
+  },
+}
+local ORDEN_EV = { "moba", "batalla", "estandarte" }
+
+local function colorEquipo(f)
+  local c = Datos.facciones[f] and Datos.facciones[f].color
+  return c or { 1, 1, 1 }
+end
+
+local function mmss(s)
+  s = math.max(0, math.floor(s))
+  return string.format("%d:%02d", math.floor(s / 60), s % 60)
+end
+
+-- Barra de progreso de un equipo con su cifra dentro (frac 0..1).
+local function barraEquipo(x, y, w, h, frac, f, rotulo, alinea)
+  local c = colorEquipo(f)
+  barra(x, y, w, h, frac, c[1] * 0.95, c[2] * 0.95, c[3] * 0.95)
+  local fu = pequena()
+  love.graphics.setFont(fu)
+  love.graphics.setColor(0, 0, 0, 0.85)
+  local tw = fu:getWidth(rotulo)
+  local tx = alinea == "der" and (x + w - tw - 6) or (x + 6)
+  love.graphics.print(rotulo, tx + 1, y + (h - fu:getHeight()) / 2 + 1)
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.print(rotulo, tx, y + (h - fu:getHeight()) / 2)
+end
+
+-- Una fila de piezas (torres en pie o capturas) como puntitos del color del equipo.
+local function puntos(x, y, n, total, f, alinea)
+  local c = colorEquipo(f)
+  local sep = 11
+  for i = 1, total do
+    local cx = alinea == "der" and (x - (i - 1) * sep) or (x + (i - 1) * sep)
+    love.graphics.setColor(0, 0, 0, 0.85)
+    love.graphics.circle("fill", cx, y, 6)
+    if i <= n then
+      love.graphics.setColor(c[1], c[2], c[3], 1)
+      love.graphics.circle("fill", cx, y, 4.5)
+      love.graphics.setColor(1, 1, 1, 0.45)
+      love.graphics.circle("fill", cx - 1.2, y - 1.4, 1.6)
+    else
+      love.graphics.setColor(0.25, 0.28, 0.4, 1)
+      love.graphics.circle("fill", cx, y, 3.5)
+    end
+  end
+end
+
+-- Aviso de quien está apuntado a un evento mientras sigue en el mundo: tarjeta con el estado de la cola de cada equipo.
+function I.hudCola(mundo, p, vw)
+  local modo = p.colaGuerra
+  local ui = EV_UI[modo]
+  if not ui then return end
+  local r = mundo:resumenEvento(modo)
+  local min = r.min or mundo:minimoEvento(modo)
+  local w, h = 360, 52
+  local x, y = vw / 2 - w / 2, 78
+  marco(x, y, w, h, true)
+  love.graphics.setColor(ui.color[1], ui.color[2], ui.color[3], 0.9)
+  love.graphics.rectangle("fill", x + 3, y + 6, 4, h - 12, 2, 2)
+  texto(ui.nombre .. " · en cola", x + 14, y + 4, TEMA.acento, pequena())
+  barraEquipo(x + 14, y + 26, 160, 18, math.min(1, r.cola.albor / min), "albor", "Albor " .. r.cola.albor .. "/" .. min)
+  barraEquipo(x + 184, y + 26, 160, 18, math.min(1, r.cola.umbra / min), "umbra", "Umbra " .. r.cola.umbra .. "/" .. min)
+end
+
+-- Marcador del evento en curso (arriba, en el centro), registro de lo que pasa, tus estadísticas y la pantalla de «has caído».
+function I.hudEvento(mundo, p, vw, vh)
+  local modo = p.modo
+  local ui = EV_UI[modo]
+  local inst = mundo.instancia[modo]
+  if not (ui and inst) then return end
+  local f = pequena()
+  local gr = fuentePortada("ev_grande", 22)
+  local med = fuentePortada("ev_medio", 16)
+  local W, H = 620, 92
+  local x, y = vw / 2 - W / 2, 74
+  marco(x, y, W, H, true)
+  love.graphics.setColor(ui.color[1], ui.color[2], ui.color[3], 0.9)
+  love.graphics.rectangle("fill", x + 4, y + 4, W - 8, 3, 2, 2)
+  local ca, cu = colorEquipo("albor"), colorEquipo("umbra")
+  -- centro: nombre y tiempo restante
+  local resta = inst.duracion - inst.tiempo
+  love.graphics.setFont(med)
+  local tn = ui.nombre
+  texto(tn, vw / 2 - med:getWidth(tn) / 2, y + 8, TEMA.acento, med)
+  local tt = mmss(resta)
+  texto(tt, vw / 2 - gr:getWidth(tt) / 2, y + 28, resta < 60 and { 1, 0.45, 0.4 } or { 1, 1, 1 }, gr)
+  -- equipos a los lados: nombre y cifra principal
+  local function cifra(equipo)
+    if modo == "moba" then return inst.bajas and inst.bajas[equipo] or 0 end
+    return inst.puntos[equipo] or 0
+  end
+  texto("ALBOR", x + 16, y + 8, ca, med)
+  local sa = tostring(cifra("albor"))
+  texto(sa, x + 16, y + 26, { 1, 1, 1 }, gr)
+  texto("UMBRA", x + W - 16 - med:getWidth("UMBRA"), y + 8, cu, med)
+  local su = tostring(cifra("umbra"))
+  texto(su, x + W - 16 - gr:getWidth(su), y + 26, { 1, 1, 1 }, gr)
+  texto(modo == "moba" and "bajas" or "puntos", x + 16 + gr:getWidth(sa) + 6, y + 36, { 0.7, 0.72, 0.82 }, f)
+  local lu = modo == "moba" and "bajas" or "puntos"
+  texto(lu, x + W - 16 - gr:getWidth(su) - 6 - f:getWidth(lu), y + 36, { 0.7, 0.72, 0.82 }, f)
+  -- fila inferior: las barras de cada equipo
+  local by = y + 66
+  local bw = 218
+  if modo == "moba" and inst.nexoPct and inst.torres then
+    local function etiquetaNexo(eq)
+      local t = "Nexo " .. (inst.nexoPct[eq] or 100) .. "%"
+      if inst.nexoProt and inst.nexoProt[eq] then t = t .. " · protegido " .. (inst.carriles and inst.carriles[eq] or 0) .. "/2" end
+      return t
+    end
+    barraEquipo(x + 12, by, bw, 18, (inst.nexoPct.albor or 100) / 100, "albor", etiquetaNexo("albor"))
+    barraEquipo(x + W - 12 - bw, by, bw, 18, (inst.nexoPct.umbra or 100) / 100, "umbra", etiquetaNexo("umbra"), "der")
+    puntos(x + 12 + bw + 12, by + 9, inst.torres.albor or 0, 6, "albor")
+    puntos(x + W - 12 - bw - 12, by + 9, inst.torres.umbra or 0, 6, "umbra", "der")
+    if inst.oleadaEn then
+      local t = "Oleada " .. ((inst.oleada or 0) + 1) .. " en " .. inst.oleadaEn .. " s"
+      texto(t, vw / 2 - f:getWidth(t) / 2, y + 52, { 0.85, 0.82, 0.95 }, f)
+    end
+  elseif modo == "estandarte" then
+    barraEquipo(x + 12, by, bw, 18, (inst.puntos.albor or 0) / ui.meta, "albor", (inst.puntos.albor or 0) .. " / " .. ui.meta .. " capturas")
+    barraEquipo(x + W - 12 - bw, by, bw, 18, (inst.puntos.umbra or 0) / ui.meta, "umbra", (inst.puntos.umbra or 0) .. " / " .. ui.meta .. " capturas", "der")
+  else
+    barraEquipo(x + 12, by, bw, 18, (inst.puntos.albor or 0) / ui.meta, "albor", (inst.puntos.albor or 0) .. " / " .. ui.meta)
+    barraEquipo(x + W - 12 - bw, by, bw, 18, (inst.puntos.umbra or 0) / ui.meta, "umbra", (inst.puntos.umbra or 0) .. " / " .. ui.meta, "der")
+  end
+  -- tus estadísticas
+  local st = p.eventoStats
+  if st then
+    local partes = { "Bajas " .. (st.bajas or 0), "Muertes " .. (st.muertes or 0) }
+    if modo == "moba" then partes[#partes + 1] = "Esbirros " .. (st.esbirros or 0) partes[#partes + 1] = "Torres " .. (st.torres or 0) end
+    local t = table.concat(partes, "  ·  ")
+    local tw = f:getWidth(t)
+    marco(vw / 2 - tw / 2 - 12, y + H + 4, tw + 24, 22, true)
+    texto(t, vw / 2 - tw / 2, y + H + 7, { 0.9, 0.9, 1 }, f)
+  end
+  -- registro: lo último que ha pasado, con el color del equipo; se va apagando
+  local reg = inst.registro or {}
+  local yy = y + H + 34
+  for i = math.max(1, #reg - 3), #reg do
+    local e = reg[i]
+    local edad = inst.tiempo - e.t
+    if edad < 16 then
+      local a = edad < 11 and 1 or math.max(0, 1 - (edad - 11) / 5)
+      local c = e.faccion and colorEquipo(e.faccion) or { 0.85, 0.85, 0.9 }
+      local tw = f:getWidth(e.texto)
+      love.graphics.setColor(0.03, 0.04, 0.1, 0.62 * a)
+      love.graphics.rectangle("fill", vw / 2 - tw / 2 - 12, yy - 1, tw + 24, 19, 6, 6)
+      love.graphics.setColor(c[1], c[2], c[3], a)
+      love.graphics.circle("fill", vw / 2 - tw / 2 - 4, yy + 8.5, 3)
+      love.graphics.setFont(f)
+      love.graphics.setColor(1, 1, 1, a)
+      love.graphics.print(e.texto, vw / 2 - tw / 2 + 4, yy + 2)
+      yy = yy + 21
+    end
+  end
+  if modo == "batalla" and (p.llevaCristales or 0) > 0 then
+    local t = "Llevas " .. p.llevaCristales .. (p.llevaCristales == 1 and " cristal" or " cristales") .. ": llévalos al altar de tu base"
+    marco(vw / 2 - f:getWidth(t) / 2 - 10, yy + 4, f:getWidth(t) + 20, 24, true)
+    texto(t, vw / 2 - f:getWidth(t) / 2, yy + 8, { 0.55, 0.9, 1 }, f)
+  end
+  -- has caído: pantalla roja suave con la cuenta atrás para reaparecer
+  if p.vivo == false or (p.hp and p.hp <= 0) then
+    love.graphics.setColor(0.35, 0.02, 0.04, 0.35)
+    love.graphics.rectangle("fill", 0, 0, vw, vh)
+    local gg = fuentePortada("ev_caido", 38)
+    local t1 = "HAS CAÍDO"
+    texto(t1, vw / 2 - gg:getWidth(t1) / 2, vh / 2 - 70, { 1, 0.4, 0.38 }, gg)
+    local s = p.respawnResta
+    local t2 = s and ("Reapareces en " .. s .. " s") or "Reapareciendo en tu base..."
+    texto(t2, vw / 2 - gr:getWidth(t2) / 2, vh / 2 - 22, { 1, 1, 1 }, gr)
+  end
+end
+
+local function cartaEvento(mundo, p, modo, x, y, w, h)
+  local ui = EV_UI[modo]
+  local r = mundo:resumenEvento(modo)
+  local min = r.min or mundo:minimoEvento(modo)
+  local f = pequena()
+  local med = fuentePortada("ev_medio", 16)
+  local gr = fuentePortada("ev_grande", 22)
+  -- fondo de la tarjeta con la franja de color del evento
+  love.graphics.setColor(TEMA.fila[1], TEMA.fila[2], TEMA.fila[3], 0.95)
+  love.graphics.rectangle("fill", x, y, w, h, 8, 8)
+  love.graphics.setColor(ui.color[1], ui.color[2], ui.color[3], 0.95)
+  love.graphics.rectangle("fill", x, y, 7, h, 4, 4)
+  love.graphics.setColor(ui.color[1], ui.color[2], ui.color[3], 0.35)
+  love.graphics.rectangle("line", x + 0.5, y + 0.5, w - 1, h - 1, 8, 8)
+  texto(ui.nombre, x + 20, y + 8, TEMA.acento, gr)
+  -- insignia de estado
+  local ins, ci
+  if r.activa then ins, ci = "EN CURSO", { 0.35, 0.9, 0.5 }
+  elseif r.programa then
+    local m = math.ceil(r.programa.restan / 60)
+    ins, ci = "A LAS " .. r.programa.hora .. (m < 600 and (" · en " .. (m >= 60 and (math.floor(m / 60) .. " h " .. string.format("%02d", m % 60)) or (m .. " min"))) or ""), { 0.5, 0.75, 1 }
+  else ins, ci = "ABIERTO", { 1, 0.82, 0.4 } end
+  local iw = med:getWidth(ins) + 18
+  love.graphics.setColor(ci[1] * 0.25, ci[2] * 0.25, ci[3] * 0.25, 0.95)
+  love.graphics.rectangle("fill", x + w - iw - 14, y + 10, iw, 24, 12, 12)
+  love.graphics.setColor(ci[1], ci[2], ci[3], 0.9)
+  love.graphics.rectangle("line", x + w - iw - 14 + 0.5, y + 10.5, iw - 1, 23, 12, 12)
+  texto(ins, x + w - iw - 5, y + 13, ci, med)
+  -- descripción
+  love.graphics.setFont(f)
+  love.graphics.setColor(0.86, 0.86, 0.94)
+  love.graphics.printf(ui.lema, x + 20, y + 42, w - 220, "left")
+  love.graphics.setColor(0.62, 0.65, 0.78)
+  love.graphics.print(ui.cuando, x + 20, y + h - 22)
+  -- colas: Albor y Umbra, con lo que falta para empezar
+  local cx = x + w - 196
+  local cola = r.activa and r.dentro or r.cola
+  local rot = r.activa and "dentro" or "apuntados"
+  love.graphics.setColor(0.62, 0.65, 0.78)
+  love.graphics.print(rot, cx, y + 46)
+  local tope = r.activa and math.max(min, cola.albor, cola.umbra, 1) or min
+  barraEquipo(cx, y + 64, 182, 16, math.min(1, cola.albor / tope), "albor", "Albor " .. cola.albor .. (r.activa and "" or "/" .. min))
+  barraEquipo(cx, y + 84, 182, 16, math.min(1, cola.umbra / tope), "umbra", "Umbra " .. cola.umbra .. (r.activa and "" or "/" .. min))
+  -- acción
+  local id, txt, activo, motivo = "guerra_" .. modo, "Apuntarse", true, nil
+  if p.modo == modo then id, txt = "guerra_salir", "Abandonar el campo"
+  elseif p.colaGuerra == modo then id, txt = "guerra_salir", "Salir de la cola"
+  elseif r.activa then txt = "Unirse ahora"
+  end
+  if p.modo ~= "mundo" and p.modo ~= modo then activo, motivo = false, "Ya estás en otro evento." end
+  if p.colaGuerra and p.colaGuerra ~= modo and p.modo ~= modo then activo, motivo = false, "Sal antes de la otra cola." end
+  I.boton(x + w - 196, y + h - 36, 182, 28, txt, id, activo, motivo)
+end
+
 function I.panelGuerra(mundo, p, w, h)
-  caja(w / 2 - 280, 70, 560, 500, "Guerra entre coronas")
-  I.boton(w / 2 + 210, 78, 60, 28, "Cerrar", "cerrar")
-  local min = Datos.JUGADORES_EVENTO
-  love.graphics.setColor(0.9, 0.86, 0.75)
-  love.graphics.printf("Los eventos los lanza el servidor a sus horas. Apúntate antes y empiezan si hay al menos " .. min .. " jugadores de Albor y " .. min .. " de Umbra. Todos pueden participar en cada evento.", w / 2 - 250, 120, 500, "left")
-  local function estado(modo)
-    local r = mundo:resumenEvento(modo)
-    if r.activa then
-      return "En curso. Dentro: Albor " .. r.dentro.albor .. " · Umbra " .. r.dentro.umbra
-    end
-    local rm = r.min or min
-    local base = string.format("Apuntados: Albor %d/%d · Umbra %d/%d", r.cola.albor, rm, r.cola.umbra, rm)
-    if r.programa then
-      local m = math.ceil(r.programa.restan / 60)
-      local falta = m >= 60 and string.format("%d h %02d min", math.floor(m / 60), m % 60) or (m .. " min")
-      return "Próxima: " .. r.programa.hora .. " (en " .. falta .. ")   " .. base
-    end
-    return base
-  end
-  love.graphics.setColor(0.95, 0.9, 0.75)
-  love.graphics.printf("Batalla por cristales (una vez al día). Derribad estatuas y puertas enemigas, recoged el cristal y llevadlo a vuestro altar.", w / 2 - 250, 180, 500, "left")
-  love.graphics.setColor(0.8, 0.78, 0.65)
-  love.graphics.print(estado("batalla"), w / 2 - 250, 248)
-  if p.modo == "batalla" then
-    I.boton(w / 2 - 240, 274, 220, 36, "Abandonar el campo", "guerra_salir")
-  elseif p.colaGuerra == "batalla" then
-    I.boton(w / 2 - 240, 274, 220, 36, "Salir de la cola", "guerra_salir")
-  else
-    I.boton(w / 2 - 240, 274, 240, 36, "Apuntarse a la batalla", "guerra_batalla")
-  end
-  love.graphics.setColor(0.95, 0.9, 0.75)
-  love.graphics.printf("Captura del estandarte (cada pocas horas). Roba la bandera enemiga y tráela a la tuya. Tres capturas ganan.", w / 2 - 250, 330, 500, "left")
-  love.graphics.setColor(0.8, 0.78, 0.65)
-  love.graphics.print(estado("estandarte"), w / 2 - 250, 390)
-  if p.modo == "estandarte" then
-    I.boton(w / 2 - 240, 416, 220, 36, "Abandonar el campo", "guerra_salir")
-  elseif p.colaGuerra == "estandarte" then
-    I.boton(w / 2 - 240, 416, 220, 36, "Salir de la cola", "guerra_salir")
-  else
-    I.boton(w / 2 - 240, 416, 260, 36, "Apuntarse al estandarte", "guerra_estandarte")
+  local pw, ph = 620, 560
+  local x0, y0 = w / 2 - pw / 2, 64
+  caja(x0, y0, pw, ph, "Guerra entre coronas")
+  I.boton(x0 + pw - 70, y0 + 8, 60, 28, "Cerrar", "cerrar")
+  local f = pequena()
+  -- tu equipo y una línea de ayuda
+  local c = colorEquipo(p.faccion)
+  love.graphics.setColor(c[1] * 0.3, c[2] * 0.3, c[3] * 0.3, 0.95)
+  love.graphics.rectangle("fill", x0 + 20, y0 + 44, 150, 24, 12, 12)
+  love.graphics.setColor(c[1], c[2], c[3], 0.95)
+  love.graphics.rectangle("line", x0 + 20.5, y0 + 44.5, 149, 23, 12, 12)
+  texto("Luchas con " .. (p.faccion == "albor" and "Albor" or "Umbra"), x0 + 32, y0 + 48, { 1, 1, 1 }, f)
+  love.graphics.setFont(f)
+  love.graphics.setColor(0.78, 0.8, 0.9)
+  love.graphics.printf("Apúntate con el Heraldo de una ciudad (o en el portal de la Cicatriz). Si el evento ya está en curso, te unes al momento.",
+    x0 + 184, y0 + 42, pw - 204, "left")
+  local ch = 148
+  for k, modo in ipairs(ORDEN_EV) do
+    cartaEvento(mundo, p, modo, x0 + 20, y0 + 86 + (k - 1) * (ch + 8), pw - 40, ch)
   end
 end
 

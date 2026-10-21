@@ -77,6 +77,12 @@ return {
     { s = "flecha_veneno__S4260105", w = "proj", t0 = 0.22, ms = 0.08, sc = 0.9, a = 1, modo = "proj", t1 = 0.4467, dir = true, mezcla = "add" },
     { s = "flecha_veneno__S4260205", w = "proj", t0 = 0.22, ms = 0.08, sc = 0.9, a = 0.6, modo = "proj", t1 = 0.4467, dir = true, mezcla = "add" },
   } },
+  fuego = { clase = "mago", dur = 1.03, golpes = { 0.55 }, capas = {
+    { s = "fuego__carga", w = "C", t0 = 0, ms = 0.04, sc = 0.7, a = 1, modo = "once", dir = false, mezcla = "add" },
+    { s = "fuego__inicio", w = "C", t0 = 0.3, ms = 0.1, sc = 0.7, a = 1, modo = "once", dir = false, mezcla = "add" },
+    { s = "fuego__tray", w = "T", t0 = 0.3, ms = 0.035, sc = 0.55, a = 1, modo = "estela", t1 = 0.56, dir = false, mezcla = "add" },
+    { s = "fuego__impacto", w = "T", t0 = 0.55, ms = 0.06, sc = 1, a = 1, modo = "once", off = { 0, 26 }, dir = false, mezcla = "add" },
+  } },
   furia = { clase = "guerrero", dur = 3.2, golpes = {  }, capas = {
     { s = "furia__S3970101", w = "GC", t0 = 0.25, ms = 0.1, sc = 1.2, a = 1, modo = "loop", t1 = 3, dir = false, mezcla = "add" },
   } },
@@ -110,6 +116,12 @@ return {
     { s = "maldecir__Line", w = "T", t0 = 0.55, ms = 0.08, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "maldecir__Bu", w = "GT", t0 = 0.8, ms = 0.1, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "maldecir__Ms", w = "T", t0 = 1.3, ms = 0.1, sc = 1, a = 1, modo = "once", off = { 0, -60 }, dir = false, mezcla = "add" },
+  } },
+  meteoro = { clase = "mago", dur = 1.95, golpes = { 0.5 }, capas = {
+    { s = "meteoro__caida", w = "T", t0 = 0, ms = 0.125, sc = 1.3, a = 1, modo = "caida", t1 = 0.5, off = { 0, -300 }, dir = false, mezcla = "add" },
+    { s = "meteoro__impacto", w = "T", t0 = 0.5, ms = 0.09, sc = 2, a = 1, modo = "once", off = { 0, 30 }, dir = false, mezcla = "add" },
+    { s = "meteoro__onda", w = "GT", t0 = 0.55, ms = 0.45, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
+    { s = "meteoro__residual", w = "GT", t0 = 0.9, ms = 0.35, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
   muro_lanzas = { clase = "lancero", dur = 3.2, golpes = {  }, capas = {
     { s = "muro_lanzas__Effect", w = "C", t0 = 0.2, ms = 0.08, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },

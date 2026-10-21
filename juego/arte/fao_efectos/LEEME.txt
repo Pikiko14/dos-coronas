@@ -1,7 +1,0 @@
-Sprites de efectos de Free Angels Online (juego ajeno): MATERIAL DE PROTOTIPO, hay que sustituirlos o licenciarlos antes de publicar.
-S391xx03 / S392xx03: Panther Killing (poder "pantera" del guerrero): abanico de fuego y ciclo de carrera de la pantera, 5 cuadros de dirección cada uno.
-ice0101 / ice02xx / ice03xx: Blizzard Burst (poder "nova" del mago): cristal grande y cristales que caen.
-Origen: Downloads\fao-efectos-dc (con efecto.json). Se dibujan en juego/src/presentacion/render/efectos_fao.lua; las anclas y celdas están en efectos_fao_datos.lua.
-tajo_AIR / tajo_SWORD: Revolving Swords (poder "tajo" del guerrero): anillo de aire en el suelo y espadas girando. Se regeneran con herramientas/generar_efectos_fao.py.
-golpe_s382xx03: Slicing Chop (poder "golpe" del guerrero): 6 variantes de 11 cuadros; se usan tres, escalonadas. Se regeneran con herramientas/generar_efectos_fao.py.
-<id>__<secuencia>.png: efectos de FAO de los poderes de guerrero (grito, carga, furia), lancero, cazador, clerigo y nigromante. Datos en compartido/datos/efectos_fao_poderes.lua y render/efectos_fao_poderes_datos.lua (generados con herramientas/generar_efectos_fao_poderes.py desde fao-clases-dc); motor en render/efectos_fao_capas.lua.

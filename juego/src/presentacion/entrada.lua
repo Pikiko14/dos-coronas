@@ -338,6 +338,7 @@ function Entrada.manejar(app, id)
   if id == "vender_sel" and Interfaz.sel then app.actuar("vender", { i = Interfaz.sel }) return end
   if id == "guerra_batalla" then app.actuar("guerra", { modo = "batalla" }) Interfaz.panel = nil return end
   if id == "guerra_estandarte" then app.actuar("guerra", { modo = "estandarte" }) Interfaz.panel = nil return end
+  if id == "guerra_moba" then app.actuar("guerra", { modo = "moba" }) Interfaz.panel = nil return end
   if id == "guerra_salir" then app.actuar("salir_guerra") Interfaz.panel = nil return end
   if id:sub(1, 13) == "casa_comprar_" then app.actuar("casa_comprar", { id = id:sub(14) }) return end
   if id:sub(1, 12) == "casa_entrar_" then app.actuar("casa_entrar", { id = id:sub(13) }) Interfaz.panel = "casa" return end

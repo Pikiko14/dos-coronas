@@ -70,7 +70,7 @@ function M.instalar(Mundo)
   function Mundo:actualizarEsbirro(e, dt)
     local dueno = self.entidades[e.dueno]
     if not dueno or not dueno.vivo or self.tiempo >= (e.hasta or 0)
-      or dueno.modo == "batalla" or dueno.modo == "estandarte" then
+      or dueno.modo == "batalla" or dueno.modo == "estandarte" or dueno.modo == "moba" then
       e.borrar = true
       return
     end

@@ -25,6 +25,7 @@ local Misiones = require("compartido.dominio.misiones")
 local Voces = require("compartido.dominio.voces")
 local Mazmorras = require("compartido.dominio.mazmorras")
 local MapasFao = require("compartido.dominio.mapas_fao")
+local Moba = require("compartido.dominio.moba")
 local PoderesFao = require("compartido.datos.efectos_fao_poderes")       -- efectos de capas de FAO de los poderes (duración, capas): el servidor solo usa la duración
 local Viaje = require("compartido.dominio.viaje")
 
@@ -64,6 +65,7 @@ function Mundo.nuevo()
   self.instancia = {
     batalla = { activa = false, tiempo = 0, duracion = Datos.EVENTO_DURACION.batalla, puntos = { albor = 0, umbra = 0 }, fin = nil },
     estandarte = { activa = false, tiempo = 0, duracion = Datos.EVENTO_DURACION.estandarte, puntos = { albor = 0, umbra = 0 }, fin = nil },
+    moba = { activa = false, tiempo = 0, duracion = Datos.EVENTO_DURACION.moba or 900, puntos = { albor = 0, umbra = 0 }, fin = nil },
   }
   self.mapas = {
     mundo = Mapa.mundo(self.rng),
@@ -102,6 +104,7 @@ function Mundo:mapaDe(e)
   if e.modo == "casa" then return self:interior(e) end
   if e.modo == "batalla" then return self.mapas.batalla end
   if e.modo == "estandarte" then return self.mapas.estandarte end
+  if e.modo == "moba" then self:asegurarArenaMoba() end          -- (la arena del asedio se calcula la primera vez que se necesita)
   return self.mapas[e.modo] or self.mapas.mundo
 end
 
@@ -240,7 +243,7 @@ function Mundo:recalcular(e)
   e.mdef = (c.mdef or 0) + (e.nivel - 1) * (c.mdefN or 0)
   e.spd = c.spd
   e.rango = c.rango
-  for hueco, itemId in pairs(e.equipo) do
+  for hueco, itemId in pairs(not e.mobaOrig and e.equipo or {}) do        -- (en el asedio nadie lleva equipo: todos parten igual)
     local it = Datos.item(itemId)
     if it then
       local m = Encanto.mult(e.encantos and e.encantos[hueco])
@@ -253,8 +256,10 @@ function Mundo:recalcular(e)
       e.spd = e.spd + (it.spd or 0)
     end
   end
-  Arbol.aplicarPasivas(e)
-  self:aplicarBonos(e)
+  if not e.mobaOrig then
+    Arbol.aplicarPasivas(e)
+    self:aplicarBonos(e)
+  end
   e.hp = math.min(hp or e.hpMax, e.hpMax)
   e.mp = math.min(mp or e.mpMax, e.mpMax)
 end
@@ -822,6 +827,8 @@ end
 
 function Mundo:puedeDanar(origen, objetivo)
   if not origen or not objetivo or not objetivo.vivo then return false end
+  -- asedio: nadie daña a los de su propio equipo (esbirros y estructuras incluidos)
+  if (origen.moba or objetivo.moba) and origen.faccion and origen.faccion == objetivo.faccion then return false end
   local kind = objetivo.kind
   -- el personal (GM y CM) no recibe daño de las criaturas
   if origen.kind == "monstruo" and objetivo.staff then return false end
@@ -926,7 +933,10 @@ end
 
 function Mundo:danar(objetivo, cantidad, origen, critico, color)
   if not objetivo or not objetivo.vivo or type(objetivo.hp) ~= "number" then return end
-  if objetivo.invulnerable then return end
+  if objetivo.invulnerable then
+    if objetivo.moba and objetivo.nexo then self:numero(objetivo, "protegido", { 0.6, 0.8, 1 }) end     -- el nexo del asedio no cae hasta derribar sus torres
+    return
+  end
   if origen and not self:puedeDanar(origen, objetivo) then return end
   cantidad = math.max(1, math.floor(cantidad))
   if objetivo.montado and self:danarMontura(objetivo, cantidad, origen) then return end
@@ -1140,6 +1150,7 @@ function Mundo:morir(e, origen)
   e.vivo = false
   e.hp = 0
   self:limpiarEstados(e)
+  if e.moba then self:morirMoba(e, origen) return end        -- esbirros, torres y nexos del asedio
   if e.kind == "mascota" then
     self:caeMascota(e)
     return
@@ -1204,10 +1215,19 @@ function Mundo:morir(e, origen)
       e.llevaCristales = nil
     end
     if origen and origen.faccion and origen.faccion ~= e.faccion then
-      self.gloria[origen.faccion] = (self.gloria[origen.faccion] or 0) + 8
+      if e.modo ~= "moba" then self.gloria[origen.faccion] = (self.gloria[origen.faccion] or 0) + 8 end
       local inst = self.instancia[e.modo]
       if inst and inst.activa then
-        inst.puntos[origen.faccion] = inst.puntos[origen.faccion] + (e.modo == "batalla" and 20 or 10)
+        -- las bajas suman puntos en la batalla y en el asedio; en el estandarte los puntos son las CAPTURAS (tres ganan): matar a alguien no cuenta, solo lo devuelve a su base
+        if e.modo ~= "estandarte" then inst.puntos[origen.faccion] = inst.puntos[origen.faccion] + (e.modo == "batalla" and 20 or 10) end
+        inst.bajas = inst.bajas or { albor = 0, umbra = 0 }
+        inst.bajas[origen.faccion] = (inst.bajas[origen.faccion] or 0) + 1
+        local autor = origen
+        if autor.dueno and self.entidades[autor.dueno] then autor = self.entidades[autor.dueno] end
+        self:contarEvento(e, "muertes")
+        self:contarEvento(autor, "bajas")
+        if e.modo == "moba" then self:bajaMoba(autor, e) end
+        self:registrarEvento(e.modo, (autor.nombre or "?") .. " derriba a " .. e.nombre, origen.faccion)
       end
     end
     self:mensaje("sistema", "", e.nombre .. " ha caído.", e)
@@ -1315,7 +1335,7 @@ function Mundo:revivir(e)
     if e.jefeMz then self:reiniciarMazmorra(e.mz) end
   elseif e.kind == "jugador" or e.kind == "bot" then
     local v = e.vinculo or { x = e.x, y = e.y, modo = "mundo" }
-    if e.modo == "batalla" or e.modo == "estandarte" then
+    if e.modo == "batalla" or e.modo == "estandarte" or e.modo == "moba" then
       local sp = self.mapas[e.modo].spawns[e.faccion]
       e.x, e.y = sp.x, sp.y
     elseif self:enMazmorra(e) or self:enMapaFao(e) then
@@ -1626,6 +1646,7 @@ function Mundo:autoataque(p)
 end
 
 function Mundo:actualizarJugador(e, dt)
+  if e.mobaOrig and e.modo ~= "moba" then self:restaurarMoba(e) end        -- salga como salga del asedio (comandos, desconexión...), recupera lo suyo
   if e.modo == "mundo" and e.kind == "jugador" and (e.z or 0) == 0 then self:vigilarPortalesFao(e) end
   if e.modo ~= "mundo" and e.modo ~= "casa" then
     self:trampasMazmorra(e)
@@ -1637,7 +1658,7 @@ function Mundo:actualizarJugador(e, dt)
   end
   if e.kind == "jugador" then self:beberAutopocion(e) end
   -- la mascota vuelve sola tras una muerte o una guerra
-  if e.kind == "jugador" and e.mascotaActiva and not e.mascotaId and e.modo ~= "batalla" and e.modo ~= "estandarte"
+  if e.kind == "jugador" and e.mascotaActiva and not e.mascotaId and e.modo ~= "batalla" and e.modo ~= "estandarte" and e.modo ~= "moba"
     and (e.mascotaDescanso or 0) <= self.tiempo then
     e.mascotaEspera = (e.mascotaEspera or 0) - dt
     if e.mascotaEspera <= 0 then
@@ -1665,7 +1686,7 @@ function Mundo:actualizarJugador(e, dt)
   if e.llevaBandera then mul = mul * 0.85 end
   mul = mul * self:buffMul(e, "vel")
   -- montura y carga: la montura acelera y ir cargado frena
-  if e.montado and ((e.modo ~= "mundo" and not self:enMapaFao(e)) or (e.z or 0) > 0) then
+  if e.montado and ((e.modo ~= "mundo" and not self:enMapaFao(e)) or e.modo == "moba" or (e.z or 0) > 0) then
     e.montado = nil
     self:recalcularCarga(e)
   end
@@ -1757,6 +1778,7 @@ function Mundo:actualizarMonstruo(e, dt)
     if self.tiempo >= (e.respawn or 0) then self:revivir(e) end
     return
   end
+  if e.moba then return self:actualizarEsbirroMoba(e, dt) end
   if e.efimero and self.tiempo > e.efimero then e.borrar = true return end
   if (e.aturdido or 0) > 0 then e.aturdido = e.aturdido - dt return end
   e.sensor = (e.sensor or 0) - dt
@@ -2146,6 +2168,7 @@ function Mundo:entregarCristales(p)
 end
 
 function Mundo:nombreEvento(modo)
+  if modo == "moba" then return "Asedio (MOBA)" end
   if modo == "batalla" then return "Batalla por cristales" end
   if modo == "estandarte" then return "Captura del estandarte" end
   return "Evento"
@@ -2179,16 +2202,21 @@ function Mundo:resumenEvento(modo)
     cola = cola,
     dentro = dentro,
     activa = inst and inst.activa and not inst.fin or false,
-    programa = self:programaDe(modo), min = Datos.JUGADORES_EVENTO,
+    programa = self:programaDe(modo), min = self:minimoEvento(modo),
   }
 end
 
 function Mundo:meterEnCampo(p, modo)
   local nombre = self:nombreEvento(modo)
   p.colaGuerra = nil
+  local inst0 = self.instancia[modo]
+  if inst0 and (not p.eventoStats or p.eventoEdicion ~= inst0.edicion or p.eventoModo ~= modo) then
+    p.eventoStats, p.eventoEdicion, p.eventoModo = { bajas = 0, muertes = 0, esbirros = 0, torres = 0 }, inst0.edicion, modo
+  end
   p.retorno = { x = p.x, y = p.y, modo = p.modo == "casa" and "mundo" or p.modo }
   p.modo = modo
   p.casaId = nil
+  if modo == "moba" then self:prepararMoba(p) end          -- (nivel 1 y sin poderes: se van ganando en la partida)
   local sp = self.mapas[modo].spawns[p.faccion]
   p.x, p.y = sp.x, sp.y
   p.objetivo, p.camino, p.persigue = nil, nil, false
@@ -2205,8 +2233,14 @@ function Mundo:meterEnCampo(p, modo)
   self:mensaje("sistema", "", p.nombre .. " entra en " .. nombre .. ".", p)
 end
 
+-- Jugadores por equipo que hacen falta para empezar un evento (el asedio es más pequeño).
+function Mundo:minimoEvento(modo)
+  if modo == "moba" then return Datos.JUGADORES_MOBA or 2 end
+  return Datos.JUGADORES_EVENTO
+end
+
 function Mundo:empezarEvento(modo)
-  local min = Datos.JUGADORES_EVENTO
+  local min = self:minimoEvento(modo)
   local n, lista = self:contarCola(modo)
   if n.albor < min or n.umbra < min then return false end
   self:reiniciarInstancia(modo)
@@ -2220,7 +2254,8 @@ function Mundo:empezarEvento(modo)
 end
 
 function Mundo:entrarGuerra(p, modo)
-  if modo ~= "batalla" and modo ~= "estandarte" then return "Ese evento no existe." end
+  if modo ~= "batalla" and modo ~= "estandarte" and modo ~= "moba" then return "Ese evento no existe." end
+  if modo == "moba" and not self:asegurarArenaMoba() then return "El asedio no está disponible (no hay mapa)." end
   if not p.vivo then return "No puedes entrar así." end
   if p.kind ~= "jugador" then return "Los eventos se juegan entre jugadores." end
   if p.modo == modo then return "Ya estás dentro." end
@@ -2238,7 +2273,7 @@ function Mundo:entrarGuerra(p, modo)
   end
   p.colaGuerra = modo
   local n = self:contarCola(modo)
-  local min = Datos.JUGADORES_EVENTO
+  local min = self:minimoEvento(modo)
   local programa = self:programaDe(modo)
   self:anunciar(string.format("%s (%s) se anota a %s. Albor %d/%d · Umbra %d/%d.", p.nombre,
     p.faccion == "albor" and "Albor" or "Umbra", self:nombreEvento(modo), n.albor, min, n.umbra, min))
@@ -2260,10 +2295,27 @@ function Mundo:entrarGuerra(p, modo)
   return nil
 end
 
+-- Apunta una línea en el registro del evento (las últimas se ven en pantalla): texto y equipo al que pertenece (para el color).
+function Mundo:registrarEvento(modo, texto, faccion)
+  local inst = self.instancia[modo]
+  if not inst then return end
+  inst.registro = inst.registro or {}
+  inst.registro[#inst.registro + 1] = { t = math.floor(inst.tiempo), texto = texto, faccion = faccion }
+  while #inst.registro > 6 do table.remove(inst.registro, 1) end
+end
+
+-- Cuenta una acción en las estadísticas del jugador dentro del evento (bajas, muertes, esbirros, torres).
+function Mundo:contarEvento(p, que)
+  if p and p.eventoStats then p.eventoStats[que] = (p.eventoStats[que] or 0) + 1 end
+end
+
 function Mundo:reiniciarInstancia(modo)
   local inst = self.instancia[modo]
   inst.tiempo = 0
   inst.puntos = { albor = 0, umbra = 0 }
+  inst.bajas = { albor = 0, umbra = 0 }
+  inst.registro = {}
+  inst.edicion = (inst.edicion or 0) + 1
   inst.fin = nil
   inst.activa = true
   if modo == "batalla" then
@@ -2283,6 +2335,7 @@ function Mundo:reiniciarInstancia(modo)
       end
     end
   end
+  if modo == "moba" then self:armarMoba() end
   if modo == "estandarte" then
     for _, e in pairs(self.entidades) do
       if e.kind == "bandera" then
@@ -2299,7 +2352,7 @@ function Mundo:cerrarInstancia(modo, ganador)
   if inst.fin then return end
   inst.fin = ganador or "empate"
   inst.activa = false
-  local titulo = modo == "batalla" and "La batalla por cristales" or "Captura el estandarte"
+  local titulo = modo == "batalla" and "La batalla por cristales" or (modo == "moba" and "El asedio" or "Captura el estandarte")
   self:avisoEvento("mundo", "", titulo .. " termina. Victoria: " .. (ganador == "albor" and "Albor" or ganador == "umbra" and "Umbra" or "nadie") .. ".", nil)
   if ganador == "albor" or ganador == "umbra" then
     self.gloria[ganador] = self.gloria[ganador] + 40
@@ -2360,20 +2413,25 @@ function Mundo:cerrarInstancia(modo, ganador)
       e.objetivo = nil
     end
   end
+  if modo == "moba" then
+    for _, e in pairs(self.entidades) do if e.mobaOrig then self:restaurarMoba(e) end end       -- cada uno recupera su nivel, su experiencia y sus poderes
+    self:limpiarMoba()
+  end
 end
 
 function Mundo:salirGuerra(p)
-  if p.colaGuerra and p.modo ~= "batalla" and p.modo ~= "estandarte" then
+  if p.colaGuerra and p.modo ~= "batalla" and p.modo ~= "estandarte" and p.modo ~= "moba" then
     local nombre = self:nombreEvento(p.colaGuerra)
     p.colaGuerra = nil
     self:mensaje("sistema", "", "Sales de la cola de " .. nombre .. ".", p)
     return
   end
-  if p.modo ~= "batalla" and p.modo ~= "estandarte" then return end
+  if p.modo ~= "batalla" and p.modo ~= "estandarte" and p.modo ~= "moba" then return end
   local ret = p.retorno
   p.modo = "mundo"
   if ret then p.x, p.y = ret.x, ret.y end
   p.llevaBandera = nil
+  self:restaurarMoba(p)
   self:mensaje("sistema", "", "Abandonas el campo.", p)
 end
 
@@ -3312,11 +3370,12 @@ function Mundo:actualizar(dt)
     fx.t = fx.t + dt
     if fx.t >= fx.dur then table.remove(self.efectos, i) end
   end
-  for _, modo in ipairs({ "batalla", "estandarte" }) do
+  self:actualizarMoba(dt)
+  for _, modo in ipairs({ "batalla", "estandarte", "moba" }) do
     local inst = self.instancia[modo]
     if inst.activa and not inst.fin then
       inst.tiempo = inst.tiempo + dt
-      local limite = modo == "batalla" and 500 or 3
+      local limite = modo == "batalla" and 500 or (modo == "moba" and 1e9 or 3)
       if inst.puntos.albor >= limite then self:cerrarInstancia(modo, "albor")
       elseif inst.puntos.umbra >= limite then self:cerrarInstancia(modo, "umbra")
       elseif inst.tiempo >= inst.duracion then
@@ -3342,11 +3401,11 @@ function Mundo:exportar(p)
   return {
     guardado = true,
     nombre = p.nombre, faccion = p.faccion, clase = p.clase,
-    nivel = p.nivel, xp = p.xp, oro = p.oro,
+    nivel = p.mobaOrig and p.mobaOrig.nivel or p.nivel, xp = p.mobaOrig and p.mobaOrig.xp or p.xp, oro = p.oro,          -- (dentro del asedio se guarda lo real, no lo de la partida)
     x = x, y = y, modo = "mundo",
     equipo = p.equipo, bolsa = p.bolsa, misiones = misiones,
     casas = p.casas, vinculo = p.vinculo, caceria = p.caceria,
-    habilidades = p.habilidades, encantos = p.encantos,
+    habilidades = p.mobaOrig and p.mobaOrig.habilidades or p.habilidades, encantos = p.encantos,
     mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
     job = p.oficioElegido, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
     monturas = p.monturas, monturaPreferida = p.monturaPreferida, diaria = p.diaria,
@@ -3623,6 +3682,12 @@ function Mundo:construirTu(p)
     tu.autoManaUmbral = p.autoManaUmbral or Mundo.AUTOPOCION_UMBRAL
     tu.invComercio = self:resumenInvitacionComercio(p)
     tu.llevaCristales = p.llevaCristales
+    if p.mobaOrig then
+      tu.xpSig = Moba.xpPara(p.nivel)                          -- barra de experiencia de la partida
+      tu.mobaNiveles, tu.mobaMax = Moba.DESBLOQUEO, Moba.NIVEL_MAX
+    end
+    tu.eventoStats = (p.modo == "batalla" or p.modo == "estandarte" or p.modo == "moba") and p.eventoStats or nil
+    tu.respawnResta = (not p.vivo and p.respawn) and math.max(0, math.ceil(p.respawn - self.tiempo)) or nil
     local defMontura = p.montado and require("compartido.dominio.monturas").especies[p.montado]
     if defMontura and defMontura.requiereOficio then
       local hp, mx = self:vidaMontura(p, p.montado)
@@ -4122,6 +4187,7 @@ Comercio.instalar(Mundo)
 Mall.instalar(Mundo)
 Mazmorras.instalar(Mundo)
 MapasFao.instalar(Mundo)
+Moba.instalar(Mundo)
 Viaje.instalar(Mundo)
 
 return Mundo

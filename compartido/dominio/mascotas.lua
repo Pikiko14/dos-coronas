@@ -175,7 +175,7 @@ function M.instalar(Mundo)
     local m = self:mascotaActiva(dueno)
     if not m then e.borrar = true return end
     -- en las guerras no hay mascotas: vuelve al terminar
-    if dueno.modo == "batalla" or dueno.modo == "estandarte" then self:retirarMascota(dueno) return end
+    if dueno.modo == "batalla" or dueno.modo == "estandarte" or dueno.modo == "moba" then self:retirarMascota(dueno) return end
     if not self:mismoLugar(e, dueno) then
       e.modo, e.casaId, e.z = dueno.modo, dueno.casaId, dueno.z or 0
       e.tramo = nil

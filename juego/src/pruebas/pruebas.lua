@@ -153,12 +153,22 @@ function Pruebas.correr()
     fallar(errores, "el efecto del servidor no se duplica", propios == 1 and ajenos == 0, propios .. "/" .. ajenos)
     -- proyectil: vuela al instante hacia el objetivo y el del servidor se oculta
     app._ecoGcd = 0
-    local ok = Eco.lanzar(app, { slot = slotDe("fuego") })
+    -- la bola de fuego es un efecto de capas de FAO (carga, estela e impacto en un solo efecto): el eco crea ese efecto y ningún proyectil
+    pj.habilidades.misil = 1
+    pj.cds = {}
+    local okf = Eco.lanzar(app, { slot = slotDe("fuego") })
+    Eco.actualizar(app, 0.016)
+    local fxf = 0
+    for _, fx in ipairs(mundo.efectos) do if fx._eco and fx.tipo == "fuego" and fx.x0 == pj.x then fxf = fxf + 1 end end
+    fallar(errores, "la bola de fuego se ve al instante como efecto de capas (con su origen)", okf == true and fxf == 1, tostring(okf) .. "/" .. fxf)
+    app._ecoGcd = 0
+    pj.cds = {}
+    local ok = Eco.lanzar(app, { slot = slotDe("misil") })
     Eco.actualizar(app, 0.05)
     local pr
     for _, e in pairs(mundo.entidades) do if e._eco and e.kind == "proyectil" then pr = e end end
-    fallar(errores, "la bola de fuego sale al instante y avanza", ok == true and pr and pr.x > pj.x, tostring(ok))
-    mundo.entidades[901] = { id = 901, kind = "proyectil", tipo = "fuego", x = pj.x + 1.5, y = pj.y, tx = mob.x, ty = mob.y, vivo = true }
+    fallar(errores, "el misil sale al instante y avanza", ok == true and pr and pr.x > pj.x, tostring(ok))
+    mundo.entidades[901] = { id = 901, kind = "proyectil", tipo = "misil", x = pj.x + 1.5, y = pj.y, tx = mob.x, ty = mob.y, vivo = true }
     Eco.actualizar(app, 0.016)
     fallar(errores, "el proyectil del servidor se oculta mientras se ve el eco", mundo.entidades[901] == nil)
     -- el servidor rechaza: sin confirmación el eco se corta
@@ -2437,7 +2447,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local CW, CH = 520, 300
     local cv = love.graphics.newCanvas(1280, 720)
     local total = 0
-    for _, clase in ipairs({ "guerrero", "lancero", "cazador", "clerigo", "nigromante" }) do
+    for _, clase in ipairs({ "guerrero", "lancero", "cazador", "clerigo", "nigromante", "mago" }) do
       local mosaico = vista and love.graphics.newCanvas(CW * 4, CH * 6) or nil
       for fila, id in ipairs(Datos.barra[clase]) do
         if Poderes[id] then
@@ -2500,7 +2510,93 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       end
       if mosaico then Log.volcar("capturas/poderes_fao_" .. clase .. ".png", mosaico:newImageData():encode("png"):getString()) end
     end
-    fallar(errores, "se probaron los 27 poderes de las cinco clases", total == 27, tostring(total))
+    fallar(errores, "se probaron los 29 poderes (las cinco clases y la bola de fuego y el meteoro del mago)", total == 29, tostring(total))
+  end)
+  -- Asedio (MOBA) en el cliente: se dibujan nexos, torres, esbirros y el marcador, el panel de guerra tiene su botón y el minimapa los marca. Con DC_PRUEBA_MOBA=1 guarda juego/capturas/moba.png
+  -- (escena junto a una torre con esbirros, y el panel de guerra con el asedio).
+  paso("asedio (MOBA): escena, marcador, minimapa y panel de guerra", function()
+    local Dibujo = require("src.presentacion.render.dibujo")
+    local mundo = Mundo.nuevo()
+    local vista = os.getenv("DC_PRUEBA_MOBA") ~= nil
+    fallar(errores, "el cliente calcula la arena del asedio cuando la necesita", mundo:asegurarArenaMoba() and mundo.mapas.moba ~= nil)
+    if not mundo.mapas.moba then return end
+    local equipo = {}
+    for i = 1, 2 do
+      for _, f in ipairs({ "albor", "umbra" }) do
+        local p = mundo:crearPersonaje({ nombre = f .. i, faccion = f, clase = i == 1 and "guerrero" or "mago", nivel = 20 })
+        p.hp, p.hpMax, p.ultimoGolpe = 5000, 5000, -99
+        mundo:entrarGuerra(p, "moba")
+        equipo[#equipo + 1] = p
+      end
+    end
+    local pj = equipo[1]
+    local tuMoba = mundo:construirTu(pj)         -- (lo que el servidor le manda al cliente: nivel de desbloqueo de cada poder)
+    pj.mobaNiveles, pj.xpSig = tuMoba.mobaNiveles, tuMoba.xpSig
+    for _ = 1, 140 do mundo:actualizar(0.1) end
+    -- junto a la primera torre de Albor, con esbirros por el camino
+    local torre
+    for _, e in pairs(mundo.entidades) do if e.torre and e.faccion == "albor" and (not torre or e.x < torre.x) then torre = e end end
+    fallar(errores, "hay torres en el asedio", torre ~= nil)
+    if not torre then return end
+    -- se pone al jugador junto a un esbirro propio (si hay) para verlos avanzar; si no, junto a la torre
+    local esb
+    for _, e in pairs(mundo.entidades) do if e.moba and e.kind == "monstruo" and e.faccion == "albor" and e.vivo and (not esb or e.x > esb.x) then esb = e end end
+    fallar(errores, "hay esbirros de Albor en el camino", esb ~= nil)
+    if esb then pj.x, pj.y = esb.x - 2.5, esb.y else pj.x, pj.y = torre.x - 3, torre.y end
+    local Interfaz = require("src.presentacion.interfaz")
+    Interfaz.escala, Interfaz.panel = 1, nil
+    local cv = love.graphics.newCanvas(1280, 720)
+    love.graphics.push("all")
+    love.graphics.setCanvas({ cv, stencil = true })
+    love.graphics.clear(0, 0, 0, 1)
+    local cam = Dibujo.camara(pj, 2, mundo:mapaDe(pj))
+    local ok, err = pcall(Dibujo.escena, mundo, pj, cam, 0, 0)
+    fallar(errores, "la escena del asedio se dibuja: " .. tostring(err), ok)
+    love.graphics.setCanvas({ cv, stencil = true })
+    local ok2, err2 = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    fallar(errores, "el marcador y el minimapa del asedio se dibujan: " .. tostring(err2), ok2)
+    love.graphics.pop()
+    local pan = love.graphics.newCanvas(1280, 720)
+    love.graphics.push("all")
+    love.graphics.setCanvas({ pan, stencil = true })
+    love.graphics.clear(0.1, 0.1, 0.12, 1)
+    Interfaz.panel = "guerra"
+    local ok3, err3 = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    love.graphics.pop()
+    Interfaz.panel = nil
+    fallar(errores, "el panel de guerra con el asedio se dibuja: " .. tostring(err3), ok3)
+    -- pantalla de «has caído» y tarjeta de cola (quien espera en el mundo)
+    local caido = love.graphics.newCanvas(1280, 720)
+    love.graphics.push("all")
+    love.graphics.setCanvas({ caido, stencil = true })
+    love.graphics.clear(0.1, 0.12, 0.1, 1)
+    pj.vivo, pj.hp, pj.respawnResta = false, 0, 4
+    local ok4, err4 = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    love.graphics.pop()
+    pj.vivo, pj.hp, pj.respawnResta = true, 5000, nil
+    fallar(errores, "la pantalla de «has caído» se dibuja: " .. tostring(err4), ok4)
+    local cola = love.graphics.newCanvas(1280, 720)
+    local espera = mundo:crearPersonaje({ nombre = "Esperando", faccion = "umbra", clase = "mago", nivel = 20 })
+    espera.ultimoGolpe = -99
+    mundo:entrarGuerra(espera, "batalla")
+    love.graphics.push("all")
+    love.graphics.setCanvas({ cola, stencil = true })
+    love.graphics.clear(0.1, 0.12, 0.1, 1)
+    local ok5, err5 = pcall(Interfaz.hud, mundo, espera, 1280, 720)
+    love.graphics.pop()
+    fallar(errores, "la tarjeta de cola se dibuja: " .. tostring(err5), ok5 and espera.colaGuerra == "batalla")
+    if vista then
+      local mosaico = love.graphics.newCanvas(2560, 1440)
+      love.graphics.push("all")
+      love.graphics.setCanvas(mosaico)
+      love.graphics.setColor(1, 1, 1, 1)
+      love.graphics.draw(cv, 0, 0)
+      love.graphics.draw(pan, 1280, 0)
+      love.graphics.draw(caido, 0, 720)
+      love.graphics.draw(cola, 1280, 720)
+      love.graphics.pop()
+      Log.volcar("capturas/moba.png", mosaico:newImageData():encode("png"):getString())
+    end
   end)
   paso("sprites de hechizos: cada poder de cada clase tiene su hoja generada", function()
     local Efectos = require("src.presentacion.render.efectos")
