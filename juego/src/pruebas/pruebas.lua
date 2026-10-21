@@ -2722,7 +2722,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       if id == "hud_ayuda" then ayuda = id end
     end
     fallar(errores, "los botones del minimapa reciben clics", ayuda == "hud_ayuda", tostring(ayuda))
-    fallar(errores, "el hueco de la barra de poderes responde", Interfaz.consumir((1280 - lado) / 2 - 242, 720 - consola - 34) == "hab_1")
+    fallar(errores, "el hueco de la barra de poderes responde", Interfaz.consumir(392 + 25, 720 - consola - 34) == "hab_1")
   end)
   paso("interfaz: clic derecho sobre un jugador abre el menú de trato, gremio y grupo", function()
     local Dibujo = require("src.presentacion.render.dibujo")

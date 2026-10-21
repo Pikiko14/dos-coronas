@@ -763,10 +763,12 @@ function I.hud(mundo, p, w, h)
   -- Barra de poderes (sobre el mundo, abajo en el centro)
   local barraP = Datos.barra[p.clase]
   local nPod = #barraP                            -- 6 poderes (10 el mago)
-  local lado_c, sep = (nPod > 6 and 40 or 46), 4
+  local lado_c, sep = (nPod > 6 and 50 or 46), 4
   -- la barra (los poderes + 2 pociones) va centrada en la pantalla; los accesos (poderes, mall, monturas, autopoción) van abajo a la derecha
-  local total = (nPod + 2) * lado_c + (nPod + 1) * sep
+  local GAP = 12                                   -- hueco entre los poderes y las pociones
+  local total = (nPod + 2) * lado_c + (nPod + 1) * sep + GAP
   local bx0 = vw / 2 - total / 2
+  if nPod > 6 then bx0 = math.max(bx0, 392) end       -- (con 10 poderes la barra no pisa el chat)
   local by0 = vh - lado_c - 10
   local orden = Ajustes.orden(p.clase)
   local teclas = Ajustes.teclas
@@ -790,7 +792,10 @@ function I.hud(mundo, p, w, h)
       local cuenta = queda < 10 and string.format("%.1f", queda) or tostring(math.ceil(queda))
       texto(cuenta, x + lado_c / 2 - f:getWidth(cuenta) / 2, by0 + lado_c / 2 - 8, { 1, 1, 1 }, f)
     end
-    texto(Ajustes.nombreTecla(teclas["poder" .. i]), x + 4, by0 + 2, { 1, 0.9, 0.5 }, f)
+    local tk = Ajustes.nombreTecla(teclas["poder" .. i])
+    love.graphics.setColor(0, 0, 0, 0.6)
+    love.graphics.rectangle("fill", x + 2, by0 + 2, f:getWidth(tk) + 6, 16, 3, 3)         -- (fondo oscuro tras la tecla para leerla sobre cualquier icono)
+    texto(tk, x + 5, by0 + 2, { 1, 0.9, 0.5 }, f)
     if not conocida then
       if p.mobaNiveles and p.modo == "moba" then
         -- asedio: el poder se desbloquea con el nivel de la partida
@@ -875,7 +880,7 @@ function I.hud(mundo, p, w, h)
     end
   end
   local function pocion(tipo, slotIdx, etiqueta, cuenta)
-    local x = bx0 + (slotIdx - 1) * (lado_c + sep)
+    local x = bx0 + (slotIdx - 1) * (lado_c + sep) + GAP
     casilla(x, by0, lado_c)
     local id = Datos.pocionAlUsar(p.bolsa, p.nivel, tipo)
     local it = Datos.item(id)
@@ -1757,7 +1762,7 @@ function I.panelArbol(mundo, p, w, h)
       Atlas.dibujar(n.icono.hoja, n.icono.sprite, c.x + cw / 2, c.y + 32, 1.4, 16, 16)
     end
     love.graphics.setColor(0.95, 0.9, 0.78, opaco)
-    local ne = cw < 100 and (#Arbol.nombre(n) > 12 and 0.68 or 0.8) or 1                     -- (tarjetas estrechas: nombre más pequeño)
+    local ne = cw < 100 and math.min(0.85, (cw - 6) / math.max(1, love.graphics.getFont():getWidth(Arbol.nombre(n)))) or 1                     -- (tarjetas estrechas: nombre más pequeño)
     love.graphics.printf(Arbol.nombre(n), c.x + 2, c.y + 56, (cw - 4) / ne, "center", 0, ne, ne)
     -- rangos
     local paso, anchoR = (cw < 100 and 14 or 19), (cw < 100 and 11 or 16)
@@ -1770,10 +1775,10 @@ function I.panelArbol(mundo, p, w, h)
     if maximo then pie = "Máximo"
     elseif r == 0 and n.requiere and Arbol.rango(p, n.requiere[1]) < n.requiere[2] then
       local previo = Arbol.nodo(p.clase, n.requiere[1])
-      pie = "Pide " .. Arbol.nombre(previo) .. " " .. n.requiere[2]
-    elseif r == 0 and (p.nivel or 1) < n.nivel then pie = "Nivel " .. n.nivel
-    elseif puede then pie = r == 0 and "Clic: aprender" or "Clic: mejorar"
-    else pie = "Sin puntos" end
+      pie = cw < 100 and ("Pide " .. n.requiere[2] .. " " .. Arbol.nombre(previo):sub(1, 7)) or ("Pide " .. Arbol.nombre(previo) .. " " .. n.requiere[2])
+    elseif r == 0 and (p.nivel or 1) < n.nivel then pie = (cw < 100 and "Nv " or "Nivel ") .. n.nivel
+    elseif puede then pie = r == 0 and (cw < 100 and "Aprender" or "Clic: aprender") or (cw < 100 and "Mejorar" or "Clic: mejorar")
+    else pie = cw < 100 and "Sin pts" or "Sin puntos" end
     love.graphics.setScissor(c.x * (I.escala or 1), c.y * (I.escala or 1), cw * (I.escala or 1), ch * (I.escala or 1))
     love.graphics.printf(pie, c.x + 4, c.y + 110, cw - 8, "center")
     love.graphics.setScissor()
