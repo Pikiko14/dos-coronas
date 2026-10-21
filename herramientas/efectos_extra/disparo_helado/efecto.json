@@ -1,0 +1,41 @@
+{
+ "id_dos_coronas": "disparo_helado",
+ "clase": "cazador",
+ "nombre": "Disparo helado",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 11,
+   "cell": [
+    250,
+    256
+   ],
+   "origin": [
+    0,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 0.8,
+  "golpes_s": [
+   0.45
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "T",
+    "t0": 0.0,
+    "ms": 0.04,
+    "sc": 0.9,
+    "a": 1.0,
+    "modo": "estela",
+    "t1": 0.45
+   }
+  ]
+ },
+ "nota": "arquero/disparo_helado del paquete de poderes."
+}

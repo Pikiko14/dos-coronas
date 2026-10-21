@@ -939,6 +939,7 @@ function Mundo:danar(objetivo, cantidad, origen, critico, color)
   end
   if origen and not self:puedeDanar(origen, objetivo) then return end
   cantidad = math.max(1, math.floor(cantidad))
+  if (objetivo.marcaHasta or 0) > self.tiempo then cantidad = math.max(1, math.floor(cantidad * (1 + (objetivo.marcaPct or 0.25)))) end     -- marca del cazador
   if objetivo.montado and self:danarMontura(objetivo, cantidad, origen) then return end
   if (objetivo.mascotaBono or 0) > 0 then cantidad = math.max(1, math.floor(cantidad * (1 - objetivo.mascotaBono))) end
   local esc = self:tieneBuff(objetivo, "escudo")
@@ -1413,6 +1414,9 @@ end
 Mundo.SONIDO_PODER = {
   golpe = "corte", tajo = "corte", carga = "corte", grito = "grito",
   misil = "magia", fuego = "fuego", escudo = "magia", nova = "hielo",
+  golpe_terrestre = "corte", salto_impacto = "corte", estocada_lineal = "corte", ejecucion = "corte",
+  disparo_multiple = "flecha", disparo_explosivo = "fuego", disparo_helado = "hielo", marca_cazador = "flecha",
+  escudo_divino = "sagrado", cadena_sanacion = "cura", tormenta_divina = "sagrado", resurreccion = "sagrado",
   rayo_hielo = "hielo", rayo_arcano = "magia", lluvia_fuego = "fuego", teletransporte = "magia", torbellino = "magia",
   disparo = "flecha", lluvia = "flecha", preciso = "flecha", trampa = "flecha",
   curar = "cura", bendicion = "sagrado", castigo = "sagrado", consagrar = "sagrado",
@@ -1452,6 +1456,17 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
       return "Te acercas."
     end
   end
+  local caido
+  if h.tipo == "resucitar" then
+    local md
+    for _, o in pairs(self.entidades) do
+      if not o.vivo and (o.kind == "jugador" or o.kind == "bot") and o ~= p and o.faccion == p.faccion and self:mismoLugar(p, o) and o.x then
+        local d = Util.dist(p.x, p.y, o.x, o.y)
+        if d <= h.rango + 0.3 and (not md or d < md) then caido, md = o, d end
+      end
+    end
+    if not caido then return "No hay ningún aliado caído a tu alcance." end
+  end
   p.mp = p.mp - h.mana
   p.cds[idh] = self.tiempo + h.cd * (1 - self:bonoVelocidadMagica(p))
   p.gcd = self.tiempo + 0.35
@@ -1465,7 +1480,13 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
     local d = math.max(0.1, math.sqrt(dx * dx + dy * dy))
     self:colocarCerca(p, objetivo.x - dx / d, objetivo.y - dy / d)
   end
+  if h.marca and objetivo and objetivo ~= p and objetivo.vivo then
+    -- marca del cazador: la presa recibe más daño de quien sea durante unos segundos
+    objetivo.marcaHasta, objetivo.marcaPct = self.tiempo + (h.dur or 8), h.marca
+    self:numero(objetivo, "Marcado", { 1, 0.35, 0.3 })
+  end
   local function golpe(obj, coef)
+    if h.ejecuta and obj.hpMax and obj.hp < obj.hpMax * 0.3 then coef = coef * h.ejecuta end       -- ejecución: remata a quien tiene poca vida
     self:golpear(p, obj, coef, nil, h.dano or "fisico")
     if obj.vivo then self:probarEstado(p, obj, h.estado) end
   end
@@ -1490,21 +1511,25 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
       local my = ({ [1] = 1, [2] = -1, [3] = 0, [4] = 0 })[p.dir or 1] or 0
       px, py = p.x + mx * d, p.y + my * d
     end
-    if h.blink then
-      -- teletransporte: te mueves al punto (como mucho hasta el alcance, y a la casilla libre más cercana)
+    if h.blink or h.salto then
+      -- teletransporte y salto: te mueves al punto (como mucho hasta el alcance, y a la casilla libre más cercana)
       local d = Util.dist(p.x, p.y, px, py)
       if d > (h.rango or 7) then px, py = p.x + (px - p.x) * h.rango / d, p.y + (py - p.y) * h.rango / d end
       local ox, oy = p.x, p.y
       if not self:colocarCerca(p, px, py) then p.cds[idh], p.mp = 0, p.mp + h.mana; return "No puedes ir ahí." end
-      p.blinkDesde = { ox, oy }
+      p.blinkDesde = h.blink and { ox, oy } or nil
       p.persigue, p.objetivoMover = nil, nil
       px, py = p.x, p.y
-    else
+    end
+    if not h.blink then
       p.impactoX, p.impactoY = px, py
       for _, o in pairs(self.entidades) do
         if o.vivo and self:mismoLugar(p, o) and self:puedeDanar(p, o) and Util.dist(px, py, o.x, o.y) <= (h.aoe or 2) then
           golpe(o, h.coef)
           if h.lentitud and o.vivo then self:aplicarEstado(o, "lentitud", 3, h.lentitud, p) end
+          if h.aturde and o.vivo then self:aplicarEstado(o, "aturdir", h.aturde, nil, p) end
+        elseif h.cura and o.vivo and self:mismoLugar(p, o) and self:aliado(p, o) and Util.dist(px, py, o.x, o.y) <= (h.aoe or 2) then
+          self:curar(o, self:potenciaCura(p, h), p)       -- tormenta divina: cura a los aliados de la zona
         end
       end
       if h.pulsos and h.pulsos > 1 then
@@ -1517,6 +1542,29 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
     end
   elseif h.tipo == "aliado" then
     if h.cura then self:curar(objetivo, self:potenciaCura(p, h), p) end
+    if h.rebotes then
+      -- cadena de sanación: la luz salta a los aliados más cercanos (con menos fuerza cada vez)
+      local desde, curados, fuerza = objetivo, { [objetivo.id] = true }, 1
+      for _ = 1, h.rebotes do
+        local mejor, md
+        for _, o in pairs(self.entidades) do
+          if o.vivo and not curados[o.id] and (o.kind == "jugador" or o.kind == "bot") and self:mismoLugar(p, o) and self:aliado(p, o) then
+            local d = Util.dist(desde.x, desde.y, o.x, o.y)
+            if d <= 4.5 and (not md or d < md) then mejor, md = o, d end
+          end
+        end
+        if not mejor then break end
+        fuerza = fuerza * 0.75
+        curados[mejor.id] = true
+        self:curar(mejor, self:potenciaCura(p, h) * fuerza, p)
+        desde = mejor
+      end
+    end
+    if h.buff == "escudo" then
+      local abs = (30 + p.nivel * 4) * (h.pot or 1) * 1.2
+      self:ponerBuff(objetivo, "escudo", h.dur, { absorbe = abs, habilidad = idh })
+      self:numero(objetivo, "escudo", { 0.55, 0.7, 1 })
+    end
     if h.buff == "bendicion" then self:ponerBuff(objetivo, "bendicion", h.dur, { def = 0.18 * h.pot, regen = 4 * h.pot, habilidad = idh }) end
   elseif h.tipo == "propio" then
     if h.buff == "escudo" then
@@ -1552,6 +1600,17 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
       end
     end
     self:curar(p, self:potenciaCura(p, h), p)
+  elseif h.tipo == "resucitar" and caido then
+    caido.vivo, caido.respawn = true, nil
+    self:limpiarEstados(caido)
+    caido.hp = math.max(1, math.floor((caido.hpMax or 1) * 0.5))
+    caido.mp = math.floor((caido.mpMax or 0) * 0.3)
+    caido.aturdido, caido.objetivo, caido.camino = 0, nil, nil
+    for _, c in pairs(self.entidades) do
+      if c.kind == "cuerpo" and c.nombre == caido.nombre and Util.dist(c.x, c.y, caido.x, caido.y) < 1.5 then c.hasta = 0 end
+    end
+    self:numero(caido, "¡Vuelve!", { 1, 0.95, 0.6 })
+    self:mensaje("sistema", "", p.nombre .. " te ha devuelto a la vida.", caido)
   elseif h.tipo == "invocar" then
     self:invocarEsbirros(p, h)
     self:numero(p, h.nombre, { 0.6, 1, 0.7 })
@@ -1564,8 +1623,8 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
     }
   end
   self:sonar(Mundo.SONIDO_PODER[idh] or "magia", p)
-  local ex = objetivo and objetivo.x or p.x
-  local ey = objetivo and objetivo.y or p.y
+  local ex = objetivo and objetivo.x or (caido and caido.x) or p.x
+  local ey = objetivo and objetivo.y or (caido and caido.y) or p.y
   if PoderesFao[idh] then
     -- poder con efecto de capas de FAO: un solo efecto con toda la animación (el proyectil del servidor viaja sin dibujarse); x, y = objetivo o punto; x0, y0 = lanzador
     local X, Y, rot = ex, ey, (objetivo and objetivo ~= p) and math.atan2(ey - p.y, ex - p.x) or nil

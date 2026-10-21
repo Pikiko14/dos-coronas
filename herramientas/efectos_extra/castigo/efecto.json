@@ -1,0 +1,40 @@
+{
+ "id_dos_coronas": "castigo",
+ "clase": "clerigo",
+ "nombre": "Castigo",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 16,
+   "cell": [
+    256,
+    256
+   ],
+   "origin": [
+    128,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 0.9,
+  "golpes_s": [
+   0.3
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "GT",
+    "t0": 0.05,
+    "ms": 0.05,
+    "sc": 0.75,
+    "a": 1.0,
+    "modo": "once"
+   }
+  ]
+ },
+ "nota": "clerigo/purificacion del paquete de poderes."
+}

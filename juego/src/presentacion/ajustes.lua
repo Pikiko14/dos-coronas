@@ -21,8 +21,8 @@ local A = {
 -- Acciones con tecla configurable y su tecla por defecto. Los poderes van por POSICIÓN en la barra (ordenados por nivel), no por poder.
 A.ACCIONES = {
   { "poder1", "Poder 1", "1" }, { "poder2", "Poder 2", "2" }, { "poder3", "Poder 3", "3" }, { "poder4", "Poder 4", "4" },
-  { "poder5", "Poder 5", "5" }, { "poder6", "Poder 6", "6" }, { "poder7", "Poder 7 (mago)", "z" }, { "poder8", "Poder 8 (mago)", "x" },
-  { "poder9", "Poder 9 (mago)", "v" }, { "poder10", "Poder 10 (mago)", "f" }, { "pocion_vida", "Poción de vida", "7" }, { "pocion_mana", "Poción de maná", "8" },
+  { "poder5", "Poder 5", "5" }, { "poder6", "Poder 6", "6" }, { "poder7", "Poder 7", "z" }, { "poder8", "Poder 8", "x" },
+  { "poder9", "Poder 9", "v" }, { "poder10", "Poder 10", "f" }, { "pocion_vida", "Poción de vida", "7" }, { "pocion_mana", "Poción de maná", "8" },
   { "interactuar", "Interactuar", "e" }, { "bolsa", "Bolsa", "i" },
 }
 -- Teclas que el juego ya usa para otra cosa (movimiento, paneles, chat...): no se pueden asignar.

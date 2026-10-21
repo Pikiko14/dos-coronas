@@ -272,8 +272,8 @@ function Pruebas.correr()
     local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
     Interfaz.foco, Interfaz.panel = nil, nil
     Ajustes.usarUsuario("Carla")
-    Ajustes.asignarTecla("poder2", "z")
-    Entrada.tecla(app, "z")
+    Ajustes.asignarTecla("poder2", "h")
+    Entrada.tecla(app, "h")
     local slotEsperado = Ajustes.orden("cazador")[2]
     fallar(errores, "la tecla de la posición 2 lanza el poder de esa posición", llamadas[1] and llamadas[1][1] == "habilidad" and llamadas[1][2].slot == slotEsperado, llamadas[1] and tostring(llamadas[1][2].slot) or "nada")
     llamadas = {}
@@ -297,8 +297,8 @@ function Pruebas.correr()
     -- con el ratón: pulsar un poder, arrastrarlo a otra casilla y soltar los intercambia; un clic corto lo lanza
     Interfaz.escala, Interfaz.panel = 1, nil
     pcall(Interfaz.hud, mundo, pj, 1280, 720)
-    local ys = 720 - 46 - 10 + 23
-    local function casilla(i) return 442 + (i - 1) * 50 + 23, ys end
+    local ys = 720 - 50 - 10 + 25
+    local function casilla(i) return 392 + (i - 1) * 54 + 25, ys end
     local antes = {}
     for i, v in ipairs(Ajustes.orden("cazador")) do antes[i] = v end
     local x1, y1 = casilla(1)
@@ -2477,6 +2477,11 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
           pj.habilidades = pj.habilidades or {}
           pj.habilidades[id] = 1
           pj.hp, pj.hpMax, pj.mp, pj.mpMax, pj.objetivo, pj.cds = 99999, 99999, 9999, 9999, 900, {}
+          if id == "resurreccion" then
+            local c = mundo:crearPersonaje({ nombre = "Caido", faccion = pj.faccion, clase = "guerrero", nivel = 10 })
+            c.x, c.y, c.modo = pj.x + 1, pj.y, pj.modo
+            mundo:morir(c, nil)
+          end
           local res = mundo:usarHabilidad(pj, fila, rival.x, rival.y)
           fallar(errores, id .. " se lanza (" .. tostring(res) .. ")", res == nil or res == "Te acercas.")
           local fx
@@ -2509,7 +2514,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       end
       if mosaico then Log.volcar("capturas/poderes_fao_" .. clase .. ".png", mosaico:newImageData():encode("png"):getString()) end
     end
-    fallar(errores, "se probaron los 37 poderes (las seis clases, con los 10 del mago)", total == 37, tostring(total))
+    fallar(errores, "se probaron los 52 poderes (las seis clases)", total == 52, tostring(total))
   end)
   -- Asedio (MOBA) en el cliente: se dibujan nexos, torres, esbirros y el marcador, el panel de guerra tiene su botón y el minimapa los marca. Con DC_PRUEBA_MOBA=1 guarda juego/capturas/moba.png
   -- (escena junto a una torre con esbirros, y el panel de guerra con el asedio).
@@ -2639,7 +2644,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       love.graphics.pop()
       fallar(errores, "se dibuja el proyectil " .. tipo, ok, tostring(err))
     end
-    fallar(errores, "se probaron los 28 poderes", n == 28 * 5, tostring(n))
+    fallar(errores, "se probaron los 40 poderes", n == 40 * 5, tostring(n))
   end)
   paso("chat: barra de desplazamiento y rueda", function()
     local Entrada = require("src.presentacion.entrada")
@@ -2677,29 +2682,32 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     fallar(errores, "al abrirla se da por visto", Interfaz.sistemaNuevo == false)
     Interfaz.canal = "todo"
   end)
-  paso("interfaz: la barra y el árbol del mago con 10 poderes se dibujan (DC_PRUEBA_PODERES_FAO=1 guarda capturas/mago_ui.png)", function()
-    local mundo = Mundo.nuevo()
-    local pj = mundo:crearPersonaje({ nombre = "Diez", faccion = "albor", clase = "mago", nivel = 30 })
-    for _, id in ipairs(Datos.barra.mago) do pj.habilidades[id] = 1 end
-    Interfaz.escala = 1
+  paso("interfaz: la barra y el árbol de poderes de cada clase se dibujan (DC_PRUEBA_PODERES_FAO=1 guarda capturas/arbol_<clase>.png)", function()
     local cv = love.graphics.newCanvas(1280, 720)
-    local mosaico = love.graphics.newCanvas(1280, 1440)
-    for k, panel in ipairs({ false, "arbol" }) do
-      Interfaz.panel = panel or nil
-      love.graphics.push("all")
-      love.graphics.setCanvas({ cv, stencil = true })
-      love.graphics.clear(0.2, 0.3, 0.2, 1)
-      local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
-      love.graphics.pop()
-      fallar(errores, "el HUD del mago se dibuja (" .. tostring(panel) .. ")", ok, tostring(err))
-      love.graphics.push("all")
-      love.graphics.setCanvas(mosaico)
-      love.graphics.setColor(1, 1, 1, 1)
-      love.graphics.draw(cv, 0, (k - 1) * 720)
-      love.graphics.pop()
+    for _, clase in ipairs({ "mago", "guerrero", "cazador", "clerigo", "lancero", "nigromante" }) do
+      local mundo = Mundo.nuevo()
+      local pj = mundo:crearPersonaje({ nombre = "Arbol" .. clase, faccion = clase == "nigromante" and "umbra" or "albor", clase = clase, nivel = 30 })
+      local n = 0
+      for _, id in ipairs(Datos.barra[clase]) do
+        n = n + 1
+        pj.habilidades[id] = n <= 3 and 5 or (n <= 6 and 2 or (n == 7 and 1 or 0))
+      end
+      Interfaz.escala, Interfaz.arbolSel = 1, nil
+      for k, panel in ipairs({ false, "arbol" }) do
+        Interfaz.panel = panel or nil
+        love.graphics.push("all")
+        love.graphics.setCanvas({ cv, stencil = true })
+        love.graphics.clear(0.2, 0.3, 0.2, 1)
+        local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+        love.graphics.pop()
+        fallar(errores, "el HUD de " .. clase .. " se dibuja (" .. tostring(panel) .. ")", ok, tostring(err))
+        if panel and os.getenv("DC_PRUEBA_PODERES_FAO") then Log.volcar("capturas/arbol_" .. clase .. ".png", cv:newImageData():encode("png"):getString()) end
+      end
+      Interfaz.panel = nil
+      -- el panel no registra más de un rectángulo por poder
+      local vistos = {}
+      for _, r in ipairs(Interfaz.rects) do if r.id:sub(1, 4) == "arb_" then vistos[r.id] = (vistos[r.id] or 0) + 1 end end
     end
-    Interfaz.panel = nil
-    if os.getenv("DC_PRUEBA_PODERES_FAO") then Log.volcar("capturas/mago_ui.png", mosaico:newImageData():encode("png"):getString()) end
   end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()

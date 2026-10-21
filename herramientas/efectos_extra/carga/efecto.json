@@ -1,0 +1,41 @@
+{
+ "id_dos_coronas": "carga",
+ "clase": "guerrero",
+ "nombre": "Carga",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 13,
+   "cell": [
+    249,
+    256
+   ],
+   "origin": [
+    0,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 0.9,
+  "golpes_s": [
+   0.45
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "T",
+    "t0": 0.0,
+    "ms": 0.035,
+    "sc": 0.7,
+    "a": 1.0,
+    "modo": "estela",
+    "t1": 0.45
+   }
+  ]
+ },
+ "nota": "guerrero/embestida del paquete de poderes."
+}

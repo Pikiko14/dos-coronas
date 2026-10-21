@@ -1,0 +1,41 @@
+{
+ "id_dos_coronas": "pantera",
+ "clase": "guerrero",
+ "nombre": "Pantera asesina",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 13,
+   "cell": [
+    248,
+    256
+   ],
+   "origin": [
+    0,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 0.9,
+  "golpes_s": [
+   0.5
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "T",
+    "t0": 0.1,
+    "ms": 0.04,
+    "sc": 0.9,
+    "a": 1.0,
+    "modo": "estela",
+    "t1": 0.5
+   }
+  ]
+ },
+ "nota": "guerrero/lanza_fuego del paquete de poderes."
+}

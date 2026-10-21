@@ -1,0 +1,40 @@
+{
+ "id_dos_coronas": "curar",
+ "clase": "clerigo",
+ "nombre": "Curación",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 16,
+   "cell": [
+    256,
+    256
+   ],
+   "origin": [
+    128,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 1.05,
+  "golpes_s": [
+   0.3
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "GT",
+    "t0": 0.05,
+    "ms": 0.06,
+    "sc": 0.8,
+    "a": 1.0,
+    "modo": "once"
+   }
+  ]
+ },
+ "nota": "clerigo/cura del paquete de poderes."
+}

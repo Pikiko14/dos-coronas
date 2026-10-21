@@ -1701,117 +1701,267 @@ local function efectoNodo(p, n, rango)
   return table.concat(partes, ", ")
 end
 
+-- ---------------------------------------------------------------------------------------------------------------------------------
+-- Árbol de poderes: los poderes se reparten en columnas según su cadena de requisitos, con líneas curvas entre un poder y lo que
+-- necesita; cada poder es una ficha redonda con su icono, número de casilla, rangos y estado (aprender, mejorar, máximo, bloqueado).
+-- Las pasivas van en una fila aparte y abajo hay un cuadro con lo que hace el poder señalado (o el último que se señaló).
+-- ---------------------------------------------------------------------------------------------------------------------------------
+local COLOR_ESTADO = {
+  puede = { 1.0, 0.84, 0.30 }, maximo = { 0.45, 0.86, 0.52 }, sabido = { 0.82, 0.70, 0.46 }, bloqueado = { 0.36, 0.40, 0.52 },
+}
+
+local function curvaArbol(x0, y0, x1, y1)
+  local mx = (x0 + x1) / 2
+  return love.math.newBezierCurve(x0, y0, mx, y0, mx, y1, x1, y1):render(4)
+end
+
+-- Columna de cada poder: 0 si no necesita nada y una más que lo que necesita.
+local function profundidades(nodos)
+  local por, prof = {}, {}
+  for _, n in ipairs(nodos) do por[n.id] = n end
+  local function d(n)
+    if prof[n.id] then return prof[n.id] end
+    prof[n.id] = 0
+    local v = 0
+    if n.requiere and por[n.requiere[1]] then v = d(por[n.requiere[1]]) + 1 end
+    prof[n.id] = v
+    return v
+  end
+  for _, n in ipairs(nodos) do d(n) end
+  return prof
+end
+
+local function estadoNodo(p, n)
+  local r = Arbol.rango(p, n.id)
+  local motivo = Arbol.motivo(p, n.id)
+  if r >= Arbol.MAX then return "maximo", r, motivo end
+  if motivo == nil then return "puede", r, motivo end
+  if r > 0 then return "sabido", r, motivo end
+  return "bloqueado", r, motivo
+end
+
+-- Ficha de un poder o una pasiva. (cx, cy) = centro del círculo; devuelve el rectángulo que ocupa (para el ratón).
+local function fichaArbol(p, n, cx, cy, R, ancho, hover, t)
+  local est, r, motivo = estadoNodo(p, n)
+  local c = COLOR_ESTADO[est]
+  local pulso = est == "puede" and (0.5 + 0.5 * math.sin(t * 3.2)) or 0
+  local x0, y0, w, h = cx - R - 4, cy - R - 4, ancho, 2 * R + 8
+  -- fondo de la ficha
+  love.graphics.setColor(0.08, 0.11, 0.22, hover and 1 or 0.92)
+  love.graphics.rectangle("fill", x0, y0, w, h, R, R)
+  love.graphics.setColor(c[1], c[2], c[3], (hover and 0.9 or 0.45) + 0.3 * pulso)
+  love.graphics.setLineWidth(hover and 2 or 1.5)
+  love.graphics.rectangle("line", x0 + 0.5, y0 + 0.5, w - 1, h - 1, R, R)
+  love.graphics.setLineWidth(1)
+  -- brillo detrás del círculo
+  if est ~= "bloqueado" then
+    love.graphics.setColor(c[1], c[2], c[3], 0.10 + 0.14 * pulso)
+    love.graphics.circle("fill", cx, cy, R + 5)
+  end
+  love.graphics.setColor(0.04, 0.05, 0.12, 1)
+  love.graphics.circle("fill", cx, cy, R)
+  -- icono recortado al círculo
+  local opaco = est == "bloqueado" and 0.38 or 1
+  love.graphics.stencil(function() love.graphics.circle("fill", cx, cy, R - 2) end, "replace", 1)
+  love.graphics.setStencilTest("greater", 0)
+  love.graphics.setColor(1, 1, 1, opaco)
+  if n.tipo == "activa" then
+    Efectos.icono(n.id, cx - R + 4, cy - R + 4, 2 * R - 8)
+  else
+    Atlas.dibujar(n.icono.hoja, n.icono.sprite, cx, cy, R / 11, 16, 16)
+  end
+  love.graphics.setStencilTest()
+  love.graphics.setLineWidth(2)
+  love.graphics.setColor(c[1], c[2], c[3], 0.95)
+  love.graphics.circle("line", cx, cy, R)
+  love.graphics.setLineWidth(1)
+  -- número de la casilla de la barra
+  local f = I.fuente
+  love.graphics.setFont(f)
+  if n.tipo == "activa" then
+    love.graphics.setColor(0.04, 0.05, 0.12, 0.95)
+    love.graphics.circle("fill", cx - R + 3, cy - R + 3, 9)
+    love.graphics.setColor(c[1], c[2], c[3], 1)
+    love.graphics.circle("line", cx - R + 3, cy - R + 3, 9)
+    local s = tostring(n.slot)
+    love.graphics.setColor(1, 0.95, 0.8, 1)
+    love.graphics.print(s, cx - R + 3 - f:getWidth(s) / 2, cy - R + 3 - f:getHeight() / 2)
+  end
+  -- nombre, rangos y estado
+  local tx = cx + R + 9
+  love.graphics.setColor(0.97, 0.94, 0.85, opaco < 1 and 0.55 or 1)
+  local nombre = Arbol.nombre(n)
+  local esc = math.min(1, (w - (R * 2 + 22)) / math.max(1, f:getWidth(nombre)))      -- nombres largos: más pequeños en vez de cortarlos
+  love.graphics.print(nombre, tx, cy - R + 1 + (1 - esc) * 4, 0, esc, esc)
+  for i = 1, Arbol.MAX do
+    love.graphics.setColor(i <= r and c[1] or 0.22, i <= r and c[2] or 0.24, i <= r and c[3] or 0.32, 1)
+    love.graphics.rectangle("fill", tx + (i - 1) * 13, cy + 2, 10, 6, 2, 2)
+  end
+  local pie, cp
+  if est == "maximo" then pie, cp = "Máximo", COLOR_ESTADO.maximo
+  elseif est == "puede" then pie, cp = r == 0 and "Aprender" or "Mejorar", COLOR_ESTADO.puede
+  elseif r == 0 and (p.nivel or 1) < n.nivel then pie, cp = "Nivel " .. n.nivel, { 0.95, 0.5, 0.45 }
+  elseif r == 0 and n.requiere and Arbol.rango(p, n.requiere[1]) < n.requiere[2] then pie, cp = "Pide otro poder", { 0.7, 0.72, 0.85 }
+  else pie, cp = "Sin puntos", { 0.7, 0.72, 0.85 } end
+  love.graphics.setColor(cp[1], cp[2], cp[3], 0.95)
+  love.graphics.print(pie, tx, cy + R - f:getHeight() + 2)
+  return x0, y0, w, h, est, r, motivo
+end
+
 function I.panelArbol(mundo, p, w, h)
   local nodos = Arbol.nodos(p.clase)
   local clase = Datos.clases[p.clase]
-  local px, py, pw, ph = w / 2 - 380, h / 2 - 250, 760, 500
-  caja(px, py, pw, ph, "Árbol de poderes — " .. (clase and clase.nombre or ""))
+  local t = love.timer.getTime()
+  local pw, ph = math.min(w - 40, 980), math.min(h - 24, 650)
+  local px, py = (w - pw) / 2, (h - ph) / 2
+  caja(px, py, pw, ph)
+  love.graphics.setFont(I.grande)
+  love.graphics.setColor(TEMA.acento[1], TEMA.acento[2], TEMA.acento[3], 1)
+  love.graphics.print("Árbol de poderes", px + 20, py + 8, 0, 0.72, 0.72)
+  love.graphics.setFont(I.fuente)
+  love.graphics.setColor(0.7, 0.78, 0.95, 1)
+  love.graphics.print((clase and clase.nombre or "") .. "  ·  nivel " .. (p.nivel or 1), px + 22, py + 44)
   I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
+  -- puntos disponibles
   local puntos = Arbol.puntos(p)
-  love.graphics.setColor(puntos > 0 and 1 or 0.7, puntos > 0 and 0.88 or 0.68, puntos > 0 and 0.35 or 0.6)
-  love.graphics.print("Puntos disponibles: " .. puntos .. "   (1 por nivel)", px + 12, py + 34)
+  local bw = 150
+  love.graphics.setColor(0.08, 0.11, 0.22, 1)
+  love.graphics.rectangle("fill", px + pw - bw - 60, py + 12, bw, 36, 18, 18)
+  love.graphics.setColor(puntos > 0 and 1 or 0.5, puntos > 0 and 0.84 or 0.52, puntos > 0 and 0.3 or 0.62, 0.9)
+  love.graphics.rectangle("line", px + pw - bw - 60 + 0.5, py + 12.5, bw - 1, 35, 18, 18)
+  love.graphics.circle("fill", px + pw - bw - 60 + 18, py + 30, 7 + 1.5 * (puntos > 0 and math.sin(t * 3) or 0))
+  love.graphics.setColor(1, 0.96, 0.85, 1)
+  love.graphics.print(puntos .. (puntos == 1 and " punto" or " puntos"), px + pw - bw - 60 + 34, py + 22)
+  love.graphics.setColor(TEMA.borde[1], TEMA.borde[2], TEMA.borde[3], 0.4)
+  love.graphics.rectangle("fill", px + 16, py + 66, pw - 32, 1)
 
-  local nAct = 0
-  for _, n in ipairs(nodos) do if n.tipo == "activa" then nAct = nAct + 1 end end
-  local cw, ch, sep = 116, 134, 8
-  if nAct > 6 then cw, sep = 70, 4 end                         -- 10 poderes (el mago): tarjetas más estrechas
-  local x0 = px + (pw - (math.max(6, nAct) * cw + (math.max(6, nAct) - 1) * sep)) / 2
-  local filas = { activa = py + 78, pasiva = py + 78 + ch + 34 }
-  love.graphics.setColor(0.85, 0.78, 0.6)
-  love.graphics.print("Poderes (barra 1-" .. nAct .. ")", x0, filas.activa - 20)
-  love.graphics.print("Pasivas", x0, filas.pasiva - 20)
-
-  local pos, contadores = {}, { activa = 0, pasiva = 0 }
+  -- reparto de los poderes en columnas
+  local activos, pasivos = {}, {}
   for _, n in ipairs(nodos) do
-    contadores[n.tipo] = contadores[n.tipo] + 1
-    pos[n.id] = { x = x0 + (contadores[n.tipo] - 1) * (cw + sep), y = filas[n.tipo] }
+    if n.tipo == "activa" then activos[#activos + 1] = n else pasivos[#pasivos + 1] = n end
   end
-  -- líneas entre un nodo y lo que necesita
-  for _, n in ipairs(nodos) do
-    if n.requiere then
+  local prof = profundidades(activos)
+  local cols, maxd, maxn = {}, 0, 1
+  for _, n in ipairs(activos) do
+    local d = prof[n.id]
+    cols[d] = cols[d] or {}
+    cols[d][#cols[d] + 1] = n
+    if d > maxd then maxd = d end
+  end
+  local gy0, gy1 = py + 90, py + ph - 238
+  local ancho = maxd >= 4 and 166 or 184
+  local gx0 = px + 26
+  local paso = maxd > 0 and ((pw - 52 - ancho) / maxd) or 0
+  local pos = {}
+  love.graphics.setFont(I.fuente)
+  love.graphics.setColor(0.85, 0.78, 0.6, 0.9)
+  love.graphics.print("Poderes (casillas de la barra 1-" .. #activos .. ")", gx0, py + 72)
+  for d = 0, maxd do
+    local col = cols[d] or {}
+    table.sort(col, function(a, b)
+      local ya = a.requiere and pos[a.requiere[1]] and pos[a.requiere[1]].cy or 0
+      local yb = b.requiere and pos[b.requiere[1]] and pos[b.requiere[1]].cy or 0
+      if math.abs(ya - yb) > 1 then return ya < yb end
+      return a.slot < b.slot
+    end)
+    if #col > maxn then maxn = #col end
+    for i, n in ipairs(col) do
+      pos[n.id] = { cx = gx0 + d * paso + 28, cy = gy0 + 8 + (gy1 - gy0 - 8) * (i - 0.5) / #col }
+    end
+  end
+  local R = math.max(18, math.min(26, ((gy1 - gy0) / maxn - 18) / 2))
+  -- líneas entre un poder y lo que necesita
+  for _, n in ipairs(activos) do
+    if n.requiere and pos[n.requiere[1]] then
       local a, b = pos[n.requiere[1]], pos[n.id]
-      if a and b then
-        local cumple = Arbol.rango(p, n.requiere[1]) >= n.requiere[2]
-        love.graphics.setColor(cumple and 0.9 or 0.4, cumple and 0.75 or 0.38, cumple and 0.3 or 0.35, 0.9)
-        love.graphics.setLineWidth(2)
-        love.graphics.line(a.x + cw / 2, a.y + ch / 2, b.x + cw / 2, b.y + ch / 2)
-        love.graphics.setLineWidth(1)
+      local cumple = Arbol.rango(p, n.requiere[1]) >= n.requiere[2]
+      local pts = curvaArbol(a.cx - R - 4 + ancho, a.cy, b.cx - R - 4, b.cy)
+      love.graphics.setLineWidth(5)
+      love.graphics.setColor(cumple and 1 or 0.3, cumple and 0.8 or 0.35, cumple and 0.3 or 0.5, cumple and 0.14 or 0.08)
+      love.graphics.line(pts)
+      love.graphics.setLineWidth(2)
+      love.graphics.setColor(cumple and 0.95 or 0.38, cumple and 0.78 or 0.42, cumple and 0.3 or 0.56, cumple and 0.95 or 0.7)
+      love.graphics.line(pts)
+      love.graphics.setLineWidth(1)
+      -- rango que se pide, en el centro de la línea
+      local k = math.floor(#pts / 4)
+      local mx, my = pts[2 * k + 1], pts[2 * k + 2]
+      if mx and my then
+        local s = tostring(n.requiere[2])
+        love.graphics.setColor(0.05, 0.06, 0.14, 1)
+        love.graphics.circle("fill", mx, my, 8)
+        love.graphics.setColor(cumple and 1 or 0.55, cumple and 0.84 or 0.6, cumple and 0.35 or 0.75, 1)
+        love.graphics.circle("line", mx, my, 8)
+        love.graphics.print(s, mx - I.fuente:getWidth(s) / 2, my - I.fuente:getHeight() / 2)
       end
     end
   end
 
-  local info
-  for _, n in ipairs(nodos) do
+  local function registrarNodo(n, x0, y0, fw, fh)
+    I.registrar(x0, y0, fw, fh, "arb_" .. n.id)
+    if sobre(x0, y0, fw, fh) then I.arbolSel = n.id end
+  end
+  for _, n in ipairs(activos) do
     local c = pos[n.id]
-    local r = Arbol.rango(p, n.id)
-    local motivo = Arbol.motivo(p, n.id)
-    local puede = motivo == nil
-    local maximo = r >= Arbol.MAX
-    love.graphics.setColor(0.10, 0.13, 0.25, 1)
-    love.graphics.rectangle("fill", c.x, c.y, cw, ch, 6, 6)
-    if puede then love.graphics.setColor(1, 0.85, 0.3, 1)
-    elseif maximo then love.graphics.setColor(0.45, 0.8, 0.45, 1)
-    elseif r > 0 then love.graphics.setColor(0.75, 0.68, 0.5, 1)
-    else love.graphics.setColor(0.35, 0.33, 0.36, 1) end
-    love.graphics.rectangle("line", c.x, c.y, cw, ch, 6, 6)
-    local opaco = (r > 0 or puede) and 1 or 0.4
-    love.graphics.setColor(1, 1, 1, opaco)
-    if n.tipo == "activa" then
-      Efectos.icono(n.id, c.x + cw / 2 - 24, c.y + 8, 48)
-    else
-      Atlas.dibujar(n.icono.hoja, n.icono.sprite, c.x + cw / 2, c.y + 32, 1.4, 16, 16)
-    end
-    love.graphics.setColor(0.95, 0.9, 0.78, opaco)
-    local ne = cw < 100 and math.min(0.85, (cw - 6) / math.max(1, love.graphics.getFont():getWidth(Arbol.nombre(n)))) or 1                     -- (tarjetas estrechas: nombre más pequeño)
-    love.graphics.printf(Arbol.nombre(n), c.x + 2, c.y + 56, (cw - 4) / ne, "center", 0, ne, ne)
-    -- rangos
-    local paso, anchoR = (cw < 100 and 14 or 19), (cw < 100 and 11 or 16)
-    for i = 1, Arbol.MAX do
-      love.graphics.setColor(i <= r and 1 or 0.25, i <= r and 0.8 or 0.24, i <= r and 0.25 or 0.22, 1)
-      love.graphics.rectangle("fill", c.x + cw / 2 - (Arbol.MAX * paso - (paso - anchoR)) / 2 + (i - 1) * paso, c.y + 98, anchoR, 8, 2, 2)
-    end
-    love.graphics.setColor(0.75, 0.72, 0.6, opaco)
-    local pie
-    if maximo then pie = "Máximo"
-    elseif r == 0 and n.requiere and Arbol.rango(p, n.requiere[1]) < n.requiere[2] then
-      local previo = Arbol.nodo(p.clase, n.requiere[1])
-      pie = cw < 100 and ("Pide " .. n.requiere[2] .. " " .. Arbol.nombre(previo):sub(1, 7)) or ("Pide " .. Arbol.nombre(previo) .. " " .. n.requiere[2])
-    elseif r == 0 and (p.nivel or 1) < n.nivel then pie = (cw < 100 and "Nv " or "Nivel ") .. n.nivel
-    elseif puede then pie = r == 0 and (cw < 100 and "Aprender" or "Clic: aprender") or (cw < 100 and "Mejorar" or "Clic: mejorar")
-    else pie = cw < 100 and "Sin pts" or "Sin puntos" end
-    love.graphics.setScissor(c.x * (I.escala or 1), c.y * (I.escala or 1), cw * (I.escala or 1), ch * (I.escala or 1))
-    love.graphics.printf(pie, c.x + 4, c.y + 110, cw - 8, "center")
-    love.graphics.setScissor()
-    if n.tipo == "activa" then
-      love.graphics.setColor(1, 0.9, 0.5, opaco)
-      love.graphics.print(tostring(n.slot), c.x + 8, c.y + 6)
-    end
-    I.registrar(c.x, c.y, cw, ch, "arb_" .. n.id)
-    if sobre(c.x, c.y, cw, ch) then
-      local desc = n.tipo == "activa" and (Datos.habilidades[n.id].desc or "") or (n.desc or "")
-      info = { nombre = Arbol.nombre(n), desc = desc, ahora = r > 0 and efectoNodo(p, n, r) or nil,
-        sigue = r < Arbol.MAX and efectoNodo(p, n, r + 1) or nil, motivo = motivo, rango = r }
-    end
+    local hover = sobre(c.cx - R - 4, c.cy - R - 4, ancho, 2 * R + 8)
+    local x0, y0, fw, fh = fichaArbol(p, n, c.cx, c.cy, R, ancho, hover, t)
+    registrarNodo(n, x0, y0, fw, fh)
   end
 
-  -- cuadro de información del nodo bajo el ratón
-  local iy = py + ph - 108
-  love.graphics.setColor(0.09, 0.12, 0.23, 1)
-  love.graphics.rectangle("fill", px + 12, iy, pw - 24, 64, 4, 4)
-  love.graphics.setColor(0.7, 0.62, 0.35, 1)
-  love.graphics.rectangle("line", px + 12, iy, pw - 24, 64, 4, 4)
-  if info then
+  -- pasivas
+  local py2 = py + ph - 212
+  love.graphics.setFont(I.fuente)
+  love.graphics.setColor(0.85, 0.78, 0.6, 0.9)
+  love.graphics.print("Pasivas", gx0, py2 - 40)
+  local wp = math.min(220, (pw - 52 - 12 * (math.max(1, #pasivos) - 1)) / math.max(1, #pasivos))
+  for i, n in ipairs(pasivos) do
+    local cx, cy = gx0 + 24 + (i - 1) * (wp + 12), py2 + 6
+    local hover = sobre(cx - 24, cy - 24, wp, 48)
+    local x0, y0, fw, fh = fichaArbol(p, n, cx, cy, 20, wp, hover, t)
+    registrarNodo(n, x0, y0, fw, fh)
+  end
+
+  -- cuadro con lo que hace el poder señalado
+  local sel = I.arbolSel and Arbol.nodo(p.clase, I.arbolSel) or nil
+  if not sel then sel = activos[1] end
+  local iy, ih = py + ph - 148, 96
+  love.graphics.setColor(0.07, 0.10, 0.21, 1)
+  love.graphics.rectangle("fill", px + 16, iy, pw - 32, ih, 8, 8)
+  love.graphics.setColor(0.7, 0.62, 0.35, 0.85)
+  love.graphics.rectangle("line", px + 16.5, iy + 0.5, pw - 33, ih - 1, 8, 8)
+  if sel then
+    local est, r, motivo = estadoNodo(p, sel)
+    local c = COLOR_ESTADO[est]
+    -- icono grande
+    love.graphics.setColor(0.04, 0.05, 0.12, 1)
+    love.graphics.circle("fill", px + 56, iy + ih / 2, 32)
+    love.graphics.stencil(function() love.graphics.circle("fill", px + 56, iy + ih / 2, 30) end, "replace", 1)
+    love.graphics.setStencilTest("greater", 0)
+    love.graphics.setColor(1, 1, 1, 1)
+    if sel.tipo == "activa" then Efectos.icono(sel.id, px + 56 - 26, iy + ih / 2 - 26, 52)
+    else Atlas.dibujar(sel.icono.hoja, sel.icono.sprite, px + 56, iy + ih / 2, 2, 16, 16) end
+    love.graphics.setStencilTest()
+    love.graphics.setLineWidth(2)
+    love.graphics.setColor(c[1], c[2], c[3], 1)
+    love.graphics.circle("line", px + 56, iy + ih / 2, 32)
+    love.graphics.setLineWidth(1)
+    local tx = px + 106
+    love.graphics.setFont(I.fuente)
     love.graphics.setColor(1, 0.9, 0.55)
-    love.graphics.print(info.nombre .. "  — rango " .. info.rango .. "/" .. Arbol.MAX, px + 20, iy + 4)
+    love.graphics.print(Arbol.nombre(sel) .. "   rango " .. r .. "/" .. Arbol.MAX .. (sel.tipo == "activa" and ("   ·   casilla " .. sel.slot) or "   ·   pasiva"), tx, iy + 8)
+    local desc = sel.tipo == "activa" and (Datos.habilidades[sel.id].desc or "") or (sel.desc or "")
     love.graphics.setColor(0.88, 0.85, 0.75)
-    love.graphics.printf(info.desc .. (info.ahora and ("  Ahora: " .. info.ahora .. ".") or "") ..
-      (info.sigue and ("  Siguiente rango: " .. info.sigue .. ".") or ""), px + 20, iy + 22, pw - 40, "left")
-  else
-    love.graphics.setColor(0.7, 0.68, 0.6)
-    love.graphics.printf("Pasa el ratón por un poder para ver lo que hace. Clic para aprenderlo o subirlo de rango; aprender un poder pide cierto nivel; mejorarlo solo cuesta puntos.", px + 20, iy + 8, pw - 40, "left")
+    local ahora = r > 0 and efectoNodo(p, sel, r) or nil
+    local sigue = r < Arbol.MAX and efectoNodo(p, sel, r + 1) or nil
+    love.graphics.printf(desc .. (ahora and ("  Ahora: " .. ahora .. ".") or "") .. (sigue and ("  Siguiente rango: " .. sigue .. ".") or ""), tx, iy + 28, pw - 150, "left")
+    love.graphics.setColor(c[1], c[2], c[3], 1)
+    love.graphics.print(est == "puede" and (r == 0 and "Clic para aprender" or "Clic para mejorar") or (motivo or ""), tx, iy + ih - 20)
   end
   local coste = mundo:costeReinicio(p)
-  I.boton(px + 12, py + ph - 36, 230, 28, "Reiniciar puntos (" .. coste .. " de oro)", "arbol_reset", Arbol.gastados(p) > 0)
+  I.boton(px + 16, py + ph - 42, 230, 28, "Reiniciar puntos (" .. coste .. " de oro)", "arbol_reset", Arbol.gastados(p) > 0)
+  love.graphics.setFont(I.fuente)
+  love.graphics.setColor(0.6, 0.65, 0.8, 0.8)
+  love.graphics.print("Aprender un poder pide cierto nivel y su requisito; mejorarlo solo cuesta puntos.", px + 262, py + ph - 36)
 end
 
 local NOMBRE_RANGO = { lider = "Líder", oficial = "Oficial", miembro = "Miembro" }

@@ -1,0 +1,38 @@
+{
+ "id_dos_coronas": "furia",
+ "clase": "guerrero",
+ "nombre": "Furia",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 16,
+   "cell": [
+    256,
+    256
+   ],
+   "origin": [
+    128,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 1.0,
+  "golpes_s": [],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "C",
+    "t0": 0.0,
+    "ms": 0.06,
+    "sc": 0.7,
+    "a": 1.0,
+    "modo": "once"
+   }
+  ]
+ },
+ "nota": "guerrero/golpe_multiple del paquete de poderes."
+}

@@ -14,36 +14,35 @@ return {
     { s = "barrido__s4220303", w = "GC", t0 = 0.3, ms = 0.05, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "barrido__s4270103", w = "GC", t0 = 0.55, ms = 0.05, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
-  bendicion = { clase = "clerigo", dur = 1.847, golpes = { 0.467 }, capas = {
-    { s = "bendicion__S2100105", w = "proj", t0 = 0.22, ms = 0.1333, sc = 0.9, a = 1, modo = "proj", t1 = 0.4467, dir = true, mezcla = "add" },
-    { s = "bendicion__s211013", w = "T", t0 = 0.4667, ms = 0.05, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
-    { s = "bendicion__s211023", w = "T", t0 = 0.5167, ms = 0.05, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
-    { s = "bendicion__s211033", w = "T", t0 = 0.5667, ms = 0.05, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
+  bendicion = { clase = "clerigo", dur = 1.1, golpes = { 0.4 }, capas = {
+    { s = "bendicion__fx", w = "GT", t0 = 0.1, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
-  carga = { clase = "guerrero", dur = 2, golpes = { 0.72 }, capas = {
-    { s = "carga__S3930105", w = "proj", t0 = 0.22, ms = 0.0667, sc = 0.85, a = 0.85, modo = "proj", t1 = 0.7, dir = true, mezcla = "add" },
-    { s = "carga__S3930205", w = "proj", t0 = 0.22, ms = 0.0667, sc = 0.85, a = 0.6, modo = "proj", t1 = 0.7, off = { -20, 0 }, dir = true, mezcla = "add" },
+  cadena_sanacion = { clase = "clerigo", dur = 1, golpes = { 0.3 }, capas = {
+    { s = "cadena_sanacion__fx", w = "T", t0 = 0, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
-  castigo = { clase = "clerigo", dur = 1.8, golpes = { 0.5 }, capas = {
-    { s = "castigo__s052011", w = "T", t0 = 0.22, ms = 0.07, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
-    { s = "castigo__s068011", w = "T", t0 = 0.4, ms = 0.06, sc = 0.7, a = 1, modo = "once", dir = false, mezcla = "add" },
-    { s = "castigo__s069011", w = "T", t0 = 0.45, ms = 0.07, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
+  carga = { clase = "guerrero", dur = 0.9, golpes = { 0.45 }, capas = {
+    { s = "carga__fx", w = "T", t0 = 0, ms = 0.035, sc = 0.7, a = 1, modo = "estela", t1 = 0.45, dir = false, mezcla = "add" },
   } },
-  consagrar = { clase = "clerigo", dur = 3.2, golpes = { 0.9, 1.3 }, capas = {
-    { s = "consagrar__S3710101", w = "GC", t0 = 0.3, ms = 0.0333, sc = 0.9, a = 1, modo = "loop", t1 = 2.8, dir = false, mezcla = "add" },
-    { s = "consagrar__S3720101", w = "GC", t0 = 0.4, ms = 0.0667, sc = 1.7, a = 1, modo = "once", off = { 0, -8 }, dir = false, mezcla = "add" },
-    { s = "consagrar__S3720101", w = "GC", t0 = 1.1, ms = 0.0667, sc = 1.9, a = 0.8, modo = "once", off = { 0, -8 }, dir = false, mezcla = "add" },
+  castigo = { clase = "clerigo", dur = 0.9, golpes = { 0.3 }, capas = {
+    { s = "castigo__fx", w = "GT", t0 = 0.05, ms = 0.05, sc = 0.75, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
-  curar = { clase = "clerigo", dur = 2, golpes = {  }, capas = {
-    { s = "curar__S0690101", w = "T", t0 = 0.25, ms = 0.1333, sc = 1.5, a = 1, modo = "once", dir = false, mezcla = "add" },
-    { s = "curar__s078011", w = "GT", t0 = 0.3, ms = 0.12, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
-    { s = "curar__s079011", w = "GT", t0 = 0.3, ms = 0.1, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
-    { s = "curar__s078011", w = "GT", t0 = 0.6, ms = 0.12, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
+  consagrar = { clase = "clerigo", dur = 1.2, golpes = { 0.5 }, capas = {
+    { s = "consagrar__fx", w = "GC", t0 = 0.05, ms = 0.07, sc = 0.95, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
-  disparo = { clase = "cazador", dur = 1.377, golpes = { 0.427 }, capas = {
-    { s = "disparo__S4340105", w = "proj", t0 = 0.2, ms = 0.0333, sc = 0.7, a = 0.9, modo = "proj", t1 = 0.4267, dir = true, mezcla = "add" },
-    { s = "disparo__s3830103", w = "T", t0 = 0.4267, ms = 0.0667, sc = 0.8, a = 0.9, modo = "once", dir = false, mezcla = "add" },
-    { s = "disparo__s3830203", w = "T", t0 = 0.4767, ms = 0.0667, sc = 0.8, a = 0.9, modo = "once", dir = false, mezcla = "add" },
+  curar = { clase = "clerigo", dur = 1.05, golpes = { 0.3 }, capas = {
+    { s = "curar__fx", w = "GT", t0 = 0.05, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
+  disparo = { clase = "cazador", dur = 0.75, golpes = { 0.4 }, capas = {
+    { s = "disparo__fx", w = "T", t0 = 0, ms = 0.035, sc = 0.7, a = 1, modo = "estela", t1 = 0.4, dir = false, mezcla = "add" },
+  } },
+  disparo_explosivo = { clase = "cazador", dur = 1.3, golpes = { 0.4 }, capas = {
+    { s = "disparo_explosivo__fx", w = "GT", t0 = 0.3, ms = 0.06, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
+  disparo_helado = { clase = "cazador", dur = 0.8, golpes = { 0.45 }, capas = {
+    { s = "disparo_helado__fx", w = "T", t0 = 0, ms = 0.04, sc = 0.9, a = 1, modo = "estela", t1 = 0.45, dir = false, mezcla = "add" },
+  } },
+  disparo_multiple = { clase = "cazador", dur = 0.8, golpes = { 0.45 }, capas = {
+    { s = "disparo_multiple__fx", w = "T", t0 = 0, ms = 0.04, sc = 1, a = 1, modo = "estela", t1 = 0.45, dir = false, mezcla = "add" },
   } },
   drenar = { clase = "nigromante", dur = 2.1, golpes = { 0.8 }, capas = {
     { s = "drenar__1250010", w = "T", t0 = 0.25, ms = 0.08, sc = 0.55, a = 1, modo = "loop", t1 = 1.4, dir = false, mezcla = "add" },
@@ -51,12 +50,18 @@ return {
     { s = "drenar__a010301", w = "C", t0 = 1.1, ms = 0.1, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "drenar__N270003", w = "C", t0 = 1.25, ms = 0.1, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
+  ejecucion = { clase = "guerrero", dur = 1, golpes = { 0.5 }, capas = {
+    { s = "ejecucion__fx", w = "GT", t0 = 0, ms = 0.06, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
   embestida = { clase = "lancero", dur = 2.2, golpes = { 0.75 }, capas = {
     { s = "embestida__S3930105", w = "proj", t0 = 0.25, ms = 0.0667, sc = 0.8, a = 0.85, modo = "proj", t1 = 0.72, dir = true, mezcla = "add" },
     { s = "embestida__S3930305", w = "proj", t0 = 0.25, ms = 0.0667, sc = 0.8, a = 0.6, modo = "proj", t1 = 0.72, off = { -20, 0 }, dir = true, mezcla = "add" },
   } },
   escudo = { clase = "mago", dur = 0.9, golpes = {  }, capas = {
     { s = "escudo__cupula", w = "C", t0 = 0, ms = 0.09, sc = 1.2, a = 1, modo = "once", off = { 0, 4 }, dir = false, mezcla = "add" },
+  } },
+  escudo_divino = { clase = "clerigo", dur = 1.05, golpes = { 0.2 }, capas = {
+    { s = "escudo_divino__fx", w = "T", t0 = 0, ms = 0.065, sc = 0.7, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
   espectro = { clase = "nigromante", dur = 3.2, golpes = {  }, capas = {
     { s = "espectro__s2370101", w = "GC", t0 = 0.4, ms = 0.0667, sc = 0.6, a = 1, modo = "once", off = { 110, 10 }, dir = false, mezcla = "add" },
@@ -76,42 +81,39 @@ return {
     { s = "estocada__s4180503", w = "T", t0 = 0.3533, ms = 0.0333, sc = 1, a = 0.95, modo = "step", off = { -30, 0 }, dur = 0.0333, th = 0, dir = true, mezcla = "add" },
     { s = "estocada__s4180603", w = "T", t0 = 0.3867, ms = 0.0333, sc = 1, a = 0.95, modo = "step", off = { -30, 0 }, dur = 0.0333, th = 0, dir = true, mezcla = "add" },
   } },
-  flecha_veneno = { clase = "cazador", dur = 1.947, golpes = { 0.447 }, capas = {
-    { s = "flecha_veneno__S4260105", w = "proj", t0 = 0.22, ms = 0.08, sc = 0.9, a = 1, modo = "proj", t1 = 0.4467, dir = true, mezcla = "add" },
-    { s = "flecha_veneno__S4260205", w = "proj", t0 = 0.22, ms = 0.08, sc = 0.9, a = 0.6, modo = "proj", t1 = 0.4467, dir = true, mezcla = "add" },
+  estocada_lineal = { clase = "guerrero", dur = 0.75, golpes = { 0.4 }, capas = {
+    { s = "estocada_lineal__fx", w = "T", t0 = 0.05, ms = 0.03, sc = 0.8, a = 1, modo = "estela", t1 = 0.4, dir = false, mezcla = "add" },
+  } },
+  flecha_veneno = { clase = "cazador", dur = 0.8, golpes = { 0.45 }, capas = {
+    { s = "flecha_veneno__fx", w = "T", t0 = 0, ms = 0.04, sc = 0.8, a = 1, modo = "estela", t1 = 0.45, dir = false, mezcla = "add" },
   } },
   fuego = { clase = "mago", dur = 0.85, golpes = { 0.55 }, capas = {
     { s = "fuego__carga", w = "C", t0 = 0, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "fuego__estela", w = "T", t0 = 0.3, ms = 0.05, sc = 0.9, a = 1, modo = "estela", t1 = 0.56, dir = false, mezcla = "add" },
     { s = "fuego__impacto", w = "T", t0 = 0.55, ms = 0.08, sc = 1.4, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
-  furia = { clase = "guerrero", dur = 3.2, golpes = {  }, capas = {
-    { s = "furia__S3970101", w = "GC", t0 = 0.25, ms = 0.1, sc = 1.2, a = 1, modo = "loop", t1 = 3, dir = false, mezcla = "add" },
+  furia = { clase = "guerrero", dur = 1, golpes = {  }, capas = {
+    { s = "furia__fx", w = "C", t0 = 0, ms = 0.06, sc = 0.7, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
-  grito = { clase = "guerrero", dur = 2.4, golpes = {  }, capas = {
-    { s = "grito__S4010101", w = "C", t0 = 0.15, ms = 0.0667, sc = 1, a = 0.9, modo = "once", off = { 0, -30 }, dir = false, mezcla = "add" },
-    { s = "grito__S4010101", w = "C", t0 = 0.65, ms = 0.0667, sc = 1.45, a = 0.75, modo = "once", off = { 0, -30 }, dir = false, mezcla = "add" },
-    { s = "grito__S4010101", w = "C", t0 = 1.15, ms = 0.0667, sc = 1.9, a = 0.6, modo = "once", off = { 0, -30 }, dir = false, mezcla = "add" },
-    { s = "grito__S4010101", w = "C", t0 = 1.65, ms = 0.0667, sc = 2.35, a = 0.45, modo = "once", off = { 0, -30 }, dir = false, mezcla = "add" },
+  golpe = { clase = "guerrero", dur = 0.95, golpes = { 0.35 }, capas = {
+    { s = "golpe__fx", w = "T", t0 = 0.1, ms = 0.05, sc = 0.8, a = 1, modo = "once", off = { 0, -8 }, dir = false, mezcla = "add" },
+  } },
+  golpe_terrestre = { clase = "guerrero", dur = 1.05, golpes = { 0.5 }, capas = {
+    { s = "golpe_terrestre__fx", w = "GT", t0 = 0.05, ms = 0.06, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
+  grito = { clase = "guerrero", dur = 1.1, golpes = {  }, capas = {
+    { s = "grito__fx", w = "GC", t0 = 0.05, ms = 0.065, sc = 0.95, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
   jabalina = { clase = "lancero", dur = 1.627, golpes = { 0.527 }, capas = {
     { s = "jabalina__spear", w = "proj", t0 = 0.25, ms = 0.08, sc = 0.7, a = 1, modo = "proj", t1 = 0.4767, dir = false, mezcla = "add" },
     { s = "jabalina__hit", w = "T", t0 = 0.4767, ms = 0.06, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "jabalina__wave", w = "GT", t0 = 0.5067, ms = 0.05, sc = 0.8, a = 0.9, modo = "once", dir = false, mezcla = "add" },
   } },
-  juicio = { clase = "clerigo", dur = 2.4, golpes = { 0.9, 1.2 }, capas = {
-    { s = "juicio__Ball", w = "T", t0 = 0.25, ms = 0.0667, sc = 0.55, a = 1, modo = "once", off = { 0, -40 }, dir = false, mezcla = "add" },
-    { s = "juicio__Laser", w = "GT", t0 = 0.9, ms = 0.08, sc = 0.9, a = 1, modo = "once", off = { 0, -140 }, dir = false, mezcla = "add" },
-    { s = "juicio__Laser", w = "GT", t0 = 1.3, ms = 0.08, sc = 0.9, a = 0.7, modo = "once", off = { 0, -140 }, dir = false, mezcla = "add" },
+  juicio = { clase = "clerigo", dur = 1.05, golpes = { 0.5 }, capas = {
+    { s = "juicio__fx", w = "GT", t0 = 0.05, ms = 0.06, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
-  lluvia = { clase = "cazador", dur = 3, golpes = { 0.8, 1.1, 1.4 }, capas = {
-    { s = "lluvia__AIR01", w = "GT", t0 = 0.2, ms = 0.0667, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
-    { s = "lluvia__A_00", w = "GT", t0 = 0.45, ms = 0.05, sc = 1, a = 1, modo = "loop", t1 = 2.5, off = { 0, -10 }, dir = false, mezcla = "add" },
-    { s = "lluvia__P0000", w = "GT", t0 = 0.5, ms = 0.0167, sc = 1, a = 1, modo = "loop", t1 = 2.4, off = { -70, 20 }, dir = false, mezcla = "add" },
-    { s = "lluvia__P0000", w = "GT", t0 = 0.65, ms = 0.0167, sc = 1, a = 1, modo = "loop", t1 = 2.4, off = { 70, 14 }, dir = false, mezcla = "add" },
-    { s = "lluvia__P0000", w = "GT", t0 = 0.8, ms = 0.0167, sc = 1, a = 1, modo = "loop", t1 = 2.4, off = { 0, -20 }, dir = false, mezcla = "add" },
-    { s = "lluvia__L_00", w = "GT", t0 = 1, ms = 0.0167, sc = 1, a = 1, modo = "once", off = { -40, 0 }, dir = false, mezcla = "add" },
-    { s = "lluvia__L_00", w = "GT", t0 = 1.3, ms = 0.0167, sc = 1, a = 1, modo = "once", off = { 55, -10 }, dir = false, mezcla = "add" },
+  lluvia = { clase = "cazador", dur = 1.2, golpes = { 0.5, 0.8 }, capas = {
+    { s = "lluvia__fx", w = "GT", t0 = 0.05, ms = 0.07, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
   lluvia_fuego = { clase = "mago", dur = 1.1, golpes = { 0.5, 0.8 }, capas = {
     { s = "lluvia_fuego__caida", w = "GT", t0 = 0, ms = 0.07, sc = 1.6, a = 1, modo = "once", off = { 0, -10 }, dir = false, mezcla = "add" },
@@ -122,6 +124,9 @@ return {
     { s = "maldecir__Line", w = "T", t0 = 0.55, ms = 0.08, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "maldecir__Bu", w = "GT", t0 = 0.8, ms = 0.1, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "maldecir__Ms", w = "T", t0 = 1.3, ms = 0.1, sc = 1, a = 1, modo = "once", off = { 0, -60 }, dir = false, mezcla = "add" },
+  } },
+  marca_cazador = { clase = "cazador", dur = 1.2, golpes = { 0.3 }, capas = {
+    { s = "marca_cazador__fx", w = "GT", t0 = 0.05, ms = 0.07, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
   meteoro = { clase = "mago", dur = 1.3, golpes = { 0.5 }, capas = {
     { s = "meteoro__caida", w = "T", t0 = 0, ms = 0.1, sc = 1.2, a = 1, modo = "caida", t1 = 0.5, off = { -90, -300 }, dir = false, mezcla = "add" },
@@ -138,14 +143,14 @@ return {
   nova = { clase = "mago", dur = 0.95, golpes = { 0.35 }, capas = {
     { s = "nova__hielo", w = "GT", t0 = 0, ms = 0.09, sc = 1.4, a = 1, modo = "once", off = { 0, -6 }, dir = false, mezcla = "add" },
   } },
-  paso_agil = { clase = "cazador", dur = 1.8, golpes = {  }, capas = {
-    { s = "paso_agil__S4060101", w = "GC", t0 = 0.15, ms = 0.0667, sc = 1.2, a = 1, modo = "once", dir = false, mezcla = "add" },
-    { s = "paso_agil__S4060101", w = "GC", t0 = 0.6, ms = 0.0667, sc = 1.2, a = 1, modo = "once", flip = true, dir = false, mezcla = "add" },
+  pantera = { clase = "guerrero", dur = 0.9, golpes = { 0.5 }, capas = {
+    { s = "pantera__fx", w = "T", t0 = 0.1, ms = 0.04, sc = 0.9, a = 1, modo = "estela", t1 = 0.5, dir = false, mezcla = "add" },
   } },
-  preciso = { clase = "cazador", dur = 1.827, golpes = { 0.447 }, capas = {
-    { s = "preciso__S3940105", w = "proj", t0 = 0.22, ms = 0.0667, sc = 0.9, a = 1, modo = "proj", t1 = 0.4467, dir = true, mezcla = "add" },
-    { s = "preciso__s3830303", w = "T", t0 = 0.4467, ms = 0.0667, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
-    { s = "preciso__s3830403", w = "T", t0 = 0.5467, ms = 0.0667, sc = 1.1, a = 0.8, modo = "once", dir = false, mezcla = "add" },
+  paso_agil = { clase = "cazador", dur = 1, golpes = {  }, capas = {
+    { s = "paso_agil__fx", w = "C", t0 = 0, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
+  preciso = { clase = "cazador", dur = 0.8, golpes = { 0.45 }, capas = {
+    { s = "preciso__fx", w = "T", t0 = 0, ms = 0.04, sc = 0.9, a = 1, modo = "estela", t1 = 0.45, dir = false, mezcla = "add" },
   } },
   rayo_arcano = { clase = "mago", dur = 0.9, golpes = { 0.5 }, capas = {
     { s = "rayo_arcano__carga", w = "C", t0 = 0, ms = 0.09, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
@@ -157,11 +162,17 @@ return {
     { s = "rayo_hielo__lanza", w = "T", t0 = 0.15, ms = 0.05, sc = 0.9, a = 1, modo = "estela", t1 = 0.5, dir = false, mezcla = "add" },
     { s = "rayo_hielo__impacto", w = "T", t0 = 0.5, ms = 0.08, sc = 1.2, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
-  sanacion = { clase = "clerigo", dur = 3.3, golpes = {  }, capas = {
-    { s = "sanacion__ground_light", w = "GC", t0 = 0.2, ms = 0.1, sc = 0.6, a = 1, modo = "once", dir = false, mezcla = "add" },
-    { s = "sanacion__ground_ground", w = "GC", t0 = 0.2, ms = 0.1, sc = 0.7, a = 1, modo = "once", dir = false, mezcla = "add" },
-    { s = "sanacion__music", w = "C", t0 = 0.5, ms = 0.12, sc = 0.8, a = 1, modo = "once", off = { 0, -60 }, dir = false, mezcla = "add" },
-    { s = "sanacion__ground_roundAngel", w = "GC", t0 = 0.5, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
+  resurreccion = { clase = "clerigo", dur = 1.2, golpes = { 0.5 }, capas = {
+    { s = "resurreccion__fx", w = "GT", t0 = 0, ms = 0.07, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
+  salto_impacto = { clase = "guerrero", dur = 1.15, golpes = { 0.6 }, capas = {
+    { s = "salto_impacto__fx", w = "GT", t0 = 0, ms = 0.07, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
+  sanacion = { clase = "clerigo", dur = 1.2, golpes = { 0.5 }, capas = {
+    { s = "sanacion__fx", w = "GC", t0 = 0.05, ms = 0.07, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
+  tajo = { clase = "guerrero", dur = 1.05, golpes = { 0.35 }, capas = {
+    { s = "tajo__fx", w = "GC", t0 = 0.05, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
   teletransporte = { clase = "mago", dur = 0.85, golpes = {  }, capas = {
     { s = "teletransporte__portal", w = "GT", t0 = 0, ms = 0.07, sc = 1.3, a = 1, modo = "once", off = { 0, -10 }, dir = false, mezcla = "add" },
@@ -178,6 +189,9 @@ return {
   torbellino = { clase = "mago", dur = 1.6, golpes = { 0.45, 0.8, 1.15, 1.5 }, capas = {
     { s = "torbellino__giro", w = "GT", t0 = 0, ms = 0.15, sc = 1.1, a = 1, modo = "loop", t1 = 1.3, off = { 0, -6 }, dir = false, mezcla = "add" },
     { s = "torbellino__fin", w = "GT", t0 = 1.3, ms = 0.3, sc = 1.1, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
+  tormenta_divina = { clase = "clerigo", dur = 1.2, golpes = { 0.5, 0.75, 1 }, capas = {
+    { s = "tormenta_divina__fx", w = "GT", t0 = 0.05, ms = 0.07, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
   tormenta_lanzas = { clase = "lancero", dur = 3, golpes = { 0.9, 1.2, 1.5 }, capas = {
     { s = "tormenta_lanzas__G0109", w = "GT", t0 = 0.2, ms = 0.03, sc = 0.9, a = 1, modo = "once", off = { -70, -25 }, dir = false, mezcla = "add" },
@@ -200,8 +214,7 @@ return {
     { s = "tormenta_lanzas__S1009", w = "GT", t0 = 1.81, ms = 0.05, sc = 1, a = 0.95, modo = "once", off = { 24, -9 }, dir = false, mezcla = "add" },
     { s = "tormenta_lanzas__S1109", w = "GT", t0 = 1.95, ms = 0.05, sc = 1, a = 0.95, modo = "once", off = { -65, 20 }, dir = false, mezcla = "add" },
   } },
-  trampa = { clase = "cazador", dur = 3, golpes = { 1.5 }, capas = {
-    { s = "trampa__S3800101", w = "GT", t0 = 0.25, ms = 0.0833, sc = 0.9, a = 1, modo = "loop", t1 = 2.9, dir = false, mezcla = "add" },
-    { s = "trampa__S3810101", w = "GT", t0 = 0.5, ms = 0.0333, sc = 0.85, a = 1, modo = "hold", t1 = 2.9, dir = false, mezcla = "add" },
+  trampa = { clase = "cazador", dur = 1.2, golpes = {  }, capas = {
+    { s = "trampa__fx", w = "GC", t0 = 0.05, ms = 0.07, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
 }

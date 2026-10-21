@@ -23,6 +23,18 @@
       <i id="paso_agil" nivel="20" tipo="activa" slot="6">
         <requiere lista="trampa,2"/>
       </i>
+      <i id="disparo_multiple" nivel="22" tipo="activa" slot="7">
+        <requiere lista="disparo,3"/>
+      </i>
+      <i id="disparo_explosivo" nivel="24" tipo="activa" slot="8">
+        <requiere lista="lluvia,2"/>
+      </i>
+      <i id="disparo_helado" nivel="26" tipo="activa" slot="9">
+        <requiere lista="preciso,1"/>
+      </i>
+      <i id="marca_cazador" nivel="28" tipo="activa" slot="10">
+        <requiere lista="flecha_veneno,1"/>
+      </i>
       <i id="punteria" nombre="Puntería" nivel="1" tipo="pasiva" desc="Más ataque físico.">
         <icono hoja="equipment" sprite="736"/>
         <por atk="0.08"/>
@@ -60,6 +72,18 @@
       <i id="juicio" nivel="20" tipo="activa" slot="6">
         <requiere lista="castigo,3"/>
       </i>
+      <i id="escudo_divino" nivel="22" tipo="activa" slot="7">
+        <requiere lista="curar,3"/>
+      </i>
+      <i id="cadena_sanacion" nivel="24" tipo="activa" slot="8">
+        <requiere lista="sanacion,1"/>
+      </i>
+      <i id="tormenta_divina" nivel="26" tipo="activa" slot="9">
+        <requiere lista="juicio,1"/>
+      </i>
+      <i id="resurreccion" nivel="28" tipo="activa" slot="10">
+        <requiere lista="consagrar,1"/>
+      </i>
       <i id="fe" nombre="Fe" nivel="1" tipo="pasiva" desc="Más ataque mágico.">
         <icono hoja="equipment" sprite="178"/>
         <por matk="0.08"/>
@@ -96,6 +120,18 @@
       </i>
       <i id="furia" nivel="20" tipo="activa" slot="6">
         <requiere lista="grito,2"/>
+      </i>
+      <i id="golpe_terrestre" nivel="22" tipo="activa" slot="7">
+        <requiere lista="tajo,2"/>
+      </i>
+      <i id="salto_impacto" nivel="24" tipo="activa" slot="8">
+        <requiere lista="carga,2"/>
+      </i>
+      <i id="estocada_lineal" nivel="26" tipo="activa" slot="9">
+        <requiere lista="golpe,3"/>
+      </i>
+      <i id="ejecucion" nivel="28" tipo="activa" slot="10">
+        <requiere lista="pantera,2"/>
       </i>
       <i id="vigor" nombre="Vigor" nivel="1" tipo="pasiva" desc="Más vida máxima.">
         <icono hoja="equipment" sprite="704"/>
@@ -263,6 +299,18 @@
     <paso_agil cd="0.05" dur="0.7" pot="0.1"/>
     <preciso cd="0.05" mana="0.03" pot="0.12"/>
     <sanacion cd="0.04" mana="0.03" pot="0.12"/>
+    <golpe_terrestre cd="0.04" mana="0.03" pot="0.12"/>
+    <salto_impacto cd="0.04" mana="0.03" pot="0.12"/>
+    <estocada_lineal cd="0.04" mana="0.03" pot="0.12"/>
+    <ejecucion cd="0.04" mana="0.03" pot="0.12"/>
+    <disparo_multiple cd="0.04" mana="0.03" pot="0.1"/>
+    <disparo_explosivo cd="0.04" mana="0.03" pot="0.12"/>
+    <disparo_helado cd="0.04" mana="0.03" pot="0.1"/>
+    <marca_cazador cd="0.04" mana="0.03" dur="1" pot="0.1"/>
+    <escudo_divino cd="0.04" mana="0.03" dur="1" pot="0.12"/>
+    <cadena_sanacion cd="0.04" mana="0.03" pot="0.12"/>
+    <tormenta_divina cd="0.04" mana="0.03" pot="0.12"/>
+    <resurreccion cd="0.05" mana="0.04" pot="0"/>
     <rayo_hielo cd="0.04" mana="0.03" pot="0.1"/>
     <rayo_arcano cd="0.04" mana="0.03" pot="0.12"/>
     <lluvia_fuego cd="0.04" mana="0.03" pot="0.12"/>
