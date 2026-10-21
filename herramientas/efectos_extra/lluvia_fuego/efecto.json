@@ -1,0 +1,67 @@
+{
+ "id_dos_coronas": "lluvia_fuego",
+ "clase": "mago",
+ "nombre": "Lluvia de fuego",
+ "poder_fao": "(secuencia propia: paquete del mago)",
+ "secuencias": {
+  "caida": {
+   "sheet": "sheets/caida.png",
+   "frames": 7,
+   "cell": [
+    128,
+    128
+   ],
+   "origin": [
+    64,
+    64
+   ],
+   "ms_per_frame": 70.0
+  },
+  "suelo": {
+   "sheet": "sheets/suelo.png",
+   "frames": 5,
+   "cell": [
+    128,
+    128
+   ],
+   "origin": [
+    64,
+    64
+   ],
+   "ms_per_frame": 120.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 1.1,
+  "golpes_s": [
+   0.5,
+   0.8
+  ],
+  "capas": [
+   {
+    "s": "caida",
+    "w": "GT",
+    "t0": 0.0,
+    "ms": 0.07,
+    "sc": 1.6,
+    "a": 1.0,
+    "modo": "once",
+    "off": [
+     0,
+     -10
+    ]
+   },
+   {
+    "s": "suelo",
+    "w": "GT",
+    "t0": 0.49,
+    "ms": 0.12,
+    "sc": 1.6,
+    "a": 1.0,
+    "modo": "once"
+   }
+  ]
+ },
+ "nota": "lluvia_fuego: caen las llamas sobre la zona y arden en el suelo."
+}

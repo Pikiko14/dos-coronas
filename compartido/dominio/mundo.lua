@@ -1413,6 +1413,7 @@ end
 Mundo.SONIDO_PODER = {
   golpe = "corte", tajo = "corte", carga = "corte", grito = "grito",
   misil = "magia", fuego = "fuego", escudo = "magia", nova = "hielo",
+  rayo_hielo = "hielo", rayo_arcano = "magia", lluvia_fuego = "fuego", teletransporte = "magia", torbellino = "magia",
   disparo = "flecha", lluvia = "flecha", preciso = "flecha", trampa = "flecha",
   curar = "cura", bendicion = "sagrado", castigo = "sagrado", consagrar = "sagrado",
   pantera = "fuego", furia = "grito", sombra = "magia", meteoro = "fuego",
@@ -1489,11 +1490,29 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
       local my = ({ [1] = 1, [2] = -1, [3] = 0, [4] = 0 })[p.dir or 1] or 0
       px, py = p.x + mx * d, p.y + my * d
     end
-    p.impactoX, p.impactoY = px, py
-    for _, o in pairs(self.entidades) do
-      if o.vivo and self:mismoLugar(p, o) and self:puedeDanar(p, o) and Util.dist(px, py, o.x, o.y) <= (h.aoe or 2) then
-        golpe(o, h.coef)
-        if h.lentitud and o.vivo then self:aplicarEstado(o, "lentitud", 3, h.lentitud, p) end
+    if h.blink then
+      -- teletransporte: te mueves al punto (como mucho hasta el alcance, y a la casilla libre más cercana)
+      local d = Util.dist(p.x, p.y, px, py)
+      if d > (h.rango or 7) then px, py = p.x + (px - p.x) * h.rango / d, p.y + (py - p.y) * h.rango / d end
+      local ox, oy = p.x, p.y
+      if not self:colocarCerca(p, px, py) then p.cds[idh], p.mp = 0, p.mp + h.mana; return "No puedes ir ahí." end
+      p.blinkDesde = { ox, oy }
+      p.persigue, p.objetivoMover = nil, nil
+      px, py = p.x, p.y
+    else
+      p.impactoX, p.impactoY = px, py
+      for _, o in pairs(self.entidades) do
+        if o.vivo and self:mismoLugar(p, o) and self:puedeDanar(p, o) and Util.dist(px, py, o.x, o.y) <= (h.aoe or 2) then
+          golpe(o, h.coef)
+          if h.lentitud and o.vivo then self:aplicarEstado(o, "lentitud", 3, h.lentitud, p) end
+        end
+      end
+      if h.pulsos and h.pulsos > 1 then
+        -- torbellino: los golpes siguientes llegan cada 0,35 s mientras gira
+        self.pulsos = self.pulsos or {}
+        for i = 1, h.pulsos - 1 do
+          self.pulsos[#self.pulsos + 1] = { t = self.tiempo + 0.45 + 0.35 * (i - 1), p = p, x = px, y = py, h = h }
+        end
       end
     end
   elseif h.tipo == "aliado" then
@@ -1553,6 +1572,11 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
     if h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" or h.tipo == "invocar" then
       X, Y, rot = p.x, p.y, Mundo.ANGULO_DIR[p.dir or 1]       -- (los de alrededor se abren hacia donde mira el personaje)
     elseif h.tipo == "punto" then X, Y, rot = p.impactoX or tx or ex, p.impactoY or ty or ey, nil end
+    if p.blinkDesde then
+      self:efecto(idh, p.blinkDesde[1], p.blinkDesde[2], Mundo.DURACION_EFECTO[idh], nil, p.blinkDesde[1], p.blinkDesde[2])
+      X, Y = p.x, p.y
+      p.blinkDesde = nil
+    end
     self:efecto(idh, X, Y, Mundo.DURACION_EFECTO[idh], rot, p.x, p.y)
     p.impactoX, p.impactoY = nil, nil
   elseif h.tipo == "alrededor" or h.tipo == "buff_alrededor" or h.tipo == "mixto" or h.tipo == "propio" or h.tipo == "suelo" or h.tipo == "aliados" or h.tipo == "invocar" then
@@ -3249,6 +3273,22 @@ end
 
 function Mundo:actualizar(dt)
   self.tiempo = self.tiempo + dt
+  if self.pulsos and #self.pulsos > 0 then
+    -- golpes diferidos de los poderes de varios impactos (torbellino arcano)
+    local resto = {}
+    for _, q in ipairs(self.pulsos) do
+      if q.t > self.tiempo then resto[#resto + 1] = q
+      elseif q.p.vivo then
+        for _, o in pairs(self.entidades) do
+          if o.vivo and self:mismoLugar(q.p, o) and self:puedeDanar(q.p, o) and Util.dist(q.x, q.y, o.x, o.y) <= (q.h.aoe or 2) then
+            self:golpear(q.p, o, q.h.coef, nil, q.h.dano or "fisico")
+            if o.vivo and q.h.lentitud then self:aplicarEstado(o, "lentitud", 3, q.h.lentitud, q.p) end
+          end
+        end
+      end
+    end
+    self.pulsos = resto
+  end
   local ids = self._ids
   if not ids then
     ids = {}

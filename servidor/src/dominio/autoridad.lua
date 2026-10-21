@@ -47,7 +47,7 @@ function A.aceptar(mundo, pj, nombre, datos)
   end
   if nombre == "habilidad" then
     local slot = tonumber(datos.slot)
-    if not slot or slot < 1 or slot > 6 then return false end
+    if not slot or slot < 1 or slot > 10 then return false end
     slot = math.floor(slot)
     local limpio = { slot = slot }
     -- poderes de área (meteoro...): se puede apuntar a un punto, siempre dentro de su alcance

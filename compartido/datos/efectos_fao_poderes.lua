@@ -55,6 +55,9 @@ return {
     { s = "embestida__S3930105", w = "proj", t0 = 0.25, ms = 0.0667, sc = 0.8, a = 0.85, modo = "proj", t1 = 0.72, dir = true, mezcla = "add" },
     { s = "embestida__S3930305", w = "proj", t0 = 0.25, ms = 0.0667, sc = 0.8, a = 0.6, modo = "proj", t1 = 0.72, off = { -20, 0 }, dir = true, mezcla = "add" },
   } },
+  escudo = { clase = "mago", dur = 0.9, golpes = {  }, capas = {
+    { s = "escudo__cupula", w = "C", t0 = 0, ms = 0.09, sc = 1.2, a = 1, modo = "once", off = { 0, 4 }, dir = false, mezcla = "add" },
+  } },
   espectro = { clase = "nigromante", dur = 3.2, golpes = {  }, capas = {
     { s = "espectro__s2370101", w = "GC", t0 = 0.4, ms = 0.0667, sc = 0.6, a = 1, modo = "once", off = { 110, 10 }, dir = false, mezcla = "add" },
     { s = "espectro__s237011", w = "GC", t0 = 0.4, ms = 0.1, sc = 0.6, a = 1, modo = "once", off = { 110, 10 }, dir = false, mezcla = "add" },
@@ -111,6 +114,10 @@ return {
     { s = "lluvia__L_00", w = "GT", t0 = 1, ms = 0.0167, sc = 1, a = 1, modo = "once", off = { -40, 0 }, dir = false, mezcla = "add" },
     { s = "lluvia__L_00", w = "GT", t0 = 1.3, ms = 0.0167, sc = 1, a = 1, modo = "once", off = { 55, -10 }, dir = false, mezcla = "add" },
   } },
+  lluvia_fuego = { clase = "mago", dur = 1.1, golpes = { 0.5, 0.8 }, capas = {
+    { s = "lluvia_fuego__caida", w = "GT", t0 = 0, ms = 0.07, sc = 1.6, a = 1, modo = "once", off = { 0, -10 }, dir = false, mezcla = "add" },
+    { s = "lluvia_fuego__suelo", w = "GT", t0 = 0.49, ms = 0.12, sc = 1.6, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
   maldecir = { clase = "nigromante", dur = 3, golpes = { 0.7 }, capas = {
     { s = "maldecir__Ini", w = "T", t0 = 0.2, ms = 0.05, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "maldecir__Line", w = "T", t0 = 0.55, ms = 0.08, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
@@ -122,6 +129,10 @@ return {
     { s = "meteoro__impacto", w = "T", t0 = 0.5, ms = 0.09, sc = 2, a = 1, modo = "once", off = { 0, 30 }, dir = false, mezcla = "add" },
     { s = "meteoro__onda", w = "GT", t0 = 0.55, ms = 0.45, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "meteoro__residual", w = "GT", t0 = 0.9, ms = 0.35, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
+  misil = { clase = "mago", dur = 0.8, golpes = { 0.42 }, capas = {
+    { s = "misil__orbe", w = "C", t0 = 0.05, ms = 0.07, sc = 0.8, a = 1, modo = "proj", t1 = 0.42, dir = false, mezcla = "add" },
+    { s = "misil__impacto", w = "T", t0 = 0.42, ms = 0.07, sc = 1.1, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
   muro_lanzas = { clase = "lancero", dur = 3.2, golpes = {  }, capas = {
     { s = "muro_lanzas__Effect", w = "C", t0 = 0.2, ms = 0.08, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
@@ -136,11 +147,24 @@ return {
     { s = "preciso__s3830303", w = "T", t0 = 0.4467, ms = 0.0667, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "preciso__s3830403", w = "T", t0 = 0.5467, ms = 0.0667, sc = 1.1, a = 0.8, modo = "once", dir = false, mezcla = "add" },
   } },
+  rayo_arcano = { clase = "mago", dur = 0.9, golpes = { 0.5 }, capas = {
+    { s = "rayo_arcano__carga", w = "C", t0 = 0, ms = 0.09, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
+    { s = "rayo_arcano__haz", w = "T", t0 = 0.2, ms = 0.05, sc = 1, a = 1, modo = "estela", t1 = 0.6, dir = false, mezcla = "add" },
+    { s = "rayo_arcano__impacto", w = "T", t0 = 0.5, ms = 0.08, sc = 1.4, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
+  rayo_hielo = { clase = "mago", dur = 0.95, golpes = { 0.5 }, capas = {
+    { s = "rayo_hielo__chispa", w = "C", t0 = 0, ms = 0.12, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
+    { s = "rayo_hielo__lanza", w = "T", t0 = 0.15, ms = 0.05, sc = 0.9, a = 1, modo = "estela", t1 = 0.5, dir = false, mezcla = "add" },
+    { s = "rayo_hielo__impacto", w = "T", t0 = 0.5, ms = 0.08, sc = 1.2, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
   sanacion = { clase = "clerigo", dur = 3.3, golpes = {  }, capas = {
     { s = "sanacion__ground_light", w = "GC", t0 = 0.2, ms = 0.1, sc = 0.6, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "sanacion__ground_ground", w = "GC", t0 = 0.2, ms = 0.1, sc = 0.7, a = 1, modo = "once", dir = false, mezcla = "add" },
     { s = "sanacion__music", w = "C", t0 = 0.5, ms = 0.12, sc = 0.8, a = 1, modo = "once", off = { 0, -60 }, dir = false, mezcla = "add" },
     { s = "sanacion__ground_roundAngel", w = "GC", t0 = 0.5, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
+  } },
+  teletransporte = { clase = "mago", dur = 0.85, golpes = {  }, capas = {
+    { s = "teletransporte__portal", w = "GT", t0 = 0, ms = 0.07, sc = 1.3, a = 1, modo = "once", off = { 0, -10 }, dir = false, mezcla = "add" },
   } },
   toque_necro = { clase = "nigromante", dur = 1.647, golpes = { 0.447 }, capas = {
     { s = "toque_necro__s2040105", w = "proj", t0 = 0.22, ms = 0.1333, sc = 0.9, a = 1, modo = "proj", t1 = 0.4467, dir = true, mezcla = "alpha" },
@@ -150,6 +174,10 @@ return {
     { s = "toque_necro__s204043", w = "T", t0 = 0.8467, ms = 0.1333, sc = 1, a = 1, modo = "step", dur = 0.1333, th = 0, dir = true, mezcla = "add" },
     { s = "toque_necro__s204053", w = "T", t0 = 0.9801, ms = 0.1333, sc = 1, a = 1, modo = "step", dur = 0.1333, th = 0, dir = true, mezcla = "add" },
     { s = "toque_necro__s204063", w = "T", t0 = 1.1134, ms = 0.1333, sc = 1, a = 1, modo = "step", dur = 0.1333, th = 0, dir = true, mezcla = "add" },
+  } },
+  torbellino = { clase = "mago", dur = 1.6, golpes = { 0.45, 0.8, 1.15, 1.5 }, capas = {
+    { s = "torbellino__giro", w = "GT", t0 = 0, ms = 0.15, sc = 1.1, a = 1, modo = "loop", t1 = 1.3, off = { 0, -6 }, dir = false, mezcla = "add" },
+    { s = "torbellino__fin", w = "GT", t0 = 1.3, ms = 0.3, sc = 1.1, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
   tormenta_lanzas = { clase = "lancero", dur = 3, golpes = { 0.9, 1.2, 1.5 }, capas = {
     { s = "tormenta_lanzas__G0109", w = "GT", t0 = 0.2, ms = 0.03, sc = 0.9, a = 1, modo = "once", off = { -70, -25 }, dir = false, mezcla = "add" },

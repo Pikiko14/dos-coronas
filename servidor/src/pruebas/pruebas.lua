@@ -630,7 +630,7 @@ function Pruebas.correr()
         end
         if n.requiere then fallar(errores, clase .. " " .. n.id .. " pide un nodo que existe", ids[n.requiere[1]]) end
       end
-      fallar(errores, clase .. " tiene seis poderes", activas == 6)
+      fallar(errores, clase .. " tiene " .. (clase == "mago" and "diez" or "seis") .. " poderes", activas == (clase == "mago" and 10 or 6))
     end
     local m = mundo:crearPersonaje({ nombre = "Arbolito", faccion = "albor", clase = "guerrero" })
     fallar(errores, "empieza con el poder inicial", Arbol.rango(m, "golpe") == 1 and Arbol.rango(m, "tajo") == 0)
@@ -4414,6 +4414,37 @@ mundo.tiempo = 100
     end
     fallar(errores, "los " .. #ids .. " poderes pasan la validación", #fallos == 0, table.concat(fallos, " | "))
   end)
+  paso("mago de 10 poderes: teletransporte, torbellino de varios golpes y barra completa", function()
+    local Arbol = require("compartido.dominio.arbol")
+    local Balance = require("compartido.dominio.balance")
+    local mundo = Mundo.nuevo()
+    local p = mundo:crearPersonaje({ nombre = "Mago10", faccion = "albor", clase = "mago", nivel = 30 })
+    fallar(errores, "la barra del mago tiene 10 poderes y todos están en el árbol", #Datos.barra.mago == 10 and #Arbol.ordenBarra("mago") == 10)
+    for _, id in ipairs(Datos.barra.mago) do p.habilidades[id] = 1 end
+    p.hp, p.hpMax, p.mp, p.mpMax, p.ultimoGolpe = 9999, 9999, 9999, 9999, -99
+    local function slotDe(id) for i, b in ipairs(Datos.barra.mago) do if b == id then return i end end end
+    fallar(errores, "con nivel 30 están disponibles los 10 huecos", Balance.slotDisponible(30, 10) and not Balance.slotDisponible(20, 10))
+    -- teletransporte: te mueve (como mucho hasta su alcance) y no lanza daño
+    mundo.tiempo = 100
+    p.cds = {}
+    local x0, y0 = p.x, p.y
+    local err = mundo:usarHabilidad(p, slotDe("teletransporte"), p.x + 3, p.y)
+    local movido = math.sqrt((p.x - x0) ^ 2 + (p.y - y0) ^ 2)
+    fallar(errores, "el teletransporte te mueve", err == nil and movido > 1.5 and movido <= 7.5, tostring(err) .. " " .. movido)
+    local fxs = 0
+    for _, e in ipairs(mundo.efectos) do if e.tipo == "teletransporte" then fxs = fxs + 1 end end
+    fallar(errores, "el teletransporte se ve en el origen y en el destino", fxs == 2, tostring(fxs))
+    -- torbellino: golpea en el momento y vuelve a golpear mientras gira
+    p.cds, p.mp = {}, 9999
+    local m = mundo:spawnMonstruo("pinguino_aprendiz", p.x + 2, p.y, { x = p.x, y = p.y })
+    m.hp, m.hpMax = 1e6, 1e6
+    local hp0 = m.hp
+    p.objetivo = m.id
+    fallar(errores, "el torbellino se lanza", mundo:usarHabilidad(p, slotDe("torbellino"), m.x, m.y) == nil)
+    local hp1 = m.hp
+    for _ = 1, 25 do mundo:actualizar(0.1) end
+    fallar(errores, "el torbellino golpea varias veces", hp1 < hp0 and m.hp < hp1 - (hp0 - hp1) * 1.5, hp0 .. " " .. hp1 .. " " .. m.hp)
+  end)
   paso("recompensa diaria: con la bolsa llena explica el motivo en el panel y se reclama al hacer sitio", function()
     local Diaria = require("compartido.dominio.diaria")
     local mundo = Mundo.nuevo()
@@ -5627,7 +5658,7 @@ mundo.tiempo = 100
     fallar(errores, "al nivel 3 se desbloquea el segundo poder", a1.nivel == 3 and conocidos(a1) == 2 and (a1.habilidades[barra[2]] or 0) == 1)
     local hpA2, matkA2 = a2.hpMax, a2.matk
     mundo:xpMoba(a2, 100000)
-    fallar(errores, "el nivel máximo de la partida es 18 y con él todos los poderes (ya con rango)", a2.nivel == Moba.NIVEL_MAX and conocidos(a2) == 6 and a2.xp == 0 and (a2.habilidades[Datos.barra.mago[1]] or 0) >= 3, tostring(a2.nivel))
+    fallar(errores, "el nivel máximo de la partida es 18 y con él todos los poderes (ya con rango)", a2.nivel == Moba.NIVEL_MAX and conocidos(a2) == #Datos.barra[a2.clase] and a2.xp == 0 and (a2.habilidades[Datos.barra.mago[1]] or 0) >= 3, tostring(a2.nivel))
     fallar(errores, "más experiencia no pasa del 18", (function() mundo:xpMoba(a2, 5000) return a2.nivel == 18 end)())
     fallar(errores, "al subir de nivel crecen las estadísticas", a2.hpMax > hpA2 and a2.matk > matkA2, hpA2 .. "->" .. a2.hpMax)
     fallar(errores, "el jugador sabe qué nivel desbloquea cada poder (para la barra)", mundo:construirTu(a2).mobaMax == 18 and mundo:construirTu(a2).mobaNiveles[2] == 3)

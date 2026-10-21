@@ -5,6 +5,7 @@ return {
   map021 = 21,
   pozo_sin_fondo = 31,
   decierto_ardiente = 33,
+  map044 = 44,
   shadow_field = 66,
   canal_mariam = 257,
 }

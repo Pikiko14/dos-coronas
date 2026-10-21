@@ -762,14 +762,15 @@ function I.hud(mundo, p, w, h)
 
   -- Barra de poderes (sobre el mundo, abajo en el centro)
   local barraP = Datos.barra[p.clase]
-  local lado_c, sep = 46, 4
-  -- la barra (6 poderes + 2 pociones) va centrada en la pantalla; los accesos (poderes, mall, monturas, autopoción) van abajo a la derecha
-  local total = 8 * lado_c + 7 * sep
+  local nPod = #barraP                            -- 6 poderes (10 el mago)
+  local lado_c, sep = (nPod > 6 and 40 or 46), 4
+  -- la barra (los poderes + 2 pociones) va centrada en la pantalla; los accesos (poderes, mall, monturas, autopoción) van abajo a la derecha
+  local total = (nPod + 2) * lado_c + (nPod + 1) * sep
   local bx0 = vw / 2 - total / 2
   local by0 = vh - lado_c - 10
   local orden = Ajustes.orden(p.clase)
   local teclas = Ajustes.teclas
-  for i = 1, 6 do
+  for i = 1, nPod do
     local slotReal = orden[i]
     local hid = barraP[slotReal]
     local rangoH = Arbol.rango(p, hid)
@@ -821,7 +822,7 @@ function I.hud(mundo, p, w, h)
     local mx, my = love.mouse.getPosition()
     local esc = I.escala or 1
     mx, my = mx / esc, my / esc
-    for i = 1, 6 do
+    for i = 1, nPod do
       local x = bx0 + (i - 1) * (lado_c + sep)
       if sobre(x, by0, lado_c, lado_c) and orden[i] ~= ah.slot then
         love.graphics.setColor(1, 0.85, 0.3, 0.9)
@@ -906,8 +907,8 @@ function I.hud(mundo, p, w, h)
       I.pista = it.nombre .. " (" .. n .. " en la bolsa). Autopoción " .. estado .. ". Se configura con R."
     end
   end
-  pocion("vida", 7, Ajustes.nombreTecla(teclas.pocion_vida), "poc_vida")
-  pocion("mana", 8, Ajustes.nombreTecla(teclas.pocion_mana), "poc_mana")
+  pocion("vida", nPod + 1, Ajustes.nombreTecla(teclas.pocion_vida), "poc_vida")
+  pocion("mana", nPod + 2, Ajustes.nombreTecla(teclas.pocion_mana), "poc_mana")
   -- accesos abajo a la derecha: poderes (K), Item Mall (L), monturas (U) y autopoción (R)
   do
     local lado, sepA = 44, 6
@@ -1705,11 +1706,14 @@ function I.panelArbol(mundo, p, w, h)
   love.graphics.setColor(puntos > 0 and 1 or 0.7, puntos > 0 and 0.88 or 0.68, puntos > 0 and 0.35 or 0.6)
   love.graphics.print("Puntos disponibles: " .. puntos .. "   (1 por nivel)", px + 12, py + 34)
 
+  local nAct = 0
+  for _, n in ipairs(nodos) do if n.tipo == "activa" then nAct = nAct + 1 end end
   local cw, ch, sep = 116, 134, 8
-  local x0 = px + (pw - (6 * cw + 5 * sep)) / 2
+  if nAct > 6 then cw, sep = 70, 4 end                         -- 10 poderes (el mago): tarjetas más estrechas
+  local x0 = px + (pw - (math.max(6, nAct) * cw + (math.max(6, nAct) - 1) * sep)) / 2
   local filas = { activa = py + 78, pasiva = py + 78 + ch + 34 }
   love.graphics.setColor(0.85, 0.78, 0.6)
-  love.graphics.print("Poderes (barra 1-6)", x0, filas.activa - 20)
+  love.graphics.print("Poderes (barra 1-" .. nAct .. ")", x0, filas.activa - 20)
   love.graphics.print("Pasivas", x0, filas.pasiva - 20)
 
   local pos, contadores = {}, { activa = 0, pasiva = 0 }
@@ -1753,11 +1757,13 @@ function I.panelArbol(mundo, p, w, h)
       Atlas.dibujar(n.icono.hoja, n.icono.sprite, c.x + cw / 2, c.y + 32, 1.4, 16, 16)
     end
     love.graphics.setColor(0.95, 0.9, 0.78, opaco)
-    love.graphics.printf(Arbol.nombre(n), c.x + 4, c.y + 56, cw - 8, "center")
+    local ne = cw < 100 and (#Arbol.nombre(n) > 12 and 0.68 or 0.8) or 1                     -- (tarjetas estrechas: nombre más pequeño)
+    love.graphics.printf(Arbol.nombre(n), c.x + 2, c.y + 56, (cw - 4) / ne, "center", 0, ne, ne)
     -- rangos
+    local paso, anchoR = (cw < 100 and 14 or 19), (cw < 100 and 11 or 16)
     for i = 1, Arbol.MAX do
       love.graphics.setColor(i <= r and 1 or 0.25, i <= r and 0.8 or 0.24, i <= r and 0.25 or 0.22, 1)
-      love.graphics.rectangle("fill", c.x + cw / 2 - 45 + (i - 1) * 19, c.y + 98, 16, 8, 2, 2)
+      love.graphics.rectangle("fill", c.x + cw / 2 - (Arbol.MAX * paso - (paso - anchoR)) / 2 + (i - 1) * paso, c.y + 98, anchoR, 8, 2, 2)
     end
     love.graphics.setColor(0.75, 0.72, 0.6, opaco)
     local pie
@@ -1768,7 +1774,9 @@ function I.panelArbol(mundo, p, w, h)
     elseif r == 0 and (p.nivel or 1) < n.nivel then pie = "Nivel " .. n.nivel
     elseif puede then pie = r == 0 and "Clic: aprender" or "Clic: mejorar"
     else pie = "Sin puntos" end
+    love.graphics.setScissor(c.x * (I.escala or 1), c.y * (I.escala or 1), cw * (I.escala or 1), ch * (I.escala or 1))
     love.graphics.printf(pie, c.x + 4, c.y + 110, cw - 8, "center")
+    love.graphics.setScissor()
     if n.tipo == "activa" then
       love.graphics.setColor(1, 0.9, 0.5, opaco)
       love.graphics.print(tostring(n.slot), c.x + 8, c.y + 6)

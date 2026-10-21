@@ -57,8 +57,8 @@ function Pruebas.correr()
     end
     fallar(errores, "hay efectos", n >= 20)
     for _, id in ipairs({ "golpe", "tajo", "grito", "carga", "misil", "fuego", "escudo", "nova", "disparo",
-      "lluvia", "trampa", "preciso", "curar", "bendicion", "castigo", "consagrar", "pantera", "furia", "sombra",
-      "meteoro", "flecha_veneno", "paso_agil", "sanacion", "juicio",
+      "lluvia", "trampa", "preciso", "curar", "bendicion", "castigo", "consagrar", "pantera", "furia",
+      "meteoro", "flecha_veneno", "paso_agil", "sanacion", "juicio", "rayo_hielo", "rayo_arcano", "lluvia_fuego", "teletransporte", "torbellino",
       "estocada", "barrido", "muro_lanzas", "embestida", "jabalina", "tormenta_lanzas",
       "toque_necro", "espinas", "maldecir", "alzar_esqueletos", "drenar", "espectro" }) do
       fallar(errores, "efecto del poder " .. id, Efectos.def[id] ~= nil)
@@ -165,12 +165,11 @@ function Pruebas.correr()
     pj.cds = {}
     local ok = Eco.lanzar(app, { slot = slotDe("misil") })
     Eco.actualizar(app, 0.05)
-    local pr
+    local pr, fxm = nil, 0
     for _, e in pairs(mundo.entidades) do if e._eco and e.kind == "proyectil" then pr = e end end
-    fallar(errores, "el misil sale al instante y avanza", ok == true and pr and pr.x > pj.x, tostring(ok))
-    mundo.entidades[901] = { id = 901, kind = "proyectil", tipo = "misil", x = pj.x + 1.5, y = pj.y, tx = mob.x, ty = mob.y, vivo = true }
-    Eco.actualizar(app, 0.016)
-    fallar(errores, "el proyectil del servidor se oculta mientras se ve el eco", mundo.entidades[901] == nil)
+    for _, fx in ipairs(mundo.efectos) do if fx._eco and fx.tipo == "misil" then fxm = fxm + 1 end end
+    -- el misil arcano también es un efecto de capas (el orbe viaja dentro de él): sin proyectil de eco
+    fallar(errores, "el misil sale al instante como efecto de capas", ok == true and pr == nil and fxm == 1, tostring(ok) .. "/" .. fxm)
     -- el servidor rechaza: sin confirmación el eco se corta
     local app2 = { jugador = pj, mundo = mundo, miId = pj.id, rol = "cliente", ping = 0.05 }
     pj.cds = {}
@@ -243,7 +242,7 @@ function Pruebas.correr()
     -- el orden de la barra sube de nivel: cada poder tiene un nivel igual o mayor que el anterior
     for _, clase in ipairs(Datos.ORDEN_CLASES) do
       local orden, barra, ant = Arbol.ordenBarra(clase), Datos.barra[clase], 0
-      local ok = #orden == 6
+      local ok = #orden == #barra
       for _, slot in ipairs(orden) do
         local n = Arbol.nodo(clase, barra[slot])
         if not n or n.nivel < ant then ok = false end
@@ -2448,7 +2447,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local cv = love.graphics.newCanvas(1280, 720)
     local total = 0
     for _, clase in ipairs({ "guerrero", "lancero", "cazador", "clerigo", "nigromante", "mago" }) do
-      local mosaico = vista and love.graphics.newCanvas(CW * 4, CH * 6) or nil
+      local mosaico = vista and love.graphics.newCanvas(CW * 4, CH * #Datos.barra[clase]) or nil
       for fila, id in ipairs(Datos.barra[clase]) do
         if Poderes[id] then
           total = total + 1
@@ -2510,7 +2509,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       end
       if mosaico then Log.volcar("capturas/poderes_fao_" .. clase .. ".png", mosaico:newImageData():encode("png"):getString()) end
     end
-    fallar(errores, "se probaron los 29 poderes (las cinco clases y la bola de fuego y el meteoro del mago)", total == 29, tostring(total))
+    fallar(errores, "se probaron los 36 poderes (las seis clases, con los 10 del mago)", total == 36, tostring(total))
   end)
   -- Asedio (MOBA) en el cliente: se dibujan nexos, torres, esbirros y el marcador, el panel de guerra tiene su botón y el minimapa los marca. Con DC_PRUEBA_MOBA=1 guarda juego/capturas/moba.png
   -- (escena junto a una torre con esbirros, y el panel de guerra con el asedio).
@@ -2640,7 +2639,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       love.graphics.pop()
       fallar(errores, "se dibuja el proyectil " .. tipo, ok, tostring(err))
     end
-    fallar(errores, "se probaron los 24 poderes", n == 24 * 5, tostring(n))
+    fallar(errores, "se probaron los 28 poderes", n == 28 * 5, tostring(n))
   end)
   paso("chat: barra de desplazamiento y rueda", function()
     local Entrada = require("src.presentacion.entrada")
@@ -2678,6 +2677,30 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     fallar(errores, "al abrirla se da por visto", Interfaz.sistemaNuevo == false)
     Interfaz.canal = "todo"
   end)
+  paso("interfaz: la barra y el árbol del mago con 10 poderes se dibujan (DC_PRUEBA_PODERES_FAO=1 guarda capturas/mago_ui.png)", function()
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Diez", faccion = "albor", clase = "mago", nivel = 30 })
+    for _, id in ipairs(Datos.barra.mago) do pj.habilidades[id] = 1 end
+    Interfaz.escala = 1
+    local cv = love.graphics.newCanvas(1280, 720)
+    local mosaico = love.graphics.newCanvas(1280, 1440)
+    for k, panel in ipairs({ false, "arbol" }) do
+      Interfaz.panel = panel or nil
+      love.graphics.push("all")
+      love.graphics.setCanvas({ cv, stencil = true })
+      love.graphics.clear(0.2, 0.3, 0.2, 1)
+      local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+      love.graphics.pop()
+      fallar(errores, "el HUD del mago se dibuja (" .. tostring(panel) .. ")", ok, tostring(err))
+      love.graphics.push("all")
+      love.graphics.setCanvas(mosaico)
+      love.graphics.setColor(1, 1, 1, 1)
+      love.graphics.draw(cv, 0, (k - 1) * 720)
+      love.graphics.pop()
+    end
+    Interfaz.panel = nil
+    if os.getenv("DC_PRUEBA_PODERES_FAO") then Log.volcar("capturas/mago_ui.png", mosaico:newImageData():encode("png"):getString()) end
+  end)
   paso("interfaz: clics", function()
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Clic", faccion = "albor", clase = "mago" })
@@ -2699,7 +2722,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       if id == "hud_ayuda" then ayuda = id end
     end
     fallar(errores, "los botones del minimapa reciben clics", ayuda == "hud_ayuda", tostring(ayuda))
-    fallar(errores, "el hueco de la barra de poderes responde", Interfaz.consumir((1280 - lado) / 2 - 175, 720 - consola - 34) == "hab_1")
+    fallar(errores, "el hueco de la barra de poderes responde", Interfaz.consumir((1280 - lado) / 2 - 242, 720 - consola - 34) == "hab_1")
   end)
   paso("interfaz: clic derecho sobre un jugador abre el menú de trato, gremio y grupo", function()
     local Dibujo = require("src.presentacion.render.dibujo")

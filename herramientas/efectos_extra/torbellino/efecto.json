@@ -1,0 +1,70 @@
+{
+ "id_dos_coronas": "torbellino",
+ "clase": "mago",
+ "nombre": "Torbellino arcano",
+ "poder_fao": "(secuencia propia: paquete del mago)",
+ "secuencias": {
+  "giro": {
+   "sheet": "sheets/giro.png",
+   "frames": 4,
+   "cell": [
+    128,
+    128
+   ],
+   "origin": [
+    64,
+    64
+   ],
+   "ms_per_frame": 150.0
+  },
+  "fin": {
+   "sheet": "sheets/fin.png",
+   "frames": 1,
+   "cell": [
+    128,
+    128
+   ],
+   "origin": [
+    64,
+    64
+   ],
+   "ms_per_frame": 300.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 1.6,
+  "golpes_s": [
+   0.45,
+   0.8,
+   1.15,
+   1.5
+  ],
+  "capas": [
+   {
+    "s": "giro",
+    "w": "GT",
+    "t0": 0.0,
+    "ms": 0.15,
+    "sc": 1.1,
+    "a": 1.0,
+    "modo": "loop",
+    "t1": 1.3,
+    "off": [
+     0,
+     -6
+    ]
+   },
+   {
+    "s": "fin",
+    "w": "GT",
+    "t0": 1.3,
+    "ms": 0.3,
+    "sc": 1.1,
+    "a": 1.0,
+    "modo": "once"
+   }
+  ]
+ },
+ "nota": "torbellino_arcano: el torbellino gira (cuadros 7-10, los completos) y se deshace; el servidor golpea 4 veces."
+}

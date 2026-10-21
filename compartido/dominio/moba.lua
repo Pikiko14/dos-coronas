@@ -28,7 +28,7 @@ M.CARRILES_PARA_NEXO = 2                 -- carriles que hay que abrir para pode
 M.NOMBRES_CARRIL = { "Superior", "Central", "Inferior" }
 -- progresión dentro de la partida
 M.NIVEL_MAX = 18
-M.DESBLOQUEO = { 1, 3, 5, 7, 9, 11 }     -- nivel al que se desbloquea cada uno de los 6 poderes de la barra
+M.DESBLOQUEO = { 1, 3, 5, 7, 9, 11, 13, 14, 16, 18 }     -- nivel al que se desbloquea cada poder de la barra (los 4 últimos solo los tiene el mago)
 M.RANGO_CADA = 5                         -- cada 5 niveles tras desbloquearlo, el poder sube de rango (máximo 3)
 M.XP_TIEMPO = 2.5                        -- experiencia por segundo para todos
 M.XP = { esbirro = 22, torre = 90, baja = 130, baja_equipo = 40 }

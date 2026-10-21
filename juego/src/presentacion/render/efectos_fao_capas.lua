@@ -263,6 +263,7 @@ function M.icono(id, x, y, lado)
   if not mejor then return end
   local d = Seqs[mejor.s]
   local k = (mejor.dir and math.floor(d.n / 2)) or math.floor(d.n * 0.45)
+  if d.n > 1 and d.n <= 5 and mejor.s:find("__impacto$") then k = 1 end         -- (los estallidos cortos del mago: el segundo cuadro es el más lleno)
   local esc = lado / math.max(d.vw, d.vh) * 0.9
   local cx, cy = centro(mejor.s)
   love.graphics.setBlendMode("add")

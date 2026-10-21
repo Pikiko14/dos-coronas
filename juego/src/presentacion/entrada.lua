@@ -951,8 +951,8 @@ function Entrada.tecla(app, tecla)
   -- poderes: la tecla de cada posición de la barra (ordenada por nivel) lanza el poder que hay en ella
   local p = app.jugador
   local orden = p and Ajustes.orden(p.clase)
-  for i = 1, 6 do
-    if orden and tecla == Ajustes.teclas["poder" .. i] then Entrada.lanzarHabilidad(app, orden[i]) end
+  for i = 1, 10 do
+    if orden and orden[i] and tecla == Ajustes.teclas["poder" .. i] then Entrada.lanzarHabilidad(app, orden[i]) end
   end
   if tecla == Ajustes.teclas.pocion_vida then beberPocion(app, "vida") end
   if tecla == Ajustes.teclas.pocion_mana then beberPocion(app, "mana") end

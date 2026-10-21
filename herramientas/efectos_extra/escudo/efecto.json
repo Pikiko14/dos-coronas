@@ -1,0 +1,42 @@
+{
+ "id_dos_coronas": "escudo",
+ "clase": "mago",
+ "nombre": "Escudo arcano",
+ "poder_fao": "(secuencia propia: paquete del mago)",
+ "secuencias": {
+  "cupula": {
+   "sheet": "sheets/cupula.png",
+   "frames": 9,
+   "cell": [
+    128,
+    128
+   ],
+   "origin": [
+    64,
+    64
+   ],
+   "ms_per_frame": 90.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 0.9,
+  "golpes_s": [],
+  "capas": [
+   {
+    "s": "cupula",
+    "w": "C",
+    "t0": 0.0,
+    "ms": 0.09,
+    "sc": 1.2,
+    "a": 1.0,
+    "modo": "once",
+    "off": [
+     0,
+     4
+    ]
+   }
+  ]
+ },
+ "nota": "escudo_magico: la cúpula se forma alrededor del mago (sin el cuadro 5, que trae tres cúpulas sueltas)."
+}

@@ -44,7 +44,8 @@ for id, c in pairs(D.clases) do
     hpN = "numero", mpN = "numero", atkN = "numero", defN = "numero", matk = "numero", mdef = "numero",
     matkN = "numero", mdefN = "numero", danoBasico = "texto", rango = "numero", desc = "texto",
   })
-  if not D.barra[id] or #D.barra[id] ~= 6 then error("habilidades.xml: la barra de " .. id .. " debe tener 6 poderes", 0) end
+  local nb = D.barra[id] and #D.barra[id]
+  if nb ~= 6 and nb ~= 10 then error("habilidades.xml: la barra de " .. id .. " debe tener 6 o 10 poderes", 0) end
 end
 -- Orden de las clases (el del campo orden del XML) y reparto por facción: una clase con faccion="..." solo la
 -- puede elegir esa facción; sin ese campo la pueden elegir las dos.

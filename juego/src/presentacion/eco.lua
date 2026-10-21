@@ -71,7 +71,7 @@ function Eco.lanzar(app, datos)
     elseif h.tipo == "aliado" then
       if not objetivo or not mundo:aliado(p, objetivo) then objetivo = p end
       if not enRango(objetivo, h.rango) then return false end
-    elseif h.dash then
+    elseif h.dash or h.blink then
       return false      -- los saltos mueven al personaje: lo decide el servidor
     end
     -- adelanta el gasto en el HUD (la foto siguiente trae las cifras reales)

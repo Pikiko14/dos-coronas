@@ -27,7 +27,7 @@
         <i id="pocion_vida" p="0.35"/>
       </rata>
     </BOTIN>
-    <NIVEL_SLOT lista="1,1,4,8,15,20"/>
+    <NIVEL_SLOT lista="1,1,4,8,15,20,22,24,26,28"/>
   </balance>
   <caravanas DISTANCIA_MAX="620" INTERVALO="70" MAX="0" RADIO_ESCOLTA="22" VELOCIDAD="2.4">
     <!-- MAX: caravanas automáticas del servidor: ninguna (las caravanas son los comerciantes jugadores) -->
