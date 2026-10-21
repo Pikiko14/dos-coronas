@@ -3576,8 +3576,8 @@ end
 -- ------------------------------------------------------------------------------------------------------------------------------ eventos de guerra (panel, cola y marcador)
 local EV_UI = {
   batalla = {
-    nombre = "Batalla por cristales", cuando = "Una vez al día", color = { 0.36, 0.62, 1.0 }, meta = 500,
-    lema = "Derriba estatuas y puertas enemigas, recoge el cristal del núcleo y llévalo al altar de tu base. Gana quien suma más puntos.",
+    nombre = "Batalla por cristales", cuando = "Una vez al día", color = { 0.36, 0.62, 1.0 }, meta = 5,
+    lema = "Derriba estatuas y puertas enemigas hasta destruir el núcleo, recoge su cristal y llévalo al altar de tu base. Gana el primer equipo con 5 cristales entregados.",
   },
   estandarte = {
     nombre = "Captura del estandarte", cuando = "Cada pocas horas", color = { 1.0, 0.76, 0.3 }, meta = 3,
@@ -3676,6 +3676,7 @@ function I.hudEvento(mundo, p, vw, vh)
   -- equipos a los lados: nombre y cifra principal
   local function cifra(equipo)
     if modo == "moba" then return inst.bajas and inst.bajas[equipo] or 0 end
+    if modo == "batalla" then return inst.cristales and inst.cristales[equipo] or 0 end
     return inst.puntos[equipo] or 0
   end
   texto("ALBOR", x + 16, y + 8, ca, med)
@@ -3684,8 +3685,9 @@ function I.hudEvento(mundo, p, vw, vh)
   texto("UMBRA", x + W - 16 - med:getWidth("UMBRA"), y + 8, cu, med)
   local su = tostring(cifra("umbra"))
   texto(su, x + W - 16 - gr:getWidth(su), y + 26, { 1, 1, 1 }, gr)
-  texto(modo == "moba" and "bajas" or "puntos", x + 16 + gr:getWidth(sa) + 6, y + 36, { 0.7, 0.72, 0.82 }, f)
-  local lu = modo == "moba" and "bajas" or "puntos"
+  local unidad = modo == "moba" and "bajas" or (modo == "batalla" and "cristales" or "capturas")
+  texto(unidad, x + 16 + gr:getWidth(sa) + 6, y + 36, { 0.7, 0.72, 0.82 }, f)
+  local lu = unidad
   texto(lu, x + W - 16 - gr:getWidth(su) - 6 - f:getWidth(lu), y + 36, { 0.7, 0.72, 0.82 }, f)
   -- fila inferior: las barras de cada equipo
   local by = y + 66
@@ -3708,8 +3710,9 @@ function I.hudEvento(mundo, p, vw, vh)
     barraEquipo(x + 12, by, bw, 18, (inst.puntos.albor or 0) / ui.meta, "albor", (inst.puntos.albor or 0) .. " / " .. ui.meta .. " capturas")
     barraEquipo(x + W - 12 - bw, by, bw, 18, (inst.puntos.umbra or 0) / ui.meta, "umbra", (inst.puntos.umbra or 0) .. " / " .. ui.meta .. " capturas", "der")
   else
-    barraEquipo(x + 12, by, bw, 18, (inst.puntos.albor or 0) / ui.meta, "albor", (inst.puntos.albor or 0) .. " / " .. ui.meta)
-    barraEquipo(x + W - 12 - bw, by, bw, 18, (inst.puntos.umbra or 0) / ui.meta, "umbra", (inst.puntos.umbra or 0) .. " / " .. ui.meta, "der")
+    local ca2, cu2 = inst.cristales and inst.cristales.albor or 0, inst.cristales and inst.cristales.umbra or 0
+    barraEquipo(x + 12, by, bw, 18, ca2 / ui.meta, "albor", ca2 .. " / " .. ui.meta .. " cristales")
+    barraEquipo(x + W - 12 - bw, by, bw, 18, cu2 / ui.meta, "umbra", cu2 .. " / " .. ui.meta .. " cristales", "der")
   end
   -- tus estadísticas
   local st = p.eventoStats

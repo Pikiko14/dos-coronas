@@ -1219,7 +1219,7 @@ function Mundo:morir(e, origen)
       local inst = self.instancia[e.modo]
       if inst and inst.activa then
         -- las bajas suman puntos en la batalla y en el asedio; en el estandarte los puntos son las CAPTURAS (tres ganan): matar a alguien no cuenta, solo lo devuelve a su base
-        if e.modo ~= "estandarte" then inst.puntos[origen.faccion] = inst.puntos[origen.faccion] + (e.modo == "batalla" and 20 or 10) end
+        if e.modo == "moba" then inst.puntos[origen.faccion] = inst.puntos[origen.faccion] + 10 end
         inst.bajas = inst.bajas or { albor = 0, umbra = 0 }
         inst.bajas[origen.faccion] = (inst.bajas[origen.faccion] or 0) + 1
         local autor = origen
@@ -1295,6 +1295,7 @@ end
 -- El cuerpo de un personaje caído se queda donde murió (sin vida, en gris) un buen rato; el
 -- personaje reaparece en la ciudad de su corona.
 Mundo.CUERPO_SEG = 300
+Mundo.CRISTALES_META = 5       -- cristales entregados que dan la victoria en la batalla
 Mundo.PUNTOS_CRISTAL = 300      -- lo que vale entregar el cristal del núcleo enemigo
 Mundo.DISTANCIA_DESPIERTA = 45    -- casillas: lejos de todo jugador, las criaturas se actualizan 1 vez por segundo
 Mundo.POCION_CD = 3          -- segundos hasta poder repetir ESA poción (cada poción tiene su propio enfriamiento)
@@ -2161,9 +2162,16 @@ function Mundo:entregarCristales(p)
   end
   if n <= 0 then return "No llevas cristales." end
   local inst = self.instancia.batalla
-  inst.puntos[p.faccion] = inst.puntos[p.faccion] + n * Mundo.PUNTOS_CRISTAL
+  inst.puntos[p.faccion] = inst.puntos[p.faccion] + n * Mundo.PUNTOS_CRISTAL          -- (los puntos solo desempatan si se acaba el tiempo)
+  inst.cristales = inst.cristales or { albor = 0, umbra = 0 }
+  inst.cristales[p.faccion] = inst.cristales[p.faccion] + n
   p.entregados = (p.entregados or 0) + n
-  self:mensaje("sistema", "", "Entregas " .. n .. " cristales enemigos. +" .. (n * Mundo.PUNTOS_CRISTAL) .. " puntos.", p)
+  self:mensaje("sistema", "", "Entregas " .. n .. (n == 1 and " cristal enemigo" or " cristales enemigos") .. ". Tu equipo lleva " .. inst.cristales[p.faccion] .. "/" .. Mundo.CRISTALES_META .. ".", p)
+  if inst.activa and not inst.fin then
+    self:registrarEvento("batalla", p.nombre .. " entrega un cristal (" .. inst.cristales[p.faccion] .. "/" .. Mundo.CRISTALES_META .. ")", p.faccion)
+    -- gana el primer equipo con 5 cristales entregados; matar a alguien no termina la batalla
+    if inst.cristales[p.faccion] >= Mundo.CRISTALES_META then self:cerrarInstancia("batalla", p.faccion) end
+  end
   return nil
 end
 
@@ -2314,6 +2322,7 @@ function Mundo:reiniciarInstancia(modo)
   inst.tiempo = 0
   inst.puntos = { albor = 0, umbra = 0 }
   inst.bajas = { albor = 0, umbra = 0 }
+  inst.cristales = { albor = 0, umbra = 0 }
   inst.registro = {}
   inst.edicion = (inst.edicion or 0) + 1
   inst.fin = nil
@@ -3375,13 +3384,15 @@ function Mundo:actualizar(dt)
     local inst = self.instancia[modo]
     if inst.activa and not inst.fin then
       inst.tiempo = inst.tiempo + dt
-      local limite = modo == "batalla" and 500 or (modo == "moba" and 1e9 or 3)
+      -- la batalla se gana entregando 5 cristales (al entregarlos) y el estandarte con 3 capturas (al capturar); el asedio, destruyendo el nexo. Aquí solo se vigila el tiempo
+      local limite = modo == "estandarte" and 3 or 1e9
       if inst.puntos.albor >= limite then self:cerrarInstancia(modo, "albor")
       elseif inst.puntos.umbra >= limite then self:cerrarInstancia(modo, "umbra")
       elseif inst.tiempo >= inst.duracion then
         local g = "empate"
-        if inst.puntos.albor > inst.puntos.umbra then g = "albor"
-        elseif inst.puntos.umbra > inst.puntos.albor then g = "umbra" end
+        local a, u = inst.puntos.albor, inst.puntos.umbra
+        if modo == "batalla" and inst.cristales and (inst.cristales.albor ~= inst.cristales.umbra) then a, u = inst.cristales.albor, inst.cristales.umbra end        -- primero los cristales, luego los puntos
+        if a > u then g = "albor" elseif u > a then g = "umbra" end
         self:cerrarInstancia(modo, g)
       end
     end

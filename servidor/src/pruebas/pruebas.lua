@@ -333,6 +333,61 @@ function Pruebas.correr()
     for _, f in ipairs({ "albor", "umbra" }) do for _, p in ipairs(equipo[f]) do if p.modo ~= "mundo" then fuera = false end end end
     fallar(errores, "al terminar todos vuelven al mundo", fuera)
   end)
+  -- Batalla por cristales: matar a alguien no termina la batalla (el caído reaparece en su zona del campo); gana el primer equipo que entrega 5 cristales.
+  paso("batalla por cristales: las bajas no sacan a nadie y se gana con 5 cristales entregados", function()
+    local mundo = Mundo.nuevo()
+    local equipo = { albor = {}, umbra = {} }
+    for i = 1, 3 do
+      for _, f in ipairs({ "albor", "umbra" }) do
+        local p = mundo:crearPersonaje({ nombre = f .. i, faccion = f, clase = "guerrero", nivel = 20 })
+        p.ultimoGolpe = -99
+        p.hp, p.hpMax = 5000, 5000
+        equipo[f][i] = p
+        mundo:entrarGuerra(p, "batalla")
+      end
+    end
+    local inst = mundo.instancia.batalla
+    local a1, u1 = equipo.albor[1], equipo.umbra[1]
+    fallar(errores, "con tres por equipo empieza la batalla", inst.activa and not inst.fin and a1.modo == "batalla" and u1.modo == "batalla")
+    local spawn = mundo.mapas.batalla.spawns.umbra
+    -- muchas bajas seguidas (más de las que antes bastaban para terminarla): nadie sale y no suman puntos
+    for _ = 1, 30 do
+      u1.vivo, u1.hp = true, 5000
+      mundo:danar(u1, 99999, a1)
+      if not (inst.activa and not inst.fin and a1.modo == "batalla" and u1.modo == "batalla") then break end
+      mundo:actualizar(0.1)
+      u1.respawn = 0
+      mundo:actualizar(0.1)
+    end
+    fallar(errores, "tras 30 bajas la batalla sigue en marcha y nadie ha salido", inst.activa and not inst.fin and a1.modo == "batalla" and u1.modo == "batalla", tostring(inst.fin))
+    fallar(errores, "matar no da puntos ni cristales", inst.puntos.albor == 0 and inst.cristales.albor == 0, inst.puntos.albor .. "/" .. inst.cristales.albor)
+    fallar(errores, "el caído vuelve a la zona de aparición de su equipo dentro del campo", u1.vivo and u1.modo == "batalla" and Util.dist(u1.x, u1.y, spawn.x, spawn.y) < 3, string.format("%s %.1f", tostring(u1.vivo), Util.dist(u1.x, u1.y, spawn.x, spawn.y)))
+    fallar(errores, "las bajas sí cuentan en las estadísticas del equipo", inst.bajas.albor >= 30)
+    -- entregar cristales: cada entrega suma uno; con el quinto gana el equipo y todos vuelven al mundo
+    for k = 1, 4 do
+      a1.llevaCristales = 1
+      mundo:entregarCristales(a1)
+      fallar(errores, "con " .. k .. " cristales la batalla sigue", inst.activa and not inst.fin and inst.cristales.albor == k, tostring(inst.cristales.albor))
+    end
+    u1.llevaCristales = 3
+    mundo:entregarCristales(u1)
+    fallar(errores, "los cristales de un equipo no cuentan para el otro y no la terminan", inst.activa and inst.cristales.umbra == 3 and inst.cristales.albor == 4)
+    a1.llevaCristales = 1
+    mundo:entregarCristales(a1)
+    fallar(errores, "con 5 cristales entregados gana Albor y la batalla termina", inst.fin == "albor" and not inst.activa, tostring(inst.fin))
+    mundo:actualizar(0.1)
+    local fuera = true
+    for _, f in ipairs({ "albor", "umbra" }) do for _, p in ipairs(equipo[f]) do if p.modo ~= "mundo" then fuera = false end end end
+    fallar(errores, "al terminar todos vuelven al mundo", fuera)
+    -- si se acaba el tiempo, gana quien más cristales entregó
+    mundo:reiniciarInstancia("batalla")
+    local ia = mundo.instancia.batalla
+    ia.cristales.umbra = 2
+    ia.cristales.albor = 1
+    ia.tiempo = ia.duracion + 1
+    mundo:actualizar(0.1)
+    fallar(errores, "al acabarse el tiempo gana quien más cristales tiene", ia.fin == "umbra", tostring(ia.fin))
+  end)
   paso("cuentas", function()
     fallar(errores, "sha256", Cuentas.sha256("abc") == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", Cuentas.sha256("abc"))
     local vector = Cuentas.pbkdf2("password", "salt", 1)
