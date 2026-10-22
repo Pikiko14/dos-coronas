@@ -16,6 +16,10 @@ require("compartido.dominio.configuracion").aplicar(M, "mascotas")
 
 -- Las especies están en compartido/datos/mascotas.xml; el orden del archivo es el de la tienda.
 M.especies, M.orden = require("compartido.dominio.configuracion").mapaOrden("mascotas", "especie", false)
+-- Las recolectoras (Item Mall, se pagan con Monedas Corona) van aparte del criador: ORDEN_MALL es su orden en la tienda.
+local recolectoras, ordenMall = require("compartido.dominio.configuracion").mapaOrden("mascotas", "recolectora", false)
+for id, d in pairs(recolectoras) do M.especies[id] = d end
+M.ORDEN_MALL = ordenMall
 
 function M.xpPara(nivel)
   nivel = math.max(1, nivel or 1)
@@ -83,6 +87,7 @@ function M.instalar(Mundo)
     if p.kind ~= "jugador" then return "Solo los jugadores adoptan mascotas." end
     local d = M.especies[especie]
     if not d then return "Esa mascota no existe." end
+    if d.mall then return "Esa mascota solo se compra en el Item Mall." end
     p.mascotas = p.mascotas or {}
     for _, m in ipairs(p.mascotas) do
       if m.especie == especie then return "Ya tienes esa mascota." end
@@ -169,6 +174,21 @@ function M.instalar(Mundo)
     return mejor
   end
 
+  -- El botín más cercano al dueño que él mismo podría recoger y que está dentro del radio de la mascota.
+  function Mundo:botinParaMascota(e, dueno, radio)
+    if not dueno.vivo then return nil end
+    local mejor, md = nil, radio
+    for _, o in pairs(self.entidades) do
+      if o.kind == "loot" and o.vivo and not o.borrar and self:mismoLugar(e, o)
+        and (not o.dueno or o.dueno == dueno.id or (o.grupo and dueno.grupoId == o.grupo) or self.tiempo > (o.hasta or 0) - 20)
+        and ((e.ignorar and e.ignorar[o.id]) or 0) <= self.tiempo then
+        local d = Util.dist(dueno.x, dueno.y, o.x, o.y)
+        if d < md then mejor, md = o, d end
+      end
+    end
+    return mejor
+  end
+
   function Mundo:actualizarMascota(e, dt)
     local dueno = self.entidades[e.dueno]
     if not dueno or dueno.mascotaId ~= e.id then e.borrar = true return end
@@ -192,7 +212,31 @@ function M.instalar(Mundo)
     e.cds = e.cds or {}
     local blanco = blancoDe(self, e, dueno)
     local dx, dy = 0, 0
-    if blanco then
+    local botin = d.radio and self:botinParaMascota(e, dueno, d.radio)
+    if botin then
+      -- recolectora: va a por el botín de su dueño y se lo mete en la bolsa
+      local dist = Util.dist(e.x, e.y, botin.x, botin.y)
+      if not e.buscaBotin or e.buscaBotin.id ~= botin.id then e.buscaBotin = { id = botin.id, desde = self.tiempo } end
+      if self.tiempo - e.buscaBotin.desde > 5 and dist > 0.9 then
+        self:colocarCerca(e, botin.x, botin.y)         -- atascada (un muro en medio): se planta junto al botín
+        dist = Util.dist(e.x, e.y, botin.x, botin.y)
+      end
+      if dist <= 0.9 then
+        self:recoger(dueno, botin)
+        if not botin.borrar then
+          e.ignorar = e.ignorar or {}
+          e.ignorar[botin.id] = self.tiempo + 12      -- (bolsa llena u otra razón: no insiste)
+        end
+        e.buscaBotin = nil
+      else
+        dx, dy = botin.x - e.x, botin.y - e.y
+      end
+    else
+      e.buscaBotin = nil
+    end
+    if botin then
+      -- (ya va a por el botín: no pelea ni vuelve con el dueño hasta terminar)
+    elseif blanco then
       local dist = Util.dist(e.x, e.y, blanco.x, blanco.y)
       if dist > 1.45 then
         dx, dy = blanco.x - e.x, blanco.y - e.y
@@ -229,7 +273,7 @@ function M.instalar(Mundo)
       if e.tramo then ddx, ddy = Util.signo(dx), Util.signo(dy)
       else ddx, ddy = self:mejorDireccion(e, dx, dy) end
     end
-    self:avanzar(e, dt, ddx, ddy, math.max(4.3, (dueno.spd or 4.4) * 1.08))
+    self:avanzar(e, dt, ddx, ddy, math.max(4.3, (dueno.spd or 4.4) * 1.08) * (d.radio and 1.35 or 1))
   end
 end
 

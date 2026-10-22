@@ -630,8 +630,7 @@ function Pruebas.correr()
         end
         if n.requiere then fallar(errores, clase .. " " .. n.id .. " pide un nodo que existe", ids[n.requiere[1]]) end
       end
-      local esperado = (clase == "lancero" or clase == "nigromante") and 6 or 10
-      fallar(errores, clase .. " tiene " .. esperado .. " poderes", activas == esperado)
+      fallar(errores, clase .. " tiene 10 poderes", activas == 10)
     end
     local m = mundo:crearPersonaje({ nombre = "Arbolito", faccion = "albor", clase = "guerrero" })
     fallar(errores, "empieza con el poder inicial", Arbol.rango(m, "golpe") == 1 and Arbol.rango(m, "tajo") == 0)
@@ -4461,8 +4460,41 @@ mundo.tiempo = 100
       return mundo, p
     end
     local function slotDe(clase, id) for i, b in ipairs(Datos.barra[clase]) do if b == id then return i end end end
-    for _, clase in ipairs({ "guerrero", "cazador", "clerigo", "mago" }) do
+    for _, clase in ipairs(Datos.ORDEN_CLASES) do
       fallar(errores, "la barra de " .. clase .. " tiene 10 poderes", #Datos.barra[clase] == 10)
+    end
+    -- lancero: el pulso terrestre aturde, el torbellino de lanzas golpea varias veces siguiéndote, el juicio final cae tres veces
+    do
+      local mundo, p = nuevo("lancero")
+      local m = mundo:spawnMonstruo("pinguino_aprendiz", p.x + 2, p.y, { x = p.x, y = p.y })
+      m.hp, m.hpMax = 1e6, 1e6
+      p.cds = {}
+      local err = mundo:usarHabilidad(p, slotDe("lancero", "pulso_terrestre"))
+      fallar(errores, "el pulso terrestre daña y aturde", err == nil and m.hp < m.hpMax and (m.aturdido or 0) > 0, tostring(err))
+      m.hp, m.aturdido = m.hpMax, 0
+      p.cds = {}
+      err = mundo:usarHabilidad(p, slotDe("lancero", "torbellino_lanzas"))
+      local h1 = m.hp
+      fallar(errores, "el torbellino de lanzas golpea al lanzarse", err == nil and h1 < m.hpMax, tostring(err))
+      for _ = 1, 20 do mundo:actualizar(0.1) end
+      fallar(errores, "y vuelve a golpear mientras gira", m.hp < h1 - (m.hpMax - h1) * 1.5, h1 .. " " .. m.hp)
+      m.hp = m.hpMax
+      p.cds, p.mp = {}, 9999
+      mundo.pulsos = {}
+      err = mundo:usarHabilidad(p, slotDe("lancero", "juicio_final"), m.x, m.y)
+      fallar(errores, "el juicio final programa sus otras dos caídas", err == nil and #mundo.pulsos == 2, tostring(err) .. " " .. #mundo.pulsos)
+    end
+    -- nigromante: nova oscura, explosión cadavérica, lluvia profana y apocalipsis
+    do
+      local mundo, p = nuevo("nigromante", "umbra")
+      local m = mundo:spawnMonstruo("pinguino_aprendiz", p.x + 2, p.y, { x = p.x, y = p.y })
+      m.hp, m.hpMax = 1e6, 1e6
+      for _, id in ipairs({ "nova_oscura", "explosion_cadaverica", "lluvia_profana", "apocalipsis_necromantico" }) do
+        m.hp = m.hpMax
+        p.cds, p.mp, p.objetivo = {}, 9999, m.id
+        local e = mundo:usarHabilidad(p, slotDe("nigromante", id), m.x, m.y)
+        fallar(errores, id .. " se lanza y daña", e == nil and m.hp < m.hpMax, tostring(e))
+      end
     end
     -- guerrero: salto de impacto (se mueve y daña al caer), golpe terrestre (aturde), ejecución (más daño con poca vida)
     local mundo, p = nuevo("guerrero")
@@ -4533,6 +4565,47 @@ mundo.tiempo = 100
     fallar(errores, "la tormenta divina se lanza", mundo:usarHabilidad(p, slotDe("clerigo", "tormenta_divina"), mt.x, mt.y) == nil)
     for _ = 1, 25 do mundo:actualizar(0.1) end
     fallar(errores, "la tormenta divina daña al enemigo y cura al aliado", mt.hp < hpT and a1.hp > 5)
+  end)
+  paso("mascotas recolectoras del Item Mall: se compran con monedas y recogen todo el botín cercano", function()
+    local Mall = require("compartido.dominio.mall")
+    local Mascotas = require("compartido.dominio.mascotas")
+    local Autoridad = require("src.dominio.autoridad")
+    local mundo = Mundo.nuevo()
+    local p = mundo:crearPersonaje({ nombre = "Recolector", faccion = "albor", clase = "guerrero", nivel = 10 })
+    fallar(errores, "hay mascotas recolectoras en el mall", #Mall.ORDEN_MASCOTAS == 4 and Mascotas.especies.fantasma.mall == true)
+    fallar(errores, "el criador no las vende", (function() for _, id in ipairs(Mascotas.orden) do if Mascotas.especies[id].mall then return false end end return true end)())
+    p.oro = 99999
+    fallar(errores, "con oro no se adopta una del mall", mundo:adoptarMascota(p, "perro_rastreador") ~= nil and #(p.mascotas or {}) == 0)
+    p.monedas = 100
+    fallar(errores, "sin monedas suficientes no se compra", mundo:comprarMascotaMall(p, "perro_rastreador") ~= nil and #(p.mascotas or {}) == 0)
+    p.monedas = 1000
+    local ok, limpio = Autoridad.aceptar(mundo, p, "mall_mascota_comprar", { id = "perro_rastreador" })
+    fallar(errores, "la acción del cliente se acepta", ok == true and limpio.id == "perro_rastreador")
+    mundo:accion(p.id, "mall_mascota_comprar", limpio)
+    fallar(errores, "se compra con monedas y sale enseguida", p.monedas == 850 and #p.mascotas == 1 and p.mascotaId and mundo.entidades[p.mascotaId].kind == "mascota")
+    fallar(errores, "no se compra dos veces", mundo:comprarMascotaMall(p, "perro_rastreador") ~= nil and p.monedas == 850)
+    local pet = mundo.entidades[p.mascotaId]
+    -- el botín que cae cerca (de este jugador) lo recoge la mascota
+    p.bolsa = {}
+    local oro0 = p.oro
+    local ids = {}
+    for i = 1, 3 do
+      local l = mundo:dejarEnSuelo({ items = { { id = "pocion_vida", cant = 1 } }, oro = 10, dueno = p.id, hasta = mundo.tiempo + 120 }, p.x + 3 + i, p.y, p.modo, p.z)
+      ids[#ids + 1] = l.id
+    end
+    local lejos = mundo:dejarEnSuelo({ items = { { id = "pocion_mana", cant = 1 } }, oro = 0, dueno = p.id, hasta = mundo.tiempo + 120 }, p.x + 30, p.y, p.modo, p.z)
+    local ajeno = mundo:dejarEnSuelo({ items = { { id = "pocion_mana", cant = 1 } }, oro = 0, dueno = 999999, hasta = mundo.tiempo + 120 }, p.x + 4, p.y + 1, p.modo, p.z)
+    for _ = 1, 150 do mundo:actualizar(0.1) end
+    local quedan = 0
+    for _, id in ipairs(ids) do local e = mundo.entidades[id]; if e and not e.borrar then quedan = quedan + 1 end end
+    fallar(errores, "la mascota recoge todo el botín cercano", quedan == 0 and p.oro >= oro0 + 30 and #p.bolsa >= 1, "quedan " .. quedan .. " oro " .. (p.oro - oro0))
+    fallar(errores, "no toca lo que está fuera de su radio ni lo de otro jugador", mundo.entidades[lejos.id] and not mundo.entidades[lejos.id].borrar and mundo.entidades[ajeno.id] and not mundo.entidades[ajeno.id].borrar)
+    -- con la bolsa llena no insiste: el botín se queda
+    p.bolsa = {}
+    for i = 1, 60 do p.bolsa[i] = { id = "cristal", cant = 1 } end
+    local l2 = mundo:dejarEnSuelo({ items = { { id = "pocion_vida", cant = 1 } }, oro = 0, dueno = p.id, hasta = mundo.tiempo + 120 }, p.x + 2, p.y, p.modo, p.z)
+    for _ = 1, 60 do mundo:actualizar(0.1) end
+    fallar(errores, "con la bolsa llena el botín se queda en el suelo", mundo.entidades[l2.id] and not mundo.entidades[l2.id].borrar)
   end)
   paso("recompensa diaria: con la bolsa llena explica el motivo en el panel y se reclama al hacer sitio", function()
     local Diaria = require("compartido.dominio.diaria")

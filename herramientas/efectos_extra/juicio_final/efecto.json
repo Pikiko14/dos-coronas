@@ -1,0 +1,42 @@
+{
+ "id_dos_coronas": "juicio_final",
+ "clase": "lancero",
+ "nombre": "Juicio final",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 16,
+   "cell": [
+    256,
+    256
+   ],
+   "origin": [
+    128,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 1.3,
+  "golpes_s": [
+   0.5,
+   0.8,
+   1.1
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "GT",
+    "t0": 0.05,
+    "ms": 0.075,
+    "sc": 1.0,
+    "a": 1.0,
+    "modo": "once"
+   }
+  ]
+ },
+ "nota": "lancero/juicio_final del paquete de poderes."
+}

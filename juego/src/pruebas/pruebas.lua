@@ -2514,7 +2514,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       end
       if mosaico then Log.volcar("capturas/poderes_fao_" .. clase .. ".png", mosaico:newImageData():encode("png"):getString()) end
     end
-    fallar(errores, "se probaron los 52 poderes (las seis clases)", total == 52, tostring(total))
+    fallar(errores, "se probaron los 60 poderes (las seis clases)", total == 60, tostring(total))
   end)
   -- Asedio (MOBA) en el cliente: se dibujan nexos, torres, esbirros y el marcador, el panel de guerra tiene su botón y el minimapa los marca. Con DC_PRUEBA_MOBA=1 guarda juego/capturas/moba.png
   -- (escena junto a una torre con esbirros, y el panel de guerra con el asedio).
@@ -2707,6 +2707,38 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       -- el panel no registra más de un rectángulo por poder
       local vistos = {}
       for _, r in ipairs(Interfaz.rects) do if r.id:sub(1, 4) == "arb_" then vistos[r.id] = (vistos[r.id] or 0) + 1 end end
+    end
+  end)
+  paso("Item Mall: pestaña de mascotas recolectoras y flecha del arquero (DC_PRUEBA_PODERES_FAO=1 guarda capturas/mall_mascotas.png)", function()
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Mall", faccion = "albor", clase = "cazador", nivel = 20 })
+    pj.monedas = 5000
+    pj.mall = { monedas = 5000, addons = {} }
+    pj.mascotas = { { especie = "perro_rastreador", nivel = 1, xp = 0 } }
+    Interfaz.escala, Interfaz.panel, Interfaz.mallTab, Interfaz.mallScroll = 1, "mall", "mascotas", 0
+    local cv = love.graphics.newCanvas(1280, 720)
+    love.graphics.push("all")
+    love.graphics.setCanvas({ cv, stencil = true })
+    love.graphics.clear(0.2, 0.3, 0.2, 1)
+    local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    love.graphics.pop()
+    fallar(errores, "la pestaña de mascotas del mall se dibuja", ok, tostring(err))
+    local botones = {}
+    for _, r in ipairs(Interfaz.rects) do botones[r.id] = true end
+    fallar(errores, "hay botones para comprar las que faltan", botones.mall_ma_buy_gallina_dorada and botones.mall_ma_buy_dragoncito and botones.mall_tab_obj)
+    Interfaz.mallTab, Interfaz.panel = nil, nil
+    if os.getenv("DC_PRUEBA_PODERES_FAO") then
+      Log.volcar("capturas/mall_mascotas.png", cv:newImageData():encode("png"):getString())
+      -- la flecha del ataque básico, en grande sobre fondo de hierba
+      local Dibujo = require("src.presentacion.render.dibujo")
+      local c2 = love.graphics.newCanvas(300, 120)
+      love.graphics.push("all")
+      love.graphics.setCanvas(c2)
+      love.graphics.clear(0.25, 0.45, 0.22, 1)
+      love.graphics.scale(3, 3)
+      Dibujo.proyectil({ tipo = "flecha", x = 0, y = 0, tx = 6, ty = 0 }, 50, 30)
+      love.graphics.pop()
+      Log.volcar("capturas/flecha_arquero.png", c2:newImageData():encode("png"):getString())
     end
   end)
   paso("interfaz: clics", function()

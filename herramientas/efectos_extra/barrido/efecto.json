@@ -1,0 +1,40 @@
+{
+ "id_dos_coronas": "barrido",
+ "clase": "lancero",
+ "nombre": "Barrido",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 16,
+   "cell": [
+    256,
+    256
+   ],
+   "origin": [
+    128,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 0.95,
+  "golpes_s": [
+   0.3
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "GC",
+    "t0": 0.05,
+    "ms": 0.055,
+    "sc": 0.85,
+    "a": 1.0,
+    "modo": "once"
+   }
+  ]
+ },
+ "nota": "lancero/lanza_giratoria del paquete de poderes."
+}

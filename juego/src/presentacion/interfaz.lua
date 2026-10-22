@@ -2514,10 +2514,11 @@ function I.panelMall(mundo, p, w, h)
   love.graphics.setColor(1, 0.85, 0.3)
   love.graphics.print(Mall.MONEDA .. ": " .. Ayudas.num(m.monedas), px + 14, py + 40)
   I.mallTab = I.mallTab or "objetos"
-  I.boton(px + 300, py + 36, 82, 28, "Objetos", "mall_tab_obj", I.mallTab ~= "objetos")
-  I.boton(px + 386, py + 36, 82, 28, "Forja", "mall_tab_forja", I.mallTab ~= "forja")
-  I.boton(px + 472, py + 36, 82, 28, "Addons", "mall_tab_add", I.mallTab ~= "addons")
-  I.boton(px + 558, py + 36, 82, 28, "Monturas", "mall_tab_mont", I.mallTab ~= "monturas")
+  I.boton(px + 230, py + 36, 80, 28, "Objetos", "mall_tab_obj", I.mallTab ~= "objetos")
+  I.boton(px + 314, py + 36, 80, 28, "Forja", "mall_tab_forja", I.mallTab ~= "forja")
+  I.boton(px + 398, py + 36, 80, 28, "Addons", "mall_tab_add", I.mallTab ~= "addons")
+  I.boton(px + 482, py + 36, 80, 28, "Monturas", "mall_tab_mont", I.mallTab ~= "monturas")
+  I.boton(px + 566, py + 36, 80, 28, "Mascotas", "mall_tab_masc", I.mallTab ~= "mascotas")
   local y0 = py + 84
   if I.mallTab == "objetos" or I.mallTab == "forja" then
     -- la pestaña Forja vende solo paquetes de polvo de encantamiento; el resto va en "Objetos"
@@ -2552,6 +2553,46 @@ function I.panelMall(mundo, p, w, h)
       love.graphics.printf(Ayudas.num(o.precio) .. " mon.", px + 410, y + 28, 80, "right")
       I.boton(px + 504, y + 20, 130, 32, "Comprar", "mall_buy_" .. o.id, (m.monedas or 0) >= o.precio,
         "Te faltan " .. Ayudas.num(o.precio - (m.monedas or 0)) .. " Monedas Corona.")
+     end
+    end
+  elseif I.mallTab == "mascotas" then
+    -- mascotas recolectoras: salen solas a por todo lo que cae al suelo a tu alrededor y lo guardan en tu bolsa
+    local tengoP = {}
+    for _, mm in ipairs(p.mascotas or {}) do tengoP[mm.especie] = true end
+    local visiblesP = 3
+    I.mallScrollMax = math.max(0, #Mall.ORDEN_MASCOTAS - visiblesP)
+    I.mallScroll = math.max(0, math.min(I.mallScrollMax, I.mallScroll or 0))
+    love.graphics.setColor(0.65, 0.62, 0.55)
+    love.graphics.print("Recogen por ti todo el botín que cae cerca (objetos, oro y mercancías). Llámalas con N." .. (I.mallScrollMax > 0 and "  Rueda: ver más." or ""), px + 14, py + 60)
+    local reloj = love.timer.getTime()
+    for i, id in ipairs(Mall.ORDEN_MASCOTAS) do
+     if i > I.mallScroll and i <= I.mallScroll + visiblesP then
+      local d = Mascotas.especies[id]
+      local y = y0 + 8 + (i - 1 - I.mallScroll) * 118
+      love.graphics.setColor(0.10, 0.13, 0.25)
+      love.graphics.rectangle("fill", px + 14, y, pw - 28, 110, 8, 8)
+      local def = Personajes.de({ kind = "mascota", especie = id })
+      if def then
+        love.graphics.push()
+        love.graphics.translate(px + 70, y + 96)
+        love.graphics.scale(2.3, 2.3)
+        Personajes.dibujar(def, 1, true, reloj, 0, 0)
+        love.graphics.pop()
+      end
+      love.graphics.setColor(0.98, 0.9, 0.7)
+      love.graphics.print(d.nombre .. (tengoP[id] and (p.mascotaActiva and p.mascotas[p.mascotaActiva] and p.mascotas[p.mascotaActiva].especie == id and "   (contigo)" or "") or ""), px + 130, y + 8)
+      love.graphics.setColor(0.72, 0.78, 0.68)
+      love.graphics.printf(d.desc, px + 130, y + 30, 360, "left")
+      love.graphics.setColor(0.6, 0.85, 1)
+      love.graphics.print("Recoge en un radio de " .. d.radio .. " casillas", px + 130, y + 86)
+      if tengoP[id] then
+        I.boton(px + 504, y + 30, 130, 32, "La tienes", "mall_ma_ya", false, "Ya es tuya: llámala con N o en el criador de mascotas.")
+      else
+        love.graphics.setColor(1, 0.85, 0.3)
+        love.graphics.printf(Ayudas.num(d.precio) .. " mon.", px + 504, y + 76, 130, "center")
+        I.boton(px + 504, y + 30, 130, 32, "Comprar", "mall_ma_buy_" .. id, (m.monedas or 0) >= d.precio,
+          "Te faltan " .. Ayudas.num(d.precio - (m.monedas or 0)) .. " Monedas Corona.")
+      end
      end
     end
   elseif I.mallTab == "monturas" then
@@ -3152,7 +3193,7 @@ function I.panelMascotas(mundo, p, w, h)
     I.boton(x2 + 296, y + 12, 94, 32, tengo and "Tuya" or "Adoptar", "masc_adoptar_" .. id, (not tengo) and nivelOk and oroOk)
   end
   love.graphics.setColor(0.7, 0.68, 0.6)
-  love.graphics.printf("La mascota te sigue, pelea a tu lado y sube de nivel contigo (sin pasar del tuyo). Puede caer en combate y vuelve a los 30 s. Solo sale una a la vez y descansa durante las guerras. Tecla N: llamar o guardar la última.",
+  love.graphics.printf("La mascota te sigue, pelea a tu lado y sube de nivel contigo (sin pasar del tuyo). Puede caer en combate y vuelve a los 30 s. Solo sale una a la vez y descansa durante las guerras. Tecla N: llamar o guardar la última. Las mascotas que recogen el botín por ti están en el Item Mall (L).",
     px + 14, py + ph - 70, pw - 28, "left")
 end
 -- Piezas que se pueden encantar: lo que llevas puesto y lo que hay en la bolsa.

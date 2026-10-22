@@ -219,6 +219,18 @@
       <i id="tormenta_lanzas" nivel="20" tipo="activa" slot="6">
         <requiere lista="muro_lanzas,2"/>
       </i>
+      <i id="fisura_del_lancero" nivel="22" tipo="activa" slot="7">
+        <requiere lista="embestida,2"/>
+      </i>
+      <i id="pulso_terrestre" nivel="24" tipo="activa" slot="8">
+        <requiere lista="barrido,2"/>
+      </i>
+      <i id="torbellino_lanzas" nivel="26" tipo="activa" slot="9">
+        <requiere lista="barrido,3"/>
+      </i>
+      <i id="juicio_final" nivel="28" tipo="activa" slot="10">
+        <requiere lista="tormenta_lanzas,1"/>
+      </i>
       <i id="temple" nombre="Temple de acero" nivel="1" tipo="pasiva" desc="Más vida máxima.">
         <icono hoja="extra" sprite="36"/>
         <por hp="0.06"/>
@@ -255,6 +267,18 @@
       </i>
       <i id="espectro" nivel="20" tipo="activa" slot="6">
         <requiere lista="alzar_esqueletos,2"/>
+      </i>
+      <i id="explosion_cadaverica" nivel="22" tipo="activa" slot="7">
+        <requiere lista="espinas,2"/>
+      </i>
+      <i id="nova_oscura" nivel="24" tipo="activa" slot="8">
+        <requiere lista="maldecir,2"/>
+      </i>
+      <i id="lluvia_profana" nivel="26" tipo="activa" slot="9">
+        <requiere lista="drenar,2"/>
+      </i>
+      <i id="apocalipsis_necromantico" nivel="28" tipo="activa" slot="10">
+        <requiere lista="espectro,1"/>
       </i>
       <i id="mente_oscura" nombre="Mente oscura" nivel="1" tipo="pasiva" desc="Más ataque mágico.">
         <icono hoja="extra" sprite="25"/>
@@ -299,6 +323,14 @@
     <paso_agil cd="0.05" dur="0.7" pot="0.1"/>
     <preciso cd="0.05" mana="0.03" pot="0.12"/>
     <sanacion cd="0.04" mana="0.03" pot="0.12"/>
+    <fisura_del_lancero cd="0.04" mana="0.03" pot="0.12"/>
+    <pulso_terrestre cd="0.04" mana="0.03" pot="0.12"/>
+    <torbellino_lanzas cd="0.04" mana="0.03" pot="0.1"/>
+    <juicio_final cd="0.04" mana="0.03" pot="0.12"/>
+    <explosion_cadaverica cd="0.04" mana="0.03" pot="0.12"/>
+    <nova_oscura cd="0.04" mana="0.03" pot="0.12"/>
+    <lluvia_profana cd="0.04" mana="0.03" pot="0.1"/>
+    <apocalipsis_necromantico cd="0.04" mana="0.03" pot="0.12"/>
     <golpe_terrestre cd="0.04" mana="0.03" pot="0.12"/>
     <salto_impacto cd="0.04" mana="0.03" pot="0.12"/>
     <estocada_lineal cd="0.04" mana="0.03" pot="0.12"/>

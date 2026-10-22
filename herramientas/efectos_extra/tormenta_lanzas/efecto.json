@@ -1,0 +1,40 @@
+{
+ "id_dos_coronas": "tormenta_lanzas",
+ "clase": "lancero",
+ "nombre": "Tormenta de lanzas",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 16,
+   "cell": [
+    256,
+    256
+   ],
+   "origin": [
+    128,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 1.2,
+  "golpes_s": [
+   0.5
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "GT",
+    "t0": 0.05,
+    "ms": 0.07,
+    "sc": 0.95,
+    "a": 1.0,
+    "modo": "once"
+   }
+  ]
+ },
+ "nota": "lancero/lluvia_de_lanzas del paquete de poderes."
+}

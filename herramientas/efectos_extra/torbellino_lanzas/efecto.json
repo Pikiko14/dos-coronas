@@ -1,0 +1,43 @@
+{
+ "id_dos_coronas": "torbellino_lanzas",
+ "clase": "lancero",
+ "nombre": "Torbellino de lanzas",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 16,
+   "cell": [
+    256,
+    256
+   ],
+   "origin": [
+    128,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 1.7,
+  "golpes_s": [
+   0.4,
+   0.8,
+   1.2,
+   1.6
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "GC",
+    "t0": 0.0,
+    "ms": 0.1,
+    "sc": 0.85,
+    "a": 1.0,
+    "modo": "once"
+   }
+  ]
+ },
+ "nota": "lancero/torbellino_lanzas del paquete de poderes."
+}

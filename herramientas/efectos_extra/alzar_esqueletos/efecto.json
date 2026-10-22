@@ -1,0 +1,38 @@
+{
+ "id_dos_coronas": "alzar_esqueletos",
+ "clase": "nigromante",
+ "nombre": "Alzar esqueletos",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 16,
+   "cell": [
+    256,
+    256
+   ],
+   "origin": [
+    128,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 1.2,
+  "golpes_s": [],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "GC",
+    "t0": 0.05,
+    "ms": 0.07,
+    "sc": 0.95,
+    "a": 1.0,
+    "modo": "once"
+   }
+  ]
+ },
+ "nota": "nigromante/invocacion_esqueletos del paquete de poderes."
+}

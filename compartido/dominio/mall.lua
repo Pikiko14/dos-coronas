@@ -25,6 +25,10 @@ M.ADDONS, M.ORDEN_ADDONS = Config.mapaOrden("mall", "addon", false)
 
 M.MONTURAS, M.ORDEN_MONTURAS = Config.mapaOrden("mall", "montura", false)
 
+-- Mascotas recolectoras: las especies están en mascotas.xml (<recolectora>), con su precio en monedas.
+local Mascotas = require("compartido.dominio.mascotas")
+M.ORDEN_MASCOTAS = Mascotas.ORDEN_MALL
+
 function M.duracion(bono)
   local d = M.BONOS[bono]
   return (d and d.largo) and M.DURACION_EXP_SEG or M.DURACION_SEG
@@ -143,6 +147,25 @@ function M.instalar(Mundo)
     return nil
   end
 
+  -- Compra una mascota recolectora del mall (permanente): se une a ti y sale enseguida a recoger el botín.
+  function Mundo:comprarMascotaMall(p, id)
+    if p.kind ~= "jugador" then return "Solo los jugadores compran mascotas." end
+    local d = Mascotas.especies[id]
+    if not d or not d.mall then return "Esa mascota no está en el mall." end
+    p.mascotas = p.mascotas or {}
+    for _, m in ipairs(p.mascotas) do
+      if m.especie == id then return "Ya tienes esa mascota." end
+    end
+    if #p.mascotas >= Mascotas.MAX_MASCOTAS then return "No puedes cuidar más mascotas." end
+    if (p.monedas or 0) < d.precio then return "Te faltan monedas: cuesta " .. d.precio .. "." end
+    p.monedas = p.monedas - d.precio
+    p.mascotas[#p.mascotas + 1] = { especie = id, nivel = 1, xp = 0 }
+    self:marcarProgreso(p)
+    self:mensaje("sistema", "", d.nombre .. " es tuya: recoge por ti todo lo que cae a tu alrededor. Pulsa N para llamarla o guardarla.", p)
+    if p.modo ~= "batalla" and p.modo ~= "estandarte" and p.modo ~= "moba" then self:invocarMascota(p, #p.mascotas) end
+    return nil
+  end
+
   -- Pone o quita un addon que ya tienes.
   function Mundo:alternarAddon(p, id)
     if p.kind ~= "jugador" then return "Solo los jugadores llevan addons." end
@@ -159,6 +182,7 @@ function M.instalar(Mundo)
     elseif nombre == "mall_addon_comprar" then err = self:comprarAddon(p, tostring(datos.id))
     elseif nombre == "mall_addon" then err = self:alternarAddon(p, tostring(datos.id))
     elseif nombre == "mall_montura_comprar" then err = self:comprarMonturaMall(p, tostring(datos.id))
+    elseif nombre == "mall_mascota_comprar" then err = self:comprarMascotaMall(p, tostring(datos.id))
     end
     if err then self:mensaje("sistema", "", err, p) end
     return nil

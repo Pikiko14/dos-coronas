@@ -1,0 +1,41 @@
+{
+ "id_dos_coronas": "estocada",
+ "clase": "lancero",
+ "nombre": "Estocada",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 13,
+   "cell": [
+    233,
+    256
+   ],
+   "origin": [
+    0,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 0.55,
+  "golpes_s": [
+   0.2
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "T",
+    "t0": 0.0,
+    "ms": 0.025,
+    "sc": 0.8,
+    "a": 1.0,
+    "modo": "estela",
+    "t1": 0.3
+   }
+  ]
+ },
+ "nota": "lancero/avance_implacable del paquete de poderes."
+}

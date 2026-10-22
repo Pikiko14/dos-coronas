@@ -428,6 +428,8 @@ function Entrada.manejar(app, id)
   if id == "mall_tab_forja" then Interfaz.mallTab, Interfaz.mallScroll = "forja", 0 return end
   if id == "mall_tab_add" then Interfaz.mallTab, Interfaz.mallScroll = "addons", 0 return end
   if id == "mall_tab_mont" then Interfaz.mallTab, Interfaz.mallScroll = "monturas", 0 return end
+  if id == "mall_tab_masc" then Interfaz.mallTab, Interfaz.mallScroll = "mascotas", 0 return end
+  if id:sub(1, 12) == "mall_ma_buy_" then app.actuar("mall_mascota_comprar", { id = id:sub(13) }) return end
   if id:sub(1, 12) == "mall_mt_buy_" then app.actuar("mall_montura_comprar", { id = id:sub(13) }) return end
   if id:sub(1, 9) == "mall_buy_" then app.actuar("mall_comprar", { id = id:sub(10) }) return end
   if id:sub(1, 12) == "mall_ad_buy_" then app.actuar("mall_addon_comprar", { id = id:sub(13) }) return end

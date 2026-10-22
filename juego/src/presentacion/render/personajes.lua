@@ -187,6 +187,11 @@ P.mascotas = {
   flor = { hoja = "Characters/Monster2.png", idx = 0 },
   hada = { hoja = "Characters/Monster2.png", idx = 3 },
   avispa = { hoja = "Characters/Monster3.png", idx = 2 },
+  -- recolectoras del Item Mall
+  perro_rastreador = { hoja = "Characters/Animal.png", idx = 0 },
+  gallina_dorada = { hoja = "Characters/Animal.png", idx = 2 },
+  dragoncito = { hoja = "Characters/Monster2.png", idx = 1 },
+  fantasma = { hoja = "Characters/Monster1.png", idx = 0 },
 }
 
 -- Monturas de transporte (compartido/dominio/monturas.lua).

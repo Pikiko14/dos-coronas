@@ -9,4 +9,9 @@
   <especie id="flor" nombre="Flor curativa" nivel="12" atk="0.35" desc="Te cura un poco cada pocos segundos." precio="2550" rol="sanador"/>
   <especie id="hada" nombre="Hada" nivel="16" atk="0.4" desc="Te devuelve maná mientras luchas." precio="4150" rol="mana"/>
   <especie id="avispa" nombre="Avispa" nivel="20" atk="0.9" desc="Su aguijón envenena a tu objetivo." precio="6700" rol="veneno"/>
+  <!-- Mascotas recolectoras del Item Mall (precio en Monedas Corona). radio = casillas alrededor del dueño en las que van a por todo lo que cae al suelo y se lo traen. -->
+  <recolectora id="perro_rastreador" nombre="Perro rastreador" nivel="1" atk="0.3" desc="Husmea el botín: recoge por ti todo lo que cae cerca." precio="150" radio="7" rol="recolector" mall="true"/>
+  <recolectora id="gallina_dorada" nombre="Gallina de oro" nivel="1" atk="0.3" desc="Recoge por ti todo lo que cae, un poco más lejos." precio="250" radio="10" rol="recolector" mall="true"/>
+  <recolectora id="dragoncito" nombre="Dragoncito tesorero" nivel="1" atk="0.4" desc="Vuela a por el botín en un radio amplio." precio="450" radio="13" rol="recolector" mall="true"/>
+  <recolectora id="fantasma" nombre="Fantasma saqueador" nivel="1" atk="0.4" desc="Atraviesa el campo y te trae todo el botín, muy rápido." precio="700" radio="17" rol="recolector" mall="true"/>
 </mascotas>

@@ -1369,9 +1369,14 @@ end
 function Mundo:recoger(p, loot)
   self:marcarProgreso(p)
   p.oro = p.oro + (loot.oro or 0)
+  local resto = {}
   for _, it in ipairs(loot.items or {}) do
     if not self:darItem(p, it.id, it.cant) then
-      self:mensaje("sistema", "", "La bolsa está llena.", p)
+      resto[#resto + 1] = it                       -- lo que no cabe se queda en el suelo
+      if (self.tiempo - (loot.avisoLleno or -10)) > 3 then
+        loot.avisoLleno = self.tiempo
+        self:mensaje("sistema", "", "La bolsa está llena.", p)
+      end
     else
       local d = Datos.item(it.id)
       self:mensaje("sistema", "", "Recoges " .. (d and d.nombre or it.id) .. ".", p)
@@ -1380,7 +1385,7 @@ function Mundo:recoger(p, loot)
   if (loot.oro or 0) > 0 then
     self:mensaje("sistema", "", "Recoges " .. loot.oro .. " de oro.", p)
   end
-  loot.items, loot.oro = {}, 0
+  loot.items, loot.oro = resto, 0
   -- mercancías de una caravana caída: las llevan comerciantes y ladrones
   if loot.bienes and next(loot.bienes) then
     loot.aviso = loot.aviso or {}
@@ -1407,6 +1412,7 @@ function Mundo:recoger(p, loot)
     if tomadas > 0 then self:mensaje("sistema", "", "Recoges " .. tomadas .. " unidades de mercancía.", p) end
     if next(loot.bienes) then return end
   end
+  if #loot.items > 0 then return end        -- queda lo que no cupo en la bolsa
   loot.borrar = true
 end
 
@@ -1414,6 +1420,8 @@ end
 Mundo.SONIDO_PODER = {
   golpe = "corte", tajo = "corte", carga = "corte", grito = "grito",
   misil = "magia", fuego = "fuego", escudo = "magia", nova = "hielo",
+  fisura_del_lancero = "lanza", pulso_terrestre = "lanza", torbellino_lanzas = "lanza", juicio_final = "lanza",
+  explosion_cadaverica = "oscuro", nova_oscura = "oscuro", lluvia_profana = "oscuro", apocalipsis_necromantico = "oscuro",
   golpe_terrestre = "corte", salto_impacto = "corte", estocada_lineal = "corte", ejecucion = "corte",
   disparo_multiple = "flecha", disparo_explosivo = "fuego", disparo_helado = "hielo", marca_cazador = "flecha",
   escudo_divino = "sagrado", cadena_sanacion = "cura", tormenta_divina = "sagrado", resurreccion = "sagrado",
@@ -1500,6 +1508,14 @@ function Mundo:usarHabilidad(p, slot, tx, ty)
       if o.vivo and self:mismoLugar(p, o) and self:puedeDanar(p, o) and Util.dist(p.x, p.y, o.x, o.y) <= h.rango then
         golpe(o, h.coef)
         if h.lentitud and o.vivo then self:aplicarEstado(o, "lentitud", 3, h.lentitud, p) end
+        if h.aturde and o.vivo then self:aplicarEstado(o, "aturdir", h.aturde, nil, p) end
+      end
+    end
+    if h.pulsos and h.pulsos > 1 then
+      -- torbellino: los golpes siguientes llegan mientras gira y siguen a quien lo lanza
+      self.pulsos = self.pulsos or {}
+      for i = 1, h.pulsos - 1 do
+        self.pulsos[#self.pulsos + 1] = { t = self.tiempo + 0.45 + 0.35 * (i - 1), p = p, x = p.x, y = p.y, h = h, seguir = h.seguir, rango = h.rango }
       end
     end
   elseif h.tipo == "punto" then
@@ -3338,8 +3354,9 @@ function Mundo:actualizar(dt)
     for _, q in ipairs(self.pulsos) do
       if q.t > self.tiempo then resto[#resto + 1] = q
       elseif q.p.vivo then
+        if q.seguir then q.x, q.y = q.p.x, q.p.y end
         for _, o in pairs(self.entidades) do
-          if o.vivo and self:mismoLugar(q.p, o) and self:puedeDanar(q.p, o) and Util.dist(q.x, q.y, o.x, o.y) <= (q.h.aoe or 2) then
+          if o.vivo and self:mismoLugar(q.p, o) and self:puedeDanar(q.p, o) and Util.dist(q.x, q.y, o.x, o.y) <= (q.rango or q.h.aoe or 2) then
             self:golpear(q.p, o, q.h.coef, nil, q.h.dano or "fisico")
             if o.vivo and q.h.lentitud then self:aplicarEstado(o, "lentitud", 3, q.h.lentitud, q.p) end
           end

@@ -1,0 +1,41 @@
+{
+ "id_dos_coronas": "embestida",
+ "clase": "lancero",
+ "nombre": "Embestida",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 13,
+   "cell": [
+    232,
+    256
+   ],
+   "origin": [
+    0,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 0.8,
+  "golpes_s": [
+   0.4
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "T",
+    "t0": 0.0,
+    "ms": 0.03,
+    "sc": 0.9,
+    "a": 1.0,
+    "modo": "estela",
+    "t1": 0.4
+   }
+  ]
+ },
+ "nota": "lancero/embestida_perforante del paquete de poderes."
+}

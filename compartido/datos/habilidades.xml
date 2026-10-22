@@ -102,6 +102,10 @@
   <habilidad id="tormenta_lanzas" nombre="Tormenta de lanzas" clase="lancero" tipo="punto" aoe="2.6" cd="22" coef="2.2" desc="Una lluvia de lanzas cae sobre la zona." mana="40" rango="7.5">
     <estado tipo="sangrar" dur="5" prob="0.5"/>
   </habilidad>
+  <habilidad id="fisura_del_lancero" nombre="Fisura del lancero" clase="lancero" tipo="punto" aoe="2.6" cd="12" coef="1.8" lentitud="0.4" desc="Clavas la lanza y abres una fisura que daña y frena a los de la zona." mana="30" rango="6"/>
+  <habilidad id="pulso_terrestre" nombre="Pulso terrestre" clase="lancero" tipo="alrededor" cd="14" coef="1.7" aturde="0.9" desc="Una onda de choque a tu alrededor daña y aturde." mana="28" rango="3.4"/>
+  <habilidad id="torbellino_lanzas" nombre="Torbellino de lanzas" clase="lancero" tipo="alrededor" pulsos="4" seguir="true" cd="20" coef="0.9" lentitud="0.3" desc="Giras la lanza sin parar: golpeas cuatro veces a los que te rodean." mana="45" rango="3.2"/>
+  <habilidad id="juicio_final" nombre="Juicio final" clase="lancero" tipo="punto" aoe="3.4" pulsos="3" cd="30" coef="1.5" aturde="0.6" desc="Una lluvia de lanzas de luz cae tres veces sobre la zona." mana="70" rango="7.5"/>
   <!-- ---- nigromante ---- -->
   <habilidad id="toque_necro" nombre="Toque necrótico" clase="nigromante" tipo="enemigo" cd="2" coef="1.2" dano="magico" desc="Una bola de energía muerta que hiere y a veces drena vida." mana="7" proyectil="necro" rango="7.2">
     <estado tipo="drenar_vida" prob="0.1"/>
@@ -117,13 +121,21 @@
     <estado tipo="drenar_vida" dur="4" prob="1"/>
   </habilidad>
   <habilidad id="espectro" nombre="Alma en pena" clase="nigromante" tipo="invocar" esbirro="espectro" cantidad="1" dur="38" cd="34" desc="Un espectro fiel dispara descargas de sombra a tus enemigos." mana="60"/>
-  <!-- ---- orden de los poderes en la barra (teclas 1 a 6; guerrero, cazador, mago y clérigo tienen 10) ---- -->
+  <habilidad id="explosion_cadaverica" nombre="Explosión cadavérica" clase="nigromante" tipo="punto" aoe="2.8" cd="14" coef="2" dano="magico" desc="Un cadáver estalla y desgarra a todos los de la zona." mana="40" rango="7.5">
+    <estado tipo="veneno" dur="5" prob="0.5"/>
+  </habilidad>
+  <habilidad id="nova_oscura" nombre="Nova oscura" clase="nigromante" tipo="alrededor" cd="12" coef="1.8" dano="magico" lentitud="0.4" desc="Una onda de oscuridad a tu alrededor daña y frena a los enemigos." mana="38" rango="3.6"/>
+  <habilidad id="lluvia_profana" nombre="Lluvia profana" clase="nigromante" tipo="punto" aoe="3.2" pulsos="4" cd="24" coef="0.95" dano="magico" desc="Llueven almas envenenadas durante un rato sobre la zona." mana="65" rango="7.5">
+    <estado tipo="veneno" dur="5" prob="0.6"/>
+  </habilidad>
+  <habilidad id="apocalipsis_necromantico" nombre="Apocalipsis necromántico" clase="nigromante" tipo="punto" aoe="3.8" pulsos="2" cd="40" coef="2.6" dano="magico" desc="La muerte misma barre la zona dos veces." mana="95" rango="7.5"/>
+  <!-- ---- orden de los poderes en la barra (teclas 1 a 6; todas las clases tienen 10) ---- -->
   <barra>
     <cazador lista="disparo,lluvia,trampa,preciso,flecha_veneno,paso_agil,disparo_multiple,disparo_explosivo,disparo_helado,marca_cazador"/>
     <clerigo lista="curar,bendicion,castigo,consagrar,sanacion,juicio,escudo_divino,cadena_sanacion,tormenta_divina,resurreccion"/>
     <guerrero lista="golpe,tajo,grito,carga,pantera,furia,golpe_terrestre,salto_impacto,estocada_lineal,ejecucion"/>
     <mago lista="misil,fuego,escudo,nova,rayo_hielo,meteoro,rayo_arcano,lluvia_fuego,teletransporte,torbellino"/>
-    <lancero lista="estocada,barrido,muro_lanzas,embestida,jabalina,tormenta_lanzas"/>
-    <nigromante lista="toque_necro,espinas,maldecir,alzar_esqueletos,drenar,espectro"/>
+    <lancero lista="estocada,barrido,muro_lanzas,embestida,jabalina,tormenta_lanzas,fisura_del_lancero,pulso_terrestre,torbellino_lanzas,juicio_final"/>
+    <nigromante lista="toque_necro,espinas,maldecir,alzar_esqueletos,drenar,espectro,explosion_cadaverica,nova_oscura,lluvia_profana,apocalipsis_necromantico"/>
   </barra>
 </habilidades>

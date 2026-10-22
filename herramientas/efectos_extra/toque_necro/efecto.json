@@ -1,0 +1,40 @@
+{
+ "id_dos_coronas": "toque_necro",
+ "clase": "nigromante",
+ "nombre": "Toque necrótico",
+ "poder_fao": "(secuencia propia: paquete de clases)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 16,
+   "cell": [
+    256,
+    256
+   ],
+   "origin": [
+    128,
+    128
+   ],
+   "ms_per_frame": 55.0
+  }
+ },
+ "composicion": {
+  "inferida": true,
+  "duracion_s": 0.95,
+  "golpes_s": [
+   0.35
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "T",
+    "t0": 0.1,
+    "ms": 0.05,
+    "sc": 0.6,
+    "a": 1.0,
+    "modo": "once"
+   }
+  ]
+ },
+ "nota": "nigromante/drenaje_vital del paquete de poderes."
+}
