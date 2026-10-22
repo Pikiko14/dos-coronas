@@ -1114,12 +1114,12 @@ function Mundo:soltarBotin(m, asesino)
       loot.items[#loot.items + 1] = { id = "polvo_arcano", cant = math.random(2, 4) }
     end
     if m.categoria == "gigante" and math.random() < 0.5 then
-      loot.items[#loot.items + 1] = { id = Items.aleatorioCualquiera(Datos, math.min(8, Items.tierPara(m.nivel) + 1)), cant = 1 }
+      loot.items[#loot.items + 1] = { id = Items.aleatorioCualquiera(Datos, math.min(#Items.TIER, Items.tierPara(m.nivel) + 1)), cant = 1 }
     end
   end
   if math.random() < (m.categoria == "gigante" and 1 or m.categoria == "party" and 0.6 or 0.12) then
     local tier = Items.tierPara(m.nivel)
-    if m.categoria then tier = math.min(8, tier + 1)
+    if m.categoria then tier = math.min(#Items.TIER, tier + 1)
     elseif tier > 1 and math.random() < 0.35 then tier = tier - 1 end
     local id = Items.aleatorioCualquiera(Datos, tier)
     if Datos.item(id) then loot.items[#loot.items + 1] = { id = id, cant = 1 } end

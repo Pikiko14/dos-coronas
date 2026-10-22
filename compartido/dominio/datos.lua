@@ -19,6 +19,8 @@ D.barra = Config.seccion("habilidades", "barra")
 D.biomas = Config.mapa("biomas", "bioma", false)
 D.misiones = Config.lista("misiones", "mision")
 D.monstruos = Config.lista("monstruos", "monstruo")
+-- criaturas de nivel 31 a 50 (el nivel máximo es 50): archivo aparte, a mano
+for _, m in ipairs(Config.lista("monstruos_altos", "monstruo")) do D.monstruos[#D.monstruos + 1] = m end
 
 -- Las diez ciudades: cinco en el continente del Alba (oeste) y cinco en el de Umbra (este); caminos curvos
 -- unen las de cada continente y los puertos (puerto = true) tienen barquero para cruzar el mar. Cada

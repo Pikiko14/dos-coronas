@@ -11,6 +11,7 @@ local VELOCIDAD = { wait = 10, run = 26, att = 28, hurt = 22, dead = 18 }   -- c
 local PASOS = { wait = 2.6, run = 7.5, dead = 4.5 }                          -- pasos por segundo (criaturas con direcciones)
 
 M.DEFS = require("src.presentacion.render.mob_anim_datos")
+for id, d in pairs(require("src.presentacion.render.mob_anim_altos")) do M.DEFS[id] = d end         -- criaturas de nivel 31-50 (variantes)
 -- PNJ de FAO (herramientas/generar_mobs/npcs.py): mismo formato, con 3 pasos de espera y 6 de carrera
 for k, d in pairs(require("src.presentacion.render.npc_anim_datos")) do M.DEFS[k] = d end
 -- monturas de FAO (herramientas/generar_mobs/monturas.py)

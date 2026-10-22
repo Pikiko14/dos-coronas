@@ -9,10 +9,10 @@
 -->
 <equipo>
   <adjetivos>
-    <f lista="tosca,de soldado,de veterano,de capitán,de campeón,de élite,legendaria,de corona"/>
-    <fp lista="toscas,de soldado,de veterano,de capitán,de campeón,de élite,legendarias,de corona"/>
-    <m lista="tosco,de soldado,de veterano,de capitán,de campeón,de élite,legendario,de corona"/>
-    <mp lista="toscos,de soldado,de veterano,de capitán,de campeón,de élite,legendarios,de corona"/>
+    <f lista="tosca,de soldado,de veterano,de capitán,de campeón,de élite,legendaria,de corona,mítica,eterna"/>
+    <fp lista="toscas,de soldado,de veterano,de capitán,de campeón,de élite,legendarias,de corona,míticas,eternas"/>
+    <m lista="tosco,de soldado,de veterano,de capitán,de campeón,de élite,legendario,de corona,mítico,eterno"/>
+    <mp lista="toscos,de soldado,de veterano,de capitán,de campeón,de élite,legendarios,de corona,míticos,eternos"/>
   </adjetivos>
   <amuletos>
     <iconos lista="720,721,722,723,724,725,726,727"/>
@@ -76,7 +76,52 @@
     <i nivel="20" mul="6.2"/>
     <i nivel="25" mul="7.8"/>
     <i nivel="30" mul="10"/>
+    <!-- escalones 9 y 10 (nivel 40 y 50): arma y armadura con iconos y dibujo nuevos de FAO (hoja altos, ver iconos_altos); escudo, anillo y amuleto usan el icono del escalón 8 con un tinte (tinte) -->
+    <i nivel="40" mul="14" hoja="altos"><tinte lista="0.6,0.78,1"/></i>
+    <i nivel="50" mul="17" hoja="altos"><tinte lista="1,0.82,0.4"/></i>
   </escalones>
+  <!-- iconos de los escalones 9 y 10: casillas de la lámina equipo_altos.png (herramientas/generar_personajes/equipo_altos.py), escalón 9 y escalón 10 -->
+  <iconos_altos>
+    <pesada>
+      <cabeza lista="0,1"/>
+      <pecho lista="2,3"/>
+      <piernas lista="4,5"/>
+      <pies lista="6,7"/>
+    </pesada>
+    <ligera>
+      <cabeza lista="8,9"/>
+      <pecho lista="10,11"/>
+      <piernas lista="12,13"/>
+      <pies lista="14,15"/>
+    </ligera>
+    <tela>
+      <cabeza lista="16,17"/>
+      <pecho lista="18,19"/>
+      <piernas lista="20,21"/>
+      <pies lista="22,23"/>
+    </tela>
+    <lancero>
+      <cabeza lista="24,25"/>
+      <pecho lista="26,27"/>
+      <piernas lista="28,29"/>
+      <pies lista="30,31"/>
+    </lancero>
+    <necro>
+      <cabeza lista="32,33"/>
+      <pecho lista="34,35"/>
+      <piernas lista="36,37"/>
+      <pies lista="38,39"/>
+    </necro>
+    <armas>
+      <espada lista="40,41"/>
+      <hacha lista="42,43"/>
+      <lanza lista="44,45"/>
+      <arco lista="46,47"/>
+      <baston lista="48,49"/>
+      <maza lista="50,51"/>
+      <baculo lista="52,53"/>
+    </armas>
+  </iconos_altos>
   <escudos>
     <iconos lista="386,400,392,395,398,408,415,422"/>
   </escudos>

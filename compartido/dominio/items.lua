@@ -1,4 +1,4 @@
--- Equipo del juego: armas, armaduras, escudos, anillos y amuletos en ocho escalones.
+-- Equipo del juego: armas, armaduras, escudos, anillos y amuletos en diez escalones.
 --
 -- Hay tres tipos de armadura, uno por oficio:
 --   pesada (guerrero): mucha defensa física y poca mágica, algo de vida; pesa y frena.
@@ -34,6 +34,17 @@ end
 
 local function redondear(v) return math.floor(v + 0.5) end
 
+-- Icono de un escalón: los escalones sin icono propio (los últimos) usan el del último que lo tiene y se distinguen por su tinte.
+local function icono(lista, t) return lista[t] or lista[#lista] end
+
+-- Los escalones con lámina propia de iconos (tier.hoja: 9 y 10, equipo_altos.png) tienen sus casillas en equipo.xml (iconos_altos).
+local ALTOS = EQ.iconos_altos
+local function altos(tier, t, tipo, hueco_o_arma)
+  if not (tier.hoja and ALTOS) then return nil end
+  local lista = tipo and ALTOS[tipo] and ALTOS[tipo][hueco_o_arma] or (not tipo and ALTOS.armas and ALTOS.armas[hueco_o_arma])
+  return lista and lista[t - #EQ.escalones + 2]       -- (los dos últimos escalones: 1 y 2 de la lista)
+end
+
 local function precio(base, mul) return math.floor(base * mul ^ 1.5 * M.FACTOR_PRECIO) end
 
 local function redondeado(it)
@@ -64,8 +75,10 @@ function M.generar(D)
           atk = a.atk and a.atk * u or nil, matk = a.matk and a.matk * u or nil,
           def = a.def and a.def * u or nil, hp = a.hp and a.hp * u or nil, mp = a.mp and a.mp * u or nil,
           spd = a.spd and a.spd * (1 + 0.15 * (t - 1)) or nil,
-          precio = precio(55, u), hoja = a.hoja or "equipment", sprite = a.iconos[t],
+          precio = precio(55, u), hoja = a.hoja or "equipment", sprite = icono(a.iconos, t),
         })
+        local propio = altos(tier, t, nil, a.id == "hacha" and "hacha" or a.arma)
+        if propio then D.items[clase .. "_" .. a.id .. "_" .. t].hoja, D.items[clase .. "_" .. a.id .. "_" .. t].sprite = tier.hoja, propio end
       end
       -- armadura de su tipo
       for _, hueco in ipairs({ "cabeza", "pecho", "piernas", "pies" }) do
@@ -79,9 +92,11 @@ function M.generar(D)
           hp = c.hp * u * f.hp, spd = f.spd * peso,
           atk = f.atk and f.atk * u * peso or nil, matk = f.matk and f.matk * u * peso or nil,
           mp = f.mp and f.mp * u * peso or nil,
-          precio = precio(c.def * 17, u), hoja = HOJA_ARMADURA[tipo] or "equipment", sprite = ICONO[tipo][hueco][t],
+          precio = precio(c.def * 17, u), hoja = HOJA_ARMADURA[tipo] or "equipment", sprite = icono(ICONO[tipo][hueco], t),
         }
         if hueco == "pies" then it.spd = f.botas * (1 + 0.15 * (t - 1)) + (tipo == "pesada" and -0.02 or 0) end
+        local propio = altos(tier, t, tipo, hueco)
+        if propio then it.hoja, it.sprite = tier.hoja, propio end
         add(it)
       end
     end
@@ -89,15 +104,15 @@ function M.generar(D)
     add({
       id = "guerrero_escudo_" .. t, nombre = "Escudo " .. ADJ.m[t], hueco = "escudo", clase = "guerrero",
       tier = t, nivel = tier.nivel, armadura = "pesada",
-      def = 2.4 * u, mdef = 0.9 * u, hp = 3 * u, precio = precio(40, u), hoja = "equipment", sprite = ESCUDOS[t],
+      def = 2.4 * u, mdef = 0.9 * u, hp = 3 * u, precio = precio(40, u), hoja = "equipment", sprite = icono(ESCUDOS, t), tinte = tier.tinte,
     })
     add({
       id = "anillo_" .. t, nombre = "Anillo " .. ADJ.m[t], hueco = "anillo", tier = t, nivel = tier.nivel,
-      atk = 0.6 * u, matk = 0.6 * u, mp = 5 * u, precio = precio(45, u), hoja = "equipment", sprite = ANILLOS[t],
+      atk = 0.6 * u, matk = 0.6 * u, mp = 5 * u, precio = precio(45, u), hoja = "equipment", sprite = icono(ANILLOS, t), tinte = tier.tinte,
     })
     add({
       id = "amuleto_" .. t, nombre = "Amuleto " .. ADJ.m[t], hueco = "amuleto", tier = t, nivel = tier.nivel,
-      hp = 10 * u, def = 0.5 * u, mdef = 0.5 * u, precio = precio(50, u), hoja = "equipment", sprite = AMULETOS[t],
+      hp = 10 * u, def = 0.5 * u, mdef = 0.5 * u, precio = precio(50, u), hoja = "equipment", sprite = icono(AMULETOS, t), tinte = tier.tinte,
     })
   end
 end

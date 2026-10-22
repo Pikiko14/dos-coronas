@@ -217,11 +217,12 @@ function M.instalar(Mundo)
       -- recolectora: va a por el botín de su dueño y se lo mete en la bolsa
       local dist = Util.dist(e.x, e.y, botin.x, botin.y)
       if not e.buscaBotin or e.buscaBotin.id ~= botin.id then e.buscaBotin = { id = botin.id, desde = self.tiempo } end
-      if self.tiempo - e.buscaBotin.desde > 5 and dist > 0.9 then
+      if self.tiempo - e.buscaBotin.desde > 5 and dist > 1.0 and not e.buscaBotin.salto then
+        e.buscaBotin.salto = true
         self:colocarCerca(e, botin.x, botin.y)         -- atascada (un muro en medio): se planta junto al botín
         dist = Util.dist(e.x, e.y, botin.x, botin.y)
       end
-      if dist <= 0.9 then
+      if dist <= 1.0 or (e.buscaBotin.salto and dist <= 2.4) then
         self:recoger(dueno, botin)
         if not botin.borrar then
           e.ignorar = e.ignorar or {}

@@ -224,7 +224,7 @@ NUEVO: PODERES, EQUIPO, ENCANTOS, MASCOTAS Y GREMIOS
           N llamar/guardar mascota, P equipo, I bolsa. Chat: /m mundo, /f faccion, /g gremio.
   - Poderes: 6 por oficio (2 nuevos: guerrero Desgarro y Furia, mago Descarga de sombras y
     Meteoro, cazador Flecha envenenada y Paso agil, clerigo Luz sanadora y Juicio divino).
-  - Equipo (compartido/dominio/items.lua): 8 escalones (nivel 1 a 30), dos familias de arma por
+  - Equipo (compartido/dominio/items.lua): 10 escalones (nivel 1 a 50; los escalones 9 y 10, de nivel 40 y 50, usan arte y armas nuevos de FAO), dos familias de arma por
     oficio, casillas cabeza/pecho/piernas/pies/escudo/anillo/amuleto/mochila. Armadura por tipo:
     pesada (guerrero), ligera (cazador), tela (mago y clerigo).
   - Encantamiento: maestro de encantos en cada ciudad; +1 a +10 con oro y polvo arcano.

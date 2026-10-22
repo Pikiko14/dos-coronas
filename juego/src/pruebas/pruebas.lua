@@ -462,7 +462,7 @@ function Pruebas.correr()
     local datos = {}
     local function celda(hoja, idx)
       if not datos[hoja] then
-        local archivo = ({ equipment = "otsp_equipment_01.png", extra = "equipo_extra.png" })[hoja] or (hoja .. ".png")
+        local archivo = ({ equipment = "otsp_equipment_01.png", extra = "equipo_extra.png", altos = "equipo_altos.png" })[hoja] or (hoja .. ".png")
         datos[hoja] = love.image.newImageData(love.filesystem.newFileData(Atlas.carpeta .. "/" .. archivo))
       end
       local d = datos[hoja]
@@ -1290,8 +1290,35 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local P = require("src.presentacion.render.personajes")
     fallar(errores, "los PNJ de misiones tienen sprite", P.de({ kind = "npc", rol = "misiones", id = "x1" }) ~= nil and Interfaz.ICONO_NPC.misiones ~= nil)
   end)
+  -- Criaturas de nivel 31 a 50 (arte nuevo de FAO): se dibujan en todas sus animaciones. Con DC_PRUEBA_PODERES_FAO=1 guarda juego/capturas/criaturas_altas.png
+  paso("criaturas de nivel 31 a 50: arte propio y todas las animaciones", function()
+    local MobAnim = require("src.presentacion.render.mob_anim")
+    local lista = {}
+    for _, m in ipairs(Datos.monstruos) do if m.nivel > 30 then lista[#lista + 1] = m end end
+    fallar(errores, "hay 26 criaturas de nivel 31 a 50", #lista == 26, tostring(#lista))
+    local carpetas = {}
+    local CW, CH = 120, 130
+    local cv = love.graphics.newCanvas(CW * 9, CH * 3)
+    love.graphics.push("all")
+    love.graphics.setCanvas(cv)
+    love.graphics.clear(0.24, 0.4, 0.24, 1)
+    for i, m in ipairs(lista) do
+      local d = MobAnim.DEFS[m.id]
+      fallar(errores, m.id .. " tiene dibujo", d ~= nil)
+      if d then
+        carpetas[d.carpeta] = (carpetas[d.carpeta] or 0) + 1
+        for _, estado in ipairs({ "wait", "run", "att", "hurt", "dead" }) do
+          local ok, err = pcall(MobAnim.dibujar, m.id, estado, 0.5, ((i - 1) % 9) * CW + CW / 2, math.floor((i - 1) / 9) * CH + CH - 16, 1, nil, i, nil)
+          fallar(errores, m.id .. " se dibuja en " .. estado, ok, tostring(err))
+        end
+      end
+    end
+    love.graphics.pop()
+    for car, n in pairs(carpetas) do fallar(errores, "el dibujo " .. car .. " no se repite", n == 1) end
+    if os.getenv("DC_PRUEBA_PODERES_FAO") then Log.volcar("capturas/criaturas_altas.png", cv:newImageData():encode("png"):getString()) end
+  end)
   -- Hoja de comprobación visual del equipo FAO: DC_PRUEBA_EQUIPOS=1 la guarda en capturas/equipos_<animación>.png (6 clases x 2 géneros en filas,
-  -- los 8 escalones en columnas) y avisa de las combinaciones que no dibujan nada.
+  -- los 10 escalones en columnas) y avisa de las combinaciones que no dibujan nada.
   if os.getenv("DC_PRUEBA_EQUIPOS") then
     paso("equipo FAO: hojas de comprobación por animación", function()
       local Fao = require("src.presentacion.render.fao")
@@ -1301,13 +1328,13 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       local CW, CH = 96, 104
       for _, anim in ipairs({ "wait", "run", "att", "cast", "dead" }) do
         for _, dir in ipairs({ 0, 4 }) do
-          local cv = love.graphics.newCanvas(CW * 8, CH * 12)
+          local cv = love.graphics.newCanvas(CW * 10, CH * 12)
           love.graphics.push("all")
           love.graphics.setCanvas(cv)
           love.graphics.clear(0.23, 0.27, 0.34, 1)
           for f, clase in ipairs(clases) do
             for g, gen in ipairs({ "h", "m" }) do
-              for tier = 1, 8 do
+              for tier = 1, 10 do
                 local fila = (f - 1) * 2 + g - 1
                 local e = { kind = "jugador", id = 3, clase = clase, gen = gen, equipo = I.equipoDe(clase, tier), x = 10, y = 10, dir = 1 }
                 local ok, err = pcall(Fao.dibujar, e, anim == "run", (tier - 1) * CW + CW / 2, fila * CH + CH - 14, nil, 1, { anim = anim, paso = 1, d5 = dir })

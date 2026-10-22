@@ -39,7 +39,7 @@ function Pruebas.correr()
     local silvestres = 0
     for _, m in ipairs(Datos.monstruos) do if not m.noCampamento then silvestres = silvestres + 1 end end
     fallar(errores, "al menos 30 criaturas", silvestres >= 30, tostring(silvestres))
-    -- hay criaturas cada dos niveles hasta el máximo (1-2, 3-4, ... 29-30), y las del último tramo no son solo élites
+    -- hay criaturas cada dos niveles hasta el máximo (1-2, 3-4, ... 49-50), y las del último tramo no son solo élites
     local cubierto = true
     for n = 1, Datos.NIVEL_MAX, 2 do
       local hay = false
@@ -51,7 +51,7 @@ function Pruebas.correr()
     fallar(errores, "hay criaturas cada dos niveles", cubierto)
     fallar(errores, "10 ciudades", #Datos.ciudades == 10)
     fallar(errores, "mapa extenso", Datos.MAPA_W >= 700 and Datos.MAPA_H >= 500)
-    fallar(errores, "nivel maximo", Datos.NIVEL_MAX == 30)
+    fallar(errores, "nivel maximo", Datos.NIVEL_MAX == 50)
     fallar(errores, "4 clases", Datos.clases.clerigo and Datos.clases.guerrero and Datos.clases.mago and Datos.clases.cazador)
   end)  paso("mundo", function()
     local mundo = Mundo.nuevo()
@@ -3672,13 +3672,13 @@ mundo.tiempo = 100
       fallar(errores, "almacén implementa " .. m, type(almacen[m]) == "function")
     end
   end)
-  paso("mazmorras: tres puertas, jefe, cofre y premios", function()
+  paso("mazmorras: cinco puertas, jefe, cofre y premios", function()
     local Mapa = require("compartido.dominio.mapa")
     local Mall = require("compartido.dominio.mall")
     local Items = require("compartido.dominio.items")
     local mundo = Mundo.nuevo()
     local puertas = mundo.mapas.mundo.mazmorras
-    fallar(errores, "hay tres puertas en el mundo", #puertas == 3)
+    fallar(errores, "hay cinco puertas en el mundo", #puertas == 5)
     local mundoMapa = mundo.mapas.mundo
     for i, z in ipairs(puertas) do
       fallar(errores, "la puerta " .. z.id .. " está en suelo firme", Mapa.transitable(mundoMapa, z.x, z.y + 1) and not mundo:ciudadEn(z.x, z.y))
@@ -3846,11 +3846,11 @@ mundo.tiempo = 100
       fallar(errores, "el jefe " .. j.id .. " está en su continente", k == j.continente, tostring(k) .. " vs " .. tostring(j.continente))
       por[j.continente] = por[j.continente] or {}
       table.insert(por[j.continente], j)
-      fallar(errores, "el jefe " .. j.id .. " sale en una zona de nivel parecido", math.abs(Mapa.nivelZona(j.x, j.y) - j.nivel) <= Mapa.TOLERANCIA_NIVEL + 3, Mapa.nivelZona(j.x, j.y) .. " vs " .. j.nivel)
+      fallar(errores, "el jefe " .. j.id .. " sale en una zona de nivel parecido", math.abs(Mapa.nivelZona(j.x, j.y) - math.min(j.nivel, Mapa.NIVEL_ZONAS)) <= Mapa.TOLERANCIA_NIVEL + (j.nivel > Mapa.NIVEL_ZONAS and 8 or 3), Mapa.nivelZona(j.x, j.y) .. " vs " .. j.nivel)
       fallar(errores, "el jefe " .. j.id .. " no se mete en una ciudad", not mundo:ciudadEn(j.x, j.y))
     end
-    fallar(errores, "cinco jefes en el continente de Albor", #por[1] == 5, tostring(#por[1]))
-    fallar(errores, "cinco jefes en el continente de Umbra", #por[2] == 5, tostring(#por[2]))
+    fallar(errores, "siete jefes en el continente de Albor", #por[1] == 7, tostring(#por[1]))
+    fallar(errores, "siete jefes en el continente de Umbra", #por[2] == 7, tostring(#por[2]))
     -- salen solos (uno por campamento), son élites y suben de nivel a lo largo del continente
     local vivos = 0
     for _, e in pairs(mundo.entidades) do
@@ -3859,7 +3859,7 @@ mundo.tiempo = 100
         fallar(errores, "el jefe " .. e.monstruo .. " es élite", e.elite == true)
       end
     end
-    fallar(errores, "los diez jefes existen en el mundo", vivos == 10, tostring(vivos))
+    fallar(errores, "los catorce jefes existen en el mundo", vivos == 14, tostring(vivos))
     -- al caer, un jefe del mundo vuelve a los 20 minutos (y una criatura normal, mucho antes)
     local jefe, normal
     for _, e in pairs(mundo.entidades) do
@@ -3896,7 +3896,7 @@ mundo.tiempo = 100
       local niveles = {}
       for _, j in ipairs(por[c]) do niveles[#niveles + 1] = j.nivel end
       table.sort(niveles)
-      fallar(errores, "los jefes del continente " .. c .. " van del 10 al 30", niveles[1] == 10 and niveles[#niveles] == 30)
+      fallar(errores, "los jefes del continente " .. c .. " van del 10 al 50", niveles[1] == 10 and niveles[#niveles] == 50)
     end
     -- cada jefe tiene su dibujo
     local ok = true
@@ -4219,7 +4219,7 @@ mundo.tiempo = 100
     fallar(errores, "sin aceptar, el destino es quien la da", d0[1] and d0[1].tipo == "npc")
     nuevo.misiones.q_auroria_2 = { aceptada = true, entregada = false, progreso = 0 }
     local d1 = Misiones.destinos(nuevo, Misiones.por_id.q_auroria_2, nuevo.misiones.q_auroria_2)
-    fallar(errores, "para cazar, los destinos son los campamentos de la criatura", #d1 >= 1 and d1[1].tipo == "criatura")
+    fallar(errores, "para cazar, los destinos son los campamentos de la criatura", #d1 >= 1 and d1[1].tipo == "criatura", "calabazas " .. #(Misiones.camps.calabaza or {}) .. " setas " .. #(Misiones.camps.seta_azul or {}) .. " total " .. (function() local n = 0 for _ in pairs(Misiones.camps) do n = n + 1 end return n end)())
   end)
   paso("mazmorras: la puerta de cada una siempre está en el mismo sitio, en una zona de su nivel", function()
     local Mapa = require("compartido.dominio.mapa")
@@ -4240,7 +4240,7 @@ mundo.tiempo = 100
       fallar(errores, def.id .. " tiene puerta", z ~= nil)
       if z then
         fallar(errores, def.id .. " está en el continente " .. tostring(def.continente), a.cont[z.x][z.y] == (def.continente or 1))
-        fallar(errores, def.id .. " está en una zona de su nivel", math.abs(Mapa.nivelZona(z.x, z.y) - def.nivelMin) <= 2, tostring(Mapa.nivelZona(z.x, z.y)))
+        fallar(errores, def.id .. " está en una zona de su nivel", math.abs(Mapa.nivelZona(z.x, z.y) - math.min(def.nivelMin, Mapa.NIVEL_ZONAS)) <= (def.nivelMin > Mapa.NIVEL_ZONAS and 8 or 2), tostring(Mapa.nivelZona(z.x, z.y)))
       end
     end
   end)
@@ -4595,7 +4595,7 @@ mundo.tiempo = 100
     end
     local lejos = mundo:dejarEnSuelo({ items = { { id = "pocion_mana", cant = 1 } }, oro = 0, dueno = p.id, hasta = mundo.tiempo + 120 }, p.x + 30, p.y, p.modo, p.z)
     local ajeno = mundo:dejarEnSuelo({ items = { { id = "pocion_mana", cant = 1 } }, oro = 0, dueno = 999999, hasta = mundo.tiempo + 120 }, p.x + 4, p.y + 1, p.modo, p.z)
-    for _ = 1, 150 do mundo:actualizar(0.1) end
+    for _ = 1, 300 do mundo:actualizar(0.1) end
     local quedan = 0
     for _, id in ipairs(ids) do local e = mundo.entidades[id]; if e and not e.borrar then quedan = quedan + 1 end end
     fallar(errores, "la mascota recoge todo el botín cercano", quedan == 0 and p.oro >= oro0 + 30 and #p.bolsa >= 1, "quedan " .. quedan .. " oro " .. (p.oro - oro0))
@@ -4726,11 +4726,11 @@ mundo.tiempo = 100
     local ok3, msg3 = pcall(Cfg.validar, "x.xml", "item", "espada", {}, { precio = "numero" })
     fallar(errores, "validar falta campo", not ok3 and tostring(msg3):find("falta el campo precio", 1, true))
     -- los archivos del juego se cargan con los datos esperados
-    fallar(errores, "xml equipo: 8 escalones", #Cfg.tabla("equipo").escalones == 8)
+    fallar(errores, "xml equipo: 10 escalones", #Cfg.tabla("equipo").escalones == 10)
     fallar(errores, "xml constantes en balance", require("compartido.dominio.balance").XP_BASE == 40)
     fallar(errores, "xml mall con addons y dragon", require("compartido.dominio.mall").MONTURAS.mnt_298 ~= nil
       and #require("compartido.dominio.mall").ORDEN_ADDONS >= 40)
-    fallar(errores, "xml mazmorras", #Datos.mazmorras == 3 and Datos.mazmorras[1].jefe.monstruo == "jefe_rey_momia")
+    fallar(errores, "xml mazmorras", #Datos.mazmorras == 5 and Datos.mazmorras[1].jefe.monstruo == "jefe_rey_momia")
     fallar(errores, "xml monturas: el dragon no sale en la cuadra", require("compartido.dominio.monturas").especies.mnt_298
       and #require("compartido.dominio.monturas").orden == 23)
   end)

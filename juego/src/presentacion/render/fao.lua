@@ -23,6 +23,16 @@ function M.activo()
     else
       local ok, d = pcall(require, "src.presentacion.render.fao_datos")
       datos = ok and d or nil
+      -- escalones 9 y 10 del equipo: sus capas y looks vienen aparte (herramientas/generar_personajes/equipo_altos.py)
+      local ok2, alt = pcall(require, "src.presentacion.render.fao_datos_altos")
+      if datos and ok2 then
+        for cap, meta in pairs(alt.capas) do datos.capas[cap] = meta end
+        for cl, gens in pairs(alt.looks) do
+          for gen, escs in pairs(gens) do
+            for esc, fila in pairs(escs) do datos.looks[cl][gen][esc] = fila end
+          end
+        end
+      end
       activoCache = datos ~= nil and love.filesystem.getInfo("arte/fao/p001b/Wait_f.png") ~= nil
     end
   end
@@ -46,7 +56,7 @@ local function capasDe(clase, gen, equipo)
   if not L then return nil end
   local res = { cuerpo = datos.cuerpo[gen] }
   local function de(tier, campo)
-    local t = L[tostring(math.max(1, math.min(8, tier or 1)))]
+    local t = L[tostring(math.max(1, math.min(10, tier or 1)))]
     return t and t[campo]
   end
   for _, hueco in ipairs({ "cabeza", "pecho", "piernas", "pies" }) do
@@ -61,7 +71,7 @@ local function capasDe(clase, gen, equipo)
   elseif arma then
     local fam = tostring(arma):match("^%a+_(%a+)_%d+$")
     if fam == "arma" then fam = PRINCIPAL[clase] end
-    local t = L[tostring(math.max(1, math.min(8, escalon(arma) or 1)))]
+    local t = L[tostring(math.max(1, math.min(10, escalon(arma) or 1)))]
     res.arma = t and t.arma and (t.arma[fam] or t.arma[PRINCIPAL[clase]])
   end
   local esc = equipo and equipo.escudo

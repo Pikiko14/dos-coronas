@@ -30,6 +30,14 @@ local VOZ = {
   -- constructos y gigantes de piedra
   golem_musgo = "constructo", golem_trepador = "constructo", golem_cristal = "constructo", coloso = "constructo", gigante_guerra = "constructo",
   troll_acorazado = "constructo", troll_escarcha = "constructo", jefe_orco_glacial = "constructo",
+  -- criaturas de nivel 31-50 (altos.py)
+  minotauro_guerra = "bestia", diablo_acorazado = "demonio", lancero_sombras = "humanoide", reptil_huesos = "no_muerto", duende_guerra = "humanoide",
+  titan_hielo = "constructo", golem_amatista = "constructo", demonio_astado = "demonio", ent_ardiente = "planta", golem_escarcha = "constructo",
+  golem_cristal_oro = "constructo", samurai_dorado = "humanoide", barbaro_ancestral = "humanoide", sacerdotisa_felina = "humanoide",
+  monje_carmesi = "humanoide", samurai_espectral = "no_muerto", lancero_esqueleto = "no_muerto", verdugo_esqueleto = "no_muerto",
+  golem_musgo_antiguo = "constructo", espectro_hielo = "no_muerto",
+  jefe_dragon_pardo = "dragon", jefe_dragon_carmesi = "dragon", jefe_dragon_abisal = "dragon", jefe_gorila_ancestral = "bestia",
+  jefe_maestro_forja = "constructo", jefe_behemot_abismo = "bestia",
   -- plantas
   ent = "planta", calabaza = "planta", hongo = "planta", girasol_lancero = "planta", flor_lanza = "planta", rabano_guerrero = "planta",
   planta_jarro = "planta",

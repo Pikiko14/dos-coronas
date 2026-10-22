@@ -3,6 +3,7 @@ local Util = require("compartido.dominio.util")
 local Continentes = require("compartido.dominio.continentes")
 
 local M = {}
+M.NIVEL_ZONAS = 30          -- las ciudades reparten los niveles 1 a 30; del 31 al 50 (nivel máximo) son la isla de la Cicatriz y las mazmorras altas
 
 -- Número repetible en [0, 1) para una casilla: reparte árboles sin cuadrícula.
 local function azar(x, y, sal)
@@ -1390,8 +1391,9 @@ local function generarMundo(rng)
         if n == 1 then mejorOrden = { 1 } else permutar(1) end
         for i, c in ipairs(ciudades) do
           local p = mejorOrden[i]
-          local lo = math.floor((p - 1) * Datos.NIVEL_MAX / n) + 1
-          local hi = math.floor(p * Datos.NIVEL_MAX / n)
+          -- las ciudades reparten los niveles 1 a 30 (6 por banda); del 31 al 50 son la isla de la Cicatriz y las mazmorras altas
+          local lo = math.floor((p - 1) * M.NIVEL_ZONAS / n) + 1
+          local hi = math.floor(p * M.NIVEL_ZONAS / n)
           bandas[c.id] = { lo = lo, hi = hi, mid = (lo + hi) / 2, orden = p }
           c.nivelMin, c.nivelMax = lo, hi
         end
@@ -1504,7 +1506,7 @@ local function generarMundo(rng)
   do
     local altas = {}
     for _, mon in ipairs(Datos.monstruos) do
-      if not mon.noCampamento and not mon.elite and mon.nivel >= 26 then altas[#altas + 1] = mon end
+      if not mon.noCampamento and not mon.elite and mon.nivel > M.NIVEL_ZONAS then altas[#altas + 1] = mon end
     end
     local isla = {}
     for gy = 24, mapa.h - 24, 30 do

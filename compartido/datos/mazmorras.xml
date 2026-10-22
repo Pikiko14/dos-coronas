@@ -37,6 +37,28 @@
     </monstruos>
     <tinte lista="0.85,0.75,1"/>
   </mazmorra>
+  <mazmorra id="mz4" nombre="Forja del Núcleo" desc="Galerías de lava viva bajo el Bastión del Eclipse. Demonios astados, ents ardientes, minotauros y el maestro que los forjó." nivelMin="35" continente="2">
+    <biomas lista="eclipse,pinar,cienaga,marea"/>
+    <jefe nombre="Maestro de la Forja" nivel="42" dano="1.5" monstruo="jefe_maestro_forja" vida="6"/>
+    <monstruos>
+      <i lista="demonio_astado,38"/>
+      <i lista="ent_ardiente,39"/>
+      <i lista="minotauro_guerra,40"/>
+      <i lista="diablo_acorazado,41"/>
+    </monstruos>
+    <tinte lista="1,0.75,0.6"/>
+  </mazmorra>
+  <mazmorra id="mz5" nombre="Abismo Eterno" desc="El pozo sin fondo bajo las colinas del Alba. Huesos que cabalgan, gólems rúnicos, verdugos y el behemot que los llama." nivelMin="45" continente="1">
+    <biomas lista="colina,senda,campos,bosque"/>
+    <jefe nombre="Behemot del Abismo" nivel="50" dano="1.4" monstruo="jefe_behemot_abismo" vida="6"/>
+    <monstruos>
+      <i lista="lancero_esqueleto,46"/>
+      <i lista="golem_musgo_antiguo,47"/>
+      <i lista="verdugo_esqueleto,48"/>
+      <i lista="espectro_hielo,49"/>
+    </monstruos>
+    <tinte lista="0.75,0.65,1"/>
+  </mazmorra>
   <!-- ---- planos: tamaño, sala de entrada y sala del jefe (x,y,ancho,alto en casillas), salas intermedias, campos de
        trampas y semilla del generador (compartido/dominio/mazmorras.lua las distribuye en ramas, bucles y callejones) ---- -->
   <plano id="mz1" h="84" w="68" salas="8" trampas="14" semilla="11">
@@ -50,5 +72,13 @@
   <plano id="mz3" h="80" w="80" salas="10" trampas="18" semilla="37">
     <entrada lista="34,68,12,9"/>
     <jefe lista="26,3,28,16"/>
+  </plano>
+  <plano id="mz4" h="84" w="84" salas="10" trampas="18" semilla="53">
+    <entrada lista="36,72,12,9"/>
+    <jefe lista="27,3,30,16"/>
+  </plano>
+  <plano id="mz5" h="80" w="88" salas="10" trampas="18" semilla="71">
+    <entrada lista="38,68,12,10"/>
+    <jefe lista="28,3,32,16"/>
   </plano>
 </mazmorras>
