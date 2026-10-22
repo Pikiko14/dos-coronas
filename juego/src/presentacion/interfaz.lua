@@ -3494,7 +3494,7 @@ function I.listaItemsClase(p, cat)
   for id, it in pairs(Datos.items) do
     -- solo lo que ya puedes llevar o está a pocos niveles
     local claseTienda = (TIENDAS[I.tienda] or {}).clase or p.clase
-    if it.hueco and def.huecos[it.hueco] and (not it.clase or it.clase == claseTienda) and not it.quest and (it.nivel or 1) <= (p.nivel or 1) + 4 then
+    if it.hueco and def.huecos[it.hueco] and (not it.clase or it.clase == claseTienda) and not it.quest and not it.botin and (it.nivel or 1) <= (p.nivel or 1) + 4 then
       lista[#lista + 1] = id
     end
   end

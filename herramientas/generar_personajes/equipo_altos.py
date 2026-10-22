@@ -34,12 +34,12 @@ CONJUNTOS = {
 }
 # arma por clase, familia y escalón: (apariencia, sufijo de carpeta; los arcos son "bl"/"gl")
 ARMAS = {
-    "guerrero": {"espada": ((6801, ""), (1541, "")), "hacha": ((7384, ""), (1546, ""))},
-    "lancero": {"lanza": ((6803, ""), (1542, ""))},
-    "cazador": {"arco": ((6804, "l"), (1548, "l"))},
-    "mago": {"baston": ((6805, ""), (1544, ""))},
-    "clerigo": {"maza": ((7045, ""), (379, ""))},
-    "nigromante": {"baculo": ((6267, ""), (6435, ""))},
+    "guerrero": {"espada": ((1541, ""), (6801, "")), "hacha": ((1546, ""), (7384, ""))},
+    "lancero": {"lanza": ((1542, ""), (6803, ""))},
+    "cazador": {"arco": ((1548, "l"), (6804, "l"))},
+    "mago": {"baston": ((1544, ""), (6805, ""))},
+    "clerigo": {"maza": ((379, ""), (7045, ""))},
+    "nigromante": {"baculo": ((6435, ""), (6267, ""))},
 }
 TIPO_ARMADURA = {"guerrero": "pesada", "lancero": "lancero", "cazador": "ligera", "mago": "tela", "nigromante": "necro"}   # (el clérigo comparte la túnica del mago en los iconos)
 HUECOS = (("cabeza", -1, "頭飾"), ("pecho", 0, "衣服"), ("piernas", 1, "手套"), ("pies", 2, "鞋子"))
@@ -123,14 +123,31 @@ def hornear_capa(cap, cod_f, meta):
 
 
 # ---------------------------------------------------------------- iconos de inventario
+_iconos = None
+
+
+def tabla_iconos():
+    """id de icono -> nombre del archivo en shape/item (setting/itemicon*.xml: <icon id="6541" normal="i1541"/>)."""
+    global _iconos
+    if _iconos is None:
+        _iconos = {}
+        for n in ("itemicon", "itemicon1", "itemicon2", "itemicon3", "itemicon4"):
+            t = pak_fao.datos("setting/%s.xml" % n).decode("utf-8", "replace")
+            for m in re.finditer(r'<icon id="(\d+)"[^>]*?normal="(\w+)"', t):
+                _iconos.setdefault(int(m.group(1)), m.group(2))
+    return _iconos
+
+
 def buscar_icono(items, ap, categorias):
-    """Imagen 32x32 del icono de inventario de la apariencia ap (un objeto de esas categorías que tenga icono)."""
+    """Imagen del icono de inventario de la apariencia ap (un objeto de esas categorías que tenga icono)."""
     idx = pak_fao.indice()
+    tabla = tabla_iconos()
     for d in items:
         if d.get("原型外觀") == str(ap) and d.get("物品類別") in categorias and d.get("原型介面", "").isdigit():
             n = int(d["原型介面"])
-            for fmt in ("shape/item/i%04d.shp", "shape/item/i%05d.shp"):
-                k = fmt % n
+            candidatos = ["shape/item/%s.shp" % tabla[n]] if n in tabla else []
+            candidatos += ["shape/item/i%04d.shp" % n, "shape/item/i%05d.shp" % n]
+            for k in candidatos:
                 if k in idx:
                     r = pak_fao.decodificar_shp(pak_fao.datos(k))
                     if r:
@@ -194,7 +211,7 @@ def main():
 
     def poner(i, im):
         if im is None and i % 2 == 1 and (i - 1) in hecho:
-            # sin icono propio (las piezas "(P)" no lo traen en el .pak): el del escalón anterior teñido de dorado
+            # (último recurso, si una pieza no tuviera icono en el .pak: el del escalón anterior teñido de dorado)
             base = hecho[i - 1].copy()
             r, g, bb, al = base.split()
             r, g, bb = r.point(lambda v: min(255, int(v * 1.25))), g.point(lambda v: int(v * 1.0)), bb.point(lambda v: int(v * 0.6))

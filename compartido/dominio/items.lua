@@ -60,7 +60,7 @@ end
 
 -- Registra todo el equipo en D.items (D.items ya existe).
 function M.generar(D)
-  local function add(it) D.items[it.id] = redondeado(it) end
+  local function add(it) it.botin = it.tier and M.TIER[it.tier].botin or nil; D.items[it.id] = redondeado(it) end
   for t, tier in ipairs(M.TIER) do
     local u = tier.mul
     for clase, armas in pairs(ARMAS) do

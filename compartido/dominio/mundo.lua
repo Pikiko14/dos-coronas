@@ -2781,6 +2781,7 @@ function Mundo:comprar(p, itemId)
   self:marcarProgreso(p)
   local it = Datos.item(itemId)
   if not it or it.quest or it.mall then return "No está a la venta." end
+  if it.botin then return "Eso no se vende: solo lo sueltan las criaturas de nivel alto y las mazmorras." end
   if (it.cura or it.mana) and it.nivel and (p.nivel or 1) < it.nivel then return "Necesitas nivel " .. it.nivel .. "." end
   local puesto = self:puestoDe(it)
   if puesto == "mercado" and not self:npcCerca(p, "mercado") then return "Las pociones se compran a la enfermera." end

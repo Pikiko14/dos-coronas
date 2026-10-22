@@ -76,9 +76,9 @@
     <i nivel="20" mul="6.2"/>
     <i nivel="25" mul="7.8"/>
     <i nivel="30" mul="10"/>
-    <!-- escalones 9 y 10 (nivel 40 y 50): arma y armadura con iconos y dibujo nuevos de FAO (hoja altos, ver iconos_altos); escudo, anillo y amuleto usan el icono del escalón 8 con un tinte (tinte) -->
-    <i nivel="40" mul="14" hoja="altos"><tinte lista="0.6,0.78,1"/></i>
-    <i nivel="50" mul="17" hoja="altos"><tinte lista="1,0.82,0.4"/></i>
+    <!-- escalones 9 y 10 (nivel 40 y 50): arma y armadura con iconos y dibujo nuevos de FAO (hoja altos, ver iconos_altos); botin = no se vende en las tiendas, solo lo sueltan criaturas y mazmorras; escudo, anillo y amuleto usan el icono del escalón 8 con un tinte (tinte) -->
+    <i nivel="40" mul="14" hoja="altos" botin="true"><tinte lista="0.6,0.78,1"/></i>
+    <i nivel="50" mul="17" hoja="altos" botin="true"><tinte lista="1,0.82,0.4"/></i>
   </escalones>
   <!-- iconos de los escalones 9 y 10: casillas de la lámina equipo_altos.png (herramientas/generar_personajes/equipo_altos.py), escalón 9 y escalón 10 -->
   <iconos_altos>

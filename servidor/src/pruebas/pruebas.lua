@@ -4071,7 +4071,7 @@ mundo.tiempo = 100
     fallar(errores, "nivel 12 compra la mediana", mundo:comprar(p, "pocion_vida_mediana") == nil and mundo:contarItem(p, "pocion_vida_mediana") == 1)
     local pecho
     for id, it in pairs(Datos.items) do
-      if it.hueco == "pecho" and it.clase == "guerrero" and not it.quest and not it.mall then pecho = id break end
+      if it.hueco == "pecho" and it.clase == "guerrero" and not it.quest and not it.mall and not it.botin then pecho = id break end
     end
     if not mundo:maestroCerca(p) then fallar(errores, "la enfermera no vende armadura", mundo:comprar(p, pecho) ~= nil) end
     if not mundo:maestroCerca(p) then fallar(errores, "la enfermera no vende armas", mundo:comprar(p, "guerrero_arma_1") ~= nil) end
@@ -4083,7 +4083,7 @@ mundo.tiempo = 100
     fallar(errores, "el maestro vende la armadura de su clase", mundo:comprar(p, pecho) == nil and mundo:contarItem(p, pecho) == 1)
     local magoArma
     for id, it in pairs(Datos.items) do
-      if it.hueco == "arma" and it.clase == "mago" and not it.quest and not it.mall then magoArma = id break end
+      if it.hueco == "arma" and it.clase == "mago" and not it.quest and not it.mall and not it.botin then magoArma = id break end
     end
     p.oro = 99999
     fallar(errores, "el maestro guerrero no vende lo del mago", mundo:comprar(p, magoArma) ~= nil)
@@ -4606,6 +4606,27 @@ mundo.tiempo = 100
     local l2 = mundo:dejarEnSuelo({ items = { { id = "pocion_vida", cant = 1 } }, oro = 0, dueno = p.id, hasta = mundo.tiempo + 120 }, p.x + 2, p.y, p.modo, p.z)
     for _ = 1, 60 do mundo:actualizar(0.1) end
     fallar(errores, "con la bolsa llena el botín se queda en el suelo", mundo.entidades[l2.id] and not mundo.entidades[l2.id].borrar)
+  end)
+  paso("los escalones 9 y 10 del equipo solo se consiguen como botín: los maestros no los venden", function()
+    local Items = require("compartido.dominio.items")
+    local mundo = Mundo.nuevo()
+    local p = mundo:crearPersonaje({ nombre = "Comprador", faccion = "albor", clase = "guerrero", nivel = 50 })
+    p.oro = 1e9
+    p.bolsa = {}
+    for _, t in ipairs({ 9, 10 }) do
+      local id = "guerrero_pecho_" .. t
+      fallar(errores, "el escalón " .. t .. " está marcado como botín", Datos.item(id).botin == true and Datos.item("guerrero_arma_" .. t).botin == true)
+      local err = mundo:comprar(p, id)
+      fallar(errores, "el escalón " .. t .. " no se puede comprar", err ~= nil and err:find("no se vende") ~= nil and #p.bolsa == 0, tostring(err))
+    end
+    fallar(errores, "el escalón 8 no es botín", not Datos.item("guerrero_pecho_8").botin)
+    -- lo que suelta una criatura de nivel 50 sí puede ser del escalón 10
+    local visto10 = false
+    for _ = 1, 400 do
+      local id = Items.aleatorioCualquiera(Datos, Items.tierPara(50))
+      if Datos.item(id) and Datos.item(id).tier == 10 then visto10 = true break end
+    end
+    fallar(errores, "el botín de nivel 50 incluye el escalón 10", visto10)
   end)
   paso("recompensa diaria: con la bolsa llena explica el motivo en el panel y se reclama al hacer sitio", function()
     local Diaria = require("compartido.dominio.diaria")
