@@ -37,6 +37,15 @@ local function redondear(v) return math.floor(v + 0.5) end
 -- Icono de un escalón: los escalones sin icono propio (los últimos) usan el del último que lo tiene y se distinguen por su tinte.
 local function icono(lista, t) return lista[t] or lista[#lista] end
 
+-- Iconos de FAO de los escalones 1 a 8 (equipo_iconos_fao.xml, lo genera herramientas/generar_personajes/iconos_equipo.py): casilla de cada pieza por clase,
+-- hueco y escalón en la lámina equipo_fao.png (-1 = sin icono: se queda el de la lámina antigua).
+local FAOI = require("compartido.dominio.configuracion").tabla("equipo_iconos_fao")
+local function iconoFao(clase, slot, t)
+  local lista = FAOI and FAOI[clase] and FAOI[clase][slot]
+  local c = lista and lista[t]
+  if c and c >= 0 then return c end
+end
+
 -- Los escalones con lámina propia de iconos (tier.hoja: 9 y 10, equipo_altos.png) tienen sus casillas en equipo.xml (iconos_altos).
 local ALTOS = EQ.iconos_altos
 local function altos(tier, t, tipo, hueco_o_arma)
@@ -79,6 +88,8 @@ function M.generar(D)
         })
         local propio = altos(tier, t, nil, a.id == "hacha" and "hacha" or a.arma)
         if propio then D.items[clase .. "_" .. a.id .. "_" .. t].hoja, D.items[clase .. "_" .. a.id .. "_" .. t].sprite = tier.hoja, propio end
+        local fao = not tier.hoja and iconoFao(clase, a.id == "hacha" and "arma2" or "arma", t)
+        if fao then D.items[clase .. "_" .. a.id .. "_" .. t].hoja, D.items[clase .. "_" .. a.id .. "_" .. t].sprite = "fao", fao end
       end
       -- armadura de su tipo
       for _, hueco in ipairs({ "cabeza", "pecho", "piernas", "pies" }) do
@@ -97,6 +108,8 @@ function M.generar(D)
         if hueco == "pies" then it.spd = f.botas * (1 + 0.15 * (t - 1)) + (tipo == "pesada" and -0.02 or 0) end
         local propio = altos(tier, t, tipo, hueco)
         if propio then it.hoja, it.sprite = tier.hoja, propio end
+        local fao = not tier.hoja and iconoFao(clase, hueco, t)
+        if fao then it.hoja, it.sprite = "fao", fao end
         add(it)
       end
     end

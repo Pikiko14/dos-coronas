@@ -8,4 +8,5 @@ return {
   map044 = 44,
   shadow_field = 66,
   canal_mariam = 257,
+  batalla_cristal = 112,
 }

@@ -462,7 +462,7 @@ function Pruebas.correr()
     local datos = {}
     local function celda(hoja, idx)
       if not datos[hoja] then
-        local archivo = ({ equipment = "otsp_equipment_01.png", extra = "equipo_extra.png", altos = "equipo_altos.png" })[hoja] or (hoja .. ".png")
+        local archivo = ({ equipment = "otsp_equipment_01.png", extra = "equipo_extra.png", altos = "equipo_altos.png", fao = "equipo_fao.png" })[hoja] or (hoja .. ".png")
         datos[hoja] = love.image.newImageData(love.filesystem.newFileData(Atlas.carpeta .. "/" .. archivo))
       end
       local d = datos[hoja]

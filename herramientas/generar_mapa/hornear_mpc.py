@@ -23,6 +23,8 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(__file__))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "generar_mobs"))
+import pak_fao          # lectura de los .pak de FAO (herramientas/generar_mobs/pak_fao.py)
 import mpc
 import reglas_mpc as R
 
@@ -99,6 +101,25 @@ def costura(t):
     return h, v
 
 
+class _Sprites:
+    """Sprites de shape/stage leídos directamente de los .pak (antes salían de una carpeta fao-sprites con manifest.jsonl ya extraída).
+    man.get("shape/stage/<carpeta>/<nombre>.png") -> { im, ox, oy, w } o None."""
+
+    def __init__(self):
+        self.cache = {}
+
+    def get(self, clave):
+        if clave not in self.cache:
+            r = None
+            k = clave[:-4] + ".shp" if clave.endswith(".png") else clave
+            if k in pak_fao.indice():
+                d = pak_fao.decodificar_shp(pak_fao.datos(k))
+                if d:
+                    r = dict(file=clave, im=d[0], ox=d[1][0], oy=d[1][1], w=d[0].width)
+            self.cache[clave] = r
+        return self.cache[clave]
+
+
 def hornear(num):
     ruta = os.path.join(MAPAS, "map%03d.mpc" % num)
     if not os.path.exists(ruta):          # (mapas enviados desde el editor: ya están junto a los datos del juego)
@@ -138,11 +159,7 @@ def hornear(num):
     paso = celda_at
 
     # ------------------------------------------------------------------ objetos
-    man = {}
-    for l in open(os.path.join(SPRITES, "manifest.jsonl"), encoding="utf-8"):
-        r = json.loads(l)
-        if r["file"].startswith("shape/stage/"):
-            man[r["file"].lower()] = r
+    man = _Sprites()
     ids = sorted({o["id"] for o in m["objetos"]})
     objetos, inertes, marcos = {}, [], []
     for sid in ids:
@@ -161,7 +178,7 @@ def hornear(num):
             continue
         fr = []
         for nombre, ret, f in cuadros:
-            im = Image.open(os.path.join(SPRITES, f["file"])).convert("RGBA")
+            im = f["im"]
             red = reducir(im, ESC_OBJ)
             fr.append(dict(nombre=nombre, ret=ret, im=red, ox=f["ox"] * ESC_OBJ, oy=f["oy"] * ESC_OBJ, w=f["w"]))
         # sombra: FAO guarda la sombra de cada pieza en otro sprite (el mismo nombre acabado en US en vez de U0): una silueta negra con el mismo ancla
@@ -170,7 +187,7 @@ def hornear(num):
             nom_s = fr[0]["nombre"][:-2] + "US"
             fs = man.get("shape/%s/%s.png" % (carpeta, nom_s.lower()))
             if fs is not None:
-                sombra = dict(im=reducir(Image.open(os.path.join(SPRITES, fs["file"])).convert("RGBA"), ESC_OBJ), ox=fs["ox"] * ESC_OBJ, oy=fs["oy"] * ESC_OBJ)
+                sombra = dict(im=reducir(fs["im"], ESC_OBJ), ox=fs["ox"] * ESC_OBJ, oy=fs["oy"] * ESC_OBJ)
         ancho = fr[0]["w"]
         bloquea = R.objeto_bloquea(d)
         objetos[sid] = dict(n=d["nombre"], c=d["proceso"].replace("SP_CLASS_MAPOBJ_", ""), b=bloquea, huella=R.huella(ancho) if bloquea else 0,
@@ -179,17 +196,24 @@ def hornear(num):
             marcos.append((sid, k, f["im"], f["ox"], f["oy"]))
         if sombra:
             marcos.append((sid, -1, sombra["im"], sombra["ox"], sombra["oy"]))
-    # estantes
-    x = y = alto_fila = 0
-    colocados = []
-    for sid, k, im, ox, oy in marcos:
-        if x + im.width + PAD > ANCHO_ATLAS:
-            x, y, alto_fila = 0, y + alto_fila + PAD, 0
-        colocados.append((sid, k, im, x, y, ox, oy))
-        x += im.width + PAD
-        alto_fila = max(alto_fila, im.height)
-    alto = y + alto_fila + PAD
-    atl = Image.new("RGBA", (ANCHO_ATLAS, max(4, alto)), (0, 0, 0, 0))
+    # estantes (si el atlas saliera más alto de 16000 px —el límite de textura de muchas tarjetas es 16384— se hace más ancho)
+    def empaquetar(ancho_atlas):
+        x = y = alto_fila = 0
+        colocados = []
+        for sid, k, im, ox, oy in marcos:
+            if x + im.width + PAD > ancho_atlas:
+                x, y, alto_fila = 0, y + alto_fila + PAD, 0
+            colocados.append((sid, k, im, x, y, ox, oy))
+            x += im.width + PAD
+            alto_fila = max(alto_fila, im.height)
+        return colocados, y + alto_fila + PAD
+
+    ancho_atlas = ANCHO_ATLAS
+    colocados, alto = empaquetar(ancho_atlas)
+    while alto > 16000 and ancho_atlas < 8192:
+        ancho_atlas *= 2
+        colocados, alto = empaquetar(ancho_atlas)
+    atl = Image.new("RGBA", (ancho_atlas, max(4, alto)), (0, 0, 0, 0))
     for sid, k, im, x, y, ox, oy in colocados:
         atl.alpha_composite(im, (x, y))
         o = objetos[sid]
@@ -214,7 +238,7 @@ def hornear(num):
     datos = dict(
         id=num, nombre=nombre, musica=musica, clima=clima, ancho=W, alto=H,
         atlasSuelo=dict(archivo="map%03d_suelo.png" % num, lado=LADO, ancho=cols * celda_at, alto=filas * celda_at),
-        atlasObjetos=dict(archivo="map%03d_objetos.png" % num, esc=ESC_OBJ, ancho=ANCHO_ATLAS, alto=max(4, alto)),
+        atlasObjetos=dict(archivo="map%03d_objetos.png" % num, esc=ESC_OBJ, ancho=ancho_atlas, alto=max(4, alto)),
         tilesets=tilesets, objetos=objetos, inertes=inertes,
     )
     with open(os.path.join(DATOS, "map%03d_datos.lua" % num), "w", encoding="utf-8", newline="\n") as f:

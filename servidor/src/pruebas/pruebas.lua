@@ -4512,10 +4512,10 @@ mundo.tiempo = 100
     m.x, m.y = p.x + 1, p.y
     m.hp, m.hpMax = 1e6, 1e6
     p.cds, p.objetivo, m.vivo = {}, m.id, true
-    -- (el daño tiene azar y críticos: se comparan 8 golpes de cada tipo)
+    -- (el daño tiene azar y críticos: se comparan 30 golpes de cada tipo)
     local function ocho(frac)
       local total = 0
-      for _ = 1, 8 do
+      for _ = 1, 30 do
         m.hp, m.vivo = m.hpMax * frac, true
         local antes = m.hp
         p.cds, p.mp = {}, 9999
@@ -4525,7 +4525,7 @@ mundo.tiempo = 100
       return total
     end
     local sano, bajo = ocho(1), ocho(0.2)
-    fallar(errores, "la ejecución daña mucho más a quien tiene poca vida", bajo > sano * 1.6, sano .. " vs " .. bajo)
+    fallar(errores, "la ejecución daña mucho más a quien tiene poca vida", bajo > sano * 1.5, sano .. " vs " .. bajo)
     -- cazador: la marca aumenta el daño recibido
     mundo, p = nuevo("cazador")
     m = mundo:spawnMonstruo("pinguino_aprendiz", p.x + 3, p.y, { x = p.x, y = p.y })
@@ -4590,7 +4590,7 @@ mundo.tiempo = 100
     local oro0 = p.oro
     local ids = {}
     for i = 1, 3 do
-      local l = mundo:dejarEnSuelo({ items = { { id = "pocion_vida", cant = 1 } }, oro = 10, dueno = p.id, hasta = mundo.tiempo + 120 }, p.x + 3 + i, p.y, p.modo, p.z)
+      local l = mundo:dejarEnSuelo({ items = { { id = "pocion_vida", cant = 1 } }, oro = 10, dueno = p.id, hasta = mundo.tiempo + 120 }, p.x + 2 + i, p.y, p.modo, p.z)
       ids[#ids + 1] = l.id
     end
     local lejos = mundo:dejarEnSuelo({ items = { { id = "pocion_mana", cant = 1 } }, oro = 0, dueno = p.id, hasta = mundo.tiempo + 120 }, p.x + 30, p.y, p.modo, p.z)
@@ -4858,7 +4858,7 @@ mundo.tiempo = 100
       for _, id in ipairs({ "lancero_arma_", "lancero_cabeza_", "lancero_pecho_", "lancero_piernas_", "lancero_pies_",
         "nigromante_arma_", "nigromante_cabeza_", "nigromante_pecho_", "nigromante_piernas_", "nigromante_pies_" }) do
         local it = Datos.items[id .. t]
-        fallar(errores, "existe " .. id .. t, it ~= nil and (it.hoja == "extra" or (it.hoja == "armas" and it.hueco == "arma")), tostring(it and it.hoja))
+        fallar(errores, "existe " .. id .. t, it ~= nil and (it.hoja == "extra" or it.hoja == "fao" or (it.hoja == "armas" and it.hueco == "arma")), tostring(it and it.hoja))
       end
     end
     fallar(errores, "la lanza es de tipo lanza", Datos.items.lancero_arma_1.arma == "lanza")

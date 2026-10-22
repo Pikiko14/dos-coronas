@@ -78,12 +78,39 @@ def leer(ruta):
 
 
 # ---------------------------------------------------------------------------------------------------------------- .pak
-sys.path.insert(0, os.path.join(DOWNLOADS, "fao-sprites"))
+class _Pak:
+    """Lectura de los .pak de FAO (antes venía de fao-sprites/extract_fao_sprites.py, que ya no hace falta):
+    .pak = zip sin cabeceras locales; directorio central con zlib (1er byte ^0x7a), EOCD ^ (0xb1+3*i); datos = deflate crudo."""
+
+    @staticmethod
+    def open_pak(path):
+        import mmap
+        import zlib
+        f = open(path, "rb")
+        m = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+        n = len(m)
+        e = bytes(a ^ ((0xb1 + 3 * i) & 255) for i, a in enumerate(m[n - 18:n]))
+        cdsz, _, _, _, cdoff, _ = struct.unpack("<IHHIIH", e)
+        blob = bytearray(m[cdoff + 4:cdoff + 4 + cdsz])
+        blob[0] ^= 0x7a
+        cd = zlib.decompress(bytes(blob))
+        ents, p = [], 0
+        while p < len(cd):
+            (_, _, _, _, meth, _, _, _, cs, us, nl, xl, cl, _, _, _, lo) = struct.unpack("<IHHHHHHIIIHHHHHII", cd[p:p + 46])
+            nombre = cd[p + 46:p + 46 + nl].decode("latin1").replace(chr(92), "/")
+            ents.append((nombre, meth, cs, us, lo))
+            p += 46 + nl + xl + cl
+        return m, ents
+
+    @staticmethod
+    def read_entry(m, meth, cs, lo):
+        import zlib
+        raw = bytes(m[lo:lo + cs])
+        return zlib.decompress(raw, -15) if meth == 8 else raw
 
 
 def _pak():
-    import extract_fao_sprites as x
-    return x
+    return _Pak
 
 
 def _orden(p):
