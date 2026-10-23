@@ -1,0 +1,96 @@
+-- GENERADO por el editor de mapas (fao-editor-mapas): campamentos de criaturas del mapa "map062".
+-- Lista de { monstruo (id de monstruos.xml), cantidad, radio (casillas), x, y (casillas, centro de la casilla = .5), jefe? }.
+return {
+  {
+    monstruo = "esqueleto",
+    cantidad = 3,
+    radio = 4,
+    x = 86.25,
+    y = 57.75
+  },
+  {
+    monstruo = "murcielago_purpura",
+    cantidad = 3,
+    radio = 5,
+    x = 19.25,
+    y = 16.75
+  },
+  {
+    monstruo = "esqueleto_soldado",
+    cantidad = 3,
+    radio = 4,
+    x = 58.25,
+    y = 41.75
+  },
+  {
+    monstruo = "espiritu_velo",
+    cantidad = 2,
+    radio = 4,
+    x = 86.75,
+    y = 17.75
+  },
+  {
+    monstruo = "momia",
+    cantidad = 2,
+    radio = 4,
+    x = 34.25,
+    y = 48.75
+  },
+  {
+    monstruo = "dama_velo",
+    cantidad = 2,
+    radio = 4,
+    x = 8.75,
+    y = 52.25
+  },
+  {
+    monstruo = "esqueleto_arquero",
+    cantidad = 3,
+    radio = 5,
+    x = 75.25,
+    y = 8.75
+  },
+  {
+    monstruo = "vampiro",
+    cantidad = 2,
+    radio = 4,
+    x = 77.75,
+    y = 45.25
+  },
+  {
+    monstruo = "esqueleto",
+    cantidad = 3,
+    radio = 4,
+    x = 50.25,
+    y = 13.75
+  },
+  {
+    monstruo = "murcielago_purpura",
+    cantidad = 3,
+    radio = 5,
+    x = 90.75,
+    y = 37.25
+  },
+  {
+    monstruo = "esqueleto_soldado",
+    cantidad = 3,
+    radio = 4,
+    x = 10.25,
+    y = 26.25
+  },
+  {
+    monstruo = "espiritu_velo",
+    cantidad = 2,
+    radio = 4,
+    x = 62.25,
+    y = 21.25
+  },
+  {
+    monstruo = "jefe_rey_esqueleto",
+    cantidad = 1,
+    radio = 3,
+    x = 50.25,
+    y = 33.25,
+    jefe = true
+  }
+}

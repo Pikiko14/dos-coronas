@@ -44,7 +44,9 @@ M.FIJOS = {
 
 -- Mapas (por nombre) que tienen portal repartido junto a los campamentos del mundo. Ahora ninguno: los que hay se entran con un evento (asedio,
 -- captura_cristal) o tienen su sitio fijo en FIJOS.
-M.CON_PORTAL = {}
+M.CON_PORTAL = { jardin_amanecer = true, necropolis_ocaso = true }
+-- Mapas de una sola facción: solo ese bando tiene portal hacia ellos (junto a su capital).
+M.FACCION = { jardin_amanecer = "albor", necropolis_ocaso = "umbra" }
 
 M.MAPAS = leerIndice()
 for nombre, num in pairs(A_MANO) do M.MAPAS[nombre] = num end
@@ -149,7 +151,11 @@ function M.instalar(Mundo)
       for _, c in ipairs(mundo.ciudades) do if c.faccion == faccion and c.spawn and not capital then capital = c end end
       if capital then
         local cont = contDe(capital.spawn.x, capital.spawn.y)
-        for i, nombre in ipairs(nombres) do
+        local propios = {}
+        for _, n in ipairs(nombres) do
+          if not M.FACCION[n] or M.FACCION[n] == faccion then propios[#propios + 1] = n end
+        end
+        for i, nombre in ipairs(propios) do
           local hallado
           -- campamentos del continente con criaturas del mapa (ordenados para que el reparto sea siempre el mismo)
           local suyas = {}
@@ -187,7 +193,7 @@ function M.instalar(Mundo)
           end
           if not hallado then
             -- sin campamentos: en su dirección alrededor de la capital, o en direcciones vecinas y radios mayores
-            local ang0 = (i - 0.5) / #nombres * math.pi * 2
+            local ang0 = (i - 0.5) / #propios * math.pi * 2 + (faccion == "umbra" and 1.2 or 0)
             for _, giro in ipairs({ 0, 0.25, -0.25, 0.5, -0.5, 0.75, -0.75, 1.0, -1.0, 1.5, -1.5, 2.0, -2.0, 3.0 }) do
               for r = 14, 60 do
                 local ang = ang0 + giro

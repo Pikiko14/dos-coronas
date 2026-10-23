@@ -3516,7 +3516,7 @@ local function fotoMapas(app)
   Interfaz.panel = nil
   if os.getenv("DC_ZOOM") then app.zoom = tonumber(os.getenv("DC_ZOOM")) end
   local j, m = app.jugador, app.mundo
-  local orden = { "mz1", "mz2", "mz3", "batalla", "estandarte" }
+  local orden = { "mz1", "mz2", "mz3", "batalla", "estandarte", "jardin_amanecer", "necropolis_ocaso" }
   local sig = { menu = orden[1] }
   for i, n in ipairs(orden) do sig[n] = orden[i + 1] or "fin" end
   foto.paso = sig[foto.paso] or "fin"

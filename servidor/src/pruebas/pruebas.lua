@@ -1617,6 +1617,47 @@ function Pruebas.correr()
     fallar(errores, "se restauran los valores", Balance.xpPara(1) == xp0 and Subastas.COMISION == 0.05 and Gremios.COSTE == 2500
       and Datos.JUGADORES_EVENTO == 3 and #Subastas.DURACIONES == 4 and Balance.XP_MULTIPLICADOR == 1)
   end)
+  paso("mapas de facción: el jardín del Amanecer es de Albor y la necrópolis del Ocaso, de Umbra", function()
+    local Mapa = require("compartido.dominio.mapa")
+    local mundo = Mundo.nuevo()
+    local cuenta = { jardin_amanecer = { albor = 0, umbra = 0 }, necropolis_ocaso = { albor = 0, umbra = 0 } }
+    for _, pt in ipairs(mundo.portalesFao) do
+      if cuenta[pt.mapaFao] then cuenta[pt.mapaFao][pt.faccion] = cuenta[pt.mapaFao][pt.faccion] + 1 end
+    end
+    fallar(errores, "los dos mapas están cargados", mundo.mapas.jardin_amanecer ~= nil and mundo.mapas.necropolis_ocaso ~= nil)
+    fallar(errores, "portal del jardín solo para Albor", cuenta.jardin_amanecer.albor == 1 and cuenta.jardin_amanecer.umbra == 0)
+    fallar(errores, "portal de la necrópolis solo para Umbra", cuenta.necropolis_ocaso.umbra == 1 and cuenta.necropolis_ocaso.albor == 0)
+    fallar(errores, "el asedio y la batalla de cristales no tienen portal", (function()
+      for _, pt in ipairs(mundo.portalesFao) do if pt.mapaFao == "asedio" or pt.mapaFao == "captura_cristal" then return false end end
+      return true
+    end)())
+    for _, nombre in ipairs({ "jardin_amanecer", "necropolis_ocaso" }) do
+      local mapa = mundo.mapas[nombre]
+      local p = mundo:crearPersonaje({ nombre = "Visita" .. nombre:sub(1, 3), faccion = nombre == "jardin_amanecer" and "albor" or "umbra", clase = "guerrero", nivel = 10 })
+      local err = mundo:entrarMapaFao(p, nombre)
+      fallar(errores, nombre .. ": se entra sin error", err == nil, tostring(err))
+      fallar(errores, nombre .. ": se aparece en suelo transitable", Mapa.transitable(mapa, math.floor(p.x), math.floor(p.y)))
+      fallar(errores, nombre .. ": tiene criaturas en sus campamentos", #(mapa.campamentos or {}) >= 10)
+      -- la mayor parte del mapa se puede recorrer desde la entrada
+      local visto, cola, n = {}, { { math.floor(p.x), math.floor(p.y) } }, 0
+      visto[cola[1][1] .. "," .. cola[1][2]] = true
+      local i = 1
+      while i <= #cola do
+        local x, y = cola[i][1], cola[i][2]
+        i = i + 1
+        n = n + 1
+        for _, d in ipairs({ { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }) do
+          local nx, ny = x + d[1], y + d[2]
+          local k = nx .. "," .. ny
+          if not visto[k] and Mapa.transitable(mapa, nx, ny) then visto[k] = true cola[#cola + 1] = { nx, ny } end
+        end
+      end
+      local total = 0
+      for x = 0, mapa.w - 1 do for y = 0, mapa.h - 1 do if Mapa.transitable(mapa, x, y) then total = total + 1 end end end
+      fallar(errores, nombre .. ": el 90 % del suelo es alcanzable desde la entrada", n >= total * 0.9, n .. " de " .. total)
+      mundo:salirMapaFao(p)
+    end
+  end)
   paso("montado se puede combatir y el dragon del mall", function()
     local Mall = require("compartido.dominio.mall")
     local Monturas = require("compartido.dominio.monturas")
