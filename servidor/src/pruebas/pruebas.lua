@@ -5467,6 +5467,51 @@ mundo.tiempo = 100
     for _, e in pairs(mundo.entidades) do if e.kind == "altar" and e.moba and e.totem then n = n + 1 end end
     fallar(errores, "los dos nexos son tótem", n == 2, tostring(n))
   end)
+  paso("calidades del equipo: normal, buena y definitiva", function()
+    local Items = require("compartido.dominio.items")
+    local base, b, d = Datos.item("guerrero_arma_5"), Datos.item("guerrero_arma_5_b"), Datos.item("guerrero_arma_5_s")
+    fallar(errores, "existen la buena y la definitiva de cada pieza", base ~= nil and b ~= nil and d ~= nil and b.base == "guerrero_arma_5" and d.calidad == "definitiva")
+    if not (base and b and d) then return end
+    fallar(errores, "la buena da un 20 % más y la definitiva un 50 %", b.atk == math.floor(base.atk * 1.2 + 0.5) and d.atk == math.floor(base.atk * 1.5 + 0.5), b.atk .. "/" .. d.atk .. " de " .. base.atk)
+    fallar(errores, "no se compran en la tienda", b.botin and d.botin)
+    local piezas = 0
+    for id, it in pairs(Datos.items) do if it.calidad then piezas = piezas + 1 end end
+    fallar(errores, "todo el equipo tiene sus dos calidades", piezas % 2 == 0 and piezas > 100, tostring(piezas))
+    local p1, p50 = Items.probCalidad(1), Items.probCalidad(50)
+    fallar(errores, "las probabilidades van de 5 a 8 %, 2 a 4 % y 0,1 a 1 %",
+      math.abs(p1.normal - 0.05) < 1e-9 and math.abs(p50.normal - 0.08) < 1e-9 and math.abs(p1.b - 0.02) < 1e-9 and math.abs(p50.b - 0.04) < 1e-9
+      and math.abs(p1.s - 0.001) < 1e-9 and math.abs(p50.s - 0.01) < 1e-9)
+    -- se equipan y suman sus estadísticas
+    local mundo = Mundo.nuevo()
+    local p = mundo:crearPersonaje({ nombre = "calid", faccion = "albor", clase = "guerrero", nivel = 30 })
+    p.bolsa = p.bolsa or {}
+    p.bolsa[#p.bolsa + 1] = { id = "guerrero_arma_5_s", cant = 1 }
+    local ok = mundo:equipar(p, #p.bolsa)
+    fallar(errores, "la definitiva se equipa", ok == nil and p.equipo.arma == "guerrero_arma_5_s", tostring(ok))
+    -- el botín: con muchas muertes salen piezas buenas y definitivas
+    local nb, ns, nn = 0, 0, 0
+    math.randomseed(7)
+    local mon = Datos.monstruos[1]
+    for i = 1, 3000 do
+      local m = mundo:spawnMonstruo(mon.id, 100, 100)
+      if m then
+        m.nivel = 40
+        local antes = {}
+        for _, e in pairs(mundo.entidades) do if e.kind == "loot" then antes[e.id] = true end end
+        mundo:soltarBotin(m, p)
+        for _, e in pairs(mundo.entidades) do
+          if e.kind == "loot" and not antes[e.id] and e.item then
+            local it = Datos.item(e.item)
+            if it and it.calidad == "buena" then nb = nb + 1 elseif it and it.calidad == "definitiva" then ns = ns + 1 elseif it and it.hueco then nn = nn + 1 end
+          end
+        end
+        for _, e in pairs(mundo.entidades) do if e.kind == "loot" then e.borrar = true end end
+        m.borrar = true
+      end
+    end
+    math.randomseed(os.time() + math.floor(os.clock() * 1000))      -- (no dejar el azar fijo para las pruebas que siguen)
+    fallar(errores, "salen piezas normales, buenas y definitivas en proporciones razonables", nn > nb and nb > ns and ns >= 1, nn .. "/" .. nb .. "/" .. ns)
+  end)
   paso("Ciénaga Alta: portal fijo en (1012, 126), se entra, hay criaturas dentro y se sale", function()
     local MapasFao = require("compartido.dominio.mapas_fao")
     fallar(errores, "cienaga_alta está en el índice", MapasFao.MAPAS.cienaga_alta == 50)

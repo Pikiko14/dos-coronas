@@ -13,6 +13,15 @@ local ESCALA_JUEGO = 0.5
 local datos
 local activoCache
 
+-- Brillo de las piezas de calidad buena (azul) y definitiva (dorado, pulsa): se dibuja la misma capa otra vez, sumada y teñida.
+local BRILLO = { buena = { 0.45, 0.75, 1, 0.34 }, definitiva = { 1, 0.85, 0.35, 0.5 } }
+local brilloActual
+local function colorBrillo(id)
+  local ok, Datos = pcall(require, "compartido.dominio.datos")
+  local it = ok and id and Datos.item(id)
+  return it and it.calidad and BRILLO[it.calidad] or nil
+end
+
 -- Las pruebas de los personajes antiguos lo apagan un momento (M.forzar(false)) y lo dejan como estaba (M.forzar(nil)).
 function M.forzar(v) activoCache = v end
 
@@ -23,6 +32,13 @@ function M.activo()
     else
       local ok, d = pcall(require, "src.presentacion.render.fao_datos")
       datos = ok and d or nil
+      -- (activo() puede repetirse con el mismo módulo en memoria: las fusiones de abajo se hacen una sola vez)
+      local yaFusionado = datos and datos._fusionado
+      if datos then datos._fusionado = true end
+      if yaFusionado then
+        activoCache = love.filesystem.getInfo("arte/fao/p001b/Wait_f.png") ~= nil
+        return activoCache
+      end
       -- escalones 9 y 10 del equipo: sus capas y looks vienen aparte (herramientas/generar_personajes/equipo_altos.py)
       local ok2, alt = pcall(require, "src.presentacion.render.fao_datos_altos")
       if datos and ok2 then
@@ -54,6 +70,27 @@ function M.activo()
           end
         end
       end
+      -- orden de los dibujos de más sencillo a más elaborado (ordenar_escalones.py): el escalón t toma el dibujo del escalón original orden[t]; el escudo se queda con el suyo
+      local ok4, orden = pcall(require, "src.presentacion.render.fao_orden")
+      if datos and ok4 and not datos._ordenado then        -- (activo() puede repetirse con el mismo módulo: el orden se aplica una sola vez)
+        datos._ordenado = true
+        for cl, lista in pairs(orden) do
+          for _, gen in ipairs({ "h", "m" }) do
+            local L = datos.looks[cl] and datos.looks[cl][gen]
+            if L then
+              local nuevo = {}
+              for t = 1, 10 do
+                local src = L[tostring(lista[t] or t)] or L[tostring(t)]
+                local fila = {}
+                for k, v in pairs(src or {}) do fila[k] = v end
+                fila.escudo = L[tostring(t)] and L[tostring(t)].escudo
+                nuevo[tostring(t)] = fila
+              end
+              datos.looks[cl][gen] = nuevo
+            end
+          end
+        end
+      end
       activoCache = datos ~= nil and love.filesystem.getInfo("arte/fao/p001b/Wait_f.png") ~= nil
     end
   end
@@ -68,7 +105,7 @@ local ORDEN_TRAS = { "arma", "escudo", "cabeza", "piernas", "pecho", "pies" }
 
 -- ---------------------------------------------------------------- qué lleva puesto
 local function escalon(id)
-  return tonumber(tostring(id or ""):match("_(%d+)$"))
+  return tonumber(tostring(id or ""):match("_(%d+)_?%a?$"))
 end
 
 -- Capas de un personaje: { cuerpo = "p001b", pecho = "i086b", ... }. equipo: hueco -> id de objeto (o nil: todo de escalón 1).
@@ -90,13 +127,22 @@ local function capasDe(clase, gen, equipo)
     local t = L["1"]
     res.arma = t and t.arma and t.arma[PRINCIPAL[clase]]
   elseif arma then
-    local fam = tostring(arma):match("^%a+_(%a+)_%d+$")
+    local fam = tostring(arma):match("^%a+_(%a+)_%d+")
     if fam == "arma" then fam = PRINCIPAL[clase] end
     local t = L[tostring(math.max(1, math.min(10, escalon(arma) or 1)))]
     res.arma = t and t.arma and (t.arma[fam] or t.arma[PRINCIPAL[clase]])
   end
   local esc = equipo and equipo.escudo
   if esc then res.escudo = de(escalon(esc), "escudo") end
+  if equipo then
+    for _, hueco in ipairs({ "cabeza", "pecho", "piernas", "pies", "arma", "escudo" }) do
+      local br = colorBrillo(equipo[hueco])
+      if br then
+        res._brillo = res._brillo or {}
+        res._brillo[hueco] = { br[1], br[2], br[3], br[4], br == BRILLO.definitiva }
+      end
+    end
+  end
   return res
 end
 
@@ -132,6 +178,15 @@ local function capa(cap, anim, lado, idx, flip, sx, sy, k)
     h.quads[idx] = q
   end
   love.graphics.draw(h.img, q, sx, sy, 0, flip and -k or k, k, h.x, h.y)
+  if brilloActual then
+    local r, g, b, a = love.graphics.getColor()
+    local pulso = brilloActual[5] and (0.7 + 0.3 * math.sin(love.timer.getTime() * 4.5)) or 1
+    love.graphics.setBlendMode("add")
+    love.graphics.setColor(brilloActual[1], brilloActual[2], brilloActual[3], brilloActual[4] * pulso * a)
+    love.graphics.draw(h.img, q, sx, sy, 0, flip and -k or k, k, h.x, h.y)
+    love.graphics.setBlendMode("alpha")
+    love.graphics.setColor(r, g, b, a)
+  end
 end
 
 -- Qué animación usa una pieza cuando no tiene la pedida (muchas piezas exóticas solo traen Wait, Run, Hurt y Att2). Para las armaduras
@@ -312,7 +367,11 @@ function M.dibujar(e, mov, sx, sy, tinte, alfa, estado)
   local k = ESCALA_JUEGO
   capaAnim(c.cuerpo, anim, paso, d5, false, flip, sx, sy, k)
   for _, hueco in ipairs(ORDEN) do
-    if c[hueco] then capaAnim(c[hueco], anim, paso, d5, hueco == "arma", flip, sx, sy, k) end
+    if c[hueco] then
+      brilloActual = c._brillo and c._brillo[hueco]
+      capaAnim(c[hueco], anim, paso, d5, hueco == "arma", flip, sx, sy, k)
+      brilloActual = nil
+    end
   end
   return 50
 end
@@ -358,7 +417,11 @@ function M.dibujarMontado(e, nomMontura, sx, pies, tinte, alfa, subir)
   local x, y, k = sx + dx, pies + dy - (subir or 0), ESCALA_JUEGO
   capaAnim(c.cuerpo, anim, paso, d5, false, flip, x, y, k, "m")
   for _, hueco in ipairs(ORDEN) do
-    if c[hueco] then capaAnim(c[hueco], anim, paso, d5, hueco == "arma", flip, x, y, k, "m") end
+    if c[hueco] then
+      brilloActual = c._brillo and c._brillo[hueco]
+      capaAnim(c[hueco], anim, paso, d5, hueco == "arma", flip, x, y, k, "m")
+      brilloActual = nil
+    end
   end
   return true
 end

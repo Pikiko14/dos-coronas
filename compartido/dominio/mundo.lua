@@ -1127,12 +1127,19 @@ function Mundo:soltarBotin(m, asesino)
       loot.items[#loot.items + 1] = { id = Items.aleatorioCualquiera(Datos, math.min(#Items.TIER, Items.tierPara(m.nivel) + 1)), cant = 1 }
     end
   end
-  if math.random() < (m.categoria == "gigante" and 1 or m.categoria == "party" and 0.6 or 0.12) then
-    local tier = Items.tierPara(m.nivel)
-    if m.categoria then tier = math.min(#Items.TIER, tier + 1)
-    elseif tier > 1 and math.random() < 0.35 then tier = tier - 1 end
-    local id = Items.aleatorioCualquiera(Datos, tier)
-    if Datos.item(id) then loot.items[#loot.items + 1] = { id = id, cant = 1 } end
+  -- equipo: una tirada por calidad (normal 5-8 %, buena 2-4 %, definitiva 0,1-1 % según el nivel de la criatura); las de grupo y los gigantes sueltan más
+  local pc = Items.probCalidad(m.nivel)
+  for _, calidad in ipairs({ "normal", "b", "s" }) do
+    local prob = pc[calidad]
+    if calidad == "normal" and m.categoria then prob = (m.categoria == "gigante" and 1 or 0.6) end
+    if math.random() < prob then
+      local tier = Items.tierPara(m.nivel)
+      if m.categoria then tier = math.min(#Items.TIER, tier + 1)
+      elseif tier > 1 and math.random() < 0.35 then tier = tier - 1 end
+      local id = Items.aleatorioCualquiera(Datos, tier)
+      if calidad ~= "normal" and Datos.item(id .. "_" .. calidad) then id = id .. "_" .. calidad end
+      if Datos.item(id) then loot.items[#loot.items + 1] = { id = id, cant = 1 } end
+    end
   end
   -- polvo arcano para encantar: difícil de conseguir y solo de criaturas por encima del nivel 10
   if (m.nivel or 1) > Balance.POLVO_NIVEL_MIN and math.random() < Balance.POLVO_PROB then
@@ -3599,7 +3606,7 @@ function Mundo:aplicarGuardado(p, data)
   do
     local RETIRADAS = { ballesta = true, alabarda = true, vara = true, cetro = true, grimorio = true }
     local function nuevo(id)
-      local clase, fam, t = tostring(id):match("^(%a+)_(%a+)_(%d+)$")
+      local clase, fam, t = tostring(id):match("^(%a+)_(%a+)_(%d+)$")   -- (las calidades "_b" y "_s" no necesitan migración)
       if clase and RETIRADAS[fam] then return clase .. "_arma_" .. t end
       return nil
     end

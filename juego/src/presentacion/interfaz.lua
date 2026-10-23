@@ -709,6 +709,20 @@ local function iconoItem(slot, x, y, lado, enc)
   local it = slot and Datos.item(slot.id)
   if not it then return nil end
   local e = (lado - 4) / 32
+  if it.calidad then
+    -- piezas de calidad: marco y halo del color de su clase (azul = buena, dorado que pulsa = definitiva)
+    local c = it.calidad == "definitiva" and { 1, 0.82, 0.3 } or { 0.45, 0.72, 1 }
+    local a = it.calidad == "definitiva" and (0.55 + 0.25 * math.sin(love.timer.getTime() * 4.5)) or 0.5
+    love.graphics.setBlendMode("add")
+    love.graphics.setColor(c[1], c[2], c[3], a * 0.45)
+    love.graphics.rectangle("fill", x + 1, y + 1, lado - 2, lado - 2, 5, 5)
+    love.graphics.setBlendMode("alpha")
+    love.graphics.setColor(c[1], c[2], c[3], a + 0.25)
+    love.graphics.setLineWidth(2)
+    love.graphics.rectangle("line", x + 1, y + 1, lado - 2, lado - 2, 5, 5)
+    love.graphics.setLineWidth(1)
+    love.graphics.setColor(1, 1, 1, 1)
+  end
   Atlas.dibujar(it.hoja, it.sprite, x + lado / 2, y + lado / 2 + 8 * e, e, 16, 16, it.tinte)
   enc = enc or slot.enc
   if enc and enc > 0 then texto("+" .. enc, x + 2, y + 1, { 0.6, 0.95, 1 }) end

@@ -128,6 +128,41 @@ function M.generar(D)
       hp = 10 * u, def = 0.5 * u, mdef = 0.5 * u, precio = precio(50, u), hoja = "equipment", sprite = icono(AMULETOS, t), tinte = tier.tinte,
     })
   end
+  M.generarCalidades(D)
+end
+
+-- Calidades del equipo: la pieza normal, la buena (nombre azul, +20 % de estadísticas, brillo azul) y la definitiva (nombre dorado, +50 %, brillo dorado que pulsa).
+-- Cada una es un objeto propio ("<id>_b" y "<id>_s"): así viaja por la bolsa, el equipo, las subastas y el guardado sin cambiar nada. No se venden en las tiendas.
+M.CALIDADES = {
+  b = { nombre = "buena", etiqueta = "buena", mul = 1.2, precio = 1.8, color = { 0.45, 0.72, 1 } },
+  s = { nombre = "definitiva", etiqueta = "definitiva", mul = 1.5, precio = 4, color = { 1, 0.82, 0.3 } },
+}
+-- Probabilidad de que una criatura de ese nivel suelte una pieza de cada calidad (1 a 50): normales 5-8 %, buenas 2-4 %, definitivas 0,1-1 %.
+function M.probCalidad(nivel)
+  local f = (math.max(1, math.min(50, nivel or 1)) - 1) / 49
+  return { normal = 0.05 + 0.03 * f, b = 0.02 + 0.02 * f, s = 0.001 + 0.009 * f }
+end
+
+function M.generarCalidades(D)
+  local ids = {}
+  for id, it in pairs(D.items) do
+    if it.hueco and it.tier and not it.calidad then ids[#ids + 1] = id end
+  end
+  table.sort(ids)
+  for _, id in ipairs(ids) do
+    local it = D.items[id]
+    for suf, c in pairs(M.CALIDADES) do
+      local v = {}
+      for k, x in pairs(it) do v[k] = x end
+      v.id, v.base, v.calidad, v.botin = id .. "_" .. suf, id, c.nombre, true
+      v.nombre = it.nombre .. " (" .. c.etiqueta .. ")"
+      for _, k in ipairs({ "atk", "matk", "def", "mdef", "hp", "mp" }) do
+        if it[k] then v[k] = math.max(1, math.floor(it[k] * c.mul + 0.5)) end
+      end
+      v.precio = math.floor((it.precio or 0) * c.precio + 0.5)
+      D.items[v.id] = v
+    end
+  end
 end
 
 -- Escalón más alto que puede llevar alguien de ese nivel.

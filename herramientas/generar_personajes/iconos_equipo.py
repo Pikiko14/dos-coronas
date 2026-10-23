@@ -56,6 +56,18 @@ def leer_looks():
                     if mm:
                         fila[hueco] = int(mm.group(1))
                 res[clase][t] = fila
+    # orden de los escalones de más sencillo a más elaborado (ordenar_escalones.py): el escalón t usa el dibujo del escalón orden[t]
+    ruta = DATOS_LUA.replace("fao_datos.lua", "fao_orden.lua")
+    if os.path.exists(ruta):
+        txt = open(ruta, encoding="utf-8").read()
+        for clase in CLASES:
+            m = re.search(r"%s = \{([\d, ]+)\}" % clase, txt)
+            if m:
+                orden = [int(x) for x in m.group(1).split(",")]
+                viejo = dict(res[clase])
+                for t in range(1, 9):
+                    if orden[t - 1] in viejo:
+                        res[clase][t] = viejo[orden[t - 1]]
     return res
 
 
