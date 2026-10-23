@@ -42,6 +42,10 @@ M.FIJOS = {
   [50] = { x = 1012.5, y = 126.5, nombre = "Ciénaga Alta" },
 }
 
+-- Mapas (por nombre) que tienen portal repartido junto a los campamentos del mundo. Ahora ninguno: los que hay se entran con un evento (asedio,
+-- captura_cristal) o tienen su sitio fijo en FIJOS.
+M.CON_PORTAL = {}
+
 M.MAPAS = leerIndice()
 for nombre, num in pairs(A_MANO) do M.MAPAS[nombre] = num end
 
@@ -125,9 +129,9 @@ function M.instalar(Mundo)
         }
         self.entidades[e.id] = e
         self.portalesFao[#self.portalesFao + 1] = e
-      else
+      elseif M.CON_PORTAL[n] then
         nombres[#nombres + 1] = n
-      end
+      end       -- (un mapa enviado desde el editor no tiene portal hasta que se use en algo: el asedio y la batalla de cristales se entran con su evento)
     end
     local usados = {}
     local function contDe(x, y) return mundo.cont[math.floor(x)] and mundo.cont[math.floor(x)][math.floor(y)] end
