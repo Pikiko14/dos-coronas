@@ -298,6 +298,24 @@ function M.aMapa(crudo, datos, reglas)
     end
   end
   mapa.entrada = { x = (bx or 2) + 0.5, y = (by or 2) + 0.5 }
+  -- el punto 31 del mapa (lo coloca el editor) es la entrada y también una salida: se aparece en su centro (en una casilla libre) y se vuelve pisándolo de nuevo
+  for _, p in ipairs(crudo.puntos) do
+    if p.id == 31 and #p.puntos > 0 then
+      local x0, y0, x1, y1 = math.huge, math.huge, -math.huge, -math.huge
+      for _, q in ipairs(p.puntos) do x0, y0, x1, y1 = math.min(x0, q.x), math.min(y0, q.y), math.max(x1, q.x), math.max(y1, q.y) end
+      local cx, cy = (x0 + x1) / 2 / M.CELDA, (y0 + y1) / 2 / M.CELDA
+      local mx, my, md = nil, nil, math.huge
+      for y = math.max(1, math.floor(cy) - 4), math.min(h - 2, math.floor(cy) + 4) do
+        for x = math.max(1, math.floor(cx) - 4), math.min(w - 2, math.floor(cx) + 4) do
+          local d = (x + 0.5 - cx) ^ 2 + (y + 0.5 - cy) ^ 2
+          if libre(x, y) and d < md then mx, my, md = x, y, d end
+        end
+      end
+      if mx then mapa.entrada = { x = mx + 0.5, y = my + 0.5 } end
+      mapa.mpc.salidas = { { id = 31, puntos = p.puntos, entrada = true } }          -- (sustituye a los triángulos 1 y 2: la salida es la entrada)
+      break
+    end
+  end
   mapa.continente = { id = mejor, casillas = mejorN }
   mapa.comp = comp
   return mapa

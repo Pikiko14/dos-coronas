@@ -164,7 +164,9 @@ def hornear(num):
     objetos, inertes, marcos = {}, [], []
     for sid in ids:
         d = defs.get(sid)
-        if d is None or d["fuente"] != "setting/mapobj.obd" or "HIDE" in d["flags"] or "SKIP_RENDER" in d["flags"]:
+        # se dibuja TODO lo que el mapa traiga y tenga sprite (objetos de mapa, recursos, adornos, casas, NPC); solo quedan fuera lo oculto (marcas TAG, generadores de criaturas) y lo que no tiene dibujo
+        visible = d is not None
+        if not visible or "HIDE" in d["flags"] or "SKIP_RENDER" in d["flags"]:
             inertes.append(sid)           # marcas y generadores del servidor, NPC, luces: no se dibujan ni se conectan
             continue
         carpeta = d["directorio"].replace(chr(92), "/").strip("/")

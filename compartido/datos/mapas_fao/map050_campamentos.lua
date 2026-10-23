@@ -1,0 +1,265 @@
+-- GENERADO por el editor de mapas (fao-editor-mapas): campamentos de criaturas del mapa "map050".
+-- Lista de { monstruo (id de monstruos.xml), cantidad, radio (casillas), x, y (casillas, centro de la casilla = .5), jefe? }.
+return {
+  {
+    monstruo = "minotauro_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 133.5,
+    y = 25.5
+  },
+  {
+    monstruo = "minotauro_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 135.5,
+    y = 16.5
+  },
+  {
+    monstruo = "minotauro_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 127.5,
+    y = 11.5
+  },
+  {
+    monstruo = "minotauro_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 123.5,
+    y = 23.5
+  },
+  {
+    monstruo = "minotauro_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 116.5,
+    y = 11.5
+  },
+  {
+    monstruo = "minotauro_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 109.5,
+    y = 20.5
+  },
+  {
+    monstruo = "minotauro_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 103.5,
+    y = 8.5
+  },
+  {
+    monstruo = "minotauro_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 91.5,
+    y = 8.5
+  },
+  {
+    monstruo = "diablo_acorazado",
+    cantidad = 1,
+    radio = 4,
+    x = 74.5,
+    y = 14.5
+  },
+  {
+    monstruo = "diablo_acorazado",
+    cantidad = 1,
+    radio = 4,
+    x = 63.5,
+    y = 14.5
+  },
+  {
+    monstruo = "diablo_acorazado",
+    cantidad = 1,
+    radio = 4,
+    x = 63.5,
+    y = 21.5
+  },
+  {
+    monstruo = "diablo_acorazado",
+    cantidad = 1,
+    radio = 4,
+    x = 49.5,
+    y = 10.5
+  },
+  {
+    monstruo = "diablo_acorazado",
+    cantidad = 1,
+    radio = 4,
+    x = 36.5,
+    y = 15.5
+  },
+  {
+    monstruo = "diablo_acorazado",
+    cantidad = 1,
+    radio = 4,
+    x = 26.5,
+    y = 21.5
+  },
+  {
+    monstruo = "diablo_acorazado",
+    cantidad = 1,
+    radio = 4,
+    x = 38.5,
+    y = 26.5
+  },
+  {
+    monstruo = "lancero_sombras",
+    cantidad = 1,
+    radio = 4,
+    x = 51.5,
+    y = 27.5
+  },
+  {
+    monstruo = "lancero_sombras",
+    cantidad = 1,
+    radio = 4,
+    x = 58.5,
+    y = 40.5
+  },
+  {
+    monstruo = "lancero_sombras",
+    cantidad = 1,
+    radio = 4,
+    x = 78.5,
+    y = 38.5
+  },
+  {
+    monstruo = "lancero_sombras",
+    cantidad = 1,
+    radio = 4,
+    x = 86.5,
+    y = 48.5
+  },
+  {
+    monstruo = "lancero_sombras",
+    cantidad = 1,
+    radio = 4,
+    x = 98.5,
+    y = 50.5
+  },
+  {
+    monstruo = "duende_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 110.5,
+    y = 50.5
+  },
+  {
+    monstruo = "duende_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 97.5,
+    y = 68.5
+  },
+  {
+    monstruo = "duende_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 114.5,
+    y = 66.5
+  },
+  {
+    monstruo = "duende_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 129.5,
+    y = 69.5
+  },
+  {
+    monstruo = "duende_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 133.5,
+    y = 80.5
+  },
+  {
+    monstruo = "duende_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 116.5,
+    y = 87.5
+  },
+  {
+    monstruo = "duende_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 110.5,
+    y = 77.5
+  },
+  {
+    monstruo = "duende_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 95.5,
+    y = 84.5
+  },
+  {
+    monstruo = "duende_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 84.5,
+    y = 87.5
+  },
+  {
+    monstruo = "duende_guerra",
+    cantidad = 1,
+    radio = 4,
+    x = 71.5,
+    y = 90.5
+  },
+  {
+    monstruo = "golem_amatista",
+    cantidad = 1,
+    radio = 4,
+    x = 71.5,
+    y = 82.5
+  },
+  {
+    monstruo = "golem_amatista",
+    cantidad = 1,
+    radio = 4,
+    x = 51.5,
+    y = 71.5
+  },
+  {
+    monstruo = "golem_amatista",
+    cantidad = 1,
+    radio = 4,
+    x = 38.5,
+    y = 64.5
+  },
+  {
+    monstruo = "golem_amatista",
+    cantidad = 1,
+    radio = 4,
+    x = 41.5,
+    y = 74.5
+  },
+  {
+    monstruo = "golem_amatista",
+    cantidad = 1,
+    radio = 4,
+    x = 27.5,
+    y = 79.5
+  },
+  {
+    monstruo = "jefe_dragon_sombra",
+    cantidad = 1,
+    radio = 4,
+    x = 29.5,
+    y = 69.5,
+    jefe = true
+  },
+  {
+    monstruo = "jefe_dragon_sombra",
+    cantidad = 1,
+    radio = 4,
+    x = 6.5,
+    y = 70.5,
+    jefe = true
+  }
+}

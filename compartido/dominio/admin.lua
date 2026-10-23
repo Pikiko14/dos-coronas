@@ -215,7 +215,9 @@ function M.instalar(Mundo)
       return self:salirMapaFao(p)
     end
     local err = nombre and self:entrarMapaFao(p, nombre)
-    if not nombre or err then return decir(self, p, err or ("Uso: /admin mapa <" .. table.concat(require("compartido.dominio.mapas_fao").nombres(), "|") .. "|salir>")) end
+    local lista = require("compartido.dominio.mapas_fao").nombres()
+    if #lista == 0 then return decir(self, p, "No hay mapas de FAO: se quitaron todos.") end
+    if not nombre or err then return decir(self, p, err or ("Uso: /admin mapa <" .. table.concat(lista, "|") .. "|salir>")) end
   end
 
   function comandos.traer(self, p, a)

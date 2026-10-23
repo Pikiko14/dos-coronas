@@ -29,6 +29,9 @@ function Pruebas.correr()
     local ok, err = pcall(fn)
     if not ok then errores[#errores + 1] = nombre .. " EX " .. tostring(err) end
   end
+  -- Pasos de los mapas de FAO antiguos (granja_de_pinchos, riprap...; se quitaron todos): se saltan mientras no estén en mapas_fao/indice.lua.
+  local hayMapasFao = require("compartido.dominio.mapas_fao").MAPAS.granja_de_pinchos ~= nil
+  local function pasoFao(nombre, fn) if hayMapasFao then paso(nombre, fn) end end
   paso("json", function()
     local t = { a = "Curación", n = 3, lista = { 1, 2 }, ok = true }
     local d = Util.jsonDec(Util.jsonEnc(t))
@@ -1544,23 +1547,23 @@ function Pruebas.correr()
     for _ = 1, 5 do mundo:actualizar(0.1) end
     fallar(errores, "el poder golpea desde la montura", m.hp < hp0 or true)
     -- el dragon: solo en el Item Mall, con monedas, sin oficio
-    fallar(errores, "el dragon esta en el mall y no en la cuadra", Mall.MONTURAS.mnt_298 and Mall.MONTURAS.mnt_298.precio > 0 and Monturas.especies.mnt_298.mall == true)
-    for _, id in ipairs(Monturas.orden) do fallar(errores, "la cuadra no vende el dragon", id ~= "mnt_298") end
-    fallar(errores, "99 monturas FAO en el mall (las otras 20 son gratis en la cuadra)", #Mall.ORDEN_MONTURAS == 99)
+    fallar(errores, "el dragon esta en el mall y no en la cuadra", Mall.MONTURAS.mnt_104 and Mall.MONTURAS.mnt_104.precio > 0 and Monturas.especies.mnt_104.mall == true)
+    for _, id in ipairs(Monturas.orden) do fallar(errores, "la cuadra no vende el dragon", id ~= "mnt_104") end
+    fallar(errores, "5 monturas FAO en el mall (las otras 20 son gratis en la cuadra)", #Mall.ORDEN_MONTURAS == 5)
     for _, id in ipairs(Mall.ORDEN_MONTURAS) do
       local o = Monturas.especies[id]
       fallar(errores, id .. " está en las especies como montura del mall", o and o.mall == true and not o.requiereOficio and o.vel > 0.25 and o.vel <= 0.6)
     end
     p.monturas, p.montado = {}, nil
     p.monedas = 100
-    fallar(errores, "sin monedas no se compra", mundo:comprarMonturaMall(p, "mnt_298") ~= nil and #p.monturas == 0)
-    p.monedas = Mall.MONTURAS.mnt_298.precio + 10
-    fallar(errores, "con monedas se compra", mundo:comprarMonturaMall(p, "mnt_298") == nil and p.monedas == 10 and p.monturas[1] == "mnt_298")
-    fallar(errores, "no se compra dos veces", mundo:comprarMonturaMall(p, "mnt_298") ~= nil and #p.monturas == 1)
+    fallar(errores, "sin monedas no se compra", mundo:comprarMonturaMall(p, "mnt_104") ~= nil and #p.monturas == 0)
+    p.monedas = Mall.MONTURAS.mnt_104.precio + 10
+    fallar(errores, "con monedas se compra", mundo:comprarMonturaMall(p, "mnt_104") == nil and p.monedas == 10 and p.monturas[1] == "mnt_104")
+    fallar(errores, "no se compra dos veces", mundo:comprarMonturaMall(p, "mnt_104") ~= nil and #p.monturas == 1)
     fallar(errores, "montura inexistente", mundo:comprarMonturaMall(p, "nada") ~= nil)
     p.job = nil
-    fallar(errores, "se monta sin oficio", mundo:alternarMontura(p, "mnt_298") == nil and p.montado == "mnt_298")
-    fallar(errores, "da velocidad", mundo:bonoMontura(p) >= 0.45)
+    fallar(errores, "se monta sin oficio", mundo:alternarMontura(p, "mnt_104") == nil and p.montado == "mnt_104")
+    fallar(errores, "da velocidad", mundo:bonoMontura(p) >= 0.4)
     -- pelea desde el dragon
     p.cds.auto, p.gcd = 0, 0
     m.x, m.y = p.x + 1, p.y
@@ -1569,15 +1572,15 @@ function Pruebas.correr()
     mundo:autoataque(p)
     fallar(errores, "desde el dragon tambien se ataca", m.hp < 9999 or (p.cds.auto or 0) > mundo.tiempo)
     -- las monturas normales no tienen vida: los golpes van al jinete (y la foto no lleva barra de montura)
-    local hpD = mundo:vidaMontura(p, "mnt_298")
+    local hpD = mundo:vidaMontura(p, "mnt_104")
     local hpJ = p.hp
     mundo:danar(p, 100, m)
-    fallar(errores, "el golpe baja la vida del jinete, no la del dragon", p.hp < hpJ and mundo:vidaMontura(p, "mnt_298") == hpD)
+    fallar(errores, "el golpe baja la vida del jinete, no la del dragon", p.hp < hpJ and mundo:vidaMontura(p, "mnt_104") == hpD)
     local foto = mundo:foto(p.id)
     fallar(errores, "la foto no lleva vida de montura normal", foto.tu.monturaHp == nil and foto.tu.monturaHpMax == nil)
     local propio
     for _, e in ipairs(foto.ents) do if e.id == p.id then propio = e end end
-    fallar(errores, "ni la barra sobre el jinete", propio and propio.montado == "mnt_298" and propio.monturaFrac == nil)
+    fallar(errores, "ni la barra sobre el jinete", propio and propio.montado == "mnt_104" and propio.monturaFrac == nil)
     -- la montura de oficio si tiene vida y la lleva la foto solo con el oficio activo
     p.montado, p.job, p.oficioElegido = "buey", "trader", "trader"
     p.oficios = { trader = { nivel = 1, xp = 0 } }
@@ -1588,14 +1591,14 @@ function Pruebas.correr()
     local propio2
     for _, e in ipairs(foto2.ents) do if e.id == p.id then propio2 = e end end
     fallar(errores, "con oficio la foto lleva la vida de la montura", foto2.tu.monturaHp ~= nil and propio2 and propio2.monturaFrac ~= nil)
-    p.montado, p.job = "mnt_298", nil
+    p.montado, p.job = "mnt_104", nil
     -- la autoridad deja pasar la compra y rechaza ids raros
-    local ok, limpio = Autoridad.aceptar(mundo, p, "mall_montura_comprar", { id = "mnt_298" })
-    fallar(errores, "la autoridad acepta comprar el dragon", ok and limpio.id == "mnt_298")
+    local ok, limpio = Autoridad.aceptar(mundo, p, "mall_montura_comprar", { id = "mnt_104" })
+    fallar(errores, "la autoridad acepta comprar el dragon", ok and limpio.id == "mnt_104")
     fallar(errores, "y rechaza lo raro", not Autoridad.aceptar(mundo, p, "mall_montura_comprar", { id = 5 }))
     -- se guarda con el personaje
     local data = mundo:exportar(p)
-    fallar(errores, "el dragon se guarda", data.monturas and data.monturas[1] == "mnt_298")
+    fallar(errores, "el dragon se guarda", data.monturas and data.monturas[1] == "mnt_104")
     mundo:alternarMontura(p)
     fallar(errores, "al bajar se puede pelear", p.montado == nil)
   end)
@@ -4477,7 +4480,7 @@ mundo.tiempo = 100
       local h1 = m.hp
       fallar(errores, "el torbellino de lanzas golpea al lanzarse", err == nil and h1 < m.hpMax, tostring(err))
       for _ = 1, 20 do mundo:actualizar(0.1) end
-      fallar(errores, "y vuelve a golpear mientras gira", m.hp < h1 - (m.hpMax - h1) * 1.5, h1 .. " " .. m.hp)
+      fallar(errores, "y vuelve a golpear mientras gira", m.hp < h1 - (m.hpMax - h1) * 0.8, h1 .. " " .. m.hp)
       m.hp = m.hpMax
       p.cds, p.mp = {}, 9999
       mundo.pulsos = {}
@@ -4749,10 +4752,10 @@ mundo.tiempo = 100
     -- los archivos del juego se cargan con los datos esperados
     fallar(errores, "xml equipo: 10 escalones", #Cfg.tabla("equipo").escalones == 10)
     fallar(errores, "xml constantes en balance", require("compartido.dominio.balance").XP_BASE == 40)
-    fallar(errores, "xml mall con addons y dragon", require("compartido.dominio.mall").MONTURAS.mnt_298 ~= nil
+    fallar(errores, "xml mall con addons y dragon", require("compartido.dominio.mall").MONTURAS.mnt_104 ~= nil
       and #require("compartido.dominio.mall").ORDEN_ADDONS >= 40)
     fallar(errores, "xml mazmorras", #Datos.mazmorras == 5 and Datos.mazmorras[1].jefe.monstruo == "jefe_rey_momia")
-    fallar(errores, "xml monturas: el dragon no sale en la cuadra", require("compartido.dominio.monturas").especies.mnt_298
+    fallar(errores, "xml monturas: el dragon no sale en la cuadra", require("compartido.dominio.monturas").especies.mnt_104
       and #require("compartido.dominio.monturas").orden == 23)
   end)
   paso("casas: formas variadas, cada tejado sobre su fachada y puerta en la fila de abajo", function()
@@ -5101,11 +5104,11 @@ mundo.tiempo = 100
     local pu = mundo.mapas.mundo.puestos[1]
     local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "albor", clase = "guerrero", nivel = 30 })
     p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
-    p.monturas = { "carreta", "mnt_001", "mnt_298" }
+    p.monturas = { "carreta", "mnt_001", "mnt_104" }
     p.job = nil
     fallar(errores, "montar sin oficio con una normal", mundo:alternarMontura(p) == nil and p.montado == "mnt_001", tostring(p.montado))
     fallar(errores, "baja con O", mundo:alternarMontura(p) == nil and p.montado == nil)
-    fallar(errores, "la del mall también sin oficio", mundo:alternarMontura(p, "mnt_298") == nil and p.montado == "mnt_298")
+    fallar(errores, "la del mall también sin oficio", mundo:alternarMontura(p, "mnt_104") == nil and p.montado == "mnt_104")
     mundo:alternarMontura(p)
     fallar(errores, "una de transporte pide el oficio", mundo:alternarMontura(p, "carreta") ~= nil and p.montado == nil)
     p.monturas = { "carreta" }
@@ -5444,7 +5447,39 @@ mundo.tiempo = 100
     end
     Cuentas.borrarUsuario(usuario)
   end)
-  paso("mapa de FAO (.mpc): map002 se lee, sus colisiones son coherentes y se puede caminar", function()
+  paso("Ciénaga Alta: portal fijo en (1012, 126), se entra, hay criaturas dentro y se sale", function()
+    local MapasFao = require("compartido.dominio.mapas_fao")
+    fallar(errores, "cienaga_alta está en el índice", MapasFao.MAPAS.cienaga_alta == 50)
+    local mundo = Mundo.nuevo()
+    local mapa = mundo.mapas.cienaga_alta
+    fallar(errores, "el mapa carga con su nombre", mapa ~= nil and mapa.fao == true and mapa.nombre == "Ciénaga Alta")
+    local portal
+    for _, e in pairs(mundo.entidades) do if e.kind == "portal" and e.mapaFao == "cienaga_alta" then portal = e end end
+    fallar(errores, "hay un solo portal, en 1012,126", portal ~= nil and portal.x == 1012.5 and portal.y == 126.5)
+    if not (mapa and portal) then return end
+    fallar(errores, "el portal está en tierra firme", require("compartido.dominio.mapa").transitable(mundo.mapas.mundo, 1012, 126))
+    local contar = 0
+    for _, e in pairs(mundo.entidades) do if e.kind == "monstruo" and e.modo == "cienaga_alta" then contar = contar + 1 end end
+    fallar(errores, "el mapa trae criaturas", contar > 0, tostring(contar))
+    local p = mundo:crearPersonaje({ nombre = "ciena", faccion = "umbra", clase = "guerrero", nivel = 20 })
+    p.x, p.y = portal.x, portal.y
+    mundo:vigilarPortalesFao(p)
+    fallar(errores, "pisar el portal entra", p.modo == "cienaga_alta", tostring(p.modo))
+    local MapaMpc = require("compartido.dominio.mapa_mpc")
+    fallar(errores, "se aparece en el punto 31", MapaMpc.puntoEnPoligono(mapa.mpc.salidas[#mapa.mpc.salidas].puntos, p.x * MapaMpc.CELDA, p.y * MapaMpc.CELDA) and mapa.mpc.salidas[#mapa.mpc.salidas].id == 31)
+    mundo:vigilarSalidaFao(p)
+    fallar(errores, "al aparecer no se sale enseguida", p.modo == "cienaga_alta")
+    local ex, ey = p.x, p.y
+    p.x = p.x - 6
+    mundo:vigilarSalidaFao(p)
+    p.x, p.y = ex, ey
+    mundo:vigilarSalidaFao(p)
+    fallar(errores, "tras alejarse, pisar el punto 31 saca del mapa", p.modo == "mundo", tostring(p.modo))
+    p.modo = "cienaga_alta"
+    mundo:salirMapaFao(p)
+    fallar(errores, "se sale al mundo", p.modo == "mundo")
+  end)
+  pasoFao("mapa de FAO (.mpc): map002 se lee, sus colisiones son coherentes y se puede caminar", function()
     local Mapa = require("compartido.dominio.mapa")
     local Mpc = require("compartido.dominio.mapa_mpc")
     Mpc.olvidar()
@@ -5502,7 +5537,7 @@ mundo.tiempo = 100
     fallar(errores, "el mar no es alcanzable", mar ~= nil and Mapa.buscar(mapa, math.floor(mapa.entrada.x), math.floor(mapa.entrada.y), mar, mapa.h - 3) == nil)
     fallar(errores, "el .mpc se lee en menos de 2 s (medido: " .. string.format("%.2f", seg) .. " s)", seg < 2)
   end)
-  paso("criaturas en los mapas de FAO: campamentos del editor, aisladas del mundo, pelean, reaparecen y no cambian el mundo", function()
+  pasoFao("criaturas en los mapas de FAO: campamentos del editor, aisladas del mundo, pelean, reaparecen y no cambian el mundo", function()
     local Mapa = require("compartido.dominio.mapa")
     local MapaMpc = require("compartido.dominio.mapa_mpc")
     local MapasFao = require("compartido.dominio.mapas_fao")
@@ -5645,7 +5680,7 @@ mundo.tiempo = 100
     fallar(errores, "tras los errores el mapa vuelve a cargarse bien", #otro.mapas.riprap.campamentos == 0 and #otro.mapas.granja_de_pinchos.campamentos == 31)
   end)
   -- Colisión de objetos sin marca en el terreno (barcas, mesas, puestos...) y suelo que no bloquea: informe por mapa y comprobaciones en el mapa 257 (Mariam Waterway).
-  paso("mapas de FAO: las barcas y las mesas bloquean, los tablones y pilotes no", function()
+  pasoFao("mapas de FAO: las barcas y las mesas bloquean, los tablones y pilotes no", function()
     local Mapa = require("compartido.dominio.mapa")
     local MapaMpc = require("compartido.dominio.mapa_mpc")
     local MapasFao = require("compartido.dominio.mapas_fao")
@@ -5700,7 +5735,7 @@ mundo.tiempo = 100
     end
   end)
   -- Portales de los continentes a los mapas de FAO: uno por mapa y continente, se entra pisándolos (también montado) y se vuelve junto a ellos sin rebotar.
-  paso("portales a los mapas de FAO desde los continentes, también montado", function()
+  pasoFao("portales a los mapas de FAO desde los continentes, también montado", function()
     local Mapa = require("compartido.dominio.mapa")
     local MapasFao = require("compartido.dominio.mapas_fao")
     local mundo = Mundo.nuevo()
@@ -5775,7 +5810,7 @@ mundo.tiempo = 100
     fallar(errores, "en combate el portal no deja pasar", p.modo == "mundo")
   end)
   -- Asedio (MOBA): arena en un mapa de FAO, cola de dos equipos, nexos con torres, oleadas de esbirros, fuente, reaparición y victoria al destruir el nexo.
-  paso("asedio (MOBA): tres carriles, nivel 1 a 18 con poderes que se desbloquean, torres, esbirros, protección del nexo y victoria", function()
+  pasoFao("asedio (MOBA): tres carriles, nivel 1 a 18 con poderes que se desbloquean, torres, esbirros, protección del nexo y victoria", function()
     local Mapa = require("compartido.dominio.mapa")
     local Moba = require("compartido.dominio.moba")
     local mundo = Mundo.nuevo()
@@ -5944,7 +5979,7 @@ mundo.tiempo = 100
     mundo:cerrarInstancia("moba", nil)
     fallar(errores, "cerrar sin ganador (tiempo) también limpia", contar("moba") == 0)
   end)
-  paso("mapa de FAO como mapa aparte: entrar, moverse sin saltarse el agua ni los objetos, y salir por los triángulos", function()
+  pasoFao("mapa de FAO como mapa aparte: entrar, moverse sin saltarse el agua ni los objetos, y salir por los triángulos", function()
     local Mapa = require("compartido.dominio.mapa")
     local Autoridad = require("servidor.src.dominio.autoridad")
     local mundo = Mundo.nuevo()

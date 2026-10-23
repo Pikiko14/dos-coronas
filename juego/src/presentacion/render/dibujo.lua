@@ -532,6 +532,16 @@ local PROYECTILES = { misil = "add", fuego = "add", sagrado = "add", flecha = "a
 function D.proyectil(e, sx, sy)
   sy = sy - 17      -- sale del pecho de quien lo lanza
   local ang = Iso.angulo((e.tx or e.x) - e.x, (e.ty or e.y) - e.y)
+  -- la flecha básica del arquero (herramientas/generar_flecha): 6 cuadros del mismo tamaño con la flecha en el centro; va ganando estela y se queda
+  -- en los últimos cuadros mientras vuela
+  if e.tipo == "flecha" then
+    local img = Arte.img("Animations/Proyectil_flecha.png", true)
+    local cw, ch = img:getWidth() / 6, img:getHeight()
+    local cuadro = ({ 3, 4, 5, 4 })[math.floor(love.timer.getTime() * 14) % 4 + 1]
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.draw(img, Arte.quad(img, cuadro * cw, 0, cw, ch), sx, sy, ang, 1, 1, cw / 2, ch / 2)
+    return
+  end
   -- sprites generados (Animations/Proyectil_<tipo>.png: 4 cuadros de 64x64, miran a la derecha)
   if PROYECTILES[e.tipo] then
     local img = Arte.img("Animations/Proyectil_" .. e.tipo .. ".png", true)

@@ -13,7 +13,7 @@ local M = {}
 -- Los mapas escritos a mano (mandan si el índice repite el nombre) más los que el editor de mapas apunta en compartido/datos/mapas_fao/indice.lua al pulsar "Enviar a Dos Coronas"
 -- (`return { nombre = numero, ... }`): un mapa nuevo queda disponible (/admin mapa nombre, ayuda del administrador) solo reiniciando el servidor. El índice se valida: nombre válido,
 -- número entero y existen mapNNN.mpc y mapNNN_datos.lua.
-local A_MANO = { riprap = 2, minas_de_la_muerte = 323 }
+local A_MANO = {}
 local RESERVADOS = { salir = true, mundo = true, batalla = true, estandarte = true, casa = true, casaPequena = true, casaMediana = true }
 
 local function leerIndice()
@@ -37,6 +37,11 @@ local function leerIndice()
   return salida
 end
 
+-- Mapas con portal en un sitio fijo del mundo (casillas, centro = .5) en vez del reparto automático junto a los campamentos: { x, y, faccion (la del continente), nombre (el que ve el jugador) }.
+M.FIJOS = {
+  cienaga_alta = { x = 1012.5, y = 126.5, faccion = "umbra", nombre = "Ciénaga Alta" },
+}
+
 M.MAPAS = leerIndice()
 for nombre, num in pairs(A_MANO) do M.MAPAS[nombre] = num end
 
@@ -50,7 +55,10 @@ end
 
 function M.instalar(Mundo)
   function Mundo:crearMapasFao()
-    for nombre, num in pairs(M.MAPAS) do self.mapas[nombre] = MapaMpc.cargar(num) end
+    for nombre, num in pairs(M.MAPAS) do
+      self.mapas[nombre] = MapaMpc.cargar(num)
+      if M.FIJOS[nombre] then self.mapas[nombre].nombre = M.FIJOS[nombre].nombre end
+    end
   end
 
   -- Criaturas de los campamentos de cada mapa de FAO, con modo = nombre del mapa: solo se ven y pelean con ellas los jugadores que están dentro. Igual que Mundo:poblar()
@@ -92,6 +100,7 @@ function M.instalar(Mundo)
     p.retorno = { x = p.x, y = p.y, modo = "mundo" }
     p.modo, p.casaId, p.z = nombre, nil, 0
     p.zona = m.nombre
+    p.salidaArmada = false
     p.x, p.y = m.entrada.x, m.entrada.y
     p.objetivo, p.camino, p.persigue = nil, nil, false
     self:mensaje("sistema", "", "Entras en " .. m.nombre .. " (mapa de Free Angels Online, prueba). Sal por los triángulos del borde del mapa.", p)
@@ -106,7 +115,20 @@ function M.instalar(Mundo)
   function Mundo:crearPortalesFao()
     self.portalesFao = {}
     local mundo = self.mapas.mundo
-    local nombres = M.nombres()
+    local nombres = {}
+    for _, n in ipairs(M.nombres()) do
+      local fijo = M.FIJOS[n]
+      if fijo then
+        local e = {
+          id = self:idNuevo(), kind = "portal", nombre = "Portal: " .. (self.mapas[n].nombre or n), mapaFao = n, faccion = fijo.faccion,
+          x = fijo.x, y = fijo.y, modo = "mundo", z = 0, vivo = true, dir = 1,
+        }
+        self.entidades[e.id] = e
+        self.portalesFao[#self.portalesFao + 1] = e
+      else
+        nombres[#nombres + 1] = n
+      end
+    end
     local usados = {}
     local function contDe(x, y) return mundo.cont[math.floor(x)] and mundo.cont[math.floor(x)][math.floor(y)] end
     local function libreParaPortal(x, y, cont, sep)
@@ -223,9 +245,14 @@ function M.instalar(Mundo)
     local m = self:enMapaFao(p)
     if not m or not p.vivo or p.modo == "moba" then return end        -- (en el asedio se sale con el evento)
     local px, py = p.x * MapaMpc.CELDA, p.y * MapaMpc.CELDA          -- (los triángulos del .mpc están en píxeles de FAO)
+    local dentro
     for _, s in ipairs(m.mpc.salidas) do
-      if MapaMpc.puntoEnPoligono(s.puntos, px, py) then self:salirMapaFao(p) return end
+      if MapaMpc.puntoEnPoligono(s.puntos, px, py) then dentro = s break end
     end
+    -- la salida que es también la entrada (punto 31) no vale mientras el jugador no haya salido de ella: se aparece encima
+    if dentro and dentro.entrada and not p.salidaArmada then return end
+    if not dentro then p.salidaArmada = true return end
+    self:salirMapaFao(p)
   end
 end
 

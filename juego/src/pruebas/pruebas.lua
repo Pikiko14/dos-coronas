@@ -22,6 +22,9 @@ function Pruebas.correr()
     local ok, err = pcall(fn)
     if not ok then errores[#errores + 1] = nombre .. " EX " .. tostring(err) end
   end
+  -- Pasos de los mapas de FAO antiguos (granja_de_pinchos, riprap...; se quitaron todos): se saltan mientras no estén en mapas_fao/indice.lua.
+  local hayMapasFao = require("compartido.dominio.mapas_fao").MAPAS.granja_de_pinchos ~= nil
+  local function pasoFao(nombre, fn) if hayMapasFao then paso(nombre, fn) end end
   paso("json", function()
     local t = { a = "Curación", n = 3, lista = { 1, 2 }, ok = true }
     local d = Util.jsonDec(Util.jsonEnc(t))
@@ -504,7 +507,7 @@ function Pruebas.correr()
     local Monturas = require("compartido.dominio.monturas")
     local Personajes = require("src.presentacion.render.personajes")
     local Propias = require("src.presentacion.render.propias")
-    local nuevas = { "mnt_001", "mnt_298", "mnt_203" }
+    local nuevas = { "mnt_001", "mnt_104", "mnt_203" }
     for id, d in pairs(Monturas.especies) do
       for _, fac in ipairs({ "albor", "umbra" }) do
         local def = Personajes.monturaDe(id, fac)
@@ -522,7 +525,7 @@ function Pruebas.correr()
     local mall = require("compartido.dominio.mall")
     local enMall = 0
     for _, id in ipairs(mall.ORDEN_MONTURAS) do enMall = enMall + 1 end
-    fallar(errores, "el mall tiene las 99 monturas de pago de FAO", enMall == 99, tostring(enMall))
+    fallar(errores, "el mall tiene las 5 monturas de pago de FAO", enMall == 5, tostring(enMall))
     -- recompensa diaria y etiqueta del personal
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Gm", faccion = "albor", clase = "guerrero", nivel = 10 })
@@ -544,7 +547,7 @@ function Pruebas.correr()
     local lado0, consola0 = Interfaz.medidas()
     fallar(errores, "con monturas el icono sale siempre, aunque no haya oficio activo", Interfaz.consumir(1198, 688) == "hud_monturas")
     -- la colección de monturas se dibuja con normales, del mall y de transporte, y con el estado de cada una
-    pj.monturas = { "caballo", "mnt_001", "mnt_298", "carreta" }
+    pj.monturas = { "caballo", "mnt_001", "mnt_104", "carreta" }
     pj.monturasEstado = { caballo = { hp = 300, max = 350 }, carreta = { caida = 40, hp = 0, max = 1100 } }
     Interfaz.panel = "montura"
     local okCol, errCol = pcall(Interfaz.hud, mundo, pj, 1280, 720)
@@ -1734,13 +1737,13 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local hay = false
     for y = 110, 260, 4 do for x = 640, 1000, 4 do if Interfaz.consumir(x, y) == "mall_mt_buy_mnt_039" then hay = true end end end
     fallar(errores, "sin monedas no se puede comprar", not hay)
-    pj.monturas = { "mnt_298" }
+    pj.monturas = { "mnt_104" }
     ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "con el dragon comprado se dibuja", ok, tostring(err))
     -- el sprite del dragon, en las dos facciones, con cada clase encima
     local cv = love.graphics.newCanvas(400, 300)
     for _, f in ipairs({ "albor", "umbra" }) do
-      local d = Personajes.monturaDe("mnt_298", f)
+      local d = Personajes.monturaDe("mnt_104", f)
       fallar(errores, "el dragon es grande y el jinete va alto", d.anim and d.altura and d.altura >= 8)
       for _, clase in ipairs({ "guerrero", "mago", "cazador", "clerigo" }) do
         for dir = 1, 4 do
@@ -1756,7 +1759,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       end
     end
     -- con el dragon montado y sin oficio, el HUD ofrece montar/bajar
-    pj.montado = "mnt_298"
+    pj.montado = "mnt_104"
     ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "el HUD con el dragon se dibuja", ok, tostring(err))
     Interfaz.panel, Interfaz.mallTab = nil, "objetos"
@@ -1892,7 +1895,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
   end)
   -- Mapa de FAO (.mpc) en el cliente: carga y dibujo del suelo/objetos, sin errores y con tiempos razonables. Con DC_PRUEBA_MAPA_FAO=1 además guarda juego/capturas/mapa_fao.png con zonas
   -- del mapa (costa, bosque, camino de tierra) dibujadas con el personaje FAO de pie y caminando, y un mapa completo con las casillas bloqueadas marcadas (mapa_fao_bloqueo.png).
-  paso("mapa de FAO (.mpc): el cliente lo dibuja (suelo y objetos) y la memoria y el tiempo son razonables", function()
+  pasoFao("mapa de FAO (.mpc): el cliente lo dibuja (suelo y objetos) y la memoria y el tiempo son razonables", function()
     local Dibujo = require("src.presentacion.render.dibujo")
     local Terreno = require("src.presentacion.render.terreno")
     local MapaMpc = require("src.presentacion.render.mapa_mpc")
@@ -2267,7 +2270,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
   end)
   -- Criaturas de los campamentos del editor dentro de los mapas de FAO: el cliente las dibuja con su animación de siempre. Con DC_PRUEBA_CRIATURAS_FAO=1 guarda juego/capturas/criaturas_fao.png
   -- (una fila por mapa: llegada, pelea, muerte y reaparición).
-  paso("criaturas en mapas de FAO: se dibujan, pelean y reaparecen dentro del mapa", function()
+  pasoFao("criaturas en mapas de FAO: se dibujan, pelean y reaparecen dentro del mapa", function()
     local Dibujo = require("src.presentacion.render.dibujo")
     local vista = os.getenv("DC_PRUEBA_CRIATURAS_FAO") ~= nil
     local CW, CH = 480, 300
@@ -2330,7 +2333,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
   end)
   -- Mapa 257 (Mariam Waterway) en el cliente: el jugador sobre los tablones se dibuja encima de ellos, la barca y las mesas bloquean y los objetos altos se atenúan si tapan al personaje.
   -- Con DC_PRUEBA_BARCA=1 guarda juego/capturas/mapa_fao_barca.png (arriba: en 29,34 sobre los tablones; en medio: junto a la barca, parado por ella; abajo: detrás de un objeto alto).
-  paso("mapa de FAO 257: tablones bajo el jugador, la barca lo detiene y el objeto alto se atenúa", function()
+  pasoFao("mapa de FAO 257: tablones bajo el jugador, la barca lo detiene y el objeto alto se atenúa", function()
     local Dibujo = require("src.presentacion.render.dibujo")
     local Mapa = require("compartido.dominio.mapa")
     local MapaMpc = require("src.presentacion.render.mapa_mpc")
@@ -2407,7 +2410,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     end
   end)
   -- Portal de un continente a un mapa de FAO y montura dentro del mapa. Con DC_PRUEBA_PORTAL=1 guarda juego/capturas/portal_fao.png (portal en el mundo, montado dentro del mapa de FAO).
-  paso("portales: el portal se dibuja en el continente y la montura se ve dentro del mapa de FAO", function()
+  pasoFao("portales: el portal se dibuja en el continente y la montura se ve dentro del mapa de FAO", function()
     local Dibujo = require("src.presentacion.render.dibujo")
     local mundo = Mundo.nuevo()
     local portal
@@ -2545,7 +2548,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
   end)
   -- Asedio (MOBA) en el cliente: se dibujan nexos, torres, esbirros y el marcador, el panel de guerra tiene su botón y el minimapa los marca. Con DC_PRUEBA_MOBA=1 guarda juego/capturas/moba.png
   -- (escena junto a una torre con esbirros, y el panel de guerra con el asedio).
-  paso("asedio (MOBA): escena, marcador, minimapa y panel de guerra", function()
+  pasoFao("asedio (MOBA): escena, marcador, minimapa y panel de guerra", function()
     local Dibujo = require("src.presentacion.render.dibujo")
     local mundo = Mundo.nuevo()
     local vista = os.getenv("DC_PRUEBA_MOBA") ~= nil
@@ -2663,7 +2666,11 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     -- impactos de proyectil y proyectiles en vuelo
     for _, tipo in ipairs({ "misil", "fuego", "flecha", "sagrado", "sombra" }) do
       local img = Arte.img("Animations/Proyectil_" .. tipo .. ".png", true)
-      fallar(errores, "proyectil " .. tipo .. " de 4 cuadros", img:getWidth() == 256 and img:getHeight() == 64)
+      if tipo == "flecha" then
+        fallar(errores, "proyectil flecha de 6 cuadros del mismo tamaño", img:getWidth() % 6 == 0 and img:getHeight() <= 64)
+      else
+        fallar(errores, "proyectil " .. tipo .. " de 4 cuadros", img:getWidth() == 256 and img:getHeight() == 64)
+      end
       fallar(errores, "impacto de " .. tipo, Efectos.def[tipo] ~= nil)
       love.graphics.push("all")
       love.graphics.setCanvas({ cv, stencil = true })
@@ -3308,7 +3315,7 @@ local function fotoCasas(app)
     Interfaz.mallTab = os.getenv("DC_FOTO_MALL")
     Interfaz.mallScroll = 0
     if os.getenv("DC_MALL_UMBRA") then app.jugador.faccion = "umbra" end
-    if os.getenv("DC_MALL_MONTADO") then app.jugador.montado = "mnt_298" end
+    if os.getenv("DC_MALL_MONTADO") then app.jugador.montado = "mnt_104" end
   elseif foto.paso == "mall" then
     foto.paso = "fin"
     love.event.quit(0)
@@ -3421,7 +3428,7 @@ local function fotoMuros(app)
   if os.getenv("DC_ZOOM") then app.zoom = tonumber(os.getenv("DC_ZOOM")) end
   local j, m = app.jugador, app.mundo
   local ciudad
-  if os.getenv("DC_MONTADO") then j.montado = os.getenv("DC_MONTADO") end   -- DC_MONTADO=mnt_298: el jugador de las fotos va montado
+  if os.getenv("DC_MONTADO") then j.montado = os.getenv("DC_MONTADO") end   -- DC_MONTADO=mnt_104: el jugador de las fotos va montado
   for _, c in ipairs(m.mapas.mundo.ciudades) do if c.id == (os.getenv("DC_CIUDAD") or "auroria") then ciudad = c end end
   local pasos = { menu = "muro_esquina", muro_esquina = "muro_puerta", muro_puerta = "muro_sur", muro_sur = "muro_este", muro_este = "ciudad_centro", ciudad_centro = "bosque", bosque = "fin" }
   foto.paso = pasos[foto.paso] or "fin"
@@ -3590,7 +3597,7 @@ local function avanzarFoto(app)
     local mapa = app.mundo.mapas.mundo
     local p = mapa.puertos[1]
     app.jugador.x, app.jugador.y = p.x, p.y
-    app.jugador.montado = "mnt_298"
+    app.jugador.montado = "mnt_104"
   elseif foto.paso == "terr_costa" then
     foto.paso = "poderes"
     app.jugador.montado = nil

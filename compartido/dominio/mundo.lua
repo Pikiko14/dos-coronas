@@ -418,9 +418,19 @@ function Mundo:poblar()
       self.entidades[e.id] = e
     end
   end
-  for _, camp in ipairs(self.mapas.mundo.campamentos) do
-    for i = 1, camp.cantidad do
-      local ang = (i / camp.cantidad) * math.pi * 2
+  -- En los continentes hay menos criaturas por campamento (DENSIDAD_CRIATURAS, 0,7 = un 30 % menos): el recorte se reparte con un acumulador para que el total
+  -- baje justo esa fracción; los jefes, las mazmorras y la isla de la Cicatriz se quedan como estaban.
+  local densidad, resto, mapaMundo = Datos.DENSIDAD_CRIATURAS or 1, 0, self.mapas.mundo
+  for _, camp in ipairs(mapaMundo.campamentos) do
+    local cantidad = camp.cantidad
+    local cont = mapaMundo.cont and mapaMundo.cont[math.floor(camp.x)] and mapaMundo.cont[math.floor(camp.x)][math.floor(camp.y)]
+    if densidad < 1 and cantidad > 1 and not camp.jefe and not camp.z and cont ~= 3 then
+      local q = cantidad * densidad + resto
+      cantidad = math.max(1, math.floor(q))
+      resto = q - cantidad
+    end
+    for i = 1, cantidad do
+      local ang = (i / cantidad) * math.pi * 2
       local x = camp.x + math.cos(ang) * 1.2
       local y = camp.y + math.sin(ang) * 1.2
       local mon = self:spawnMonstruo(camp.monstruo, x, y, camp, camp.nivel)

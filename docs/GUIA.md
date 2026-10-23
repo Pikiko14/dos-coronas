@@ -74,7 +74,7 @@ El servidor en desarrollo usa archivo (`cuentas.json`) si no hay PostgreSQL; en 
 
 ### 3.2 Autoridad
 `servidor/src/dominio/autoridad.lua` valida y limpia cada acción (rangos, tipos, límites) antes de que `Mundo:accion` la ejecute.
-El cliente nunca decide daño, loot ni posiciones. Hay límite de mensajes por segundo por conexión y **desconexión por inactividad a los 60 s**
+El cliente nunca decide daño, loot ni posiciones. Hay límite de mensajes por segundo por conexión y **desconexión por inactividad a los 15 minutos (900 s)**
 (`DOSCORONAS_INACTIVIDAD_SEG`, 0 = nunca; avisa 10 s antes).
 
 ### 3.3 Mundo

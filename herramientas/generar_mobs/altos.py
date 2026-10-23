@@ -2,7 +2,7 @@
 código que el resto del bestiario (mobs.hornear) y escribe
   juego/arte/monstruos/<id>/{wait,run,att,hurt,dead}.png          las tiras horneadas
   juego/src/presentacion/render/mob_anim_altos.lua                tamaño en pantalla y aura de cada una
-  compartido/datos/monstruos_altos.xml                            datos de juego (nivel, golpes, poderes...)
+  compartido/datos/monstruos.xml (bloque ALTOS)                    datos de juego (nivel, golpes, poderes...)
 Uso:  python -X utf8 herramientas/generar_mobs/altos.py            (variable FAO_PAK = carpeta con data1.pak y update*.pak; por defecto Descargas)
 Arte de un juego ajeno (FAO): prototipo."""
 import os
@@ -15,7 +15,7 @@ import mobs
 import pak_fao
 
 RAIZ = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
-XML = os.path.join(RAIZ, "compartido", "datos", "monstruos_altos.xml")
+XML = os.path.join(RAIZ, "compartido", "datos", "monstruos.xml")
 LUA = os.path.join(RAIZ, "juego", "src", "presentacion", "render", "mob_anim_altos.lua")
 PAD = mobs.PAD
 
@@ -81,8 +81,7 @@ def main():
         f.write("-- GENERADO por herramientas/generar_mobs/altos.py: tamaño en pantalla y aura de las criaturas de nivel 31 a 50. No editar a mano.\n")
         f.write("return {\n" + mobs.lua_tabla(datos) + "\n}\n")
     # datos de juego
-    x = ['<?xml version="1.0" encoding="UTF-8"?>\n<!--\n  Criaturas de nivel 31 a 50 (el nivel máximo es 50), con arte nuevo de FAO. GENERADO por herramientas/generar_mobs/altos.py: edita allí, no aquí.\n'
-         '  Mismos campos que monstruos.xml. Los jefes del mundo salen en su continente; los de mazmorra (jefe_maestro_forja, jefe_behemot_abismo) solo en mz4 y mz5.\n-->\n<monstruos>\n']
+    x = ['  <!-- ALTOS: criaturas de nivel 31 a 50 con arte nuevo de FAO. GENERADO por herramientas/generar_mobs/altos.py (edita allí). Los jefes del mundo salen en su continente; los de mazmorra solo en mz4 y mz5. -->\n']
     for (idm, nombre, nivel, bioma, c, alto, magico, golpes, poderes, desc) in NORMALES:
         x.append(mobs.entrada(idm, nombre, nivel, bioma, True, golpes, poderes, {"magico": magico}, desc))
     for (idm, nombre, nivel, cont, c, alto, aura, golpes, poderes, desc) in JEFES:
@@ -90,9 +89,17 @@ def main():
                               dict(elite="true", noCampamento="true", jefeMundo="true", continente=cont, tam=2)))
     for (idm, nombre, nivel, c, alto, aura, golpes, poderes, desc) in MAZMORRAS:
         x.append(mobs.entrada(idm, nombre, nivel, None, True, golpes, poderes, {}, desc, dict(elite="true", noCampamento="true", tam=2)))
-    x.append("</monstruos>\n")
+    x.append("  <!-- /ALTOS -->\n")
+    # va dentro de monstruos.xml, entre las marcas ALTOS: se reemplaza el bloque (o se añade antes del cierre)
+    t = open(XML, encoding="utf-8", newline="").read().replace("\r\n", "\n")
+    ini = t.find("  <!-- ALTOS")
+    fin = t.find("  <!-- /ALTOS -->\n")
+    if ini >= 0 and fin >= 0:
+        t = t[:ini] + t[fin + len("  <!-- /ALTOS -->\n"):]
+    k = t.rindex("</monstruos>")
+    t = t[:k] + "".join(x) + t[k:]
     with open(XML, "w", encoding="utf-8", newline="\n") as f:
-        f.write("".join(x))
+        f.write(t)
     print("criaturas:", len(NORMALES) + len(JEFES) + len(MAZMORRAS))
 
 
