@@ -5538,6 +5538,18 @@ mundo.tiempo = 100
     fallar(errores, "la recolectora es invulnerable", rec.recolectora == true and rec.invulnerable == true)
     local monstruo = mundo:spawnMonstruo("seta_azul", rec.x + 1, rec.y, { x = rec.x, y = rec.y })
     fallar(errores, "ni las criaturas pueden herirla", not mundo:puedeDanar(monstruo, rec))
+    -- no se solapan: con su dueño quieto, cada una se coloca a su lado y a distancia de las demás
+    p.x, p.y, p.dir = math.floor(p.x) + 0.5, math.floor(p.y) + 0.5, 3
+    local ataque = mundo.entidades[p.mascotaId]
+    ataque.x, ataque.y, rec.x, rec.y = p.x, p.y, p.x, p.y          -- (apiladas en el mismo sitio)
+    avanzar(4)
+    local function d(a, b) return Util.dist(a.x, a.y, b.x, b.y) end
+    fallar(errores, "las mascotas no se solapan con su dueño ni entre ellas", d(ataque, p) > 0.8 and d(rec, p) > 0.8 and d(ataque, rec) > 0.8,
+      string.format("%.2f %.2f %.2f", d(ataque, p), d(rec, p), d(ataque, rec)))
+    -- el dueño camina: lo siguen sin amontonarse
+    for _ = 1, 40 do p.x = p.x + 0.2 avanzar(0.1) end
+    fallar(errores, "al seguirle tampoco se solapan", d(ataque, p) > 0.7 and d(rec, p) > 0.7 and d(ataque, rec) > 0.7 and d(ataque, p) < 6 and d(rec, p) < 6,
+      string.format("%.2f %.2f %.2f", d(ataque, p), d(rec, p), d(ataque, rec)))
     -- otra de ataque sustituye a la de ataque, no a la recolectora
     fallar(errores, "otra de ataque sustituye a la anterior", mundo:invocarMascota(p, 3) == nil and p.mascotaActiva == 3 and p.recolectoraActiva == 2 and p.recolectoraId ~= nil)
     -- la recolectora no ataca: junto a un enemigo del dueño no le hace daño

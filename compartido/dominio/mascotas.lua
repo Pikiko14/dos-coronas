@@ -217,6 +217,29 @@ function M.instalar(Mundo)
   end
 
   -- La mascota hostil más cercana a la que puede atacar: el objetivo del dueño o quien lo ataque.
+  -- Dónde espera una mascota junto a su dueño: detrás de él y a un lado (la de ataque a la izquierda, la recolectora a la derecha), para que no se amontonen.
+  local DIR_MUNDO = { [1] = { 0, 1 }, [2] = { 0, -1 }, [3] = { 1, 0 }, [4] = { -1, 0 } }
+  local function puestoSeguir(e, dueno)
+    local v = DIR_MUNDO[dueno.dir or 1] or DIR_MUNDO[1]
+    local lado = e.recolectora and -1 or 1
+    return dueno.x - v[1] * 1.7 - v[2] * lado * 1.1, dueno.y - v[2] * 1.7 + v[1] * lado * 1.1
+  end
+
+  -- Empujón para separarse de quien tiene demasiado cerca (su dueño, otros jugadores y las demás mascotas).
+  local function separacion(self, e)
+    local rx, ry = 0, 0
+    for _, o in pairs(self.entidades) do
+      if o ~= e and o.vivo and (o.kind == "jugador" or o.kind == "bot" or o.kind == "mascota") and self:mismoLugar(e, o) then
+        local d = Util.dist(e.x, e.y, o.x, o.y)
+        if d < 1.05 then
+          if d < 0.05 then rx, ry = rx + (e.id % 2 == 0 and 1 or -1), ry + 0.5
+          else rx, ry = rx + (e.x - o.x) / d * (1.05 - d), ry + (e.y - o.y) / d * (1.05 - d) end
+        end
+      end
+    end
+    return rx, ry
+  end
+
   local function blancoDe(self, e, dueno)
     local t = dueno.objetivo and self.entidades[dueno.objetivo]
     if t and t.vivo and self:mismoLugar(e, t) and self:puedeDanar(dueno, t) and t.kind ~= "estatua" and t.kind ~= "puerta" then
@@ -312,8 +335,15 @@ function M.instalar(Mundo)
           self:danar(blanco, dano, dueno, critico)
         end
       end
-    elseif dd > 2.4 then
-      dx, dy = dueno.x - e.x, dueno.y - e.y
+    else
+      -- sigue a su dueño hacia su sitio (detrás y a un lado); si ya está cerca, se queda quieta
+      local px, py = puestoSeguir(e, dueno)
+      if dd > 2.8 or Util.dist(e.x, e.y, px, py) > 2.0 then dx, dy = px - e.x, py - e.y end
+    end
+    -- sin nada que hacer, que no se solape con su dueño ni con otras mascotas
+    if dx == 0 and dy == 0 then
+      local rx, ry = separacion(self, e)
+      if rx ~= 0 or ry ~= 0 then dx, dy = rx, ry end
     end
     local ddx, ddy = 0, 0
     if dx ~= 0 or dy ~= 0 then
