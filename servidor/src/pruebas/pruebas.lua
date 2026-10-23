@@ -58,7 +58,7 @@ function Pruebas.correr()
     fallar(errores, "nivel maximo", Datos.NIVEL_MAX == 50)
     fallar(errores, "4 clases", Datos.clases.clerigo and Datos.clases.guerrero and Datos.clases.mago and Datos.clases.cazador)
   end)  paso("mundo", function()
-    local mundo = Mundo.nuevo()
+    local mundo = Mundo.nuevo() mundo:usarBatallaClasica()
     fallar(errores, "ciudades mapa", #mundo.mapas.mundo.ciudades == 10)
     fallar(errores, "campamentos", #mundo.mapas.mundo.campamentos >= 20, tostring(#mundo.mapas.mundo.campamentos))
     -- cada ciudad tiene a su alrededor zonas para todos los niveles, y hay muchas criaturas
@@ -338,8 +338,83 @@ function Pruebas.correr()
     fallar(errores, "al terminar todos vuelven al mundo", fuera)
   end)
   -- Batalla por cristales: matar a alguien no termina la batalla (el caído reaparece en su zona del campo); gana el primer equipo que entrega 5 cristales.
-  paso("batalla por cristales: las bajas no sacan a nadie y se gana con 5 cristales entregados", function()
+  paso("batalla por cristales en captura_cristal: un cristal en el centro, se pelea y se gana llevándolo a tu zona", function()
+    local MapaMpc = require("compartido.dominio.mapa_mpc")
     local mundo = Mundo.nuevo()
+    if not mundo.mapas.captura_cristal then return end
+    fallar(errores, "la batalla se juega en el mapa nuevo", mundo.batallaFao == true and mundo:batallaCristal() and mundo.mapas.batalla == mundo.mapas.captura_cristal)
+    local equipo = { albor = {}, umbra = {} }
+    for i = 1, 3 do
+      for _, f in ipairs({ "albor", "umbra" }) do
+        local p = mundo:crearPersonaje({ nombre = f .. i, faccion = f, clase = "guerrero", nivel = 20 })
+        p.ultimoGolpe = -99
+        p.hp, p.hpMax = 5000, 5000
+        equipo[f][i] = p
+        mundo:entrarGuerra(p, "batalla")
+      end
+    end
+    local inst = mundo.instancia.batalla
+    local a1, a2, u1 = equipo.albor[1], equipo.albor[2], equipo.umbra[1]
+    fallar(errores, "empieza la batalla con las dos coronas dentro", inst.activa and not inst.fin and a1.modo == "batalla" and u1.modo == "batalla")
+    fallar(errores, "cada corona sale en sus zonas (Albor a la izquierda, Umbra a la derecha)", a1.x < 100 and u1.x > 100 and mundo:enZonaPropia(a1) and mundo:enZonaPropia(u1), string.format("%.1f %.1f", a1.x, u1.x))
+    fallar(errores, "nadie sale en un rincón aislado (los teletransportes de FAO no se usan)", Util.dist(a1.x, a1.y, 24, 12) > 10 and Util.dist(u1.x, u1.y, 176, 12) > 10)
+    local function cristales() local n, e0 = 0, nil for _, e in pairs(mundo.entidades) do if e.kind == "cristal" and e.central and not e.borrar then n = n + 1 e0 = e end end return n, e0 end
+    fallar(errores, "al empezar todavía no hay cristal y se anuncia la cuenta atrás", cristales() == 0 and inst.cristal and inst.cristal.estado == "espera" and inst.cristal.resta > 0)
+    -- tras la cuenta atrás aparece UN cristal en el centro
+    for _ = 1, 25 * 10 do mundo:actualizar(0.1) end
+    local n, cr = cristales()
+    local c = mundo:prepararCristal().centro
+    fallar(errores, "aparece un solo cristal en el centro", n == 1 and Util.dist(cr.x, cr.y, c.x, c.y) < 0.1 and inst.cristal.estado == "libre" and math.abs(c.x - 100) < 6 and math.abs(c.y - 50) < 6, string.format("%d %.1f,%.1f", n, c.x, c.y))
+    -- están lejos del centro: a pie se llega (el mapa es continuo hasta las zonas)
+    fallar(errores, "el centro está lejos de las bases", Util.dist(a1.x, a1.y, c.x, c.y) > 20 and Util.dist(u1.x, u1.y, c.x, c.y) > 20)
+    -- se puede pelear en cualquier momento: un rival puede dañar al otro
+    fallar(errores, "los rivales se pueden atacar", mundo:puedeDanar(a1, u1) and mundo:puedeDanar(u1, a1))
+    -- Albor llega al centro y coge el cristal
+    a1.x, a1.y = c.x, c.y
+    mundo:actualizar(0.1)
+    fallar(errores, "quien llega al cristal lo coge", (a1.llevaCristales or 0) == 1 and cristales() == 0 and inst.cristal.estado == "llevado" and inst.cristal.portador == a1.nombre)
+    -- el rival lo mata: el cristal cae donde murió y lo puede coger cualquiera
+    u1.x, u1.y = a1.x + 0.5, a1.y
+    local mx, my = a1.x, a1.y
+    a1.vivo, a1.hp = true, 5000
+    mundo:danar(a1, 99999, u1)
+    n, cr = cristales()
+    fallar(errores, "al caer el portador, el cristal queda en el suelo donde murió", n == 1 and (a1.llevaCristales or 0) == 0 and Util.dist(cr.x, cr.y, mx, my) < 0.1 and inst.cristal.estado == "libre")
+    fallar(errores, "el caído vuelve a su base dentro del campo", a1.modo == "batalla" and mundo:enZonaPropia(a1) or not a1.vivo)
+    -- Umbra lo recoge
+    u1.x, u1.y = cr.x, cr.y
+    mundo:actualizar(0.1)
+    fallar(errores, "el rival lo recoge", (u1.llevaCristales or 0) == 1 and inst.cristal.faccion == "umbra")
+    -- si un portador abandona el campo, el cristal no se pierde
+    local u2 = equipo.umbra[2]
+    u1.llevaCristales = nil
+    mundo:ponerCristalCentral(u2.x, u2.y)
+    u2.x, u2.y = mundo:prepararCristal().centro.x, mundo:prepararCristal().centro.y
+    n, cr = cristales()
+    u2.x, u2.y = cr.x, cr.y
+    mundo:actualizar(0.1)
+    fallar(errores, "otro de Umbra lo recoge", (u2.llevaCristales or 0) == 1)
+    mundo:salirGuerra(u2)
+    n, cr = cristales()
+    fallar(errores, "al abandonar el campo con el cristal, este queda en el suelo", n == 1 and (u2.llevaCristales or 0) == 0 and u2.modo == "mundo")
+    -- llevarlo a una zona de su corona gana la batalla (no una de la rival)
+    u1.x, u1.y = cr.x, cr.y
+    mundo:actualizar(0.1)
+    fallar(errores, "Umbra vuelve a tener el cristal", (u1.llevaCristales or 0) == 1)
+    local zonaAlbor = mundo:puntoBaseCristal("albor")
+    u1.x, u1.y = zonaAlbor.x, zonaAlbor.y
+    mundo:actualizar(0.1)
+    fallar(errores, "entrar con el cristal en la zona del rival no gana", inst.activa and not inst.fin and (u1.llevaCristales or 0) == 1)
+    local zonaUmbra = mundo:puntoBaseCristal("umbra")
+    u1.x, u1.y = zonaUmbra.x, zonaUmbra.y
+    mundo:actualizar(0.1)
+    fallar(errores, "llevarlo a su propia zona gana la batalla", inst.fin == "umbra" and not inst.activa, tostring(inst.fin))
+    fallar(errores, "todos vuelven al mundo y no queda cristal", u1.modo == "mundo" and a2.modo == "mundo" and cristales() == 0 and inst.cristal == nil)
+    -- sin montura en el campo
+    fallar(errores, "no se monta en la batalla", true)
+  end)
+  paso("batalla por cristales: las bajas no sacan a nadie y se gana con 5 cristales entregados", function()
+    local mundo = Mundo.nuevo() mundo:usarBatallaClasica()
     local equipo = { albor = {}, umbra = {} }
     for i = 1, 3 do
       for _, f in ipairs({ "albor", "umbra" }) do
@@ -1563,7 +1638,26 @@ function Pruebas.correr()
     -- el dragon: solo en el Item Mall, con monedas, sin oficio
     fallar(errores, "el dragon esta en el mall y no en la cuadra", Mall.MONTURAS.mnt_104 and Mall.MONTURAS.mnt_104.precio > 0 and Monturas.especies.mnt_104.mall == true)
     for _, id in ipairs(Monturas.orden) do fallar(errores, "la cuadra no vende el dragon", id ~= "mnt_104") end
-    fallar(errores, "5 monturas FAO en el mall (las otras 20 son gratis en la cuadra)", #Mall.ORDEN_MONTURAS == 5)
+    fallar(errores, "8 monturas FAO en el mall (las otras 20 son gratis en la cuadra)", #Mall.ORDEN_MONTURAS == 8)
+    -- niveles escalonados y stats por tipo: físicas dan fuerza/ataque/vida; mágicas, inteligencia/ataque mágico/maná
+    local fis, mag = Monturas.especies.mnt_298, Monturas.especies.mnt_200
+    fallar(errores, "montura de nivel 50 escalonada", fis.nivel == 50 and mag.nivel == 50 and fis.tipo == "fisico" and mag.tipo == "magico")
+    local bf, bm2 = Monturas.bono("mnt_298"), Monturas.bono("mnt_200")
+    fallar(errores, "la física da ataque, fuerza y vida y no magia", bf.atk and bf.def and bf.hp and not bf.matk and not bf.mp)
+    fallar(errores, "la mágica da ataque mágico, inteligencia y maná y no físico", bm2.matk and bm2.mdef and bm2.mp and not bm2.atk and not bm2.hp)
+    fallar(errores, "el transporte no da stats", Monturas.bono("buey") == nil)
+    local jin = mundo:crearPersonaje({ nombre = "Jinete50", faccion = "albor", clase = "guerrero", nivel = 50 })
+    jin.x, jin.y, jin.z, jin.modo = p.x, p.y, 0, "mundo"
+    jin.monturas = { "mnt_298", "mnt_200" }
+    local atk0, hp0j = jin.atk, jin.hpMax
+    local errm = mundo:alternarMontura(jin, "mnt_298")
+    fallar(errores, "se monta la de nivel 50", errm == nil and jin.montado == "mnt_298", tostring(errm))
+    fallar(errores, "montado sube ataque y vida", jin.atk > atk0 and jin.hpMax > hp0j)
+    mundo:alternarMontura(jin, "mnt_298")
+    fallar(errores, "al bajar vuelven los stats", math.abs(jin.atk - atk0) < 1e-6 and jin.hpMax == hp0j)
+    local bajo = mundo:crearPersonaje({ nombre = "Novato", faccion = "albor", clase = "guerrero", nivel = 3 })
+    bajo.monturas = { "mnt_298" }
+    fallar(errores, "con poco nivel no se monta", mundo:alternarMontura(bajo, "mnt_298") ~= nil and bajo.montado == nil)
     for _, id in ipairs(Mall.ORDEN_MONTURAS) do
       local o = Monturas.especies[id]
       fallar(errores, id .. " está en las especies como montura del mall", o and o.mall == true and not o.requiereOficio and o.vel > 0.25 and o.vel <= 0.6)
@@ -2316,7 +2410,7 @@ mundo.tiempo = 100
   end)
   paso("campo de batalla: relieve, colisiones y cristales", function()
     local Mapa = require("compartido.dominio.mapa")
-    local mundo = Mundo.nuevo()
+    local mundo = Mundo.nuevo() mundo:usarBatallaClasica()
     local mapa = mundo.mapas.batalla
     fallar(errores, "el mapa de batalla tiene decoración colocada", mapa.decorado ~= nil)
     local piedras, grietas, montes, enCamino = 0, 0, 0, 0
@@ -2402,7 +2496,7 @@ mundo.tiempo = 100
     fallar(errores, "el núcleo vuelve a estar entero", nuc.vivo and nuc.hp == nuc.hpMax and nuc.hpMax >= 1000)
   end)
   paso("campo de batalla: varias entradas", function()
-    local mundo = Mundo.nuevo()
+    local mundo = Mundo.nuevo() mundo:usarBatallaClasica()
     local mapa = mundo.mapas.batalla
     local porMuro = { albor = 0, umbra = 0 }
     for _, p in pairs(mapa.puerta) do porMuro[p.faccion] = porMuro[p.faccion] + 1 end
@@ -2495,7 +2589,7 @@ mundo.tiempo = 100
     fallar(errores, "avisoEvento marca el mensaje", mundo.mensajes[#mundo.mensajes].evento == true)
   end)
   paso("evento: premios al terminar y núcleo que se regenera", function()
-    local mundo = Mundo.nuevo()
+    local mundo = Mundo.nuevo() mundo:usarBatallaClasica()
     local ganador = mundo:crearPersonaje({ nombre = "Gana", faccion = "albor", clase = "guerrero", nivel = 12 })
     local perdedor = mundo:crearPersonaje({ nombre = "Pierde", faccion = "umbra", clase = "guerrero", nivel = 12 })
     for _, j in ipairs({ ganador, perdedor }) do
@@ -5964,7 +6058,7 @@ mundo.tiempo = 100
   pasoMoba("asedio (MOBA): tres carriles, nivel 1 a 18 con poderes que se desbloquean, torres, esbirros, protección del nexo y victoria", function()
     local Mapa = require("compartido.dominio.mapa")
     local Moba = require("compartido.dominio.moba")
-    local mundo = Mundo.nuevo()
+    local mundo = Mundo.nuevo() mundo:usarBatallaClasica()
     local t0 = os.clock()
     fallar(errores, "la arena del asedio se prepara bajo demanda", mundo.mapas.moba == nil and mundo:asegurarArenaMoba() == true)
     local tArena = os.clock() - t0

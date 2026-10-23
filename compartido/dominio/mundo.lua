@@ -25,6 +25,7 @@ local Misiones = require("compartido.dominio.misiones")
 local Voces = require("compartido.dominio.voces")
 local Mazmorras = require("compartido.dominio.mazmorras")
 local MapasFao = require("compartido.dominio.mapas_fao")
+local Cristal = require("compartido.dominio.cristal")
 local Moba = require("compartido.dominio.moba")
 local PoderesFao = require("compartido.datos.efectos_fao_poderes")       -- efectos de capas de FAO de los poderes (duración, capas): el servidor solo usa la duración
 local Viaje = require("compartido.dominio.viaje")
@@ -77,6 +78,8 @@ function Mundo.nuevo()
   }
   self:crearMapasMazmorras()
   self:crearMapasFao()
+  -- la batalla por cristales se juega en el mapa captura_cristal si está instalado (cristal.lua); si no, en el campo de siempre
+  if self.mapas[Cristal.MAPA] then self.mapas.batalla, self.batallaFao = self.mapas[Cristal.MAPA], true end
   Misiones.preparar(self.mapas.mundo)
   self:poblar()
   self:poblarMazmorras()
@@ -255,6 +258,11 @@ function Mundo:recalcular(e)
       e.mpMax = e.mpMax + (it.mp or 0) * m
       e.spd = e.spd + (it.spd or 0)
     end
+  end
+  local bm = (not e.mobaOrig and e.montado) and Monturas.bono(e.montado)
+  if bm then       -- (la montura de viaje da stats según su tipo: física o mágica)
+    e.atk, e.def, e.hpMax = e.atk + (bm.atk or 0), e.def + (bm.def or 0), e.hpMax + (bm.hp or 0)
+    e.matk, e.mdef, e.mpMax = e.matk + (bm.matk or 0), e.mdef + (bm.mdef or 0), e.mpMax + (bm.mp or 0)
   end
   if not e.mobaOrig then
     Arbol.aplicarPasivas(e)
@@ -446,7 +454,7 @@ function Mundo:crearObjetivos()
   for id, e in pairs(self.entidades) do
     if e.modo == "batalla" or e.modo == "estandarte" then self.entidades[id] = nil end
   end
-  for _, o in ipairs(self.mapas.batalla.objetivos) do
+  for _, o in ipairs(self.mapas.batalla.objetivos or {}) do
     local hp = o.tipo == "altar" and 1500 or (o.tipo == "puerta" and (o.principal and 1100 or 800) or 780)
     local e = {
       id = self:idNuevo(),
@@ -1229,8 +1237,12 @@ function Mundo:morir(e, origen)
     if e.modo == "estandarte" and e.llevaBandera then self:soltarBandera(e) end
     -- los cristales que llevaba caen al suelo donde muere: el rival puede cogerlos
     if e.modo == "batalla" and (e.llevaCristales or 0) > 0 then
-      for _ = 1, e.llevaCristales do self:dejarCristal(e.x, e.y, e.faccion == "albor" and "umbra" or "albor") end
-      e.llevaCristales = nil
+      if self:batallaCristal() then
+        self:soltarCristalPortador(e, false, (origen and origen.nombre or "alguien") .. " derribó a " .. e.nombre)
+      else
+        for _ = 1, e.llevaCristales do self:dejarCristal(e.x, e.y, e.faccion == "albor" and "umbra" or "albor") end
+        e.llevaCristales = nil
+      end
     end
     if origen and origen.faccion and origen.faccion ~= e.faccion then
       if e.modo ~= "moba" then self.gloria[origen.faccion] = (self.gloria[origen.faccion] or 0) + 8 end
@@ -1238,6 +1250,7 @@ function Mundo:morir(e, origen)
       if inst and inst.activa then
         -- las bajas suman puntos en la batalla y en el asedio; en el estandarte los puntos son las CAPTURAS (tres ganan): matar a alguien no cuenta, solo lo devuelve a su base
         if e.modo == "moba" then inst.puntos[origen.faccion] = inst.puntos[origen.faccion] + 10 end
+        if e.modo == "batalla" and self:batallaCristal() then inst.puntos[origen.faccion] = inst.puntos[origen.faccion] + Cristal.PUNTOS_BAJA end
         inst.bajas = inst.bajas or { albor = 0, umbra = 0 }
         inst.bajas[origen.faccion] = (inst.bajas[origen.faccion] or 0) + 1
         local autor = origen
@@ -1355,7 +1368,7 @@ function Mundo:revivir(e)
   elseif e.kind == "jugador" or e.kind == "bot" then
     local v = e.vinculo or { x = e.x, y = e.y, modo = "mundo" }
     if e.modo == "batalla" or e.modo == "estandarte" or e.modo == "moba" then
-      local sp = self.mapas[e.modo].spawns[e.faccion]
+      local sp = (e.modo == "batalla" and self:batallaCristal()) and self:puntoBaseCristal(e.faccion) or self.mapas[e.modo].spawns[e.faccion]
       e.x, e.y = sp.x, sp.y
     elseif self:enMazmorra(e) or self:enMapaFao(e) then
       -- muere en una mazmorra o en un mapa aparte de FAO: vuelve al punto de reaparición del mundo
@@ -1803,9 +1816,10 @@ function Mundo:actualizarJugador(e, dt)
   if e.llevaBandera then mul = mul * 0.85 end
   mul = mul * self:buffMul(e, "vel")
   -- montura y carga: la montura acelera y ir cargado frena
-  if e.montado and ((e.modo ~= "mundo" and not self:enMapaFao(e)) or e.modo == "moba" or (e.z or 0) > 0) then
+  if e.montado and ((e.modo ~= "mundo" and not self:enMapaFao(e)) or e.modo == "moba" or e.modo == "batalla" or (e.z or 0) > 0) then
     e.montado = nil
     self:recalcularCarga(e)
+    self:recalcular(e)
   end
   if e.job or e.montado then
     local vel = self:bonoMontura(e)
@@ -2250,6 +2264,7 @@ end
 -- Recoge cristales cercanos y, si llevas alguno, los entrega al llegar al altar de tu corona.
 function Mundo:cristalesCerca(p)
   if p.modo ~= "batalla" or not p.vivo then return end
+  if self:batallaCristal() then return self:cristalFao(p) end
   for _, o in pairs(self.entidades) do
     if o.kind == "cristal" and o.vivo and not o.borrar and Util.dist(p.x, p.y, o.x, o.y) < 1.1 then
       o.vivo, o.borrar = false, true
@@ -2341,7 +2356,7 @@ function Mundo:meterEnCampo(p, modo)
   p.modo = modo
   p.casaId = nil
   if modo == "moba" then self:prepararMoba(p) end          -- (nivel 1 y sin poderes: se van ganando en la partida)
-  local sp = self.mapas[modo].spawns[p.faccion]
+  local sp = (modo == "batalla" and self:batallaCristal()) and self:puntoBaseCristal(p.faccion) or self.mapas[modo].spawns[p.faccion]
   p.x, p.y = sp.x, sp.y
   p.objetivo, p.camino, p.persigue = nil, nil, false
   p.zona = nombre
@@ -2461,6 +2476,7 @@ function Mundo:reiniciarInstancia(modo)
     end
   end
   if modo == "moba" then self:armarMoba() end
+  if modo == "batalla" and self:batallaCristal() then self:empezarCristal() end
   if modo == "estandarte" then
     for _, e in pairs(self.entidades) do
       if e.kind == "bandera" then
@@ -2542,6 +2558,7 @@ function Mundo:cerrarInstancia(modo, ganador)
     for _, e in pairs(self.entidades) do if e.mobaOrig then self:restaurarMoba(e) end end       -- cada uno recupera su nivel, su experiencia y sus poderes
     self:limpiarMoba()
   end
+  if modo == "batalla" and self.batallaFao then self:acabarCristal() end
 end
 
 function Mundo:salirGuerra(p)
@@ -2552,6 +2569,9 @@ function Mundo:salirGuerra(p)
     return
   end
   if p.modo ~= "batalla" and p.modo ~= "estandarte" and p.modo ~= "moba" then return end
+  if p.modo == "batalla" and (p.llevaCristales or 0) > 0 and self:batallaCristal() then
+    self:soltarCristalPortador(p, false, p.nombre .. " abandonó el campo")
+  end
   local ret = p.retorno
   p.modo = "mundo"
   if ret then p.x, p.y = ret.x, ret.y end
@@ -3513,6 +3533,7 @@ function Mundo:actualizar(dt)
     if fx.t >= fx.dur then table.remove(self.efectos, i) end
   end
   self:actualizarMoba(dt)
+  self:actualizarCristal(dt)
   for _, modo in ipairs({ "batalla", "estandarte", "moba" }) do
     local inst = self.instancia[modo]
     if inst.activa and not inst.fin then
@@ -4363,6 +4384,7 @@ Comercio.instalar(Mundo)
 Mall.instalar(Mundo)
 Mazmorras.instalar(Mundo)
 MapasFao.instalar(Mundo)
+Cristal.instalar(Mundo)
 Moba.instalar(Mundo)
 Viaje.instalar(Mundo)
 

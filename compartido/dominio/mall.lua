@@ -139,6 +139,8 @@ function M.instalar(Mundo)
     for _, t in ipairs(p.monturas) do
       if t == id then return "Ya tienes esa montura." end
     end
+    local def = require("compartido.dominio.monturas").especies[id]
+    if def and (p.nivel or 1) < (def.nivel or 1) then return "Esta montura pide el nivel " .. def.nivel .. "." end
     if (p.monedas or 0) < d.precio then return "Te faltan monedas: cuesta " .. d.precio .. "." end
     p.monedas = p.monedas - d.precio
     p.monturas[#p.monturas + 1] = id

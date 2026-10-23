@@ -526,7 +526,7 @@ function Pruebas.correr()
     local mall = require("compartido.dominio.mall")
     local enMall = 0
     for _, id in ipairs(mall.ORDEN_MONTURAS) do enMall = enMall + 1 end
-    fallar(errores, "el mall tiene las 5 monturas de pago de FAO", enMall == 5, tostring(enMall))
+    fallar(errores, "el mall tiene las 8 monturas de pago de FAO", enMall == 8, tostring(enMall))
     -- recompensa diaria y etiqueta del personal
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Gm", faccion = "albor", clase = "guerrero", nivel = 10 })
@@ -924,6 +924,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local Campo = require("src.presentacion.render.campo")
     local Objetos = require("src.presentacion.render.objetos")
     local mundo = Mundo.nuevo()
+    mundo:usarBatallaClasica()
     local mapa = mundo.mapas.batalla
     local ok, err = pcall(function()
       Terreno.dibujar(mapa, 20 * 32, 12 * 32, 1280, 720, 0)

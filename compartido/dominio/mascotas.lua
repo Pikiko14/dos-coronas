@@ -232,7 +232,7 @@ function M.instalar(Mundo)
       if o ~= e and o.vivo and (o.kind == "jugador" or o.kind == "bot" or o.kind == "mascota") and self:mismoLugar(e, o) then
         local d = Util.dist(e.x, e.y, o.x, o.y)
         if d < 1.05 then
-          if d < 0.05 then rx, ry = rx + (e.id % 2 == 0 and 1 or -1), ry + 0.5
+          if d < 0.05 then rx, ry = rx + (((tonumber(tostring(e.id):match("%d+")) or 0) % 2 == 0) and 1 or -1), ry + 0.5
           else rx, ry = rx + (e.x - o.x) / d * (1.05 - d), ry + (e.y - o.y) / d * (1.05 - d) end
         end
       end

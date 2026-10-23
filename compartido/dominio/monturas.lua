@@ -16,6 +16,26 @@ for _, id in ipairs(orden) do
   if not especies[id].mall then M.orden[#M.orden + 1] = id end
 end
 
+-- Stats que da una montura de viaje al jinete, según su tipo y el nivel que pide (cuanto más alta, más da):
+--   fisico: fuerza (defensa), ataque y vida;  magico: inteligencia (defensa mágica), ataque mágico y maná.
+-- Las de transporte (requiereOficio) no dan stats.
+function M.bono(especie)
+  local d = M.especies[especie]
+  if not d or d.requiereOficio then return nil end
+  local n = d.nivel or 1
+  if d.tipo == "magico" then return { matk = 1 + n * 0.5, mdef = n * 0.3, mp = n * 3 } end
+  return { atk = 1 + n * 0.5, def = n * 0.3, hp = n * 6 }
+end
+
+-- El bono en texto corto para las tarjetas ("+11 ataque +8 fuerza +180 vida"); nil si no da ninguno.
+function M.textoBono(especie)
+  local b = M.bono(especie)
+  if not b then return nil end
+  local function f(x) return "+" .. math.floor(x + 0.5) end
+  if b.matk then return f(b.matk) .. " at. mágico  " .. f(b.mdef) .. " inteligencia  " .. f(b.mp) .. " maná" end
+  return f(b.atk) .. " ataque  " .. f(b.def) .. " fuerza  " .. f(b.hp) .. " vida"
+end
+
 function M.instalar(Mundo)
   function M.vidaMax(especie)
   local d = M.especies[especie]
@@ -58,6 +78,7 @@ function Mundo:romperMontura(p, origen)
   local especie = p.montado
   local d = especie and M.especies[especie]
   p.montado = nil
+  self:recalcular(p)
   p.monturaCaida = p.monturaCaida or {}
   p.monturaCaida[especie] = self.tiempo + M.RECUPERA_SEG
   self:soltarCargaMuerto(p)
@@ -119,6 +140,7 @@ function Mundo:comprarMontura(p, especie)
     if p.montado and (especie == nil or especie == p.montado) then
       p.montado = nil
       self:recalcularCarga(p)
+      self:recalcular(p)
       return nil
     end
     -- sin elegir una: la última usada si se puede usar ahora; si no, la primera que se pueda (las normales no piden oficio)
@@ -126,6 +148,7 @@ function Mundo:comprarMontura(p, especie)
       local function usable(id)
         local de = M.especies[id]
         if not de then return false end
+        if (p.nivel or 1) < (de.nivel or 1) then return false end
         if de.requiereOficio and not p.job then return false end
         if p.job and not de.requiereOficio then return false end   -- con el oficio activo solo valen las de transporte
         if de.oficio and p.job ~= de.oficio then return false end
@@ -144,8 +167,9 @@ function Mundo:comprarMontura(p, especie)
     local tiene = false
     for _, t in ipairs(lista) do if t == especie then tiene = true end end
     if not d or not tiene then return "No tienes monturas: compra una en la cuadra." end
-    if (p.modo ~= "mundo" and not self:enMapaFao(p)) or p.modo == "moba" then return "Aquí no se puede montar." end
+    if (p.modo ~= "mundo" and not self:enMapaFao(p)) or p.modo == "moba" or p.modo == "batalla" then return "Aquí no se puede montar." end
     if (p.z or 0) > 0 then return "No se monta en las alturas." end
+    if (p.nivel or 1) < (d.nivel or 1) then return "Esta montura pide el nivel " .. d.nivel .. "." end
     if d.oficio and p.job ~= d.oficio then return "Solo para el oficio de comerciante." end
     if d.requiereOficio and not p.job then return "Las monturas solo se usan con el oficio activo (activa tu oficio en el menú o con Y)." end
     if p.job and not d.requiereOficio then return "Con el oficio activo solo puedes montar las monturas de transporte." end
@@ -155,6 +179,7 @@ function Mundo:comprarMontura(p, especie)
     end
     p.montado, p.monturaPreferida = especie, especie
     self:recalcularCarga(p)
+    self:recalcular(p)
     return nil
   end
 
@@ -164,10 +189,12 @@ function Mundo:comprarMontura(p, especie)
     if d and d.requiereOficio and (not p.job or (d.oficio and p.job ~= d.oficio)) then
       p.montado = nil
       self:recalcularCarga(p)
+      self:recalcular(p)
       self:mensaje("sistema", "", "Bajas de la montura de carga: solo se usa con el oficio activo.", p)
     elseif d and p.job and not d.requiereOficio then
       p.montado = nil
       self:recalcularCarga(p)
+      self:recalcular(p)
       self:mensaje("sistema", "", "Bajas de la montura: con el oficio activo solo valen las de transporte.", p)
     end
   end

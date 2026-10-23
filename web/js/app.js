@@ -106,7 +106,7 @@
     ["mnt_037", "Cerdito rosa", "Gratis en el establo", "+34 % de velocidad", "gratis"],
     ["mnt_038", "Corcel borgoña", "Gratis en el establo", "+38 % de velocidad", "gratis"],
     ["mnt_039", "Hámster tostado", "Item Mall", "+38 % de velocidad", "mall"],
-    ["mnt_040", "Caballo de crin oscura", "Item Mall", "+38 % de velocidad", "mall"],
+    ["mnt_040", "Lobo Aullador", "Item Mall", "+38 % de velocidad", "mall"],
     ["mnt_103", "Tortuga viajera", "Item Mall", "+42 % de velocidad", "mall"],
     ["mnt_104", "León dorado", "Item Mall", "+42 % de velocidad", "mall"],
     ["mnt_105", "Autómata azul", "Item Mall", "+42 % de velocidad", "mall"],

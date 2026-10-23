@@ -243,7 +243,7 @@ function M.instalar(Mundo)
   -- Cada tick de un jugador: si pisa una de las salidas (los triángulos de los puntos 1 y 2 del .mpc), sale.
   function Mundo:vigilarSalidaFao(p)
     local m = self:enMapaFao(p)
-    if not m or not p.vivo or p.modo == "moba" then return end        -- (en el asedio se sale con el evento)
+    if not m or not p.vivo or p.modo == "moba" or p.modo == "batalla" then return end        -- (en el asedio y en la batalla de cristales se sale con el evento, no por los rincones del mapa)
     local px, py = p.x * MapaMpc.CELDA, p.y * MapaMpc.CELDA          -- (los triángulos del .mpc están en píxeles de FAO)
     local dentro
     for _, s in ipairs(m.mpc.salidas) do

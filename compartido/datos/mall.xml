@@ -96,9 +96,12 @@
   <addon id="skin_centinela" nombre="Centinela verde" desc="Yelmo verde y mirada fija." precio="350"/>
   <addon id="skin_caballero_oscuro" nombre="Caballero oscuro" desc="Armadura negra con cuernos." precio="500"/>
   <!-- ---- monturas exclusivas ---- -->
-  <montura id="mnt_039" nombre="Hámster tostado" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +38%." precio="700"/>
-  <montura id="mnt_040" nombre="Caballo de crin oscura" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +38%." precio="700"/>
-  <montura id="mnt_103" nombre="Tortuga viajera" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="750"/>
-  <montura id="mnt_104" nombre="León dorado" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="750"/>
-  <montura id="mnt_105" nombre="Autómata azul" desc="Exclusiva del Item Mall: sin oficio y se pelea montado. Velocidad +42%." precio="750"/>
+  <montura id="mnt_039" nombre="Hámster tostado" desc="Física, nivel 5. Velocidad +38%. Se pelea montado." precio="700"/>
+  <montura id="mnt_040" nombre="Lobo Aullador" desc="Física, nivel 5. Velocidad +38%. Se pelea montado." precio="700"/>
+  <montura id="mnt_103" nombre="Tortuga viajera" desc="Física, nivel 5. Velocidad +42%. Se pelea montado." precio="750"/>
+  <montura id="mnt_104" nombre="León dorado" desc="Mágica, nivel 5. Velocidad +42%. Se pelea montado." precio="750"/>
+  <montura id="mnt_105" nombre="Autómata azul" desc="Mágica, nivel 5. Velocidad +42%. Se pelea montado." precio="750"/>
+  <montura id="mnt_298" nombre="Dragón dorado" desc="Física, nivel 50. Velocidad +48%. Se pelea montado." precio="1200"/>
+  <montura id="mnt_200" nombre="Genio dorado" desc="Mágica, nivel 50. Velocidad +42%. Se pelea montado." precio="1200"/>
+  <montura id="mnt_295" nombre="Dragón negro y azul" desc="Física, nivel 45. Velocidad +50%. Se pelea montado." precio="1000"/>
 </mall>

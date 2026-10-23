@@ -2321,6 +2321,7 @@ function I.panelMontura(mundo, p, w, h)
     local d = Monturas.especies[id]
     local e = estado[id] or {}
     if e.caida then return "Herida: se recupera en " .. e.caida .. " s." end
+    if (p.nivel or 1) < (d.nivel or 1) then return "Pide el nivel " .. d.nivel .. "." end
     if d.requiereOficio and not p.job then return "Las monturas de transporte piden el oficio activo (Y)." end
     if p.job and not d.requiereOficio then return "Con el oficio activo solo valen las monturas de transporte." end
     if d.oficio and p.job ~= d.oficio then return "Solo para el oficio de comerciante." end
@@ -2405,6 +2406,13 @@ function I.panelMontura(mundo, p, w, h)
     love.graphics.setFont(fd)
     love.graphics.setColor(0.6, 0.85, 1)
     love.graphics.print("Vel +" .. math.floor(d.vel * 100) .. "%" .. (d.carga > 0 and ("   Carga +" .. d.carga) or ""), px + 110, y + 52)
+    local tb = Monturas.textoBono(id)
+    if tb then
+      love.graphics.setFont(pequena())
+      love.graphics.setColor(d.tipo == "magico" and 0.55 or 0.95, d.tipo == "magico" and 0.7 or 0.65, d.tipo == "magico" and 1 or 0.55)
+      love.graphics.print("nv " .. d.nivel .. " · " .. tb, px + 110, y + 66 - 4)
+      love.graphics.setFont(fd)
+    end
     local e = estado[id] or {}
     if e.hp then
       love.graphics.setColor(0.95, 0.6, 0.2)
@@ -2701,7 +2709,8 @@ local function tarjetasMall(p, m, Mall, pestana)
       local M2 = Monturas.especies[id]
       lista[#lista + 1] = {
         nombre = d.nombre, texto = d.desc, precio = (not tengo[id]) and d.precio or nil,
-        etiquetas = M2 and { { "+" .. math.floor(M2.vel * 100) .. "% velocidad", COL_MALL.verde }, { "Sin oficio", COL_MALL.gris } } or {},
+        etiquetas = M2 and { { "nv " .. M2.nivel, (p.nivel or 1) >= M2.nivel and COL_MALL.oro or COL_MALL.rojo }, { M2.tipo == "magico" and "Mágica" or "Física", M2.tipo == "magico" and COL_MALL.azul or COL_MALL.rojo }, { "+" .. math.floor(M2.vel * 100) .. "% vel.", COL_MALL.verde } } or {},
+        extra = Monturas.textoBono(id),
         cinta = p.montado == id and "MONTADA" or (tengo[id] and "TUYA" or nil),
         borde = tengo[id] and { 0.35, 0.75, 0.45 } or nil,
         previa = function(cx, pies)
@@ -2718,7 +2727,8 @@ local function tarjetasMall(p, m, Mall, pestana)
           love.graphics.pop()
         end,
         boton = tengo[id] and { "La tienes", "mall_mt_ya", false, "Ya es tuya: pulsa O para montar." }
-          or { "Comprar", "mall_mt_buy_" .. id, (m.monedas or 0) >= d.precio, faltan(d.precio) },
+          or { "Comprar", "mall_mt_buy_" .. id, (m.monedas or 0) >= d.precio and (p.nivel or 1) >= (M2 and M2.nivel or 1),
+               (p.nivel or 1) < (M2 and M2.nivel or 1) and ("Pide el nivel " .. M2.nivel .. ".") or faltan(d.precio) },
       }
     end
   else
@@ -3968,7 +3978,7 @@ end
 local EV_UI = {
   batalla = {
     nombre = "Batalla por cristales", cuando = "Una vez al día", color = { 0.36, 0.62, 1.0 }, meta = 5,
-    lema = "Derriba estatuas y puertas enemigas hasta destruir el núcleo, recoge su cristal y llévalo al altar de tu base. Gana el primer equipo con 5 cristales entregados.",
+    lema = "Un cristal aparece en el centro del mapa. Las dos coronas van a por él: se puede pelear en cualquier momento. Gana quien lo lleve a su zona.",
   },
   estandarte = {
     nombre = "Captura del estandarte", cuando = "Cada pocas horas", color = { 1.0, 0.76, 0.3 }, meta = 3,
@@ -4100,6 +4110,19 @@ function I.hudEvento(mundo, p, vw, vh)
   elseif modo == "estandarte" then
     barraEquipo(x + 12, by, bw, 18, (inst.puntos.albor or 0) / ui.meta, "albor", (inst.puntos.albor or 0) .. " / " .. ui.meta .. " capturas")
     barraEquipo(x + W - 12 - bw, by, bw, 18, (inst.puntos.umbra or 0) / ui.meta, "umbra", (inst.puntos.umbra or 0) .. " / " .. ui.meta .. " capturas", "der")
+  elseif modo == "batalla" and inst.cristal then
+    -- mapa captura_cristal: un solo cristal en el centro; el estado dice dónde está
+    local c = inst.cristal
+    local t, col
+    if c.estado == "espera" then t, col = "El cristal aparece en el centro en " .. (c.resta or 0) .. " s", { 0.85, 0.85, 1 }
+    elseif c.estado == "libre" then t, col = "¡El cristal está en el suelo! Llévalo a tu zona", { 0.6, 0.95, 1 }
+    elseif c.estado == "llevado" then
+      t = "Lo lleva " .. (c.portador or "?") .. " (" .. (c.faccion == "albor" and "Albor" or "Umbra") .. "): ¡quítaselo!"
+      col = c.faccion == "albor" and { 0.5, 0.75, 1 } or { 0.85, 0.6, 1 }
+    else t, col = "Cristal entregado", { 1, 0.9, 0.5 } end
+    local tw = f:getWidth(t)
+    marco(vw / 2 - tw / 2 - 14, by - 2, tw + 28, 24, true)
+    texto(t, vw / 2 - tw / 2, by + 2, col, f)
   else
     local ca2, cu2 = inst.cristales and inst.cristales.albor or 0, inst.cristales and inst.cristales.umbra or 0
     barraEquipo(x + 12, by, bw, 18, ca2 / ui.meta, "albor", ca2 .. " / " .. ui.meta .. " cristales")
@@ -4136,7 +4159,8 @@ function I.hudEvento(mundo, p, vw, vh)
     end
   end
   if modo == "batalla" and (p.llevaCristales or 0) > 0 then
-    local t = "Llevas " .. p.llevaCristales .. (p.llevaCristales == 1 and " cristal" or " cristales") .. ": llévalos al altar de tu base"
+    local t = (inst.cristal and "¡Llevas el cristal! Llévalo a tu zona (" .. (p.faccion == "albor" and "izquierda" or "derecha") .. " del mapa)"
+      or ("Llevas " .. p.llevaCristales .. (p.llevaCristales == 1 and " cristal" or " cristales") .. ": llévalos al altar de tu base"))
     marco(vw / 2 - f:getWidth(t) / 2 - 10, yy + 4, f:getWidth(t) + 20, 24, true)
     texto(t, vw / 2 - f:getWidth(t) / 2, yy + 8, { 0.55, 0.9, 1 }, f)
   end

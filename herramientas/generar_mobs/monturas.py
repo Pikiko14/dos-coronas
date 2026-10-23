@@ -34,7 +34,7 @@ NOMBRES = {
     "009": "Jabalí ámbar", "026": "Corcel granate", "027": "Bisonte pardo", "028": "Hámster pardo", "029": "Corcel de nieve",
     "030": "Caballo castaño", "031": "Rana azul", "032": "Conejo escarlata", "033": "Jabalí dorado", "034": "Hámster del huevo",
     "035": "Lobo de melena", "036": "Gallo rojo", "037": "Cerdito rosa", "038": "Corcel borgoña", "039": "Hámster tostado",
-    "040": "Caballo de crin oscura", "103": "Tortuga viajera", "104": "León dorado", "105": "Autómata azul", "143": "Escarabajo real",
+    "040": "Lobo Aullador", "103": "Tortuga viajera", "104": "León dorado", "105": "Autómata azul", "143": "Escarabajo real",
     "144": "Escarabajo de acero", "145": "Foca blanca", "146": "Foca madre", "167": "Mono frutal", "176": "Vagoneta dorada",
     "197": "Avestruz gris", "198": "Avestruz violeta", "199": "Genio de oro", "200": "Genio dorado", "201": "Barco de nubes",
     "202": "Tiburón submarino", "203": "Águila parda", "204": "Águila blanca", "225": "Oca gigante", "226": "Espíritus de la noche",

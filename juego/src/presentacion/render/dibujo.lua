@@ -1143,9 +1143,24 @@ function entidadBase(e, sx, sy, mundo, jugador)
     local pulso = 0.5 + 0.5 * math.sin((mundo.tiempo or 0) * 4 + (e.x or 0))
     love.graphics.setColor(0, 0, 0, 0.3)
     love.graphics.ellipse("fill", sx, pies - 1, 9, 4)
-    Objetos.cristal(e.faccion, pulso, sx, pies - 2)
-    love.graphics.setColor(0.5, 0.9, 1, 0.35 + 0.35 * pulso)
-    love.graphics.circle("line", sx, pies - 10, 12 + 2 * pulso)
+    if e.central then
+      -- el cristal del centro del mapa: grande, con un haz de luz que se ve de lejos
+      love.graphics.setColor(0.6, 0.9, 1, 0.12 + 0.1 * pulso)
+      love.graphics.rectangle("fill", sx - 7, pies - 220, 14, 220)
+      love.graphics.setColor(0.8, 0.95, 1, 0.25 + 0.2 * pulso)
+      love.graphics.rectangle("fill", sx - 2, pies - 220, 4, 220)
+      love.graphics.push()
+      love.graphics.translate(sx, pies - 2)
+      love.graphics.scale(1.8, 1.8)
+      Objetos.cristal(nil, pulso > 0.5, 0, 0)
+      love.graphics.pop()
+      love.graphics.setColor(0.5, 0.9, 1, 0.35 + 0.35 * pulso)
+      love.graphics.circle("line", sx, pies - 18, 24 + 4 * pulso)
+    else
+      Objetos.cristal(e.faccion, pulso, sx, pies - 2)
+      love.graphics.setColor(0.5, 0.9, 1, 0.35 + 0.35 * pulso)
+      love.graphics.circle("line", sx, pies - 10, 12 + 2 * pulso)
+    end
   elseif e.kind == "trampa" then
     local img = Arte.img("Characters/!Hexagram.png")
     love.graphics.setColor(1, 1, 1, 0.9)

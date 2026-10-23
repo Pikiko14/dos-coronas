@@ -43,6 +43,7 @@ function M.instalar(Mundo)
     p.oro = p.oro - precio
     if p.montado then
       p.montado = nil
+      self:recalcular(p)
       self:recalcularCarga(p)
     end
     p.x, p.y = destino.x, destino.y
