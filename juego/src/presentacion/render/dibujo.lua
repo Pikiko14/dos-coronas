@@ -280,7 +280,7 @@ function D.escena(mundo, jugador, cam, mx, my)
         Objetos.dibujar("restos", 0, sx, sy + 14, nil, math.max(0, math.min(1, resta / 6)))
       elseif e.kind == "altar" then
         -- núcleo destruido: ruinas apagadas hasta que se regenere
-        Objetos.dibujar("altar_cristal", 0, sx, sy + 14, { 0.3, 0.3, 0.32 }, 0.7)
+        if not e.totem then Objetos.dibujar("altar_cristal", 0, sx, sy + 14, { 0.3, 0.3, 0.32 }, 0.7) end
       elseif e.kind == "puerta" then
         Objetos.puerta(e.faccion, true, sx, sy + 14, 0.8)
       end
@@ -934,7 +934,17 @@ function entidadBase(e, sx, sy, mundo, jugador)
   local alto = 32
   local def = Personajes.de(e)
   love.graphics.setColor(0, 0, 0, 0.3)
-  love.graphics.ellipse("fill", sx, pies - 1, def and def.fila and ((def.celda or 64) > 64 and 26 or 20) or (e.montado and 17 or 11), def and def.fila and 7 or (e.montado and 6 or 4))
+  local sombraX, sombraRx, sombraRy = sx, def and def.fila and ((def.celda or 64) > 64 and 26 or 20) or (e.montado and 17 or 11), def and def.fila and 7 or (e.montado and 6 or 4)
+  if e.montado and not def.fila and (e.kind == "jugador" or e.kind == "bot") then
+    -- sobre una montura de FAO el cuerpo del animal no está centrado en los pies del dibujo: de lado se estira y se corre hacia donde se sienta el jinete
+    local m = Personajes.monturaDe(e.montado, e.faccion)
+    local dx = require("src.presentacion.render.mob_anim").asiento(m and m.anim or "", e.dir)
+    if dx then
+      sombraX = sx + dx * 0.9
+      sombraRx, sombraRy = 24, 7
+    end
+  end
+  love.graphics.ellipse("fill", sombraX, pies - 1, sombraRx, sombraRy)
   -- animación de ataque: la criatura (y su montura) se deforma y se mueve; la sombra se queda en el suelo
   local atq, atqU, atqPose, atqK
   if def and e.kind ~= "caravana" and e.kind ~= "cuerpo" and e.vivo ~= false then
@@ -1096,8 +1106,8 @@ function entidadBase(e, sx, sy, mundo, jugador)
     Objetos.puerta(e.faccion, false, sx, pies, 0.8)
     alto = 50
   elseif e.kind == "altar" then
-    Objetos.dibujar("altar_cristal", 0, sx, pies)
-    alto = 64
+    if not e.totem then Objetos.dibujar("altar_cristal", 0, sx, pies) end      -- (el tótem del mapa del asedio ya está dibujado en el propio mapa)
+    alto = e.totem and 120 or 64
   elseif e.kind == "cofre_mz" then
     -- cofre de premio de la mazmorra: late con un brillo dorado
     local br = 0.3 + 0.15 * math.sin((mundo.tiempo or 0) * 4)

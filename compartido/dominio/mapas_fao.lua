@@ -37,9 +37,9 @@ local function leerIndice()
   return salida
 end
 
--- Mapas con portal en un sitio fijo del mundo (casillas, centro = .5) en vez del reparto automático junto a los campamentos: { x, y, faccion (la del continente), nombre (el que ve el jugador) }.
+-- Mapas con portal en un sitio fijo del mundo (casillas, centro = .5) en vez del reparto automático junto a los campamentos: { x, y, nombre (el que ve el jugador) }, por NÚMERO de mapa (así no depende del nombre que se le dé al enviarlo desde el editor).
 M.FIJOS = {
-  cienaga_alta = { x = 1012.5, y = 126.5, faccion = "umbra", nombre = "Ciénaga Alta" },
+  [50] = { x = 1012.5, y = 126.5, nombre = "Ciénaga Alta" },
 }
 
 M.MAPAS = leerIndice()
@@ -57,7 +57,7 @@ function M.instalar(Mundo)
   function Mundo:crearMapasFao()
     for nombre, num in pairs(M.MAPAS) do
       self.mapas[nombre] = MapaMpc.cargar(num)
-      if M.FIJOS[nombre] then self.mapas[nombre].nombre = M.FIJOS[nombre].nombre end
+      if M.FIJOS[M.MAPAS[nombre]] then self.mapas[nombre].nombre = M.FIJOS[M.MAPAS[nombre]].nombre end
     end
   end
 
@@ -117,7 +117,7 @@ function M.instalar(Mundo)
     local mundo = self.mapas.mundo
     local nombres = {}
     for _, n in ipairs(M.nombres()) do
-      local fijo = M.FIJOS[n]
+      local fijo = M.FIJOS[M.MAPAS[n]]
       if fijo then
         local e = {
           id = self:idNuevo(), kind = "portal", nombre = "Portal: " .. (self.mapas[n].nombre or n), mapaFao = n, faccion = fijo.faccion,
@@ -247,7 +247,8 @@ function M.instalar(Mundo)
     local px, py = p.x * MapaMpc.CELDA, p.y * MapaMpc.CELDA          -- (los triángulos del .mpc están en píxeles de FAO)
     local dentro
     for _, s in ipairs(m.mpc.salidas) do
-      if MapaMpc.puntoEnPoligono(s.puntos, px, py) then dentro = s break end
+      -- (el punto 31 suele ser pequeño: también cuenta estar a menos de una casilla de su centro)
+      if MapaMpc.puntoEnPoligono(s.puntos, px, py) or (s.entrada and (p.x - s.cx) ^ 2 + (p.y - s.cy) ^ 2 < 0.8) then dentro = s break end
     end
     -- la salida que es también la entrada (punto 31) no vale mientras el jugador no haya salido de ella: se aparece encima
     if dentro and dentro.entrada and not p.salidaArmada then return end

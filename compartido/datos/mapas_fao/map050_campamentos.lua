@@ -250,15 +250,7 @@ return {
     monstruo = "jefe_dragon_sombra",
     cantidad = 1,
     radio = 4,
-    x = 29.5,
-    y = 69.5,
-    jefe = true
-  },
-  {
-    monstruo = "jefe_dragon_sombra",
-    cantidad = 1,
-    radio = 4,
-    x = 6.5,
+    x = 9.5,
     y = 70.5,
     jefe = true
   }

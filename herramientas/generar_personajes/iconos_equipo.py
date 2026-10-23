@@ -33,23 +33,29 @@ def casilla(clase, slot, t):
 
 def leer_looks():
     """{clase: {escalón: {hueco: apariencia, 'arma': [apariencias]}}} del género masculino de fao_datos.lua."""
-    s = open(DATOS_LUA, encoding="utf-8").read()
     res = {}
-    for clase in CLASES:
-        i = s.index("    %s = {\n      h = {" % clase)
-        j = s.index("      m = {", i)
-        seg = s[i:j]
-        res[clase] = {}
-        for m in re.finditer(r'\["(\d+)"\] = \{\n(.*?)\n        \},', seg, re.S):
-            t, cuerpo = int(m.group(1)), m.group(2)
-            fila = {}
-            armas = re.search(r"arma = \{(.*?)\}", cuerpo, re.S)
-            fila["arma"] = [int(n) for n in re.findall(r'"i(\d+)b?l?"', armas.group(1))] if armas else []
-            for hueco, _ in HUECOS:
-                mm = re.search(r'\b%s = "i(\d+)b"' % hueco, cuerpo)
-                if mm:
-                    fila[hueco] = int(mm.group(1))
-            res[clase][t] = fila
+    # fao_datos.lua y, encima, los escalones 3, 5 y 7 de fao_datos_medios.lua (equipo_intermedio.py), que sustituyen a los de la misma etapa
+    for ruta, solo in ((DATOS_LUA, None), (DATOS_LUA.replace("fao_datos.lua", "fao_datos_medios.lua"), (3, 5, 7))):
+        if not os.path.exists(ruta):
+            continue
+        s = open(ruta, encoding="utf-8").read()
+        for clase in CLASES:
+            i = s.index("    %s = {\n      h = {" % clase)
+            j = s.index("      m = {", i)
+            seg = s[i:j]
+            res.setdefault(clase, {})
+            for m in re.finditer(r'\["(\d+)"\] = \{\n(.*?)\n        \},', seg, re.S):
+                t, cuerpo = int(m.group(1)), m.group(2)
+                if solo and t not in solo:
+                    continue
+                fila = {}
+                armas = re.search(r"arma = \{(.*?)\}", cuerpo, re.S)
+                fila["arma"] = [int(n) for n in re.findall(r'"i(\d+)b?l?"', armas.group(1))] if armas else []
+                for hueco, _ in HUECOS:
+                    mm = re.search(r'\b%s = "i(\d+)b"' % hueco, cuerpo)
+                    if mm:
+                        fila[hueco] = int(mm.group(1))
+                res[clase][t] = fila
     return res
 
 

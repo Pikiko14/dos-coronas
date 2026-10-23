@@ -166,7 +166,9 @@ def hornear(num):
         d = defs.get(sid)
         # se dibuja TODO lo que el mapa traiga y tenga sprite (objetos de mapa, recursos, adornos, casas, NPC); solo quedan fuera lo oculto (marcas TAG, generadores de criaturas) y lo que no tiene dibujo
         visible = d is not None
-        if not visible or "HIDE" in d["flags"] or "SKIP_RENDER" in d["flags"]:
+        # (lo "oculto" de FAO solo son marcas y generadores de criaturas; un adorno estático con sprite en stage —el remolino de una salida, por ejemplo— sí se dibuja)
+        adorno = visible and d["proceso"] == "SERV_CLASS_STATIC" and "stage" in d["directorio"]
+        if not visible or ("HIDE" in d["flags"] and not adorno) or "SKIP_RENDER" in d["flags"]:
             inertes.append(sid)           # marcas y generadores del servidor, NPC, luces: no se dibujan ni se conectan
             continue
         carpeta = d["directorio"].replace(chr(92), "/").strip("/")

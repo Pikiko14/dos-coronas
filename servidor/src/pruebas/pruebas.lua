@@ -32,6 +32,7 @@ function Pruebas.correr()
   -- Pasos de los mapas de FAO antiguos (granja_de_pinchos, riprap...; se quitaron todos): se saltan mientras no estén en mapas_fao/indice.lua.
   local hayMapasFao = require("compartido.dominio.mapas_fao").MAPAS.granja_de_pinchos ~= nil
   local function pasoFao(nombre, fn) if hayMapasFao then paso(nombre, fn) end end
+  local function pasoMoba(nombre, fn) if hayMapasFao or require("compartido.dominio.mapas_fao").MAPAS.asedio then paso(nombre, fn) end end
   paso("json", function()
     local t = { a = "Curación", n = 3, lista = { 1, 2 }, ok = true }
     local d = Util.jsonDec(Util.jsonEnc(t))
@@ -4143,7 +4144,7 @@ mundo.tiempo = 100
       if q.montura then monturas = monturas + 1 fallar(errores, "la montura " .. q.montura .. " existe", require("compartido.dominio.monturas").especies[q.montura] ~= nil) end
       if q.addon or q.montura then fallar(errores, "el premio gordo es de una misión difícil o épica", q.dif ~= "normal") end
     end
-    fallar(errores, "solo unas pocas dan addon o montura", addons >= 2 and addons <= 4 and monturas >= 2 and monturas <= 4, addons .. "/" .. monturas)
+    fallar(errores, "las cadenas dan montura (y monedas), ya no addons", addons == 0 and monturas >= 4 and monturas <= 6, addons .. "/" .. monturas)
 
     -- flujo: aceptar y entregar solo junto al PNJ
     local p = mundo:crearPersonaje({ nombre = "Misionero", faccion = "albor", clase = "guerrero", nivel = 12 })
@@ -5447,6 +5448,25 @@ mundo.tiempo = 100
     end
     Cuentas.borrarUsuario(usuario)
   end)
+  paso("Asedio en el mapa propio: los tótems de la luz y la oscuridad son los nexos", function()
+    if not require("compartido.dominio.mapas_fao").MAPAS.asedio then return end
+    local mundo = Mundo.nuevo()
+    fallar(errores, "la arena se prepara", mundo:asegurarArenaMoba() == true)
+    local arena = mundo.moba and mundo.moba.mapa
+    fallar(errores, "la arena es el mapa asedio", arena ~= nil and arena == mundo.mapas.asedio)
+    if not arena then return end
+    local function pies(id) for _, o in ipairs(arena.mpc.objetos) do if o.id == id then return o.x / 64, o.y / 64 end end end
+    local ax, ay = pies(60051)
+    local ux, uy = pies(60052)
+    local Util = require("compartido.dominio.util")
+    fallar(errores, "el nexo de Albor está en el tótem de la luz", Util.dist(mundo.moba.nexo.albor.x, mundo.moba.nexo.albor.y, ax, ay) < 4, string.format("%.1f", Util.dist(mundo.moba.nexo.albor.x, mundo.moba.nexo.albor.y, ax, ay)))
+    fallar(errores, "el nexo de Umbra está en el tótem de la oscuridad", Util.dist(mundo.moba.nexo.umbra.x, mundo.moba.nexo.umbra.y, ux, uy) < 4)
+    fallar(errores, "hay tres carriles", #mundo.moba.carriles == 3)
+    mundo:armarMoba()
+    local n = 0
+    for _, e in pairs(mundo.entidades) do if e.kind == "altar" and e.moba and e.totem then n = n + 1 end end
+    fallar(errores, "los dos nexos son tótem", n == 2, tostring(n))
+  end)
   paso("Ciénaga Alta: portal fijo en (1012, 126), se entra, hay criaturas dentro y se sale", function()
     local MapasFao = require("compartido.dominio.mapas_fao")
     fallar(errores, "cienaga_alta está en el índice", MapasFao.MAPAS.cienaga_alta == 50)
@@ -5466,7 +5486,7 @@ mundo.tiempo = 100
     mundo:vigilarPortalesFao(p)
     fallar(errores, "pisar el portal entra", p.modo == "cienaga_alta", tostring(p.modo))
     local MapaMpc = require("compartido.dominio.mapa_mpc")
-    fallar(errores, "se aparece en el punto 31", MapaMpc.puntoEnPoligono(mapa.mpc.salidas[#mapa.mpc.salidas].puntos, p.x * MapaMpc.CELDA, p.y * MapaMpc.CELDA) and mapa.mpc.salidas[#mapa.mpc.salidas].id == 31)
+    fallar(errores, "se aparece junto al centro del punto 31", (p.x - mapa.mpc.salidas[1].cx) ^ 2 + (p.y - mapa.mpc.salidas[1].cy) ^ 2 < 2 and mapa.mpc.salidas[1].id == 31)
     mundo:vigilarSalidaFao(p)
     fallar(errores, "al aparecer no se sale enseguida", p.modo == "cienaga_alta")
     local ex, ey = p.x, p.y
@@ -5810,7 +5830,7 @@ mundo.tiempo = 100
     fallar(errores, "en combate el portal no deja pasar", p.modo == "mundo")
   end)
   -- Asedio (MOBA): arena en un mapa de FAO, cola de dos equipos, nexos con torres, oleadas de esbirros, fuente, reaparición y victoria al destruir el nexo.
-  pasoFao("asedio (MOBA): tres carriles, nivel 1 a 18 con poderes que se desbloquean, torres, esbirros, protección del nexo y victoria", function()
+  pasoMoba("asedio (MOBA): tres carriles, nivel 1 a 18 con poderes que se desbloquean, torres, esbirros, protección del nexo y victoria", function()
     local Mapa = require("compartido.dominio.mapa")
     local Moba = require("compartido.dominio.moba")
     local mundo = Mundo.nuevo()

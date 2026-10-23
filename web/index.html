@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dos Coronas — RPG multijugador en pixel art</title>
-  <meta name="description" content="Dos Coronas es un RPG online en pixel art: elige Albor o Umbra, sube de nivel con seis clases, vence mazmorras con trampas, comercia, cabalga monturas y lucha en la guerra de las dos coronas. Descarga la beta para Windows.">
+  <meta name="description" content="Dos Coronas es un RPG online en pixel art: elige Albor o Umbra, sube hasta el nivel 50 con seis clases y sesenta poderes, vence mazmorras con trampas, viste equipo de diez escalones, cabalga monturas, adopta mascotas y lucha en la guerra de las dos coronas. Descarga la beta para Windows.">
   <meta name="theme-color" content="#0a0e1f">
   <meta property="og:title" content="Dos Coronas — Albor contra Umbra">
   <meta property="og:description" content="RPG multijugador en pixel art. Descarga la beta para Windows.">
@@ -26,11 +26,13 @@
     <button class="burger" id="burger" aria-label="Menú">☰</button>
     <nav class="menu" id="menu">
       <a href="#juego">El juego</a>
-      <a href="#coronas">Las coronas</a>
       <a href="#clases">Clases</a>
+      <a href="#poderes">Poderes</a>
+      <a href="#equipo">Equipo</a>
       <a href="#mundo">El mundo</a>
       <a href="#mazmorras">Mazmorras</a>
       <a href="#monturas">Monturas</a>
+      <a href="#mascotas">Mascotas</a>
       <a href="#guerra">Guerra</a>
       <a href="guia.html">Guía</a>
       <a class="boton-menu" href="#descargar">Descargar</a>
@@ -64,10 +66,10 @@
     <div class="contenedor">
       <div><b>2</b><span>Coronas en guerra</span></div>
       <div><b>6</b><span>Clases</span></div>
-      <div><b>3</b><span>Continentes</span></div>
-      <div><b>5</b><span>Mazmorras con jefe</span></div>
-      <div><b>18</b><span>Monturas</span></div>
+      <div><b>60</b><span>Poderes</span></div>
       <div><b>50</b><span>Niveles</span></div>
+      <div><b>10</b><span>Escalones de equipo</span></div>
+      <div><b>5</b><span>Mazmorras con jefe</span></div>
     </div>
   </div>
 
@@ -83,12 +85,12 @@
         <article class="rasgo cristal rev">
           <div class="icono"><svg viewBox="0 0 24 24"><path d="M14.5 4 20 9.5 9.5 20 4 14.5zM4 20l3-3M13 5.5l5.5 5.5"/></svg></div>
           <h3>Combate con diez poderes</h3>
-          <p>Cada clase tiene su propio árbol de poderes y diez habilidades en la barra, más pociones de vida y maná. Apunta tus hechizos al suelo, combina estados y juega en grupo.</p>
+          <p>Cada clase tiene su propio árbol de poderes y diez habilidades en la barra, cada una con su efecto propio: saltos, marcas, rebotes, escudos y resurrecciones. Apunta tus hechizos al suelo, combina estados y juega en grupo.</p>
         </article>
         <article class="rasgo cristal rev">
           <div class="icono"><svg viewBox="0 0 24 24"><path d="M5 20V7l7-4 7 4v13M9 20v-6h6v6M9 10h.01M15 10h.01"/></svg></div>
           <h3>Mazmorras con trampas</h3>
-          <p>Tres cuevas generadas con ramas, bucles y callejones. Pinchos, fuego y gas que se activan al compás, un jefe al final y un cofre cuyo botín cae al suelo.</p>
+          <p>Cinco cuevas generadas con ramas, bucles y callejones. Pinchos, fuego y gas que se activan al compás, un jefe al final y un cofre cuyo botín cae al suelo, con el mejor equipo del juego.</p>
         </article>
         <article class="rasgo cristal rev">
           <div class="icono"><svg viewBox="0 0 24 24"><path d="M12 3 2 20h20zM12 10v4M12 17h.01"/></svg></div>
@@ -103,7 +105,7 @@
         <article class="rasgo cristal rev">
           <div class="icono"><svg viewBox="0 0 24 24"><path d="M4 18c0-4 2-7 5-8l3-4 2 2 3 1-1 3c2 1 4 3 4 6M9 18v2M17 18v2"/></svg></div>
           <h3>Monturas y mascotas</h3>
-          <p>Dieciocho monturas con efectos propios, desde un caballo hasta un dragón de hielo, y diez mascotas que suben de nivel contigo, entre ellas cuatro que recogen el botín por ti.</p>
+          <p>Treinta monturas, desde un burro hasta un autómata, y diez mascotas que suben de nivel contigo, entre ellas cuatro que recogen el botín por ti.</p>
         </article>
         <article class="rasgo cristal rev">
           <div class="icono"><svg viewBox="0 0 24 24"><path d="M3 21V10l9-7 9 7v11zM9 21v-6h6v6"/></svg></div>
@@ -177,6 +179,57 @@
     </div>
   </section>
 
+  <!-- ======================================================== poderes -->
+  <section id="poderes">
+    <div class="contenedor">
+      <div class="cabeza-seccion rev">
+        <span class="sobre">Sesenta poderes</span>
+        <h2>Un árbol para cada clase</h2>
+        <p>Cada nivel te da un punto. Gástalo en mejorar un poder (hasta cinco rangos) o en desbloquear uno nuevo: los diez se abren por el camino, del nivel 1 al 28.</p>
+      </div>
+      <div class="bloque-doble rev">
+        <img data-zoom loading="lazy" src="img/capturas/arbol.jpg" alt="Árbol de poderes del clérigo">
+        <div>
+          <h3>Elige el camino</h3>
+          <p>El árbol muestra qué poder pide a cuál, en qué nivel se abre y cuánto cuesta mejorarlo. Al elegir uno ves lo que hace ahora y lo que hará en el siguiente rango.</p>
+          <ul>
+            <li>Diez poderes en la barra: teclas <b>1</b> a <b>6</b> y <b>Z</b>, <b>X</b>, <b>V</b>, <b>F</b>.</li>
+            <li>Pasivas que mejoran tus estadísticas, y que piden haber aprendido otro poder.</li>
+            <li>Puedes reiniciar tus puntos pagando oro.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="bloque-doble inv rev" style="margin-top:46px">
+        <img data-zoom loading="lazy" src="img/capturas/poderes.jpg" alt="Combate con poderes">
+        <div>
+          <h3>Cada poder se nota</h3>
+          <p>Cada hechizo, golpe y estocada tiene su propio efecto en pantalla. Algunos se apuntan al suelo; otros marcan al enemigo, rebotan entre varios, te hacen saltar o levantan a un aliado caído.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================================================== equipo -->
+  <section id="equipo" class="oscura">
+    <div class="contenedor">
+      <div class="cabeza-seccion rev">
+        <span class="sobre">Diez escalones</span>
+        <h2>Del andrajo a la armadura eterna</h2>
+        <p>Cada clase tiene su propio aspecto en los diez escalones del equipo, y todo se ve sobre tu personaje: cabeza, pecho, piernas, pies y arma.</p>
+      </div>
+      <img class="tira-equipo rev" data-zoom loading="lazy" src="img/equipo_escalones.png" alt="El equipo de las seis clases en los diez escalones">
+      <div class="escalones rev"><span>Tosca</span><span>Soldado</span><span>Veterano</span><span>Capitán</span><span>Campeón</span><span>Élite</span><span>Legendaria</span><span>Corona</span><span>Mítica</span><span>Eterna</span></div>
+      <p class="suave rev" style="text-align:center;margin:26px auto 0;max-width:760px">Los maestros de cada clase venden hasta el escalón de <b>corona</b> (nivel 30). La armadura <b style="color:var(--oro)">mítica</b> (nivel 40) y la <b style="color:var(--oro)">eterna</b> (nivel 50) solo las sueltan las criaturas de nivel alto y los cofres de las mazmorras.</p>
+      <div class="bloque-doble inv rev" style="margin-top:46px">
+        <img data-zoom loading="lazy" src="img/capturas/equipo.jpg" alt="Panel del personaje y su equipo">
+        <div>
+          <h3>Encanta lo que te sirva</h3>
+          <p>Con polvo arcano y oro puedes encantar tus piezas. Hay riesgo: el panel te lo cuenta antes de confirmar. Lo que no uses, véndelo o ponlo en la casa de subastas.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- ======================================================== el mundo -->
   <section id="mundo" class="oscura">
     <div class="contenedor">
@@ -186,16 +239,15 @@
         <p>Alba al oeste, Umbra al este y, en el centro, la Isla de la Cicatriz: la zona de guerra. Entre ellos se viaja en barco desde los muelles; a pie no se cruza el mar.</p>
       </div>
       <div class="galeria rev">
-        <figure class="ancha" data-zoom><img loading="lazy" src="img/capturas/ciudad.png" alt="Una ciudad de Albor"><figcaption>Las ciudades son refugio: nadie puede atacarte dentro.</figcaption></figure>
-        <figure data-zoom><img loading="lazy" src="img/capturas/poderes.png" alt="Combate con poderes"><figcaption>Combate con poderes y estados</figcaption></figure>
-        <figure data-zoom><img loading="lazy" src="img/capturas/mzjefe.png" alt="Mazmorra"><figcaption>Mazmorras con trampas y jefes</figcaption></figure>
-        <figure data-zoom><img loading="lazy" src="img/capturas/batalla.png" alt="Batalla por cristales"><figcaption>Batalla por cristales</figcaption></figure>
+        <figure class="ancha" data-zoom><img loading="lazy" src="img/capturas/ciudad.jpg" alt="Una ciudad de Albor"><figcaption>Las ciudades son refugio: nadie puede atacarte dentro.</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/mzjefe.jpg" alt="Mazmorra"><figcaption>Mazmorras con trampas y jefes</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/batalla.jpg" alt="Batalla por cristales"><figcaption>Batalla por cristales</figcaption></figure>
         <figure data-zoom><img loading="lazy" src="img/capturas/estandarte.png" alt="Captura del estandarte"><figcaption>Captura del estandarte: el río, los puentes y las dos coronas</figcaption></figure>
         <figure class="ancha" data-zoom><img loading="lazy" src="img/capturas/muelle.png" alt="Muelle con el barquero"><figcaption>Los muelles: cruza el mar con el barquero</figcaption></figure>
-        <figure data-zoom><img loading="lazy" src="img/capturas/casa.png" alt="Casa decorada"><figcaption>Tu casa, a tu gusto</figcaption></figure>
-        <figure data-zoom><img loading="lazy" src="img/capturas/arbol.png" alt="Árbol de poderes"><figcaption>Árbol de poderes</figcaption></figure>
-        <figure data-zoom><img loading="lazy" src="img/capturas/establo.png" alt="Establo"><figcaption>El establo y sus monturas</figcaption></figure>
-        <figure data-zoom><img loading="lazy" src="img/capturas/subastas.png" alt="Casa de subastas"><figcaption>La casa de subastas</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/casa.jpg" alt="Casa decorada"><figcaption>Tu casa, a tu gusto</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/establo.jpg" alt="Establo"><figcaption>El establo y sus monturas</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/subastas.jpg" alt="Casa de subastas"><figcaption>La casa de subastas</figcaption></figure>
+        <figure data-zoom><img loading="lazy" src="img/capturas/estados.jpg" alt="Estados y bonos"><figcaption>Estados y bonos sobre la barra de poderes</figcaption></figure>
       </div>
     </div>
   </section>
@@ -235,7 +287,7 @@
         <div class="rasgo cristal"><h3>Fuego</h3><p>Chorros de llamas que avisan antes de encenderse. El daño más fuerte: el 12 % de tu vida por golpe.</p></div>
         <div class="rasgo cristal"><h3>Gas venenoso</h3><p>Una nube que te daña cada medio segundo mientras sigas dentro. Rodéala o cruza sin detenerte.</p></div>
       </div>
-      <div class="cabeza-seccion rev" style="margin-top:70px;margin-bottom:34px"><h3>Criaturas que encontrarás</h3></div>
+      <div class="cabeza-seccion rev" style="margin-top:70px;margin-bottom:34px"><h3>Criaturas de nivel 31 a 50</h3></div>
       <div class="rejilla c4" id="bestiario-rejilla"></div>
     </div>
   </section>
@@ -246,9 +298,35 @@
       <div class="cabeza-seccion rev">
         <span class="sobre">A galope</span>
         <h2>Monturas con estilo</h2>
-        <p>Compra monturas en las cuadras de las ciudades o consigue las exclusivas en el Item Mall. Las de transporte se usan con el oficio activo; el resto, con el oficio apagado. Puedes guardar hasta 20 en tu colección y cambiar con la tecla <b>O</b>.</p>
+        <p>Las de viaje son gratis en el establo de cada ciudad. Hay cinco exclusivas en el Item Mall y otras que solo te da una cadena de misiones difícil. Las de transporte se usan con el oficio activo; el resto, con el oficio apagado. Guarda hasta 20 en tu colección y cambia con la tecla <b>O</b>.</p>
       </div>
       <div class="rejilla c4" id="monturas-rejilla"></div>
+    </div>
+  </section>
+
+  <!-- ======================================================== mascotas -->
+  <section id="mascotas">
+    <div class="contenedor">
+      <div class="cabeza-seccion rev">
+        <span class="sobre">A tu lado</span>
+        <h2>Mascotas que pelean y mascotas que recogen</h2>
+        <p>El Criador de las ciudades vende seis mascotas de combate; el Item Mall, cuatro recolectoras que se llevan el botín por ti.</p>
+      </div>
+      <div class="bloque-doble rev">
+        <img data-zoom loading="lazy" src="img/capturas/mascotas.jpg" alt="El criador de mascotas">
+        <div>
+          <h3>Compañeras de combate</h3>
+          <p>Gatito, murciélago, limo guardián, flor curativa, hada y avispa. Suben de nivel contigo (sin pasar el tuyo) y cada especie da un beneficio distinto: pegar fuerte, devolver vida, amortiguar golpes, curar, darte maná o envenenar.</p>
+        </div>
+      </div>
+      <div class="bloque-doble inv rev" style="margin-top:46px">
+        <img data-zoom loading="lazy" src="img/capturas/mall_mascotas.jpg" alt="Mascotas recolectoras del Item Mall">
+        <div>
+          <h3>Recolectoras del Item Mall</h3>
+          <p>Perro rastreador, gallina de oro, dragoncito tesorero y fantasma saqueador recogen por ti objetos, oro y mercancías, y los guardan en tu bolsa. Cuanto más cara, más lejos llega.</p>
+          <ul><li>Llámala o guárdala con la tecla <b>N</b>.</li><li>Si la bolsa se llena, lo demás queda en el suelo.</li></ul>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -262,7 +340,7 @@
       </div>
       <div class="eventos">
         <article class="evento cristal rev">
-          <img loading="lazy" src="img/capturas/batalla.png" alt="Batalla por cristales">
+          <img loading="lazy" src="img/capturas/batalla.jpg" alt="Batalla por cristales">
           <div class="texto">
             <span class="hora">Todos los días · 21:00</span>
             <h3>Batalla por cristales</h3>

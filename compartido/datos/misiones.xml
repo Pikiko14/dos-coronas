@@ -27,7 +27,7 @@
   <mision id="q_velo" ciudad="velo" monstruo="polilla_rosa" cantidad="6" nivel="8" texto="Derrota 6 polillas rosas." titulo="Polillas de la ciénaga"/>
   <mision id="q_eclipse" ciudad="eclipse" monstruo="girasol_lancero" cantidad="5" nivel="10" texto="Derrota 5 girasoles lanceros." titulo="Girasoles del eclipse"/>
 
-  <!-- ======================= Cadena A (Albor): El camino del explorador. Premio: addon Explorador ======================= -->
+  <!-- ======================= Cadena A (Albor): El camino del explorador. Premio: montura Escarabajo real y monedas ======================= -->
   <mision id="ca_1" npc="c_liria" tipo="recolectar" de="larva_verde" cantidad="6" nivel="3" titulo="Seda para el curtidor"
     dialogo="Un explorador me encargó un mapa nuevo, y el curtidor pide seda de larva para la tinta. Tráeme seis." texto="Reúne 6 trofeos de larva verde." final="Con esto el curtidor tendrá para semanas."/>
   <mision id="ca_2" npc="c_liria" tipo="entregar" paquete="Mapa del explorador" destino="c_henar" nivel="5" requiere="ca_1" titulo="El mapa del explorador"
@@ -37,10 +37,10 @@
   <mision id="ca_4" npc="c_henar" monstruo="rabano_guerrero" cantidad="10" nivel="9" dif="dificil" requiere="ca_3" titulo="Rábanos de las colinas" siguiente="ca_5"
     dialogo="Más allá hay rábanos guerreros. Parecen graciosos, pero cortan: ve con cuidado." texto="Derrota 10 rábanos guerreros."/>
   <mision id="ca_5" npc="c_henar" monstruo="ogro_palido" cantidad="8" nivel="12" dif="dificil" factor="1.8" requiere="ca_4" titulo="El camino del explorador"
-    premios="polvo_arcano:20,pocion_vida_mediana:10" addon="skin_explorador"
-    dialogo="Solo queda la banda de ogros que guarda el paso. Derrótala y el camino será tuyo, y mi ropa de viaje también." texto="Derrota 8 ogros pálidos." final="Eres un explorador de los buenos. Quédate con mi atuendo."/>
+    premios="polvo_arcano:20,pocion_vida_mediana:10" monedas="30" montura="mnt_143"
+    dialogo="Solo queda la banda de ogros que guarda el paso. Derrótala y el camino será tuyo, y mi escarabajo de viaje también." texto="Derrota 8 ogros pálidos." final="Eres un explorador de los buenos. Quédate con mi escarabajo real."/>
 
-  <!-- ======================= Cadena B (Albor): La corona del Alba. Premio: addon Rey ======================= -->
+  <!-- ======================= Cadena B (Albor): La corona del Alba. Premio: montura Centauro dorado y monedas ======================= -->
   <mision id="cb_1" npc="c_alba" monstruo="lancero_dorado" cantidad="15" nivel="16" dif="dificil" titulo="Lanceros sin señor" siguiente="cb_2"
     dialogo="Los lanceros dorados vagan sin señor. La corona del Alba te necesita: empieza por ellos." texto="Derrota 15 lanceros dorados."/>
   <mision id="cb_2" npc="c_alba" tipo="recolectar" de="esqueleto" cantidad="10" nivel="15" dif="dificil" requiere="cb_1" titulo="Huesos del linaje"
@@ -52,10 +52,10 @@
   <mision id="cb_5" npc="c_auroria" monstruo="bestia_cornuda" cantidad="6" nivel="21" dif="dificil" requiere="cb_4" titulo="Bestias cornudas" siguiente="cb_6"
     dialogo="Las bestias cornudas de los pinares. Sin ellas, el reino respira." texto="Derrota 6 bestias cornudas."/>
   <mision id="cb_6" npc="c_auroria" monstruo="cangrejo_loto" cantidad="4" nivel="24" dif="epica" factor="2" requiere="cb_5" titulo="La corona del Alba"
-    premios="polvo_arcano:60,pocion_vida_grande:15" monedas="80" addon="skin_rey"
-    dialogo="Los cangrejos de loto son la última prueba. Si caen cuatro, la corona es tuya." texto="Derrota 4 cangrejos de loto." final="Viva el nuevo rey. Que la corona del Alba te sirva."/>
+    premios="polvo_arcano:60,pocion_vida_grande:15" monedas="80" montura="mnt_239"
+    dialogo="Los cangrejos de loto son la última prueba. Si caen cuatro, la corona es tuya, y con ella el centauro dorado." texto="Derrota 4 cangrejos de loto." final="Viva el nuevo rey. Que la corona del Alba te sirva."/>
 
-  <!-- ======================= Cadena C (Umbra): El señor del Ocaso. Premio: addon Caballero oscuro ======================= -->
+  <!-- ======================= Cadena C (Umbra): El señor del Ocaso. Premio: montura Espíritus de la noche y monedas ======================= -->
   <mision id="cc_1" npc="c_eclipse" monstruo="diablillo_azul" cantidad="12" nivel="13" dif="dificil" titulo="Diablillos del Ocaso" siguiente="cc_2"
     dialogo="Los diablillos hablan de un señor que nunca vino. El Ocaso necesita a alguien que acabe con ellos." texto="Derrota 12 diablillos azules."/>
   <mision id="cc_2" npc="c_eclipse" tipo="recolectar" de="medusa_violeta" cantidad="10" nivel="16" dif="dificil" requiere="cc_1" titulo="Tentáculos del velo"
@@ -67,8 +67,8 @@
   <mision id="cc_5" npc="c_velo" monstruo="calamar_espectral" cantidad="8" nivel="22" dif="dificil" requiere="cc_4" titulo="Calamares de la marea" siguiente="cc_6"
     dialogo="De la marea salen calamares cada noche. Quien los detenga merece la armadura." texto="Derrota 8 calamares espectrales."/>
   <mision id="cc_6" npc="c_velo" monstruo="elemental_brasas" cantidad="4" nivel="27" dif="epica" factor="2" requiere="cc_5" titulo="El señor del Ocaso"
-    premios="polvo_arcano:60,pocion_vida_grande:15" monedas="80" addon="skin_caballero_oscuro"
-    dialogo="El elemental de brasas es el último obstáculo. Acaba con él cuatro veces y la armadura negra será tuya." texto="Derrota 4 elementales de brasas." final="La noche reconoce a su señor."/>
+    premios="polvo_arcano:60,pocion_vida_grande:15" monedas="80" montura="mnt_226"
+    dialogo="El elemental de brasas es el último obstáculo. Acaba con él cuatro veces y los espíritus de la noche te servirán de montura." texto="Derrota 4 elementales de brasas." final="La noche reconoce a su señor."/>
 
   <!-- ======================= Cadena D (Umbra): Jinete de la tormenta. Premio: montura Toro del trueno ======================= -->
   <mision id="cd_1" npc="c_nox" monstruo="tortuga_espinosa" cantidad="12" nivel="16" dif="dificil" titulo="Tortugas de la ciénaga" siguiente="cd_2"

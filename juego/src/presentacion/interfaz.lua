@@ -1412,7 +1412,7 @@ local function minimapaLocal(mundo, p, x, y, lado)
   -- portales a los mapas de FAO (se ven aunque estén lejos)
   for _, pt in ipairs(mundo.portalesFao or {}) do
     local ex, ey = x + (pt.x - x0) * k, y + (pt.y - y0) * k
-    if pt.faccion == (p.faccion or pt.faccion) and dentroMini(ex, ey, x, y, lado, 4) then I.iconoPortal(ex, ey, 3) end
+    if (pt.faccion == nil or pt.faccion == (p.faccion or pt.faccion)) and dentroMini(ex, ey, x, y, lado, 4) then I.iconoPortal(ex, ey, 3) end
   end
   -- compañeros de grupo (se ven aunque estén lejos)
   for _, m in ipairs(p.grupo and p.grupo.miembros or {}) do
@@ -4173,7 +4173,7 @@ function I.panelMapa(mundo, p, w, h)
   end
   -- portales a los mapas de FAO del continente del jugador, con el nombre del mapa al que llevan
   for _, pt in ipairs(mundo.portalesFao or {}) do
-    if pt.faccion == (p.faccion or pt.faccion) then
+    if (pt.faccion == nil or pt.faccion == (p.faccion or pt.faccion)) then
       local x0, y0 = aP(pt.x, pt.y)
       I.iconoPortal(x0, y0, math.min(7, 3 + I.mapaZoom * 0.6))
       if I.mapaZoom >= 1.2 then
@@ -4351,7 +4351,7 @@ function I.panelMapa(mundo, p, w, h)
     ly = ly + 20
     local nombresPortales = {}
     for _, pt in ipairs(mundo.portalesFao or {}) do
-      if pt.faccion == (p.faccion or pt.faccion) then nombresPortales[#nombresPortales + 1] = (pt.nombre:gsub("^Portal: ", "")) end
+      if (pt.faccion == nil or pt.faccion == (p.faccion or pt.faccion)) then nombresPortales[#nombresPortales + 1] = (pt.nombre:gsub("^Portal: ", "")) end
     end
     love.graphics.setColor(0.6, 0.85, 1, 1)
     love.graphics.printf(table.concat(nombresPortales, "  ·  "), lx + 22, ly, 300, "left")

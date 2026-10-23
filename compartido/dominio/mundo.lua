@@ -3715,7 +3715,7 @@ function Mundo:compactar(e)
     modo = e.modo, hp = r0(e.hp), hpMax = r0(e.hpMax), mp = r0(e.mp), mpMax = r0(e.mpMax),
     nivel = e.nivel, hoja = e.hoja, base = e.base, cuadros = e.cuadros,
     tam = e.tam, paso = e.paso, porDir = e.porDir, elite = e.elite,
-    estructura = e.estructura, llevaBandera = e.llevaBandera, llevaCristales = e.llevaCristales, equipo = copiaSup(e.equipo),
+    estructura = e.estructura, totem = e.totem, llevaBandera = e.llevaBandera, llevaCristales = e.llevaCristales, equipo = copiaSup(e.equipo),
     rol = e.rol, qid = e.qid, staff = e.staff, casaId = e.casaId, casaTamano = e.casaTamano, anim = e.anim, portador = e.portador,
     mov = e.mov and true or nil, objetivo = (e.kind == "monstruo") and e.objetivo or nil,
     respawn = (e.kind == "monstruo" or e.kind == "puerta") and e.respawn or nil,

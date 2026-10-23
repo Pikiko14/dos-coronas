@@ -13,6 +13,9 @@ local Util = require("compartido.dominio.util")
 
 local M = {}
 
+-- El mapa propio del asedio (editor de mapas, nombre "asedio"): dos tótems (objetos 60051 de la luz y 60052 de la oscuridad) son los nexos de Albor y Umbra.
+M.MAPA_ASEDIO = "asedio"
+M.TOTEM_ALBOR, M.TOTEM_UMBRA = 60051, 60052
 M.CANDIDATOS = { "granja_de_pinchos", "pozo_sin_fondo", "decierto_ardiente", "graveyar", "canal_mariam", "minas_de_la_muerte", "riprap" }
 M.PRIMERA_OLEADA = 6                     -- segundos hasta la primera oleada
 M.OLEADA_CADA = 22                       -- segundos entre oleadas
@@ -95,12 +98,26 @@ function M.instalar(Mundo)
   end
 
   -- Calcula las bases y los tres carriles de un mapa; devuelve la arena y su puntuación (qué tan separados quedan los carriles) o nil.
-  local function trazarArena(mapa)
+  -- Los tótems del mapa del asedio (casillas libres más cercanas a sus pies) o nil si el mapa no los trae.
+  local function totems(mapa)
+    if not (mapa and mapa.mpc and mapa.comp and mapa.continente) then return nil end
+    local a, b
+    for _, o in ipairs(mapa.mpc.objetos or {}) do
+      if o.id == M.TOTEM_ALBOR then a = { x = math.floor(o.x / 64), y = math.floor(o.y / 64) } end
+      if o.id == M.TOTEM_UMBRA then b = { x = math.floor(o.x / 64), y = math.floor(o.y / 64) } end
+    end
+    if not (a and b) then return nil end
+    a, b = casillaCerca(mapa, a.x, a.y), casillaCerca(mapa, b.x, b.y)
+    if not (a and b) then return nil end
+    return a, b
+  end
+
+  local function trazarArena(mapa, fijoA, fijoB)
     if not (mapa and mapa.comp and mapa.continente) then return nil end
     local w, h = mapa.w, mapa.h
     local id = mapa.continente.id
-    local a, b
-    for y = 2, h - 3 do
+    local a, b = fijoA, fijoB
+    for y = 2, (fijoA and 0 or h - 3) do
       for x = 2, w - 3 do
         if mapa.comp[y * w + x] == id and libre3(mapa, x, y) then
           local fy = math.abs(y - h / 2)
@@ -109,7 +126,7 @@ function M.instalar(Mundo)
         end
       end
     end
-    if not a or not b or b.x - a.x < w * 0.4 then return nil end
+    if not a or not b or (not fijoA and b.x - a.x < w * 0.4) then return nil end
     local central = Mapa.buscar(mapa, a.x, a.y, b.x, b.y)
     if not central or #central < 50 then return nil end
     local carriles = { nil, { nombre = M.NOMBRES_CARRIL[2], ruta = central }, nil }
@@ -117,7 +134,16 @@ function M.instalar(Mundo)
     local tapado = tapar(mapa, central, 7, 26)
     local resultado = {}
     for k, fy in ipairs({ 0.16, 0.84 }) do
-      local punto = casillaCerca(mapa, (a.x + b.x) / 2, h * fy)
+      local punto
+      if fijoA then
+        -- mapa con bases fijas (puede ir en diagonal): los carriles laterales pasan a un lado y a otro de la mitad del camino
+        local dx, dy = b.x - a.x, b.y - a.y
+        local l = math.max(1, math.sqrt(dx * dx + dy * dy))
+        local lado = (k == 1 and -1 or 1) * l * 0.3
+        punto = casillaCerca(mapa, (a.x + b.x) / 2 - dy / l * lado, (a.y + b.y) / 2 + dx / l * lado)
+      else
+        punto = casillaCerca(mapa, (a.x + b.x) / 2, h * fy)
+      end
       local ruta
       if punto then
         local r1 = Mapa.buscar(mapa, a.x, a.y, punto.x, punto.y)
@@ -154,7 +180,12 @@ function M.instalar(Mundo)
     if self._arenaMoba ~= nil then return self._arenaMoba end
     self._arenaMoba = false
     local mejor, mapaMejor
-    for _, nombre in ipairs(M.CANDIDATOS) do
+    local ta, tb = totems(self.mapas[M.MAPA_ASEDIO])
+    if ta then
+      mejor = trazarArena(self.mapas[M.MAPA_ASEDIO], ta, tb)
+      mapaMejor = self.mapas[M.MAPA_ASEDIO]
+    end
+    for _, nombre in ipairs(mejor and {} or M.CANDIDATOS) do
       local mapa = self.mapas[nombre]
       local t = trazarArena(mapa)
       if t and (not mejor or t.puntuacion > mejor.puntuacion) then mejor, mapaMejor = t, mapa end
@@ -165,12 +196,14 @@ function M.instalar(Mundo)
     local central = mejor.carriles[2].ruta
     local n = #central
     mapa.spawns = mapa.spawns or {}
-    mapa.spawns.albor = { x = central[3].x, y = central[3].y }
-    mapa.spawns.umbra = { x = central[n - 2].x, y = central[n - 2].y }
+    local fijo = ta ~= nil and mapa == self.mapas[M.MAPA_ASEDIO]
+    mapa.spawns.albor = { x = central[fijo and 5 or 3].x, y = central[fijo and 5 or 3].y }
+    mapa.spawns.umbra = { x = central[n - (fijo and 4 or 2)].x, y = central[n - (fijo and 4 or 2)].y }
     local function en(ruta, frac) return ruta[math.max(1, math.min(#ruta, math.floor(#ruta * frac + 0.5)))] end
     self.moba = {
       mapa = mapa, carriles = mejor.carriles, puntuacion = mejor.puntuacion,
-      nexo = { albor = central[6], umbra = central[n - 5] },
+      nexo = fijo and { albor = central[1], umbra = central[n] } or { albor = central[6], umbra = central[n - 5] },
+      totem = fijo,
       torres = {},
     }
     for ci, c in ipairs(mejor.carriles) do
@@ -204,7 +237,7 @@ function M.instalar(Mundo)
       local pos = m.nexo[f]
       local e = {
         id = self:idNuevo(), kind = "altar", nombre = "Nexo de " .. nombreEquipo(f), faccion = f, x = pos.x, y = pos.y, modo = "moba", z = 0, vivo = true,
-        hp = M.NEXO.hp, hpMax = M.NEXO.hp, def = 0, estructura = true, moba = true, nexo = true, invulnerable = true,
+        hp = M.NEXO.hp, hpMax = M.NEXO.hp, def = 0, estructura = true, moba = true, nexo = true, invulnerable = true, totem = m.totem,
       }
       self.entidades[e.id] = e
       m.nexos[f] = e

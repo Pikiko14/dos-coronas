@@ -25,6 +25,7 @@ function Pruebas.correr()
   -- Pasos de los mapas de FAO antiguos (granja_de_pinchos, riprap...; se quitaron todos): se saltan mientras no estén en mapas_fao/indice.lua.
   local hayMapasFao = require("compartido.dominio.mapas_fao").MAPAS.granja_de_pinchos ~= nil
   local function pasoFao(nombre, fn) if hayMapasFao then paso(nombre, fn) end end
+  local function pasoMoba(nombre, fn) if hayMapasFao or require("compartido.dominio.mapas_fao").MAPAS.asedio then paso(nombre, fn) end end
   paso("json", function()
     local t = { a = "Curación", n = 3, lista = { 1, 2 }, ok = true }
     local d = Util.jsonDec(Util.jsonEnc(t))
@@ -2548,7 +2549,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
   end)
   -- Asedio (MOBA) en el cliente: se dibujan nexos, torres, esbirros y el marcador, el panel de guerra tiene su botón y el minimapa los marca. Con DC_PRUEBA_MOBA=1 guarda juego/capturas/moba.png
   -- (escena junto a una torre con esbirros, y el panel de guerra con el asedio).
-  pasoFao("asedio (MOBA): escena, marcador, minimapa y panel de guerra", function()
+  pasoMoba("asedio (MOBA): escena, marcador, minimapa y panel de guerra", function()
     local Dibujo = require("src.presentacion.render.dibujo")
     local mundo = Mundo.nuevo()
     local vista = os.getenv("DC_PRUEBA_MOBA") ~= nil

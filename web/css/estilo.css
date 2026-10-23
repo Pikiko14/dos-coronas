@@ -58,7 +58,7 @@ p { margin: 0 0 1em; }
 .marca { white-space: nowrap; display: flex; align-items: center; gap: 12px; font-family: var(--titulo); font-weight: 900; font-size: 1.25rem; color: var(--oro-claro); letter-spacing: .06em; }
 .marca img { width: 34px; height: 34px; filter: drop-shadow(0 2px 6px rgba(242, 199, 71, .45)); }
 .menu { display: flex; align-items: center; gap: 4px; }
-.menu a { white-space: nowrap; color: var(--texto); padding: 9px 14px; border-radius: 9px; font-weight: 600; font-size: .98rem; transition: .2s; }
+.menu a { white-space: nowrap; color: var(--texto); padding: 9px 10px; border-radius: 9px; font-weight: 600; font-size: .94rem; transition: .2s; }
 .menu a:hover, .menu a.activo { background: rgba(88, 118, 214, .22); color: var(--oro-claro); }
 .menu a.boton-menu { background: linear-gradient(180deg, #f6d363, #c8932d); color: #2a1a05; box-shadow: 0 4px 16px rgba(242, 199, 71, .3); }
 .menu a.boton-menu:hover { filter: brightness(1.1); color: #2a1a05; }
@@ -295,7 +295,7 @@ footer nav { margin: 14px 0; display: flex; gap: 22px; justify-content: center; 
 .rev.visible { opacity: 1; transform: none; }
 
 /* ------------------------------------------------------------------ móvil */
-@media (max-width: 1120px) {
+@media (max-width: 1240px) {
   .burger { display: block; }
   .menu { position: fixed; inset: 66px 0 auto 0; flex-direction: column; align-items: stretch; padding: 14px 20px 22px; background: rgba(8, 11, 26, .97); border-bottom: 1px solid var(--linea); transform: translateY(-120%); transition: transform .3s; }
   .menu.abierto { transform: none; }
@@ -334,4 +334,25 @@ footer nav { margin: 14px 0; display: flex; gap: 22px; justify-content: center; 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .rev { opacity: 1; transform: none; }
+}
+
+/* ------------------------------------------------------------------ novedades: arte pintado, etiquetas nuevas y bloques de texto con imagen */
+.tarjeta .lienzo img.suave { image-rendering: auto; max-height: 128px; max-width: 100%; object-fit: contain; }
+.etiqueta.gratis { background: rgba(111, 208, 140, .15); border: 1px solid #3f8f58; color: #b5f0c8; }
+.etiqueta.mision { background: rgba(158, 107, 242, .18); border: 1px solid #7b52c4; color: #d9c4ff; }
+.etiqueta.nv { background: rgba(88, 118, 214, .2); border: 1px solid var(--linea-fuerte); color: #c9d6ff; }
+.bloque-doble { display: grid; grid-template-columns: 1.15fr 1fr; gap: 34px; align-items: center; }
+.bloque-doble.inv { grid-template-columns: 1fr 1.15fr; }
+.bloque-doble.inv > :first-child { order: 2; }
+.bloque-doble img { width: 100%; border-radius: var(--radio); border: 1px solid var(--linea); box-shadow: 0 14px 40px rgba(0, 0, 0, .45); }
+.bloque-doble h3 { font-size: 1.5rem; margin: 0 0 10px; }
+.bloque-doble p, .bloque-doble li { color: var(--suave); }
+.bloque-doble ul { padding-left: 1.1rem; margin: 12px 0 0; }
+.tira-equipo { display: block; width: 100%; max-width: 960px; margin: 0 auto; image-rendering: pixelated; filter: drop-shadow(0 10px 16px rgba(0, 0, 0, .5)); }
+.escalones { display: grid; grid-template-columns: repeat(10, 1fr); max-width: 960px; margin: 6px auto 0; text-align: center; font-size: .72rem; color: var(--suave); letter-spacing: .04em; }
+.escalones span:nth-child(n+9) { color: var(--oro); font-weight: 700; }
+@media (max-width: 860px) {
+  .bloque-doble, .bloque-doble.inv { grid-template-columns: 1fr; }
+  .bloque-doble.inv > :first-child { order: 0; }
+  .escalones { font-size: .55rem; }
 }

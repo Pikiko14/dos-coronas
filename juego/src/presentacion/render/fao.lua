@@ -33,6 +33,27 @@ function M.activo()
           end
         end
       end
+      -- escalones 3, 5 y 7: dibujo propio para que no repitan el del escalón anterior (equipo_intermedio.py); se suman campo por campo (conservan el escudo)
+      local ok3, med = pcall(require, "src.presentacion.render.fao_datos_medios")
+      if datos and ok3 then
+        for cap, meta in pairs(med.capas) do datos.capas[cap] = meta end
+        for cl, gens in pairs(med.looks) do
+          for gen, escs in pairs(gens) do
+            for esc, fila in pairs(escs) do
+              local base = datos.looks[cl][gen][esc]
+              if base then
+                for k, v in pairs(fila) do base[k] = v end
+                -- piezas que FAO no tiene en el conjunto nuevo: se quedan sin cubrir (no las del escalón anterior)
+                for _, hueco in ipairs({ "cabeza", "pecho", "piernas", "pies" }) do
+                  if fila[hueco] == nil then base[hueco] = nil end
+                end
+              else
+                datos.looks[cl][gen][esc] = fila
+              end
+            end
+          end
+        end
+      end
       activoCache = datos ~= nil and love.filesystem.getInfo("arte/fao/p001b/Wait_f.png") ~= nil
     end
   end

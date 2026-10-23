@@ -308,11 +308,14 @@ function M.aMapa(crudo, datos, reglas)
       for y = math.max(1, math.floor(cy) - 4), math.min(h - 2, math.floor(cy) + 4) do
         for x = math.max(1, math.floor(cx) - 4), math.min(w - 2, math.floor(cx) + 4) do
           local d = (x + 0.5 - cx) ^ 2 + (y + 0.5 - cy) ^ 2
-          if libre(x, y) and d < md then mx, my, md = x, y, d end
+          if libre(x, y) then
+            if M.puntoEnPoligono(p.puntos, (x + 0.5) * M.CELDA, (y + 0.5) * M.CELDA) then d = d - 1000 end      -- (mejor una casilla dentro del punto: así la salida queda donde se aparece)
+            if d < md then mx, my, md = x, y, d end
+          end
         end
       end
       if mx then mapa.entrada = { x = mx + 0.5, y = my + 0.5 } end
-      mapa.mpc.salidas = { { id = 31, puntos = p.puntos, entrada = true } }          -- (sustituye a los triángulos 1 y 2: la salida es la entrada)
+      mapa.mpc.salidas = { { id = 31, puntos = p.puntos, entrada = true, cx = cx, cy = cy } }          -- (sustituye a los triángulos 1 y 2: la salida es la entrada)
       break
     end
   end

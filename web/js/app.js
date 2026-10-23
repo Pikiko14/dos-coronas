@@ -83,35 +83,79 @@
 
   // ------------------------------------------------------------------ monturas
   var MONTURAS = [
-    ["caballo", "Caballo", "Nivel 10", "+40 % de velocidad", "oro"], ["corcel_real", "Corcel real", "Nivel 12", "+38 %", "oro"],
-    ["unicornio", "Unicornio", "Nivel 14", "+42 % · deja estrellas", "oro"], ["lobo_guerra", "Lobo de guerra", "Nivel 16", "+45 %", "oro"],
-    ["lobo_ascua", "Lobo de ascuas", "Nivel 18", "+46 % · deja llamas", "oro"], ["lobo_escarcha", "Lobo de escarcha", "Nivel 21", "+47 % · nevada", "oro"],
-    ["toro_trueno", "Toro del trueno", "Nivel 24", "+40 % · rayos", "oro"], ["corcel_fuego", "Corcel de fuego", "Nivel 25", "+50 %", "oro"],
-    ["pegaso", "Pegaso", "Nivel 28", "+52 % · alas", "oro"], ["buey", "Buey de carga", "Nivel 5", "Transporte de mercancías", "oro"],
-    ["bisonte_guerra", "Bisonte acorazado", "Nivel 20", "+28 % · aguanta mucho", "oro"],
-    ["dragon", "Dragón", "Item Mall", "+55 % · la más rápida", "mall"], ["fenix", "Fénix", "Item Mall", "+54 % · alas de fuego", "mall"],
-    ["dragon_hielo", "Dragón de hielo", "Item Mall", "+54 % · nevada", "mall"], ["dragon_sombra", "Dragón de sombra", "Item Mall", "+54 % · humo violeta", "mall"],
-    ["corcel_astral", "Corcel astral", "Item Mall", "+52 % · estrellas", "mall"], ["gargola_oro", "Gárgola de oro", "Item Mall", "+50 % · destellos", "mall"]
+    ["buey", "Buey de carga", "Oficio · nivel 5", "Transporte: carga 22", "nv"],
+    ["caballo", "Caballo", "Oficio · nivel 10", "Transporte: carga 6", "nv"],
+    ["mnt_001", "Corcel blanco", "Gratis en el establo", "+40 % de velocidad", "gratis"],
+    ["mnt_002", "Gallo de monta", "Gratis en el establo", "+38 % de velocidad", "gratis"],
+    ["mnt_005", "Burro", "Gratis en el establo", "+40 % de velocidad", "gratis"],
+    ["mnt_006", "Lobo blanco", "Gratis en el establo", "+30 % de velocidad", "gratis"],
+    ["mnt_007", "Hámster de cofia", "Gratis en el establo", "+38 % de velocidad", "gratis"],
+    ["mnt_008", "Zorro rojo", "Gratis en el establo", "+40 % de velocidad", "gratis"],
+    ["mnt_009", "Jabalí ámbar", "Gratis en el establo", "+40 % de velocidad", "gratis"],
+    ["mnt_026", "Corcel granate", "Gratis en el establo", "+34 % de velocidad", "gratis"],
+    ["mnt_027", "Bisonte pardo", "Gratis en el establo", "+34 % de velocidad", "gratis"],
+    ["mnt_028", "Hámster pardo", "Gratis en el establo", "+34 % de velocidad", "gratis"],
+    ["mnt_029", "Corcel de nieve", "Gratis en el establo", "+34 % de velocidad", "gratis"],
+    ["mnt_030", "Caballo castaño", "Gratis en el establo", "+34 % de velocidad", "gratis"],
+    ["mnt_031", "Rana azul", "Gratis en el establo", "+34 % de velocidad", "gratis"],
+    ["mnt_032", "Conejo escarlata", "Gratis en el establo", "+34 % de velocidad", "gratis"],
+    ["mnt_033", "Jabalí dorado", "Gratis en el establo", "+34 % de velocidad", "gratis"],
+    ["mnt_034", "Hámster del huevo", "Gratis en el establo", "+34 % de velocidad", "gratis"],
+    ["mnt_035", "Lobo de melena", "Gratis en el establo", "+34 % de velocidad", "gratis"],
+    ["mnt_036", "Gallo rojo", "Gratis en el establo", "+34 % de velocidad", "gratis"],
+    ["mnt_037", "Cerdito rosa", "Gratis en el establo", "+34 % de velocidad", "gratis"],
+    ["mnt_038", "Corcel borgoña", "Gratis en el establo", "+38 % de velocidad", "gratis"],
+    ["mnt_039", "Hámster tostado", "Item Mall", "+38 % de velocidad", "mall"],
+    ["mnt_040", "Caballo de crin oscura", "Item Mall", "+38 % de velocidad", "mall"],
+    ["mnt_103", "Tortuga viajera", "Item Mall", "+42 % de velocidad", "mall"],
+    ["mnt_104", "León dorado", "Item Mall", "+42 % de velocidad", "mall"],
+    ["mnt_105", "Autómata azul", "Item Mall", "+42 % de velocidad", "mall"],
+    ["mnt_143", "Escarabajo real", "Misión · El camino del explorador", "+42 % de velocidad", "mision"],
+    ["mnt_226", "Espíritus de la noche", "Misión · El señor del Ocaso", "+46 % de velocidad", "mision"],
+    ["mnt_239", "Centauro dorado", "Misión · La corona del Alba", "+42 % de velocidad", "mision"]
   ];
   var cm = document.getElementById("monturas-rejilla");
   if (cm) {
     MONTURAS.forEach(function (m) {
       var t = el("div", "tarjeta cristal rev",
-        '<div class="lienzo"><img class="pixel" loading="lazy" src="img/sprites/montura_' + m[0] + '.png" alt="' + m[1] + '"></div><h4>' + m[1] + "</h4><p>" + m[3] + '</p><span class="etiqueta ' + (m[4] === "mall" ? "mall" : "nv") + '">' + m[2] + "</span>");
+        '<div class="lienzo"><img class="suave" loading="lazy" src="img/sprites/montura_' + m[0] + '.png" alt="' + m[1] + '"></div><h4>' + m[1] + "</h4><p>" + m[3] + '</p><span class="etiqueta ' + m[4] + '">' + m[2] + "</span>");
       cm.appendChild(t);
     });
   }
 
   // ------------------------------------------------------------------ criaturas notables
   var BESTIARIO = [
-    ["caballero", "Señor de la Cripta", "Jefe · Cripta del Olvido"], ["titan", "Titán del Foso", "Jefe · Foso de las Brasas"], ["behemot", "Behemot del Eclipse", "Jefe · Santuario del Eclipse"],
-    ["dragon_brasas", "Dragón de brasas", "Foso de las Brasas"], ["liche", "Liche", "Santuario del Eclipse"], ["ojo_abismo", "Ojo del abismo", "Santuario del Eclipse"],
-    ["golem", "Gólem", "Foso de las Brasas"], ["demonio_rey", "Demonio rey", "Santuario del Eclipse"]
+    ["minotauro_guerra", "Minotauro de guerra", "Nivel 31 · colina"],
+    ["diablo_acorazado", "Diablo acorazado", "Nivel 32 · eclipse"],
+    ["lancero_sombras", "Lancero de las sombras", "Nivel 33 · velo"],
+    ["reptil_huesos", "Reptil de huesos", "Nivel 34 · cienaga"],
+    ["duende_guerra", "Duende de guerra", "Nivel 35 · senda"],
+    ["titan_hielo", "Titán de hielo", "Nivel 36 · pinar"],
+    ["golem_amatista", "Gólem de amatista", "Nivel 37 · eclipse"],
+    ["demonio_astado", "Demonio astado", "Nivel 38 · eclipse"],
+    ["ent_ardiente", "Ent ardiente", "Nivel 39 · colina"],
+    ["golem_escarcha", "Gólem de escarcha", "Nivel 40 · pinar"],
+    ["jefe_dragon_pardo", "Dragón Pardo", "Jefe del mundo · nivel 40"],
+    ["golem_cristal_oro", "Gólem de cristal dorado", "Nivel 41 · marea"],
+    ["samurai_dorado", "Samurái de oro", "Nivel 42 · senda"],
+    ["jefe_maestro_forja", "Maestro de la Forja", "Jefe de mazmorra · nivel 42"],
+    ["barbaro_ancestral", "Bárbaro ancestral", "Nivel 43 · campos"],
+    ["sacerdotisa_felina", "Sacerdotisa felina", "Nivel 44 · velo"],
+    ["monje_carmesi", "Monje del desierto", "Nivel 45 · marea"],
+    ["jefe_dragon_abisal", "Dragón Abisal", "Jefe del mundo · nivel 45"],
+    ["samurai_espectral", "Samurái espectral", "Nivel 46 · eclipse"],
+    ["lancero_esqueleto", "Jinete de huesos", "Nivel 47 · cienaga"],
+    ["verdugo_esqueleto", "Verdugo de huesos", "Nivel 48 · cienaga"],
+    ["golem_musgo_antiguo", "Gólem rúnico", "Nivel 49 · pinar"],
+    ["espectro_hielo", "Espectro de hielo", "Nivel 50 · marea"],
+    ["jefe_dragon_carmesi", "Dragón Carmesí", "Jefe del mundo · nivel 50"],
+    ["jefe_gorila_ancestral", "Gorila Ancestral", "Jefe del mundo · nivel 50"],
+    ["jefe_behemot_abismo", "Behemot del Abismo", "Jefe de mazmorra · nivel 50"]
   ];
   var cb = document.getElementById("bestiario-rejilla");
   if (cb) {
     BESTIARIO.forEach(function (m) {
-      cb.appendChild(el("div", "tarjeta cristal rev", '<div class="lienzo"><img class="pixel" loading="lazy" src="img/sprites/jefe_' + m[0] + '.png" alt="' + m[1] + '"></div><h4>' + m[1] + '</h4><p>' + m[2] + "</p>"));
+      cb.appendChild(el("div", "tarjeta cristal rev", '<div class="lienzo"><img class="suave" loading="lazy" src="img/criaturas/' + m[0] + '.png" alt="' + m[1] + '"></div><h4>' + m[1] + '</h4><p>' + m[2] + "</p>"));
     });
   }
 
