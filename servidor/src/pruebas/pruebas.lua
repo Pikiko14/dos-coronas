@@ -1619,7 +1619,7 @@ function Pruebas.correr()
     local mundo = Mundo.nuevo()
     mundo.entidades = {}
     local pu = mundo.mapas.mundo.puestos[1]
-    local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "albor", clase = "guerrero", nivel = 12 })
+    local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "albor", clase = "guerrero", nivel = 20 })
     p.x, p.y, p.z, p.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
     local m = mundo:spawnMonstruo("seta_azul", p.x + 1, p.y, { x = p.x, y = p.y })
     m.hp, m.hpMax, m.agresivo, m.cds = 9999, 9999, false, { auto = 1e9 }
