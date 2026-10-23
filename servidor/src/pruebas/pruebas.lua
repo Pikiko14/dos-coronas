@@ -591,6 +591,11 @@ function Pruebas.correr()
     })
     local cre = caja.enviados[#caja.enviados]
     fallar(errores, "servidor crea personaje", cre and cre.t == "sesion" and tonumber(cre.creado) ~= nil)
+    Servidor.tratar(caja, mundo, 9, { t = "cuenta", a = "listar", token = ses and ses.token })
+    local lis = caja.enviados[#caja.enviados]
+    fallar(errores, "volver al selector: la lista llega con el token", lis and lis.t == "sesion" and #lis.personajes == 2 and lis.creado == nil)
+    Servidor.tratar(caja, mundo, 9, { t = "cuenta", a = "listar", token = "falso" })
+    fallar(errores, "listar con token falso se rechaza", caja.enviados[#caja.enviados].t == "no")
     if token and pid then
       Servidor.tratar(srv, mundo, 7, { t = "hola", token = token, personaje = pid })
       local ultimo = srv.enviados[#srv.enviados]

@@ -205,6 +205,16 @@ function Servicio.tratar(servidor, mundo, idCon, msg)
       responderSesion(servidor, idCon, extra, usuario, idCuenta)
       return
     end
+    if accion == "listar" then
+      -- volver al selector de personajes sin escribir otra vez la clave
+      local cuentaId, usuario = Cuentas.cuentaDeToken(msg.token)
+      if not cuentaId then
+        servidor:enviar(idCon, { t = "no", error = usuario or "Sesión no válida." })
+        return
+      end
+      responderSesion(servidor, idCon, msg.token, usuario, cuentaId)
+      return
+    end
     if accion == "crear" then
       local cuentaId, usuario = Cuentas.cuentaDeToken(msg.token)
       if not cuentaId then

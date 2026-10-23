@@ -530,97 +530,404 @@ function I.menu(_, w, h)
   I.portada({ modo = "entrar", usuario = Ajustes.ultimoUsuario or "", clave = "", error = "" }, w, h, "entrar")
 end
 
-function I.crear(estado, w, h)
+-- ===================================================================== selector de personajes y creación (mismo estilo que la portada)
+local function panelPJ(x, y, w, h, borde, alfa, radio)
+  radio = radio or 12
+  love.graphics.setColor(0, 0, 0, 0.28)
+  love.graphics.rectangle("fill", x, y + 3, w, h, radio, radio)
+  love.graphics.setColor(0.04, 0.07, 0.15, alfa or 0.86)
+  love.graphics.rectangle("fill", x, y, w, h, radio, radio)
+  local c = borde or { 0.78, 0.64, 0.32, 0.7 }
+  love.graphics.setLineWidth(1.5)
+  love.graphics.setColor(c[1], c[2], c[3], c[4] or 0.9)
+  love.graphics.rectangle("line", x + 0.5, y + 0.5, w - 1, h - 1, radio, radio)
+  love.graphics.setLineWidth(1)
+  love.graphics.setColor(1, 1, 1, 0.04)
+  love.graphics.rectangle("line", x + 3.5, y + 3.5, w - 7, h - 7, radio - 2, radio - 2)
+end
+
+-- Halo del color de la facción detrás de un personaje (círculos suaves).
+local function aureola(cx, cy, rx, ry, color, fuerza)
+  love.graphics.setBlendMode("add")
+  for i = 1, 6 do
+    local k = i / 6
+    love.graphics.setColor(color[1], color[2], color[3], (fuerza or 0.5) * 0.09)
+    love.graphics.ellipse("fill", cx, cy, rx * (1.05 - k * 0.7), ry * (1.05 - k * 0.7))
+  end
+  love.graphics.setBlendMode("alpha")
+end
+
+local function textoSombra(t, x, y, ancho, alin, c)
+  love.graphics.setColor(0, 0, 0, 0.75)
+  love.graphics.printf(t, x + 1, y + 1, ancho, alin)
+  love.graphics.setColor(c[1], c[2], c[3], c[4] or 1)
+  love.graphics.printf(t, x, y, ancho, alin)
+end
+
+-- Cabecera común: fondo, barra con la marca y un botón de volver a la derecha.
+local function cabeceraPJ(w, h, volverTxt, volverId)
   I.limpiar()
-  I.fondo("Titles2/Forest.png", w, h, 0.62)
-  love.graphics.setFont(I.grande)
-  love.graphics.setColor(0.95, 0.86, 0.55)
-  love.graphics.printf("Crea tu personaje", 0, 16, w, "center")
-  love.graphics.setFont(I.fuente)
-  love.graphics.setColor(0.75, 0.72, 0.64)
-  love.graphics.printf("1. Facción    2. Oficio    3. Nombre", 0, 52, w, "center")
-
-  local claseVista = estado.clase or "guerrero"
-  local facVista = estado.faccion and Datos.facciones[estado.faccion]
-  caja(24, 84, 300, 520, "Así se verá")
-  if facVista then
-    love.graphics.setColor(facVista.color[1], facVista.color[2], facVista.color[3], 0.25)
-    love.graphics.rectangle("fill", 48, 160, 252, 220, 8, 8)
-  end
-  I.persona(claseVista, 174, 360, 2.3, estado.faccion, nil, estado.genero)
-  love.graphics.setColor(0.95, 0.9, 0.75)
-  local nombreVista = (estado.nombre ~= "" and estado.nombre) or "Sin nombre"
-  love.graphics.printf(nombreVista, 40, 400, 268, "center")
-  if facVista then
-    love.graphics.setColor(facVista.color)
-    love.graphics.printf(facVista.nombre, 40, 428, 268, "center")
+  if love.filesystem.getInfo("arte/hojas/new-sprites/Titles1/Portada.jpg") then
+    I.fondo("Titles1/Portada.jpg", w, h, 0.34)
   else
-    love.graphics.setColor(0.7, 0.66, 0.58)
-    love.graphics.printf("Elige una facción", 40, 428, 268, "center")
+    I.fondo("Titles2/Forest.png", w, h, 0.55)
   end
-  love.graphics.setColor(0.9, 0.84, 0.7)
-  love.graphics.printf(Datos.clases[claseVista].nombre, 40, 452, 268, "center")
-  -- aspecto: hombre o mujer
-  I.boton(48, 480, 122, 30, (estado.genero ~= "m") and "● Hombre" or "Hombre", "genero_h")
-  I.boton(178, 480, 122, 30, (estado.genero == "m") and "● Mujer" or "Mujer", "genero_m")
-  if not estado.clase then
-    love.graphics.setColor(0.65, 0.62, 0.55)
-    love.graphics.printf("El oficio cambia este dibujo.", 40, 520, 268, "center")
+  local barra, margen = 58, math.max(28, math.min(64, w * 0.045))
+  love.graphics.setColor(0.03, 0.05, 0.12, 0.7)
+  love.graphics.rectangle("fill", 0, 0, w, barra)
+  love.graphics.setColor(0.78, 0.64, 0.32, 0.45)
+  love.graphics.rectangle("fill", 0, barra - 1, w, 1)
+  love.graphics.setFont(fuentePortada("marca15", 15))
+  love.graphics.setColor(0.95, 0.82, 0.42)
+  love.graphics.polygon("fill", margen, 22, margen + 6, 29, margen, 36, margen - 6, 29)
+  love.graphics.print("DOS CORONAS", margen + 16, 20)
+  if volverTxt then
+    local bw = 190
+    local x, y = w - margen - bw, 9
+    local hover = sobre(x, y, bw, 40)
+    love.graphics.setColor(0.07, 0.1, 0.2, hover and 0.95 or 0.7)
+    love.graphics.rectangle("fill", x, y, bw, 40, 10, 10)
+    love.graphics.setColor(0.93, 0.75, 0.28, hover and 1 or 0.7)
+    love.graphics.rectangle("line", x + 0.5, y + 0.5, bw - 1, 39, 10, 10)
+    love.graphics.setFont(I.fuente)
+    love.graphics.setColor(hover and 1 or 0.92, hover and 0.9 or 0.86, hover and 0.6 or 0.6)
+    love.graphics.printf("‹  " .. volverTxt, x, y + 10, bw, "center")
+    I.registrar(x, y, bw, 40, volverId)
+  end
+  return barra, margen
+end
+
+function I.personajes(lista, usuario, w, h, errorTxt)
+  local barra, margen = cabeceraPJ(w, h, "Cerrar sesión", "cuenta_salir")
+  lista = lista or {}
+  local MAX = 4
+  love.graphics.setFont(fuentePortada("titulo30", 30))
+  textoSombra("Elige tu personaje", 0, barra + 26, w, "center", { 0.98, 0.88, 0.55 })
+  love.graphics.setFont(I.fuente)
+  textoSombra("Cuenta: " .. (usuario or "") .. "   ·   " .. #lista .. " de " .. MAX .. " personajes", 0, barra + 68, w, "center", { 0.88, 0.9, 0.96 })
+  if errorTxt and errorTxt ~= "" then
+    local f = fuentePortada("mini15", 15)
+    love.graphics.setFont(f)
+    local tw = math.min(w - 120, f:getWidth(errorTxt) + 40)
+    panelPJ((w - tw) / 2, barra + 98, tw, 34, { 1, 0.45, 0.4, 0.9 }, 0.92, 10)
+    love.graphics.setColor(1, 0.7, 0.65)
+    love.graphics.printf(errorTxt, (w - tw) / 2 + 12, barra + 106, tw - 24, "center")
+    love.graphics.setFont(I.fuente)
   end
 
-  local function tarjetaFaccion(id, x)
+  local gap = 18
+  local cw = math.max(190, math.min(262, math.floor((w - margen * 2 - gap * (MAX - 1)) / MAX)))
+  local ch = math.max(330, math.min(430, h - barra - 230))
+  local total = MAX * cw + (MAX - 1) * gap
+  local x0 = math.floor((w - total) / 2)
+  local y0 = barra + 146
+  local t = love.timer.getTime()
+  for i = 1, MAX do
+    local pj = lista[i]
+    local x = x0 + (i - 1) * (cw + gap)
+    if pj then
+      local fac = Datos.facciones[pj.faccion]
+      local clase = Datos.clases[pj.clase]
+      local col = fac and fac.color or { 0.8, 0.8, 0.8 }
+      local hover = sobre(x, y0, cw, ch)
+      panelPJ(x, y0, cw, ch, { col[1], col[2], col[3], hover and 1 or 0.6 }, hover and 0.94 or 0.86, 14)
+      love.graphics.stencil(function() love.graphics.rectangle("fill", x + 4, y0 + 4, cw - 8, ch - 8, 12, 12) end, "replace", 1)
+      love.graphics.setStencilTest("greater", 0)
+      love.graphics.setColor(col[1] * 0.35, col[2] * 0.35, col[3] * 0.35, 0.55)
+      love.graphics.rectangle("fill", x + 4, y0 + 4, cw - 8, ch * 0.62)
+      aureola(x + cw / 2, y0 + ch * 0.42, cw * 0.46, ch * 0.34, col, hover and 1.1 or 0.8)
+      love.graphics.setStencilTest()
+      local bob = hover and math.sin(t * 3) * 2 or 0
+      I.persona(pj.clase, x + cw / 2, y0 + ch * 0.57 + bob, math.min(2.0, ch / 225), pj.faccion, (type(pj.addon) == "string" and Personajes.skins[pj.addon]) and pj.addon or nil, pj.genero)
+      love.graphics.setFont(fuentePortada("subtitulo22", 22))
+      textoSombra(pj.nombre, x + 8, y0 + ch * 0.58 + 8, cw - 16, "center", { 1, 0.96, 0.86 })
+      love.graphics.setFont(I.fuente)
+      -- insignia de nivel
+      local ins = "Nivel " .. (pj.nivel or 1)
+      local iw = I.fuente:getWidth(ins) + 22
+      love.graphics.setColor(0.93, 0.75, 0.28, 0.2)
+      love.graphics.rectangle("fill", x + (cw - iw) / 2, y0 + ch * 0.58 + 40, iw, 24, 12, 12)
+      love.graphics.setColor(0.93, 0.75, 0.28, 0.9)
+      love.graphics.rectangle("line", x + (cw - iw) / 2 + 0.5, y0 + ch * 0.58 + 40.5, iw - 1, 23, 12, 12)
+      love.graphics.setColor(1, 0.9, 0.55)
+      love.graphics.printf(ins, x, y0 + ch * 0.58 + 43, cw, "center")
+      love.graphics.setColor(col[1], col[2], col[3])
+      love.graphics.printf((fac and fac.nombre or "") .. "  ·  " .. (clase and clase.nombre or ""), x + 6, y0 + ch * 0.58 + 72, cw - 12, "center")
+      I.registrar(x, y0, cw, ch, "pj_" .. pj.id)
+      botonPortada(x + 18, y0 + ch - 58, cw - 36, 42, "Jugar  →", "pj_" .. pj.id)
+    else
+      local hover = sobre(x, y0, cw, ch)
+      love.graphics.setColor(0.04, 0.07, 0.15, hover and 0.82 or 0.6)
+      love.graphics.rectangle("fill", x, y0, cw, ch, 14, 14)
+      love.graphics.setColor(0.78, 0.64, 0.32, hover and 0.95 or 0.45)
+      love.graphics.setLineWidth(1.5)
+      for k = 0, math.floor(cw / 14) do
+        local sx = x + 8 + k * 14
+        if sx + 8 < x + cw - 8 then
+          love.graphics.line(sx, y0 + 0.5, sx + 8, y0 + 0.5)
+          love.graphics.line(sx, y0 + ch - 0.5, sx + 8, y0 + ch - 0.5)
+        end
+      end
+      for k = 0, math.floor(ch / 14) do
+        local sy = y0 + 8 + k * 14
+        if sy + 8 < y0 + ch - 8 then
+          love.graphics.line(x + 0.5, sy, x + 0.5, sy + 8)
+          love.graphics.line(x + cw - 0.5, sy, x + cw - 0.5, sy + 8)
+        end
+      end
+      love.graphics.setLineWidth(1)
+      local libre = #lista < MAX
+      local cx, cy = x + cw / 2, y0 + ch * 0.4
+      love.graphics.setColor(0.93, 0.75, 0.28, hover and 0.3 or 0.15)
+      love.graphics.circle("fill", cx, cy, 38)
+      love.graphics.setColor(0.98, 0.84, 0.45, hover and 1 or 0.75)
+      love.graphics.setLineWidth(3)
+      love.graphics.line(cx - 15, cy, cx + 15, cy)
+      love.graphics.line(cx, cy - 15, cx, cy + 15)
+      love.graphics.setLineWidth(1)
+      love.graphics.setFont(fuentePortada("subtitulo20", 20))
+      love.graphics.setColor(0.95, 0.9, 0.75, hover and 1 or 0.8)
+      love.graphics.printf("Espacio libre", x, cy + 54, cw, "center")
+      love.graphics.setFont(I.fuente)
+      love.graphics.setColor(0.7, 0.74, 0.82)
+      love.graphics.printf("Crea un nuevo héroe:\nfacción, oficio y nombre.", x + 14, cy + 86, cw - 28, "center")
+      if libre then
+        I.registrar(x, y0, cw, ch, "pj_nuevo")
+        botonPortada(x + 18, y0 + ch - 58, cw - 36, 42, "Crear personaje", "pj_nuevo")
+      end
+    end
+  end
+  love.graphics.setFont(fuentePortada("mini14", 14))
+  love.graphics.setColor(0.86, 0.88, 0.94, 0.9)
+  love.graphics.printf("Haz clic en un personaje para entrar. Tu progreso se guarda solo.", 0, h - 40, w, "center")
+  love.graphics.setFont(I.fuente)
+end
+
+-- Barra de una característica de oficio (v / maximo).
+local function barraStat(x, y, w, etiqueta, v, maximo, color)
+  love.graphics.setFont(fuentePortada("mini14", 14))
+  love.graphics.setColor(0.82, 0.85, 0.92)
+  love.graphics.print(etiqueta, x, y - 1)
+  local bx = x + 92
+  local bw = w - 92 - 44
+  love.graphics.setColor(0.02, 0.03, 0.08, 0.9)
+  love.graphics.rectangle("fill", bx, y + 2, bw, 10, 5, 5)
+  local f = math.max(0.03, math.min(1, v / math.max(1, maximo)))
+  love.graphics.setColor(color[1], color[2], color[3], 1)
+  love.graphics.rectangle("fill", bx + 1, y + 3, (bw - 2) * f, 8, 4, 4)
+  love.graphics.setColor(1, 1, 1, 0.25)
+  love.graphics.rectangle("fill", bx + 1, y + 3, (bw - 2) * f, 3, 3, 3)
+  love.graphics.setColor(0.95, 0.9, 0.7)
+  love.graphics.print(tostring(math.floor(v + 0.5)), bx + bw + 8, y - 1)
+end
+
+function I.crear(estado, w, h)
+  local barra, margen = cabeceraPJ(w, h, "Volver", "crear_volver")
+  local claseId = estado.clase
+  local claseVista = claseId or "guerrero"
+  local facId = estado.faccion
+  local fac = facId and Datos.facciones[facId]
+  local col = fac and fac.color or { 0.8, 0.74, 0.5 }
+  local t = love.timer.getTime()
+
+  -- pasos
+  love.graphics.setFont(fuentePortada("marca15", 15))
+  local pasos = { { "1", "Facción", facId ~= nil }, { "2", "Oficio", claseId ~= nil }, { "3", "Nombre", (estado.nombre or "") ~= "" } }
+  local pw, pg = 150, 14
+  local px = (w - (#pasos * pw + (#pasos - 1) * pg)) / 2
+  for i, p in ipairs(pasos) do
+    local x = px + (i - 1) * (pw + pg)
+    local hecho = p[3]
+    love.graphics.setColor(hecho and 0.2 or 0.05, hecho and 0.36 or 0.08, hecho and 0.2 or 0.16, 0.85)
+    love.graphics.rectangle("fill", x, barra + 12, pw, 30, 15, 15)
+    love.graphics.setColor(hecho and 0.5 or 0.78, hecho and 0.9 or 0.64, hecho and 0.5 or 0.32, 0.9)
+    love.graphics.rectangle("line", x + 0.5, barra + 12.5, pw - 1, 29, 15, 15)
+    love.graphics.setColor(1, 0.96, 0.82)
+    love.graphics.printf((hecho and "✓ " or (p[1] .. "  ")) .. p[2], x, barra + 19, pw, "center")
+  end
+
+  local top = barra + 56
+  local izqW = math.max(300, math.min(380, math.floor(w * 0.3)))
+  local derX = margen + izqW + 22
+  local derW = w - derX - margen
+
+  -- ---- vista previa (izquierda)
+  local altoIzq = h - top - 24
+  panelPJ(margen, top, izqW, altoIzq, { col[1], col[2], col[3], 0.8 }, 0.88, 14)
+  love.graphics.stencil(function() love.graphics.rectangle("fill", margen + 4, top + 4, izqW - 8, altoIzq - 8, 12, 12) end, "replace", 1)
+  love.graphics.setStencilTest("greater", 0)
+  love.graphics.setColor(col[1] * 0.3, col[2] * 0.3, col[3] * 0.3, 0.55)
+  love.graphics.rectangle("fill", margen + 4, top + 4, izqW - 8, altoIzq * 0.62)
+  aureola(margen + izqW / 2, top + altoIzq * 0.34, izqW * 0.5, altoIzq * 0.3, col, 0.9)
+  love.graphics.setStencilTest()
+  local zoom = math.min(3.0, altoIzq / 205)
+  I.persona(claseVista, margen + izqW / 2, top + altoIzq * 0.56 + math.sin(t * 2) * 1.5, zoom, facId, nil, estado.genero)
+  local yy = top + altoIzq * 0.6 + 18
+  love.graphics.setFont(fuentePortada("subtitulo22", 22))
+  textoSombra((estado.nombre ~= "" and estado.nombre) or "Sin nombre", margen + 8, yy, izqW - 16, "center", { 1, 0.96, 0.86 })
+  love.graphics.setFont(I.fuente)
+  yy = yy + 32
+  love.graphics.setColor(col[1], col[2], col[3])
+  love.graphics.printf(fac and fac.nombre or "Elige una facción", margen, yy, izqW, "center")
+  love.graphics.setColor(0.9, 0.86, 0.72)
+  love.graphics.printf(claseId and Datos.clases[claseId].nombre or "Elige un oficio", margen, yy + 22, izqW, "center")
+  -- aspecto
+  local bw2 = (izqW - 48 - 10) / 2
+  local by = top + altoIzq - 56
+  for k, g in ipairs({ { "h", "Hombre" }, { "m", "Mujer" } }) do
+    local x = margen + 24 + (k - 1) * (bw2 + 10)
+    local sel = (estado.genero == "m") == (g[1] == "m")
+    local hover = sobre(x, by, bw2, 36)
+    love.graphics.setColor(sel and 0.16 or 0.06, sel and 0.2 or 0.09, sel and 0.36 or 0.18, 0.95)
+    love.graphics.rectangle("fill", x, by, bw2, 36, 10, 10)
+    love.graphics.setColor(sel and 0.98 or 0.55, sel and 0.84 or 0.5, sel and 0.4 or 0.42, hover and 1 or 0.85)
+    love.graphics.rectangle("line", x + 0.5, by + 0.5, bw2 - 1, 35, 10, 10)
+    love.graphics.setColor(sel and 1 or 0.8, sel and 0.94 or 0.82, sel and 0.7 or 0.85)
+    love.graphics.printf((sel and "● " or "") .. g[2], x, by + 9, bw2, "center")
+    I.registrar(x, by, bw2, 36, "genero_" .. g[1])
+  end
+
+  -- ---- facciones (derecha, arriba)
+  local fy = top
+  local fh = 132
+  local fgap = 14
+  local fw = (derW - fgap) / 2
+  love.graphics.setFont(fuentePortada("marca14", 14))
+  love.graphics.setColor(0.93, 0.75, 0.28)
+  love.graphics.print("1 · ELIGE TU FACCIÓN", derX, fy - 2)
+  fy = fy + 20
+  for k, id in ipairs({ "albor", "umbra" }) do
     local f = Datos.facciones[id]
-    local elegida = estado.faccion == id
-    love.graphics.setColor(elegida and 0.16 or 0.08, elegida and 0.13 or 0.07, elegida and 0.08 or 0.1, 0.96)
-    love.graphics.rectangle("fill", x, 84, 450, 168, 6, 6)
-    love.graphics.setColor(elegida and f.color[1] or 0.7, elegida and f.color[2] or 0.6, elegida and f.color[3] or 0.35, 1)
-    love.graphics.rectangle("line", x, 84, 450, 168, 6, 6)
-    love.graphics.setColor(f.color[1], f.color[2], f.color[3], 0.2)
-    love.graphics.rectangle("fill", x + 16, 118, 120, 110, 6, 6)
-    I.persona(claseVista, x + 76, 220, 1.25, id, nil, estado.genero)
-    love.graphics.setColor(f.color)
-    love.graphics.print(f.nombre, x + 150, 108)
-    love.graphics.setColor(0.9, 0.86, 0.75)
-    love.graphics.print(f.titulo, x + 150, 130)
-    love.graphics.setColor(0.8, 0.78, 0.7)
-    love.graphics.printf(f.texto, x + 150, 154, 280, "left")
-    I.boton(x + 150, 210, 180, 30, elegida and "Facción elegida" or "Elegir facción", "faccion_" .. id)
+    local x = derX + (k - 1) * (fw + fgap)
+    local elegida = facId == id
+    local hover = sobre(x, fy, fw, fh)
+    panelPJ(x, fy, fw, fh, { f.color[1], f.color[2], f.color[3], elegida and 1 or (hover and 0.8 or 0.45) }, elegida and 0.95 or 0.82, 12)
+    if elegida then
+      love.graphics.stencil(function() love.graphics.rectangle("fill", x + 3, fy + 3, fw - 6, fh - 6, 10, 10) end, "replace", 1)
+      love.graphics.setStencilTest("greater", 0)
+      aureola(x + 70, fy + fh * 0.5, 110, fh * 0.7, f.color, 0.9)
+      love.graphics.setStencilTest()
+    end
+    I.persona(claseVista, x + 62, fy + fh - 10, 0.82, id, nil, estado.genero)
+    love.graphics.setFont(fuentePortada("subtitulo20", 20))
+    love.graphics.setColor(f.color[1], f.color[2], f.color[3])
+    love.graphics.print(f.nombre, x + 124, fy + 10)
+    love.graphics.setFont(I.fuente)
+    love.graphics.setColor(0.95, 0.9, 0.75)
+    love.graphics.print(f.titulo, x + 124, fy + 36)
+    love.graphics.setFont(fuentePortada("mini14", 14))
+    love.graphics.setColor(0.8, 0.82, 0.88)
+    love.graphics.printf(f.texto, x + 124, fy + 60, fw - 136, "left")
+    if elegida then
+      love.graphics.setColor(f.color[1], f.color[2], f.color[3], 1)
+      love.graphics.print("✓ Elegida", x + fw - 80, fy + 8)
+    end
+    I.registrar(x, fy, fw, fh, "faccion_" .. id)
   end
-  tarjetaFaccion("albor", 348)
-  tarjetaFaccion("umbra", 812)
 
-  -- los oficios de la facción elegida (Alba suma al lancero y Ocaso al nigromante)
-  local clases = Datos.clasesDe(estado.faccion)
-  local paso = math.min(230, math.floor(920 / #clases))
-  local ancho = paso - 12
+  -- ---- oficios
+  local cy = fy + fh + 16
+  love.graphics.setFont(fuentePortada("marca14", 14))
+  love.graphics.setColor(0.93, 0.75, 0.28)
+  love.graphics.print("2 · ELIGE TU OFICIO", derX, cy - 2)
+  cy = cy + 20
+  local clases = Datos.clasesDe(facId)
+  local cgap = 10
+  local cwid = math.min(190, math.floor((derW - cgap * (#clases - 1)) / #clases))
+  local chei = 186
+  local ox = derX + math.floor((derW - (#clases * cwid + (#clases - 1) * cgap)) / 2)
   for i, id in ipairs(clases) do
     local c = Datos.clases[id]
-    local cx = 348 + (i - 1) * paso
-    local elegida = estado.clase == id
-    love.graphics.setColor(elegida and 0.16 or 0.08, elegida and 0.12 or 0.07, 0.08, 0.96)
-    love.graphics.rectangle("fill", cx, 268, ancho, 250, 6, 6)
-    love.graphics.setColor(elegida and 0.95 or 0.7, elegida and 0.78 or 0.6, 0.35, 1)
-    love.graphics.rectangle("line", cx, 268, ancho, 250, 6, 6)
-    love.graphics.setColor(0.95, 0.9, 0.75)
-    love.graphics.printf(c.nombre, cx, 278, ancho, "center")
-    I.persona(id, cx + ancho / 2, 400, 1.15, estado.faccion, nil, estado.genero)
-    love.graphics.setColor(0.75, 0.72, 0.64)
-    love.graphics.printf(c.rol, cx + 8, 414, ancho - 16, "center")
-    I.boton(cx + 12, 472, ancho - 24, 30, elegida and "Oficio elegido" or "Elegir", "clase_" .. id)
+    local x = ox + (i - 1) * (cwid + cgap)
+    local elegida = claseId == id
+    local hover = sobre(x, cy, cwid, chei)
+    panelPJ(x, cy, cwid, chei, { 0.93, 0.75, 0.28, elegida and 1 or (hover and 0.8 or 0.35) }, elegida and 0.95 or 0.82, 12)
+    if elegida then
+      love.graphics.stencil(function() love.graphics.rectangle("fill", x + 3, cy + 3, cwid - 6, chei - 6, 10, 10) end, "replace", 1)
+      love.graphics.setStencilTest("greater", 0)
+      aureola(x + cwid / 2, cy + chei * 0.45, cwid * 0.5, chei * 0.45, col, 0.8)
+      love.graphics.setStencilTest()
+    end
+    I.persona(id, x + cwid / 2, cy + chei - 70 + (hover and math.sin(t * 4) or 0), math.min(1.15, cwid / 150), facId, nil, estado.genero)
+    love.graphics.setFont(I.fuente)
+    love.graphics.setColor(0.98, 0.94, 0.8)
+    love.graphics.printf(c.nombre, x, cy + chei - 62, cwid, "center")
+    love.graphics.setFont(fuentePortada("mini13", 13))
+    love.graphics.setColor(0.72, 0.78, 0.88)
+    love.graphics.printf(c.rol or "", x + 6, cy + chei - 40, cwid - 12, "center")
+    I.registrar(x, cy, cwid, chei, "clase_" .. id)
   end
 
-  caja(348, h - 92, 620, 76, "3. Nombre")
-  love.graphics.setColor(0.11, 0.15, 0.28)
-  love.graphics.rectangle("fill", 368, h - 58, 280, 32, 4, 4)
-  love.graphics.setColor(1, 0.95, 0.8)
-  love.graphics.print((estado.nombre or "") .. (I.foco == "nombre" and "_" or ""), 378, h - 52)
-  I.registrar(368, h - 58, 280, 32, "foco_nombre")
-  if estado.error and estado.error ~= "" then
-    love.graphics.setColor(1, 0.45, 0.4)
-    love.graphics.print(estado.error, 368, h - 108)
+  -- ---- detalle del oficio elegido
+  local dy = cy + chei + 12
+  local dh = h - dy - 104
+  if dh > 70 then
+    panelPJ(derX, dy, derW, dh, { 0.78, 0.64, 0.32, 0.5 }, 0.8, 12)
+    if claseId then
+      local c = Datos.clases[claseId]
+      love.graphics.setFont(fuentePortada("subtitulo18", 18))
+      love.graphics.setColor(0.98, 0.88, 0.55)
+      love.graphics.print(c.nombre, derX + 16, dy + 10)
+      love.graphics.setFont(fuentePortada("mini14", 14))
+      love.graphics.setColor(0.82, 0.85, 0.92)
+      love.graphics.printf(c.desc or c.rol or "", derX + 16, dy + 38, derW * 0.46 - 24, "left")
+      -- características frente al mejor valor de todos los oficios
+      local mx = { hp = 1, mp = 1, atk = 1, matk = 1, def = 1 }
+      for _, o in pairs(Datos.clases) do
+        for k in pairs(mx) do mx[k] = math.max(mx[k], o[k] or 0) end
+      end
+      local sx, sw = derX + derW * 0.5, derW * 0.5 - 18
+      local filas = {
+        { "Vida", c.hp, mx.hp, { 0.45, 0.85, 0.45 } },
+        { "Maná", c.mp, mx.mp, { 0.4, 0.62, 1 } },
+        { "Ataque", c.atk, mx.atk, { 0.95, 0.5, 0.35 } },
+        { "Magia", c.matk or 0, mx.matk, { 0.75, 0.5, 1 } },
+        { "Defensa", c.def, mx.def, { 0.85, 0.78, 0.4 } },
+      }
+      local paso = math.min(20, (dh - 20) / #filas)
+      for k, f in ipairs(filas) do barraStat(sx, dy + 12 + (k - 1) * paso, sw, f[1], f[2] or 0, f[3], f[4]) end
+    else
+      love.graphics.setFont(I.fuente)
+      love.graphics.setColor(0.75, 0.78, 0.86)
+      love.graphics.printf("Elige un oficio para ver sus características.", derX, dy + dh / 2 - 10, derW, "center")
+    end
   end
-  I.boton(980, h - 70, 200, 40, "Entrar al mundo", "crear_entrar", estado.faccion and estado.clase and estado.nombre ~= "")
-  I.boton(24, h - 70, 140, 36, "Volver", "crear_volver")
+
+  -- ---- nombre y entrar
+  local ny = h - 84
+  panelPJ(derX, ny, derW, 64, { 0.78, 0.64, 0.32, 0.7 }, 0.88, 12)
+  love.graphics.setFont(fuentePortada("marca14", 14))
+  love.graphics.setColor(0.93, 0.75, 0.28)
+  love.graphics.print("3 · NOMBRE", derX + 16, ny + 6)
+  local campoW = derW - 250 - 40
+  local foco = I.foco == "nombre"
+  love.graphics.setColor(0.05, 0.08, 0.16, 0.95)
+  love.graphics.rectangle("fill", derX + 16, ny + 26, campoW, 30, 8, 8)
+  love.graphics.setColor(foco and 0.95 or 0.62, foco and 0.78 or 0.58, foco and 0.38 or 0.42, foco and 1 or 0.75)
+  love.graphics.rectangle("line", derX + 16.5, ny + 26.5, campoW - 1, 29, 8, 8)
+  love.graphics.setFont(I.fuente)
+  if (estado.nombre or "") == "" and not foco then
+    love.graphics.setColor(0.58, 0.62, 0.7)
+    love.graphics.print("Escribe el nombre de tu héroe", derX + 28, ny + 31)
+  else
+    love.graphics.setColor(0.97, 0.98, 1)
+    love.graphics.print((estado.nombre or "") .. (foco and "|" or ""), derX + 28, ny + 31)
+  end
+  I.registrar(derX + 16, ny + 26, campoW, 30, "foco_nombre")
+  local listo = facId ~= nil and claseId ~= nil and (estado.nombre or "") ~= ""
+  if listo then
+    botonPortada(derX + derW - 250, ny + 10, 234, 44, "Entrar al mundo  →", "crear_entrar")
+  else
+    panelPJ(derX + derW - 250, ny + 10, 234, 44, { 0.4, 0.42, 0.5, 0.7 }, 0.8, 10)
+    love.graphics.setColor(0.6, 0.64, 0.74)
+    love.graphics.printf(not facId and "Elige una facción" or (not claseId and "Elige un oficio" or "Escribe un nombre"), derX + derW - 250, ny + 22, 234, "center")
+  end
+  if estado.error and estado.error ~= "" then
+    love.graphics.setColor(1, 0.55, 0.5)
+    love.graphics.setFont(fuentePortada("mini14", 14))
+    love.graphics.printf(estado.error, derX, ny - 22, derW, "right")
+    love.graphics.setFont(I.fuente)
+  end
 end
 
 -- Medidas del marco de juego (en píxeles lógicos de la interfaz).
@@ -4627,66 +4934,27 @@ function I.panelCasa(p, w, h)
   end
 end
 
-function I.personajes(lista, usuario, w, h, errorTxt)
-  I.limpiar()
-  I.fondo("Titles2/Forest.png", w, h, 0.62)
-  love.graphics.setFont(I.grande)
-  love.graphics.setColor(0.95, 0.86, 0.55)
-  love.graphics.printf("Elige personaje", 0, 28, w, "center")
-  love.graphics.setFont(I.fuente)
-  love.graphics.setColor(0.8, 0.78, 0.7)
-  love.graphics.printf("Cuenta: " .. (usuario or ""), 0, 68, w, "center")
-  if errorTxt and errorTxt ~= "" then
-    love.graphics.setColor(1, 0.45, 0.4)
-    love.graphics.printf(errorTxt, 80, 96, w - 160, "center")
-  end
-  local y = 130
-  if not lista or #lista == 0 then
-    love.graphics.setColor(0.85, 0.82, 0.75)
-    love.graphics.printf("Esta cuenta aún no tiene personajes.\nPulsa Crear personaje, elige facción y oficio, y ponle un nombre.", 0, 220, w, "center")
-  end
-  for _, pj in ipairs(lista or {}) do
-    local fac = Datos.facciones[pj.faccion]
-    local clase = Datos.clases[pj.clase]
-    caja(w / 2 - 340, y, 680, 96, nil)
-    if fac then
-      love.graphics.setColor(fac.color[1], fac.color[2], fac.color[3], 0.2)
-      love.graphics.rectangle("fill", w / 2 - 324, y + 12, 72, 72, 4, 4)
-    end
-    I.persona(pj.clase, w / 2 - 288, y + 84, 0.85, pj.faccion, (type(pj.addon) == "string" and Personajes.skins[pj.addon]) and pj.addon or nil, pj.genero)
-    love.graphics.setColor(fac and fac.color or { 1, 1, 1 })
-    love.graphics.print(pj.nombre .. "   nivel " .. pj.nivel, w / 2 - 220, y + 28)
-    love.graphics.setColor(0.85, 0.82, 0.75)
-    love.graphics.print((fac and fac.nombre or "") .. "  ·  " .. (clase and clase.nombre or ""), w / 2 - 220, y + 52)
-    I.boton(w / 2 + 80, y + 30, 160, 36, "Jugar", "pj_" .. pj.id)
-    y = y + 108
-  end
-  love.graphics.setColor(0.7, 0.68, 0.6)
-  love.graphics.printf("El servidor ya validó la cuenta. Jugar entra con ese personaje.", 40, h - 118, w - 80, "center")
-  I.boton(w / 2 - 220, h - 72, 240, 44, "Crear personaje", "pj_nuevo", not lista or #lista < 4)
-  I.boton(w / 2 + 40, h - 72, 180, 44, "Cerrar sesión", "cuenta_salir")
-end
-
 function I.cuenta(form, w, h)
   I.portada(form, w, h)
 end
 
 function I.panelPausa(w, h)
-  caja(w / 2 - 160, h / 2 - 150, 320, 400, "Menú")
-  I.boton(w / 2 - 120, h / 2 - 100, 240, 36, "Volver", "cerrar")
-  I.boton(w / 2 - 120, h / 2 - 50, 240, 36, "Ajustes", "ajustes")
+  caja(w / 2 - 160, h / 2 - 175, 320, 450, "Menú")
+  I.boton(w / 2 - 120, h / 2 - 125, 240, 36, "Volver", "cerrar")
+  I.boton(w / 2 - 120, h / 2 - 75, 240, 36, "Ajustes", "ajustes")
   local etiqueta, hay = "Oficio: aún no tienes", false
   local pj = I.jugadorMenu
   if pj and pj.oficioElegido then
     hay = true
     etiqueta = (pj.job and "Desactivar oficio" or "Activar oficio") .. " (" .. (NOMBRES_OFICIO[pj.oficioElegido] or "?") .. ")"
   end
-  I.boton(w / 2 - 120, h / 2, 240, 36, etiqueta, "menu_oficio", hay)
-  I.boton(w / 2 - 120, h / 2 + 50, 240, 36, "Item Mall (L)", "menu_mall")
-  I.boton(w / 2 - 120, h / 2 + 100, 240, 36, "Autopoción (R)", "menu_autopocion")
-  I.boton(w / 2 - 120, h / 2 + 150, 240, 36, "Salir al menú", "salir_menu")
+  I.boton(w / 2 - 120, h / 2 - 25, 240, 36, etiqueta, "menu_oficio", hay)
+  I.boton(w / 2 - 120, h / 2 + 25, 240, 36, "Item Mall (L)", "menu_mall")
+  I.boton(w / 2 - 120, h / 2 + 75, 240, 36, "Autopoción (R)", "menu_autopocion")
+  I.boton(w / 2 - 120, h / 2 + 125, 240, 36, "Cambiar de personaje", "volver_selector")
+  I.boton(w / 2 - 120, h / 2 + 175, 240, 36, "Salir al menú", "salir_menu")
   love.graphics.setColor(0.75, 0.72, 0.64)
-  love.graphics.printf("Tu progreso se guarda solo. El oficio solo se activa dentro de una ciudad.", w / 2 - 140, h / 2 + 196, 280, "center")
+  love.graphics.printf("Tu progreso se guarda solo. El oficio solo se activa dentro de una ciudad.", w / 2 - 140, h / 2 + 221, 280, "center")
 end
 
 function I.panelAutopocion(p, w, h)

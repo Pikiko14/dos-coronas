@@ -460,6 +460,20 @@ function Entrada.manejar(app, id)
   if id == "tk_volver" then Interfaz.panel = "ajustes" Ajustes.esperando = nil Interfaz.avisoTeclas = nil return end
   if id == "tk_restablecer" then Ajustes.restablecerTeclas() Ajustes.guardar() Ajustes.esperando = nil Interfaz.avisoTeclas = "Teclas restablecidas." return end
   if id:sub(1, 3) == "tk_" then Ajustes.esperando = id:sub(4) Interfaz.avisoTeclas = nil return end
+  if id == "volver_selector" then
+    -- sale del mundo (el servidor guarda al personaje al cortar) y pide de nuevo la lista de personajes con el token de la cuenta
+    local sesion = app.sesion
+    Interfaz.panel = nil
+    if app.rol ~= "cliente" or not (sesion and sesion.token) then
+      app.sesion = { cuentaId = nil, usuario = "", personajes = {}, error = "" }
+      app.estado = "menu"
+      return
+    end
+    local juego = require("src.presentacion.estados.juego")
+    juego.soltar(app)
+    juego.pedirCuenta(app, Config.red.host, { t = "cuenta", a = "listar", token = sesion.token }, "personajes")
+    return
+  end
   if id == "salir_menu" then
     if app.rol == "cliente" then require("src.presentacion.estados.juego").soltar(app) end
     app.sesion = { cuentaId = nil, usuario = "", personajes = {}, error = "" }

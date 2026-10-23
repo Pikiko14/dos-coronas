@@ -3878,6 +3878,7 @@ function Pruebas.tickFoto(app, dt)
   if foto.paso == "batalla" and app.jugador and app.jugador.modo == "batalla" and not foto.vista then
     -- vista del campo abierto (rocas, crestas, huecos y marcas del suelo) en vez de la base
     foto.vista = true
+    app.mundo:usarBatallaClasica()
     local r0
     for _, pr in ipairs(app.mundo.mapas.batalla.props) do
       if pr.tipo:find("risco") and (not r0 or math.abs(pr.x - 56) + math.abs(pr.y - 26) < math.abs(r0.x - 56) + math.abs(r0.y - 26)) then r0 = pr end
