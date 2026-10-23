@@ -29,10 +29,10 @@
   <montura id="mnt_036" nombre="Gallo rojo" nivel="10" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
   <montura id="mnt_037" nombre="Cerdito rosa" nivel="15" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
   <montura id="mnt_038" nombre="Corcel borgoña" nivel="15" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.38" vida="600"/>
-  <montura id="mnt_039" nombre="Hámster tostado" nivel="5" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.38" vida="600"/>
+  <montura id="mnt_039" nombre="Hámster tostado" nivel="5" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.38" vida="600"/>
   <montura id="mnt_040" nombre="Lobo Aullador" nivel="5" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.38" vida="600"/>
-  <montura id="mnt_103" nombre="Tortuga viajera" nivel="5" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_104" nombre="León dorado" nivel="5" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_103" nombre="Tortuga viajera" nivel="20" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_104" nombre="León dorado" nivel="20" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
   <montura id="mnt_105" nombre="Autómata azul" nivel="5" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
   <montura id="mnt_143" nombre="Escarabajo real" nivel="10" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
   <montura id="mnt_144" nombre="Escarabajo de acero" nivel="10" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
