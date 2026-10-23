@@ -175,8 +175,8 @@ def main():
         DESCARGAS = sys.argv[2]
     os.makedirs(salida, exist_ok=True)
     idx = indice()
-    # todos los .shp de shape/ y el .spr suelto de shape/stage (los .spr de personajes y criaturas se hornean con las herramientas de cada uno)
-    tareas = [(k, v, salida) for k, v in idx.items() if k.startswith("shape/") and (k.endswith(".shp") or (k.endswith(".spr") and k.startswith("shape/stage/")))]
+    # todos los .shp y todos los .spr de shape/ (personajes, criaturas, hechizos, objetos...): cada cuadro de un .spr sale como <ruta>_<n>.png
+    tareas = [(k, v, salida) for k, v in idx.items() if k.startswith("shape/") and (k.endswith(".shp") or k.endswith(".spr"))]
     print(len(tareas), "archivos a extraer a", salida)
     n = 0
     with open(os.path.join(salida, "manifest.jsonl"), "w", encoding="utf-8", newline="\n") as man, Pool(max(1, (os.cpu_count() or 4) - 1)) as pool:

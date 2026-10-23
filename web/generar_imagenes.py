@@ -20,12 +20,16 @@ CAP = os.path.join(RAIZ, "juego", "capturas")
 WEB_SPR = os.path.join(CAP, "web")
 IMG = os.path.join(RAIZ, "web", "img")
 
-CAPTURAS = ["ciudad", "poderes", "arbol", "equipo", "mzjefe", "batalla", "mascotas", "mall_mascotas", "establo", "casa", "subastas", "mercado", "encantar", "estados", "crear"]
+CAPTURAS = ["ciudad", "poderes", "arbol", "equipo", "mzjefe", "batalla", "establo", "casa", "subastas", "mercado", "encantar", "estados", "crear"]
+
+
+# capturas de las mascotas: las hace la prueba del cliente con DC_PRUEBA_MASCOTAS=1 lovec juego --test (capturas/mascotas_<lista|tienda|mall>.png)
+RENOMBRADAS = {"mascotas_lista": "mascotas", "mascotas_tienda": "tienda_mascotas", "mascotas_mall": "mall_mascotas"}
 
 
 def capturas():
     os.makedirs(os.path.join(IMG, "capturas"), exist_ok=True)
-    for n in CAPTURAS:
+    for n in CAPTURAS + list(RENOMBRADAS):
         p = os.path.join(CAP, n + ".png")
         if not os.path.exists(p):
             print("falta", p)
@@ -33,7 +37,7 @@ def capturas():
         im = Image.open(p).convert("RGB")
         if im.width > 1280:
             im = im.resize((1280, round(im.height * 1280 / im.width)), Image.LANCZOS)
-        im.save(os.path.join(IMG, "capturas", n + ".jpg"), quality=84, optimize=True)
+        im.save(os.path.join(IMG, "capturas", RENOMBRADAS.get(n, n) + ".jpg"), quality=84, optimize=True)
 
 
 def ids_altos():

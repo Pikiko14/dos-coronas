@@ -1,14 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Mascotas. rol: ataque, vampiro, guardian, sanador, mana o veneno; atk = multiplicador de ataque. Orden = el de la tienda.
+  Mascotas de ataque, como las de Free Angels Online: cada línea empieza en una forma inicial (etapa 1) y evoluciona SOLA al llegar a un nivel de la mascota
+  (evo = la forma siguiente, evoNivel = nivel al que evoluciona). Solo se compra la forma inicial: el osito, con oro, en la tienda del mercado; las demás
+  líneas y las recolectoras, con Monedas Corona en el Item Mall (mall="true"). precio = oro (tienda) o monedas (mall). nivel = nivel mínimo del dueño.
+  atk = multiplicador de ataque de la forma. sprite = arte de la forma si no es su id (arte/monstruos/masc_<sprite>, mascotas_fao.py).
 -->
 <mascotas>
-  <especie id="gatito" nombre="Gatito" nivel="1" atk="1.25" desc="Rápido y mordedor: el que más pega." precio="240" rol="ataque"/>
-  <especie id="murcielago" nombre="Murciélago" nivel="5" atk="0.85" desc="Te devuelve parte de lo que muerde." precio="800" rol="vampiro"/>
-  <especie id="limo" nombre="Limo guardián" nivel="8" atk="0.45" desc="Amortigua los golpes que recibes." precio="1450" rol="guardian"/>
-  <especie id="flor" nombre="Flor curativa" nivel="12" atk="0.35" desc="Te cura un poco cada pocos segundos." precio="2550" rol="sanador"/>
-  <especie id="hada" nombre="Hada" nivel="16" atk="0.4" desc="Te devuelve maná mientras luchas." precio="4150" rol="mana"/>
-  <especie id="avispa" nombre="Avispa" nivel="20" atk="0.9" desc="Su aguijón envenena a tu objetivo." precio="6700" rol="veneno"/>
+  <!-- Osito (Baby Bear -> Hula Bear -> Bear Man): la única que se compra con oro -->
+  <especie id="osito_1" nombre="Osito pardo" linaje="osito" etapa="1" nivel="1" atk="1.25" desc="Parece un peluche, muerde como un oso." precio="30000" rol="ataque" evo="osito_2" evoNivel="12"/>
+  <especie id="osito_2" nombre="Oso bailarín" linaje="osito" etapa="2" atk="1.85" desc="Baila entre golpe y golpe." rol="ataque" evo="osito_3" evoNivel="28"/>
+  <especie id="osito_3" nombre="Hombre oso" linaje="osito" etapa="3" atk="2.55" desc="Camina a dos patas y pega como cuatro." rol="ataque"/>
+  <!-- Dragón (Baby Dragon -> Wing Dragon -> Earth Dragon) -->
+  <especie id="dragon_1" nombre="Cría de dragón" linaje="dragon" etapa="1" nivel="1" atk="1.3" desc="Escupe chispas y aún no sabe volar." precio="750" rol="ataque" mall="true" evo="dragon_2" evoNivel="12"/>
+  <especie id="dragon_2" nombre="Dragón alado" linaje="dragon" etapa="2" atk="1.9" desc="Las alas ya le sirven para algo más que estorbar." rol="ataque" evo="dragon_3" evoNivel="28"/>
+  <especie id="dragon_3" nombre="Dragón de tierra" linaje="dragon" etapa="3" atk="2.6" desc="Escamas de roca y un pisotón que se oye a una legua." rol="ataque"/>
+  <!-- Pelusa angelical (Purple Fuzz Ball -> Blue Angel -> Seraphim) -->
+  <especie id="angel_1" nombre="Pelusa angelical" linaje="angel" sprite="pelusa_1" etapa="1" nivel="1" atk="1.35" desc="Una bola de pelo con ganas de ser ángel." precio="750" rol="ataque" mall="true" evo="angel_2" evoNivel="12"/>
+  <especie id="angel_2" nombre="Ángel azul" linaje="angel" etapa="2" atk="1.95" desc="Alas pequeñas y un halo que todavía le queda grande." rol="ataque" evo="angel_3" evoNivel="28"/>
+  <especie id="angel_3" nombre="Serafín" linaje="angel" etapa="3" atk="2.5" desc="Alas moradas y una espada de luz: un ángel de verdad." rol="ataque"/>
+  <!-- Pelusa infernal (Purple Fuzz Ball -> Swamp Devil -> Hell Spawn) -->
+  <especie id="demonio_1" nombre="Pelusa infernal" linaje="demonio" sprite="pelusa_1" etapa="1" nivel="1" atk="1.4" desc="Una bola de pelo con muy malas pulgas." precio="750" rol="ataque" mall="true" evo="demonio_2" evoNivel="12"/>
+  <especie id="demonio_2" nombre="Diablo del pantano" linaje="demonio" etapa="2" atk="2.1" desc="Salió de la ciénaga con cuernos nuevos." rol="ataque" evo="demonio_3" evoNivel="28"/>
+  <especie id="demonio_3" nombre="Engendro infernal" linaje="demonio" etapa="3" atk="2.9" desc="No olvida un agravio y pega más fuerte que nadie." rol="ataque"/>
   <!-- Mascotas recolectoras del Item Mall (precio en Monedas Corona). radio = casillas alrededor del dueño en las que van a por todo lo que cae al suelo y se lo traen. -->
   <recolectora id="perro_rastreador" nombre="Perro rastreador" nivel="1" atk="0.3" desc="Husmea el botín: recoge por ti todo lo que cae cerca." precio="150" radio="7" rol="recolector" mall="true"/>
   <recolectora id="gallina_dorada" nombre="Gallina de oro" nivel="1" atk="0.3" desc="Recoge por ti todo lo que cae, un poco más lejos." precio="250" radio="10" rol="recolector" mall="true"/>

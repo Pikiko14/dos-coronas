@@ -477,7 +477,6 @@ local function estamparCiudad(mapa, ciudad)
     for yy = ry + 1, ry + rh - 2, 2 do
       for xx = rx + 1, rx + rw - 2 do deco(xx, yy, "cultivo", false) end
     end
-    deco(rx + math.floor(rw / 2), ry + 2, "espantapajaros")
     deco(rx, ry + rh - 1, "heno")
     deco(rx + rw - 1, ry + rh - 1, "madera_apilada")
   end }
@@ -508,7 +507,6 @@ local function estamparCiudad(mapa, ciudad)
     end
     deco(rx, ry, "arbol_seco")
     deco(rx + rw - 1, ry, "arbol_seco")
-    deco(rx + 3, ry + rh - 1, "restos", false)
   end }
   do
     local lista = ciudad.faccion == "umbra" and { "cementerio", "mercadillo", "bosquecillo", "jardin", "huerto" }
@@ -705,7 +703,6 @@ local function estamparCiudad(mapa, ciudad)
   npcEn(-2, -9, "mayordomo", "Mayordomo")
   npcEn(2, -9, "encargos", "Tablón de encargos")
   npcEn(-2, 9, "encantador", "Maestro de encantos")
-  npcEn(2, 9, "criador", "Criador de mascotas")
   npcEn(-17, 0, "gremio", "Escribano del gremio")
   npcEn(17, 0, "oficios", "Maestro de oficios")
   npcEn(-14, 2, "subastas", "Subastador")
@@ -1116,8 +1113,8 @@ local function generarMundo(rng)
           if azar(x, y, 31) < 0.02 then solido = "huevo"
           else
             local listas = {
-              eclipse = { { "grieta", 0.04 }, { "restos", 0.007 }, { "piedra", 0.025 }, { "hierba_seca", 0.025 } },
-              cicatriz = { { "grieta", 0.045 }, { "restos", 0.008 }, { "piedra", 0.025 } },
+              eclipse = { { "grieta", 0.04 }, { "piedra", 0.025 }, { "hierba_seca", 0.025 } },
+              cicatriz = { { "grieta", 0.045 }, { "piedra", 0.025 } },
             }
             local lista = listas[b]
             if lista then
@@ -1240,8 +1237,7 @@ local function generarMundo(rng)
     { { "contacto", "Contacto en las sombras" } }, 40)
   repartir(2, { "velo", "campos", "colina" }, "torre", "Torre de encantos",
     { { "encantador", "Maestro de encantos" } }, 40)
-  repartir(2, { "trigal", "senda", "cienaga" }, "ermita", "Ermita del criador",
-    { { "criador", "Criador de mascotas" } }, 40)
+  repartir(2, { "trigal", "senda", "cienaga" }, "ermita", "Ermita", {}, 40)
   -- Muelles: cada puerto (Puerto del Sol, Puerto Sombra y el embarcadero de la Cicatriz) tiene un embarcadero de
   -- madera que se adentra en el mar desde la orilla más cercana, con un barco amarrado, un bote y su barquero.
   local DIRS = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
@@ -1878,7 +1874,7 @@ function M.batalla()
         if M.get(mapa, x, y) == "cicatriz" then
           local r = azar(x, y, 105)
           local tipo
-          if r < 0.006 then tipo = "restos"
+          if r < 0.006 then tipo = "mancha"
           elseif r < 0.07 then tipo = "mancha"
           elseif r < 0.10 then tipo = "guijarros"
           elseif r < 0.125 then tipo = "grietita"
@@ -1906,7 +1902,7 @@ function M.batalla()
           if umbra(x) then
             if d < 0.025 then prop(x, y, "seta_roja")
             elseif d < 0.05 then prop(x, y, "hierba_seca")
-            elseif d < 0.06 then prop(x, y, "restos") end
+            end
           else
             if d < 0.03 then prop(x, y, "flores_mixtas")
             elseif d < 0.05 then prop(x, y, "flor_amarilla")
@@ -2138,7 +2134,6 @@ function M.estandarte()
         if umbra(x) then
           if r < 0.025 then prop(x, y, "seta_roja")
           elseif r < 0.05 then prop(x, y, "hierba_seca")
-          elseif r < 0.065 then prop(x, y, "restos")
           elseif r < 0.075 then prop(x, y, "matorral") end
         else
           if r < 0.03 then prop(x, y, "flores_mixtas")

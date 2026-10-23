@@ -742,11 +742,12 @@ function Pruebas.correr()
     mundo.entidades = {}
     local function avanzar(seg) for _ = 1, math.floor(seg / 0.1) do mundo:actualizar(0.1) end end
     local dueno = mundo:crearPersonaje({ nombre = "Criador", faccion = "albor", clase = "guerrero", nivel = 12 })
-    dueno.oro = 20000
-    fallar(errores, "adopta un gatito", mundo:adoptarMascota(dueno, "gatito") == nil and dueno.mascotas[1].nivel == 1)
-    fallar(errores, "no repite especie", mundo:adoptarMascota(dueno, "gatito") ~= nil)
-    fallar(errores, "pide nivel", mundo:adoptarMascota(dueno, "avispa") ~= nil)
-    fallar(errores, "cuesta oro", dueno.oro == 20000 - Mascotas.especies.gatito.precio)
+    dueno.oro = 40000
+    fallar(errores, "adopta un osito", mundo:adoptarMascota(dueno, "osito_1") == nil and dueno.mascotas[1].nivel == 1)
+    fallar(errores, "no repite especie", mundo:adoptarMascota(dueno, "osito_1") ~= nil)
+    fallar(errores, "las del Item Mall no se compran con oro", mundo:adoptarMascota(dueno, "dragon_1") ~= nil)
+    fallar(errores, "solo se venden las formas iniciales", #Mascotas.orden == 1 and Mascotas.orden[1] == "osito_1" and Mascotas.especies.osito_2.etapa == 2 and mundo:adoptarMascota(dueno, "osito_2") ~= nil)
+    fallar(errores, "cuesta oro", dueno.oro == 40000 - Mascotas.especies.osito_1.precio)
     fallar(errores, "la invoca", mundo:invocarMascota(dueno, 1) == nil and dueno.mascotaId and mundo.entidades[dueno.mascotaId].kind == "mascota")
     local pet = mundo.entidades[dueno.mascotaId]
     -- sigue al dueño
@@ -772,15 +773,27 @@ function Pruebas.correr()
     local lv = dueno.mascotas[1].nivel
     mundo:mascotaGanaXp(dueno, 100000)
     fallar(errores, "no supera al dueño", dueno.mascotas[1].nivel == lv)
-    -- el limo guardián reduce el daño
-    mundo:adoptarMascota(dueno, "limo")
+    -- una segunda mascota: solo una fuera a la vez
+    dueno.monedas = 5000
+    fallar(errores, "el dragón se compra con monedas del mall", mundo:comprarMascotaMall(dueno, "dragon_1") == nil and dueno.monedas == 5000 - Mascotas.especies.dragon_1.precio)
     mundo:invocarMascota(dueno, 2)
-    fallar(errores, "el limo da protección", (dueno.mascotaBono or 0) > 0.05, tostring(dueno.mascotaBono))
     fallar(errores, "solo una mascota fuera a la vez", not mundo.entidades[pet.id] or pet.borrar)
     dueno.hp = dueno.hpMax
-    local golpe = Mascotas.proteccion("limo", 1)
-    mundo:danar(dueno, 100, nil)
-    fallar(errores, "el daño baja con el limo", dueno.hpMax - dueno.hp < 100 and dueno.hpMax - dueno.hp >= 100 * (1 - golpe - 0.2), tostring(dueno.hpMax - dueno.hp))
+    -- evolución: al llegar al nivel de su forma pasa a la siguiente etapa
+    dueno.nivel = 30
+    local lag = dueno.mascotas[1]
+    lag.nivel, lag.xp = 11, Mascotas.xpPara(11) - 1
+    mundo:invocarMascota(dueno, 1)
+    mundo:mascotaGanaXp(dueno, 10000)
+    fallar(errores, "el osito evoluciona al nivel 12", lag.especie == "osito_2" and lag.nivel >= 12, tostring(lag.especie) .. " nv " .. lag.nivel)
+    fallar(errores, "su dibujo y su nombre cambian", mundo.entidades[dueno.mascotaId].especie == "osito_2")
+    -- las formas evolucionan solas a ciertos niveles
+    fallar(errores, "el osito pasa a oso bailarín al nivel 12", Mascotas.siguienteForma({ especie = "osito_1", nivel = 12 }) == "osito_2")
+    fallar(errores, "sin nivel no evoluciona", Mascotas.siguienteForma({ especie = "osito_1", nivel = 11 }) == nil)
+    fallar(errores, "el oso bailarín pasa a hombre oso al 28", Mascotas.siguienteForma({ especie = "osito_2", nivel = 28 }) == "osito_3")
+    fallar(errores, "las pelusas acaban distinto", Mascotas.siguienteForma({ especie = "angel_2", nivel = 28 }) == "angel_3" and Mascotas.siguienteForma({ especie = "demonio_2", nivel = 28 }) == "demonio_3")
+    fallar(errores, "las formas finales no evolucionan", Mascotas.siguienteForma({ especie = "osito_3", nivel = 50 }) == nil)
+    mundo:invocarMascota(dueno, 2)
     -- en guerra no hay mascotas; al volver regresa
     dueno.modo = "batalla"
     avanzar(0.5)
@@ -1010,7 +1023,7 @@ function Pruebas.correr()
       roles[n.rol] = (roles[n.rol] or 0) + 1
       fallar(errores, "PNJ " .. n.nombre .. " en suelo transitable", Mapa.transitable(mapa, math.floor(n.x), math.floor(n.y)))
     end
-    for _, rol in ipairs({ "mercado", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "criador", "gremio", "oficios", "establo", "capitan", "contacto" }) do
+    for _, rol in ipairs({ "mercado", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "gremio", "oficios", "establo", "capitan", "contacto" }) do
       fallar(errores, "hay PNJ de " .. rol, (roles[rol] or 0) >= 2, tostring(roles[rol]))
     end
     -- en las ciudades no se amontonan en el centro de la plaza
@@ -3494,7 +3507,7 @@ mundo.tiempo = 100
         pj.job, pj.oficioElegido, pj.oficios = "trader", "trader", { trader = { nivel = 3, xp = 40 }, thief = { nivel = 2, xp = 5 } }
         pj.carga, pj.cargaRobada = { vino = 7 }, { gemas = 2 }
         pj.monturas, pj.monturaPreferida = { "buey", "caballo" }, "caballo"
-        pj.mascotas = { { especie = "murcielago", nivel = 3, xp = 11 }, { especie = "gatito", nivel = 2, xp = 5 } }
+        pj.mascotas = { { especie = "osito_1", nivel = 3, xp = 11 }, { especie = "dragon_1", nivel = 2, xp = 5 } }
         pj.mascotaActiva = 2
         pj.habilidades.vigor = 2
         pj.habilidades.golpe = 2
@@ -3526,7 +3539,7 @@ mundo.tiempo = 100
             and otra.oficios.thief and otra.oficios.thief.nivel == 2)
           fallar(errores, "recupera la carga y lo robado", otra.carga.vino == 7 and otra.cargaRobada.gemas == 2)
           fallar(errores, "recupera las monturas", #otra.monturas == 2 and otra.monturaPreferida == "caballo")
-          fallar(errores, "recupera las mascotas", otra.mascotas and #otra.mascotas == 2 and otra.mascotas[1].especie == "murcielago"
+          fallar(errores, "recupera las mascotas", otra.mascotas and #otra.mascotas == 2 and otra.mascotas[1].especie == "osito_1"
             and otra.mascotas[1].nivel == 3 and otra.mascotas[2].xp == 5 and otra.mascotaActiva == 2)
           fallar(errores, "recupera el encantamiento del arma", otra.encantos and otra.encantos.arma == 4,
             tostring(otra.encantos and otra.encantos.arma))
@@ -4576,7 +4589,7 @@ mundo.tiempo = 100
     local Autoridad = require("src.dominio.autoridad")
     local mundo = Mundo.nuevo()
     local p = mundo:crearPersonaje({ nombre = "Recolector", faccion = "albor", clase = "guerrero", nivel = 10 })
-    fallar(errores, "hay mascotas recolectoras en el mall", #Mall.ORDEN_MASCOTAS == 4 and Mascotas.especies.fantasma.mall == true)
+    fallar(errores, "hay mascotas recolectoras en el mall", #Mall.ORDEN_MASCOTAS == 7 and Mascotas.especies.fantasma.mall == true)
     fallar(errores, "el criador no las vende", (function() for _, id in ipairs(Mascotas.orden) do if Mascotas.especies[id].mall then return false end end return true end)())
     p.oro = 99999
     fallar(errores, "con oro no se adopta una del mall", mundo:adoptarMascota(p, "perro_rastreador") ~= nil and #(p.mascotas or {}) == 0)
@@ -4586,9 +4599,9 @@ mundo.tiempo = 100
     local ok, limpio = Autoridad.aceptar(mundo, p, "mall_mascota_comprar", { id = "perro_rastreador" })
     fallar(errores, "la acción del cliente se acepta", ok == true and limpio.id == "perro_rastreador")
     mundo:accion(p.id, "mall_mascota_comprar", limpio)
-    fallar(errores, "se compra con monedas y sale enseguida", p.monedas == 850 and #p.mascotas == 1 and p.mascotaId and mundo.entidades[p.mascotaId].kind == "mascota")
+    fallar(errores, "se compra con monedas y sale enseguida", p.monedas == 850 and #p.mascotas == 1 and p.recolectoraId and mundo.entidades[p.recolectoraId].kind == "mascota")
     fallar(errores, "no se compra dos veces", mundo:comprarMascotaMall(p, "perro_rastreador") ~= nil and p.monedas == 850)
-    local pet = mundo.entidades[p.mascotaId]
+    local pet = mundo.entidades[p.recolectoraId]
     -- el botín que cae cerca (de este jugador) lo recoge la mascota
     p.bolsa = {}
     local oro0 = p.oro
@@ -5512,6 +5525,67 @@ mundo.tiempo = 100
     math.randomseed(os.time() + math.floor(os.clock() * 1000))      -- (no dejar el azar fijo para las pruebas que siguen)
     fallar(errores, "salen piezas normales, buenas y definitivas en proporciones razonables", nn > nb and nb > ns and ns >= 1, nn .. "/" .. nb .. "/" .. ns)
   end)
+  paso("mascotas: una de ataque y una recolectora a la vez; la recolectora es invulnerable y no ataca", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local function avanzar(seg) for _ = 1, math.floor(seg / 0.1) do mundo:actualizar(0.1) end end
+    local p = mundo:crearPersonaje({ nombre = "Dos", faccion = "albor", clase = "guerrero", nivel = 30 })
+    p.mascotas = { { especie = "osito_2", nivel = 14, xp = 0 }, { especie = "perro_rastreador", nivel = 1, xp = 0 }, { especie = "dragon_1", nivel = 5, xp = 0 } }
+    fallar(errores, "invoca la de ataque", mundo:invocarMascota(p, 1) == nil and p.mascotaId ~= nil and p.mascotaActiva == 1)
+    fallar(errores, "invoca la recolectora sin guardar la de ataque", mundo:invocarMascota(p, 2) == nil and p.recolectoraId ~= nil and p.recolectoraActiva == 2 and p.mascotaId ~= nil
+      and mundo.entidades[p.mascotaId] ~= nil and mundo.entidades[p.recolectoraId] ~= nil)
+    local rec = mundo.entidades[p.recolectoraId]
+    fallar(errores, "la recolectora es invulnerable", rec.recolectora == true and rec.invulnerable == true)
+    local monstruo = mundo:spawnMonstruo("seta_azul", rec.x + 1, rec.y, { x = rec.x, y = rec.y })
+    fallar(errores, "ni las criaturas pueden herirla", not mundo:puedeDanar(monstruo, rec))
+    -- otra de ataque sustituye a la de ataque, no a la recolectora
+    fallar(errores, "otra de ataque sustituye a la anterior", mundo:invocarMascota(p, 3) == nil and p.mascotaActiva == 3 and p.recolectoraActiva == 2 and p.recolectoraId ~= nil)
+    -- la recolectora no ataca: junto a un enemigo del dueño no le hace daño
+    p.mascotaActiva, p.mascotaId = nil, nil
+    mundo:retirarMascota(p, "ataque")
+    local blanco = mundo:spawnMonstruo("seta_azul", p.x + 1.2, p.y, { x = p.x, y = p.y })
+    blanco.hp, blanco.hpMax, blanco.agresivo, blanco.atk, blanco.matk = 400, 400, false, 0, 0
+    p.objetivo = blanco.id
+    avanzar(6)
+    fallar(errores, "la recolectora no ataca (aunque su dueño pelee)", rec.atqN == nil and (rec.cds.ataque or 0) == 0, tostring(rec.atqN))
+    -- guardar una no toca la otra
+    mundo:invocarMascota(p, 1)
+    fallar(errores, "volver a pulsar la recolectora la guarda y deja la de ataque", mundo:invocarMascota(p, 2) == nil and p.recolectoraId == nil and p.recolectoraActiva == nil and p.mascotaId ~= nil)
+    mundo:invocarMascota(p, 2)
+    -- en la guerra se guardan las dos y vuelven al terminar
+    p.modo = "batalla"
+    avanzar(0.5)
+    fallar(errores, "en la guerra se guardan las dos", p.mascotaId == nil and p.recolectoraId == nil)
+    p.modo = "mundo"
+    avanzar(5)
+    fallar(errores, "al volver reaparecen las dos", p.mascotaId ~= nil and p.recolectoraId ~= nil)
+    -- se guardan y se recuperan las dos ranuras
+    local ex = mundo:exportar(p)
+    local otro = mundo:crearPersonaje({ nombre = "Dos2", faccion = "albor", clase = "guerrero", nivel = 30 })
+    mundo:aplicarGuardado(otro, ex)
+    fallar(errores, "el guardado conserva las dos ranuras", otro.mascotaActiva == 1 and otro.recolectoraActiva == 2, tostring(otro.mascotaActiva) .. "/" .. tostring(otro.recolectoraActiva))
+    -- un guardado antiguo con una recolectora como única activa pasa a la ranura de recolectora
+    local viejo = mundo:exportar(p)
+    viejo.mascotaActiva, viejo.recolectoraActiva = 2, nil
+    local tercero = mundo:crearPersonaje({ nombre = "Dos3", faccion = "albor", clase = "guerrero", nivel = 30 })
+    mundo:aplicarGuardado(tercero, viejo)
+    fallar(errores, "el guardado antiguo con recolectora activa se corrige", tercero.recolectoraActiva == 2 and tercero.mascotaActiva == nil)
+  end)
+  paso("mascotas antiguas: pasan a las líneas de ataque o se devuelve su precio", function()
+    local mundo = Mundo.nuevo()
+    local p = mundo:crearPersonaje({ nombre = "Antiguo", faccion = "albor", clase = "guerrero", nivel = 30 })
+    local oro0 = p.oro
+    local guardado = mundo:exportar(p)
+    guardado.mascotas = { { especie = "gatito", nivel = 5, xp = 10 }, { especie = "murcielago", nivel = 3, xp = 4 }, { especie = "hada", nivel = 2, xp = 1 }, { especie = "osito_1", nivel = 1, xp = 0 } }
+    guardado.mascotaActiva = 2
+    guardado.oro = 100
+    mundo:aplicarGuardado(p, guardado)
+    local especies = {}
+    for _, m in ipairs(p.mascotas) do especies[#especies + 1] = m.especie end
+    fallar(errores, "el gatito se devuelve (ya tiene un osito), el murciélago pasa a duende", table.concat(especies, ",") == "dragon_1,osito_1", table.concat(especies, ","))
+    fallar(errores, "se devuelve el oro de las que sobran (gatito 240 + hada 4150)", p.oro == 100 + 240 + 4150, tostring(p.oro))
+    fallar(errores, "la activa sigue siendo la misma (el murciélago, ahora duende)", p.mascotaActiva == 1 and p.mascotas[1].nivel == 3)
+  end)
   paso("Ciénaga Alta: portal fijo en (1012, 126), se entra, hay criaturas dentro y se sale", function()
     local MapasFao = require("compartido.dominio.mapas_fao")
     fallar(errores, "cienaga_alta está en el índice", MapasFao.MAPAS.cienaga_alta == 50)
@@ -5977,7 +6051,14 @@ mundo.tiempo = 100
     fallar(errores, "abatir un esbirro da experiencia de la partida", a1.xp + a1.nivel * 10000 > xp0)
     -- una torre dispara al rival que se le acerca
     local torre = torres.albor[1]
+    -- (una casilla libre a 2-4 casillas de la torre: el mapa del asedio va en diagonal y torre.x + 3 puede caer en un muro)
     u1.x, u1.y = torre.x + 3, torre.y
+    for r = 2, 4 do
+      for _, d in ipairs({ { r, 0 }, { -r, 0 }, { 0, r }, { 0, -r }, { r, r }, { -r, -r }, { r, -r }, { -r, r } }) do
+        if Mapa.transitable(arena, math.floor(torre.x + d[1]), math.floor(torre.y + d[2])) then u1.x, u1.y = torre.x + d[1] + 0.5, torre.y + d[2] + 0.5 goto colocado end
+      end
+    end
+    ::colocado::
     for _, e in pairs(mundo.entidades) do if e.moba and e.kind == "monstruo" then e.borrar = true end end
     mundo:actualizar(0.05)
     local hp0 = u1.hp

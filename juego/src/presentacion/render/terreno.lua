@@ -183,8 +183,8 @@ local DECORADO = {
   colina = { { "piedra", 0.025 }, { "flor_amarilla", 0.03 }, { "hierba_alta", 0.03 }, { "matas", 0.025 }, { "arbusto", 0.01 } },
   velo = { { "seta_roja", 0.022 }, { "hierba_seca", 0.04 }, { "hojas", 0.025 }, { "rafflesia", 0.004 }, { "piedra", 0.008 } },
   cienaga = { { "seta_roja", 0.028 }, { "rafflesia", 0.009 }, { "hierba_alta", 0.045 }, { "hojas", 0.03 }, { "helecho", 0.035 } },
-  eclipse = { { "grieta", 0.04 }, { "restos", 0.007 }, { "piedra", 0.025 }, { "hierba_seca", 0.025 } },
-  cicatriz = { { "grieta", 0.045 }, { "restos", 0.008 }, { "piedra", 0.025 } },
+  eclipse = { { "grieta", 0.04 }, { "piedra", 0.025 }, { "hierba_seca", 0.025 } },
+  cicatriz = { { "grieta", 0.045 }, { "piedra", 0.025 } },
   costa = { { "hierba_seca", 0.03 }, { "piedra", 0.014 }, { "tronco", 0.006 } },
   bosque = { { "seta_marron", 0.014 }, { "seta_roja", 0.008 }, { "tocon", 0.012 }, { "tronco", 0.008 }, { "helecho", 0.045 }, { "hojas", 0.02 } },
   altiplano = { { "piedra", 0.035 }, { "grieta", 0.02 }, { "hierba_seca", 0.012 } },
@@ -197,14 +197,13 @@ local DECORADO = {
 -- Lo que se queda tal cual, sin teñir con el color de la zona.
 local SIN_TINTE = { piedra = true, grieta = true, restos = true, fogata = true, cubo = true, jarron = true, madera_apilada = true, tronco = true, tocon = true }
 
--- Campos de cultivo: parches de 8x6 casillas con hortalizas y un espantapájaros.
+-- Campos de cultivo: parches de 8x6 casillas con hortalizas.
 local function cultivo(mapa, x, y, bioma)
   if bioma ~= "campos" and bioma ~= "trigal" then return nil end
   local bx, by = math.floor(x / 8), math.floor(y / 6)
   if hash(bx, by, 9) > 0.3 then return nil end
   local lx, ly = x - bx * 8, y - by * 6
   if lx < 1 or lx > 6 or ly < 1 or ly > 4 then return nil end
-  if lx == 3 and ly == 2 then return "espantapajaros", 0 end
   return "cultivo", math.floor(hash(bx, by, 10) * 4)
 end
 

@@ -441,6 +441,7 @@ function Entrada.manejar(app, id)
   if id == "hud_mall" then Interfaz.panel = (Interfaz.panel ~= "mall") and "mall" or nil return end
   if id == "hud_autopocion" then Interfaz.panel = (Interfaz.panel ~= "autopocion") and "autopocion" or nil return end
   if id == "hud_monturas" then Interfaz.panel = (Interfaz.panel ~= "montura") and "montura" or nil return end
+  if id == "hud_mascotas" then Interfaz.panel = (Interfaz.panel ~= "mascotas") and "mascotas" or nil return end
   if id == "est_pag_ant" then Interfaz.establoPag = math.max(1, (Interfaz.establoPag or 1) - 1) return end
   if id == "est_pag_sig" then Interfaz.establoPag = (Interfaz.establoPag or 1) + 1 return end
   if id == "mon_pag_ant" then Interfaz.monturaPag = math.max(1, (Interfaz.monturaPag or 1) - 1) return end
@@ -758,7 +759,9 @@ function Entrada.rueda(app, dy)
   elseif Interfaz.panel == "vivienda" then
     Interfaz.casaScroll = math.max(0, math.min(Interfaz.casaScrollMax or 0, (Interfaz.casaScroll or 0) - dy))
   elseif Interfaz.panel == "mall" then
-    Interfaz.mallScroll = math.max(0, math.min(Interfaz.mallScrollMax or 0, (Interfaz.mallScroll or 0) - dy * (Interfaz.mallTab == "addons" and 3 or 1)))
+    Interfaz.mallScroll = math.max(0, math.min(Interfaz.mallScrollMax or 0, (Interfaz.mallScroll or 0) - dy))
+  elseif Interfaz.panel == "mascotas" then
+    Interfaz.mascScroll = math.max(0, math.min(Interfaz.mascScrollMax or 0, (Interfaz.mascScroll or 0) - dy))
   elseif Interfaz.panel == "mercado" then
     Interfaz.scroll = math.max(0, Interfaz.scroll - dy)
   else
@@ -909,11 +912,7 @@ function Entrada.tecla(app, tecla)
   local interactuar = Ajustes.teclas.interactuar or "e"
   if tecla == bolsa then Interfaz.panel = (Interfaz.panel ~= "bolsa") and "bolsa" or nil end
   if tecla == "p" or tecla == "c" then Interfaz.panel = (Interfaz.panel ~= "equipo") and "equipo" or nil end
-  if tecla == "n" then
-    local p = app.jugador
-    local idx = p and (p.mascotaActiva or (p.mascotas and #p.mascotas > 0 and 1))
-    if idx then app.actuar("mascota_invocar", { idx = idx }) end
-  end
+  if tecla == "n" then Interfaz.panel = (Interfaz.panel ~= "mascotas") and "mascotas" or nil end
   if tecla == "j" then Interfaz.panel = (Interfaz.panel ~= "grupo") and "grupo" or nil end
   if tecla == "o" then app.actuar("montura_alternar", {}) end
   if tecla == "l" then Interfaz.panel = (Interfaz.panel ~= "mall") and "mall" or nil end

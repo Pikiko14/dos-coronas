@@ -1,4 +1,4 @@
-"""Iconos del HUD (poderes, item mall, monturas, autopoción) dibujados por código con motor.py, a 64x64 con fondo transparente.
+"""Iconos del HUD (poderes, item mall, monturas, mascotas, autopoción) dibujados por código con motor.py, a 64x64 con fondo transparente.
 Uso:  python herramientas/generar_hud/iconos.py   ->  juego/arte/hud/<nombre>.png"""
 import math, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -75,6 +75,22 @@ def monturas():
     return L.imagen()
 
 
+def mascotas():
+    L = Lienzo()
+    # huella de pata (almohadilla grande y cuatro dedos) en tonos cálidos, con un corazoncito rosa
+    L.elipsoide(32, 41, 17, 14, (222, 140, 72), brillo=0.8, oscuro=0.4)
+    L.elipsoide(32, 44, 11, 7, (246, 176, 112), brillo=0.6, oscuro=0.6)
+    for (x, y, rx, ry, giro) in [(13, 27, 6.5, 8.5, -0.5), (25, 16, 6.5, 9, -0.15), (39, 16, 6.5, 9, 0.15), (51, 27, 6.5, 8.5, 0.5)]:
+        L.elipsoide(x, y, rx, ry, (232, 154, 84), giro=giro, brillo=0.8, oscuro=0.4)
+        L.elipsoide(x, y + 1, rx * 0.55, ry * 0.5, (250, 190, 130), giro=giro, brillo=0.5, oscuro=0.7)
+    L.elipsoide(28, 38, 3.4, 3.4, (255, 110, 150), brillo=0.7, oscuro=0.5)
+    L.elipsoide(36, 38, 3.4, 3.4, (255, 110, 150), brillo=0.7, oscuro=0.5)
+    L.poligono([(24.6, 40), (39.4, 40), (32, 50)], (255, 110, 150), curvatura=0.4, brillo=0.7, oscuro=0.5)
+    L.contorno()
+    L.brillo(22, 30, 8, 0.7)
+    return L.imagen()
+
+
 def autopocion():
     L = Lienzo()
     # frasco de poción roja con corcho y flechas verdes circulares
@@ -107,6 +123,6 @@ def autopocion():
 
 if __name__ == "__main__":
     os.makedirs(SALIDA, exist_ok=True)
-    for nombre, f in [("poderes", poderes), ("mall", mall), ("monturas", monturas), ("autopocion", autopocion)]:
+    for nombre, f in [("poderes", poderes), ("mall", mall), ("monturas", monturas), ("mascotas", mascotas), ("autopocion", autopocion)]:
         f().save(os.path.join(SALIDA, nombre + ".png"), optimize=True)
         print("icono", nombre)

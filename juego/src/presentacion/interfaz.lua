@@ -778,12 +778,18 @@ function I.hud(mundo, p, w, h)
   local barraP = Datos.barra[p.clase]
   local nPod = #barraP                            -- 6 poderes (10 el mago)
   local lado_c, sep = (nPod > 6 and 50 or 46), 4
-  -- la barra (los poderes + 2 pociones) va centrada en la pantalla; los accesos (poderes, mall, monturas, autopoción) van abajo a la derecha
-  local GAP = 12                                   -- hueco entre los poderes y las pociones
-  local total = (nPod + 2) * lado_c + (nPod + 1) * sep + GAP
-  local bx0 = vw / 2 - total / 2
-  if nPod > 6 then bx0 = math.max(bx0, 392) end       -- (con 10 poderes la barra no pisa el chat)
-  local by0 = vh - lado_c - 10
+  -- la barra (los poderes y las 2 pociones) va centrada en la pantalla, de 6 en 6 por fila (con 10 poderes: 6 arriba y 4 + las 2 pociones abajo);
+  -- los accesos (poderes, mall, monturas, mascotas, autopoción) van abajo a la derecha
+  local COLS = 6
+  local nCas = nPod + 2
+  local filasB = math.ceil(nCas / COLS)
+  local bx0 = vw / 2 - (COLS * lado_c + (COLS - 1) * sep) / 2
+  local by0 = vh - lado_c - 10                      -- fila de abajo
+  local function cas(k)                              -- esquina de la casilla k (poderes y luego pociones), de arriba abajo y de izquierda a derecha
+    local fila, col = math.floor((k - 1) / COLS), (k - 1) % COLS
+    return bx0 + col * (lado_c + sep), by0 - (filasB - 1 - fila) * (lado_c + sep)
+  end
+  local ytope = by0 - (filasB - 1) * (lado_c + sep)  -- borde de arriba de la barra
   local orden = Ajustes.orden(p.clase)
   local teclas = Ajustes.teclas
   for i = 1, nPod do
@@ -792,7 +798,7 @@ function I.hud(mundo, p, w, h)
     local rangoH = Arbol.rango(p, hid)
     local conocida = rangoH > 0
     local hdef = Arbol.efectiva(hid, math.max(1, rangoH))
-    local x = bx0 + (i - 1) * (lado_c + sep)
+    local x, by0 = cas(i)
     local queda = (p.cds[hid] or 0) - mundo.tiempo
     local nivelOk = conocida
     local manaOk = (p.mp or 0) >= (hdef.mana or 0)
@@ -842,7 +848,7 @@ function I.hud(mundo, p, w, h)
     local esc = I.escala or 1
     mx, my = mx / esc, my / esc
     for i = 1, nPod do
-      local x = bx0 + (i - 1) * (lado_c + sep)
+      local x, by0 = cas(i)
       if sobre(x, by0, lado_c, lado_c) and orden[i] ~= ah.slot then
         love.graphics.setColor(1, 0.85, 0.3, 0.9)
         love.graphics.setLineWidth(2)
@@ -861,7 +867,7 @@ function I.hud(mundo, p, w, h)
     for i, s in ipairs(lista) do
       local def = Estados.def[s.tipo]
       local x = bx0 + (i - 1) * 36
-      local y = by0 - 38
+      local y = ytope - 38
       love.graphics.setColor(0.08, 0.07, 0.1, 0.9)
       love.graphics.rectangle("fill", x, y, 32, 32, 4, 4)
       local c = def and def.color or { 1, 1, 1 }
@@ -875,7 +881,7 @@ function I.hud(mundo, p, w, h)
     -- potenciadores propios (escudo arcano, furia, grito...): a continuación, con borde verde y una barra que se vacía
     for j, b in ipairs(p.buffsResta or {}) do
       local x = bx0 + (#lista + j - 1) * 36
-      local y = by0 - 38
+      local y = ytope - 38
       local hdef = b.hab and Datos.habilidades[b.hab]
       local nombre = hdef and hdef.nombre or b.id
       love.graphics.setColor(0.06, 0.1, 0.08, 0.92)
@@ -894,7 +900,7 @@ function I.hud(mundo, p, w, h)
     end
   end
   local function pocion(tipo, slotIdx, etiqueta, cuenta)
-    local x = bx0 + (slotIdx - 1) * (lado_c + sep) + GAP
+    local x, by0 = cas(slotIdx)
     casilla(x, by0, lado_c)
     local id = Datos.pocionAlUsar(p.bolsa, p.nivel, tipo)
     local it = Datos.item(id)
@@ -928,10 +934,10 @@ function I.hud(mundo, p, w, h)
   end
   pocion("vida", nPod + 1, Ajustes.nombreTecla(teclas.pocion_vida), "poc_vida")
   pocion("mana", nPod + 2, Ajustes.nombreTecla(teclas.pocion_mana), "poc_mana")
-  -- accesos abajo a la derecha: poderes (K), Item Mall (L), monturas (U) y autopoción (R)
+  -- accesos abajo a la derecha: poderes (K), Item Mall (L), monturas (U), mascotas (N) y autopoción (R)
   do
     local lado, sepA = 44, 6
-    local ax = vw - 4 * lado - 3 * sepA - 10
+    local ax = vw - 5 * lado - 4 * sepA - 10
     local ay = vh - lado - 10
     local puntos = Arbol.puntos(p)
     local libre = false
@@ -943,6 +949,7 @@ function I.hud(mundo, p, w, h)
       { "hud_arbol", "poderes", "K", "Árbol de poderes (K): " .. puntos .. " punto(s) por gastar.", puntos > 0 },
       { "hud_mall", "mall", "L", "Item Mall (L): monedas, addons, bonos y monturas exclusivas.", false },
       { "hud_monturas", "monturas", "U", p.montado and "Colección de monturas (U). Montado: O para bajar." or "Colección de monturas (U). O monta y desmonta.", p.montado ~= nil },
+      { "hud_mascotas", "mascotas", "N", (p.mascotaActiva or p.recolectoraActiva) and "Tus mascotas (N): invócalas o guárdalas desde la lista; pueden salir a la vez una de ataque y una recolectora." or "Tus mascotas (N): invócalas, guárdalas y mira cómo evolucionan.", (p.mascotaActiva or p.recolectoraActiva) ~= nil },
       { "hud_autopocion", "autopocion", "R", "Autopoción (R): bebe sola la vida o el maná al bajar de un umbral.", (p.autoPocion or p.autoMana) and true or false },
     }
     for i, a in ipairs(accesos) do
@@ -1210,7 +1217,6 @@ local ICONO_NPC = {
   mayordomo = { "cuadrado", { 0.85, 0.75, 0.55 }, "Mayordomo (casas)" },
   encargos = { "rombo", { 1, 1, 0.55 }, "Encargos" },
   encantador = { "estrella", { 0.78, 0.45, 1 }, "Maestro de encantos" },
-  criador = { "circulo", { 0.4, 0.92, 0.4 }, "Criador de mascotas" },
   gremio = { "cuadrado", { 0.4, 0.62, 1 }, "Escribano del gremio" },
   oficios = { "rombo", { 0.4, 0.92, 0.92 }, "Maestro de oficios" },
   establo = { "triangulo", { 0.72, 0.52, 0.3 }, "Establo (monturas)" },
@@ -1220,7 +1226,7 @@ local ICONO_NPC = {
   misiones = { "rombo", { 1, 0.85, 0.2 }, "Misiones (cazar, recolectar y entregar)" },
 }
 I.ICONO_NPC = ICONO_NPC
-I.ORDEN_ICONOS = { "mercado", "maestro_guerrero", "maestro_lancero", "maestro_cazador", "maestro_mago", "maestro_clerigo", "maestro_nigromante", "establo", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "criador", "gremio", "oficios", "barquero", "capitan", "contacto", "subastas", "misiones" }
+I.ORDEN_ICONOS = { "mercado", "maestro_guerrero", "maestro_lancero", "maestro_cazador", "maestro_mago", "maestro_clerigo", "maestro_nigromante", "establo", "comercio", "heraldo", "mayordomo", "encargos", "encantador", "gremio", "oficios", "barquero", "capitan", "contacto", "subastas", "misiones" }
 
 function I.iconoNpc(rol, x, y, r)
   local d = ICONO_NPC[rol]
@@ -2513,211 +2519,339 @@ function I.panelDiaria(mundo, p, w, h)
 end
 
 -- Item Mall: tienda con monedas especiales (objetos de bonificación y addons).
+-- ---------------------------------------------------------------- tarjetas (Item Mall y panel de mascotas)
+-- Una tarjeta: vista previa a la izquierda; a la derecha el nombre, unas etiquetas, el texto y, abajo, el precio (con su moneda) y el botón.
+-- t = { nombre, texto, extra (línea azul bajo el texto), etiquetas = { { texto, { r, g, b } }, ... }, previa = function(cx, pies, ancho, alto),
+--       borde = { r, g, b }, cinta = "TUYA", barra = { fraccion, texto }, precio = n, boton = { texto, id, activo, motivo } }
+local function moneda(x, y, r)
+  love.graphics.setColor(0.5, 0.33, 0.06, 1)
+  love.graphics.circle("fill", x, y, r + 1)
+  love.graphics.setColor(1, 0.85, 0.3, 1)
+  love.graphics.circle("fill", x, y, r)
+  love.graphics.setColor(1, 0.96, 0.7, 0.9)
+  love.graphics.circle("line", x, y, r - 2.5)
+  love.graphics.setColor(0.65, 0.45, 0.1, 1)
+  love.graphics.circle("fill", x, y, 2.2)
+end
+I.moneda = moneda
+
+function I.tarjeta(x, y, w, h, t)
+  local f = pequena()
+  local borde = t.borde or { 0.32, 0.44, 0.8 }
+  local encima = sobre(x, y, w, h)
+  relleno(x, y, w, h, 9, encima and { 0.2, 0.25, 0.46 } or { 0.16, 0.2, 0.38 }, { 0.09, 0.11, 0.24 }, 1)
+  love.graphics.setLineWidth(1.5)
+  love.graphics.setColor(borde[1], borde[2], borde[3], encima and 1 or 0.7)
+  love.graphics.rectangle("line", x + 0.5, y + 0.5, w - 1, h - 1, 9, 9)
+  love.graphics.setLineWidth(1)
+  -- vista previa
+  local pv = 104
+  love.graphics.setColor(0.04, 0.06, 0.14, 0.92)
+  love.graphics.rectangle("fill", x + 8, y + 8, pv, h - 16, 7, 7)
+  love.graphics.setColor(borde[1], borde[2], borde[3], 0.14)
+  love.graphics.ellipse("fill", x + 8 + pv / 2, y + h - 26, pv * 0.42, 11)
+  if t.previa then
+    local s = I.escala or 1
+    love.graphics.setScissor((x + 8) * s, (y + 8) * s, pv * s, (h - 16) * s)
+    t.previa(x + 8 + pv / 2, y + h - 24, pv, h - 16)
+    love.graphics.setScissor()
+  end
+  local tx = x + pv + 20
+  local tw = w - pv - 30
+  -- nombre y cinta
+  love.graphics.setFont(I.fuente)
+  love.graphics.setColor(0.98, 0.9, 0.7)
+  love.graphics.printf(t.nombre, tx, y + 8, tw - (t.cinta and 56 or 0), "left")
+  if t.cinta then
+    local cw = f:getWidth(t.cinta) + 12
+    love.graphics.setColor(0.2, 0.55, 0.3, 0.95)
+    love.graphics.rectangle("fill", x + w - cw - 8, y + 9, cw, 18, 9, 9)
+    love.graphics.setFont(f)
+    love.graphics.setColor(0.92, 1, 0.92)
+    love.graphics.print(t.cinta, x + w - cw - 2, y + 11)
+    love.graphics.setFont(I.fuente)
+  end
+  -- etiquetas
+  love.graphics.setFont(f)
+  local ex = tx
+  for _, e in ipairs(t.etiquetas or {}) do
+    local c = e[2] or { 0.55, 0.65, 0.95 }
+    local cw = f:getWidth(e[1]) + 12
+    if ex + cw <= tx + tw then
+      love.graphics.setColor(c[1], c[2], c[3], 0.2)
+      love.graphics.rectangle("fill", ex, y + 30, cw, 17, 8, 8)
+      love.graphics.setColor(c[1], c[2], c[3], 0.85)
+      love.graphics.rectangle("line", ex + 0.5, y + 30.5, cw - 1, 16, 8, 8)
+      love.graphics.setColor(math.min(1, c[1] + 0.35), math.min(1, c[2] + 0.35), math.min(1, c[3] + 0.35), 1)
+      love.graphics.print(e[1], ex + 6, y + 31)
+      ex = ex + cw + 5
+    end
+  end
+  -- texto y línea extra
+  love.graphics.setColor(0.74, 0.8, 0.7)
+  love.graphics.printf(t.texto or "", tx, y + 50, tw, "left")
+  local _, lineas = f:getWrap(t.texto or "", tw)
+  local yx = y + 50 + math.min(#lineas, 2) * f:getHeight() + 2
+  if t.extra then
+    love.graphics.setColor(0.6, 0.85, 1)
+    love.graphics.printf(t.extra, tx, yx, tw, "left")
+  end
+  -- barra de experiencia (panel de mascotas)
+  if t.barra then
+    local by = y + h - 52
+    love.graphics.setColor(0, 0, 0, 0.7)
+    love.graphics.rectangle("fill", tx, by, tw, 7, 3, 3)
+    love.graphics.setColor(0.88, 0.72, 0.22)
+    love.graphics.rectangle("fill", tx, by, tw * math.max(0, math.min(1, t.barra[1])), 7, 3, 3)
+    love.graphics.setColor(0.72, 0.76, 0.66)
+    love.graphics.print(t.barra[2], tx, by + 8)
+  end
+  -- precio y botón
+  if t.precio then
+    moneda(tx + 8, y + h - 23, 8)
+    love.graphics.setColor(1, 0.88, 0.35)
+    love.graphics.print(Ayudas.num(t.precio), tx + 22, y + h - 31)
+  end
+  love.graphics.setFont(I.fuente)
+  if t.boton then
+    I.boton(x + w - 108, y + h - 38, 100, 30, t.boton[1], t.boton[2], t.boton[3], t.boton[4])
+  end
+end
+
+-- Barra de desplazamiento fina a la derecha de una lista de tarjetas.
+local function barraDesplazamiento(x, y, alto, primera, visibles, total)
+  if total <= visibles then return end
+  love.graphics.setColor(0, 0, 0, 0.45)
+  love.graphics.rectangle("fill", x, y, 5, alto, 2, 2)
+  local th = math.max(24, alto * visibles / total)
+  local ty = y + (alto - th) * (primera / math.max(1, total - visibles))
+  love.graphics.setColor(0.45, 0.6, 0.95, 0.9)
+  love.graphics.rectangle("fill", x, ty, 5, th, 2, 2)
+end
+
 local function tiempoCorto(seg)
   seg = math.max(0, math.floor(seg or 0))
   if seg >= 3600 then return string.format("%d:%02d:%02d", math.floor(seg / 3600), math.floor((seg % 3600) / 60), seg % 60) end
   return string.format("%d:%02d", math.floor(seg / 60), seg % 60)
 end
 
+local COL_MALL = {
+  oro = { 1, 0.82, 0.3 }, azul = { 0.5, 0.7, 1 }, verde = { 0.5, 0.9, 0.55 }, morado = { 0.78, 0.6, 1 }, rojo = { 1, 0.55, 0.5 }, gris = { 0.7, 0.74, 0.82 },
+}
+local TABS_MALL = {
+  { "objetos", "Objetos", "mall_tab_obj", "Bonos, pociones y pergaminos para ir más rápido." },
+  { "forja", "Forja", "mall_tab_forja", "Polvo arcano para encantar tu equipo." },
+  { "addons", "Addons", "mall_tab_add", "Aspectos de personaje únicos." },
+  { "monturas", "Monturas", "mall_tab_mont", "Monturas exclusivas: sin oficio y se pelea montado. Colección: U, montar: O." },
+  { "mascotas", "Mascotas", "mall_tab_masc", "Mascotas de ataque que evolucionan solas y recolectoras de botín. Tus mascotas: N." },
+}
+
+-- Las tarjetas de cada pestaña del Item Mall.
+local function tarjetasMall(p, m, Mall, pestana)
+  local lista = {}
+  local faltan = function(precio) return "Te faltan " .. Ayudas.num(math.max(0, precio - (m.monedas or 0))) .. " Monedas Corona." end
+  if pestana == "objetos" or pestana == "forja" then
+    for _, o in ipairs(Mall.OBJETOS) do
+      if (o.polvo ~= nil) == (pestana == "forja") then
+        local def = Datos.item(o.id)
+        lista[#lista + 1] = {
+          nombre = o.nombre, texto = o.texto, precio = o.precio,
+          etiquetas = { { o.polvo ~= nil and "Polvo arcano" or (o.bono and "Bono temporal" or "Objeto"), o.polvo ~= nil and COL_MALL.morado or COL_MALL.azul } },
+          previa = function(cx, pies)
+            if def then
+              local tt = def.tinte or { 1, 1, 1 }
+              love.graphics.setColor(tt[1], tt[2], tt[3], 1)
+              Atlas.dibujar(def.hoja, def.sprite, cx, pies - 30, 2, 16, 16, tt)
+            end
+          end,
+          boton = { "Comprar", "mall_buy_" .. o.id, (m.monedas or 0) >= o.precio, faltan(o.precio) },
+        }
+      end
+    end
+  elseif pestana == "addons" then
+    local tengo = {}
+    for _, id in ipairs(m.addons or {}) do tengo[id] = true end
+    for _, id in ipairs(Mall.ORDEN_ADDONS) do
+      local a = Mall.ADDONS[id]
+      local puesto = m.addonActivo == id
+      lista[#lista + 1] = {
+        nombre = a.nombre, texto = a.desc, precio = (not tengo[id]) and a.precio or nil,
+        etiquetas = { { "Aspecto", COL_MALL.morado } },
+        cinta = puesto and "PUESTO" or (tengo[id] and "TUYO" or nil),
+        borde = tengo[id] and { 0.35, 0.75, 0.45 } or nil,
+        previa = function(cx, pies)
+          local skin = Personajes.skins[id]
+          if skin then
+            love.graphics.push()
+            love.graphics.translate(cx, pies)
+            love.graphics.scale(1.8, 1.8)
+            Personajes.dibujar(skin, 1, false, 0, 0, 0)
+            love.graphics.pop()
+          end
+        end,
+        boton = tengo[id] and { puesto and "Quitar" or "Poner", "mall_ad_" .. id }
+          or { "Comprar", "mall_ad_buy_" .. id, (m.monedas or 0) >= a.precio, faltan(a.precio) },
+      }
+    end
+  elseif pestana == "monturas" then
+    local tengo = {}
+    for _, id in ipairs(p.monturas or {}) do tengo[id] = true end
+    for _, id in ipairs(Mall.ORDEN_MONTURAS) do
+      local d = Mall.MONTURAS[id]
+      local M2 = Monturas.especies[id]
+      lista[#lista + 1] = {
+        nombre = d.nombre, texto = d.desc, precio = (not tengo[id]) and d.precio or nil,
+        etiquetas = M2 and { { "+" .. math.floor(M2.vel * 100) .. "% velocidad", COL_MALL.verde }, { "Sin oficio", COL_MALL.gris } } or {},
+        cinta = p.montado == id and "MONTADA" or (tengo[id] and "TUYA" or nil),
+        borde = tengo[id] and { 0.35, 0.75, 0.45 } or nil,
+        previa = function(cx, pies)
+          local def = Personajes.monturaDe(id, p.faccion)
+          local esc = 1.5
+          if def and def.anim then
+            local dm = require("src.presentacion.render.mob_anim").DEFS[def.anim]
+            if dm then esc = math.min(1.5, 78 / math.max(1, dm.alto)) end
+          end
+          love.graphics.push()
+          love.graphics.translate(cx, pies)
+          love.graphics.scale(esc, esc)
+          if def then Personajes.dibujar(def, 1, true, love.timer.getTime(), 0, 0) end
+          love.graphics.pop()
+        end,
+        boton = tengo[id] and { "La tienes", "mall_mt_ya", false, "Ya es tuya: pulsa O para montar." }
+          or { "Comprar", "mall_mt_buy_" .. id, (m.monedas or 0) >= d.precio, faltan(d.precio) },
+      }
+    end
+  else
+    local act1 = p.mascotaActiva and p.mascotas and p.mascotas[p.mascotaActiva]
+    local act2 = p.recolectoraActiva and p.mascotas and p.mascotas[p.recolectoraActiva]
+    for _, id in ipairs(Mall.ORDEN_MASCOTAS) do
+      local d = Mascotas.especies[id]
+      local tengo = false
+      for _, mm in ipairs(p.mascotas or {}) do if Mascotas.mismaLinea(mm.especie, id) then tengo = true end end
+      local n2 = d.evo and Mascotas.especies[d.evo]
+      local n3 = n2 and n2.evo and Mascotas.especies[n2.evo]
+      lista[#lista + 1] = {
+        nombre = d.nombre, texto = d.desc, precio = (not tengo) and d.precio or nil,
+        etiquetas = d.radio and { { "Recolectora", COL_MALL.oro }, { "radio " .. d.radio, COL_MALL.gris } }
+          or { { "Ataque", COL_MALL.rojo }, { "3 etapas", COL_MALL.azul } },
+        extra = n2 and ("Luego: " .. n2.nombre .. " (nv " .. d.evoNivel .. ")" .. (n3 and (" > " .. n3.nombre .. " (nv " .. n2.evoNivel .. ")") or "")) or nil,
+        cinta = ((act1 and Mascotas.mismaLinea(act1.especie, id)) or (act2 and Mascotas.mismaLinea(act2.especie, id))) and "CONTIGO" or (tengo and "TUYA" or nil),
+        borde = tengo and { 0.35, 0.75, 0.45 } or nil,
+        previa = function(cx, pies)
+          local def = Personajes.de({ kind = "mascota", especie = id })
+          if def then
+            love.graphics.push()
+            love.graphics.translate(cx, pies)
+            love.graphics.scale(2.2, 2.2)
+            Personajes.dibujar(def, 1, true, love.timer.getTime(), 0, 0)
+            love.graphics.pop()
+          end
+        end,
+        boton = tengo and { "La tienes", "mall_ma_ya", false, "Ya es tuya: abre tus mascotas con N." }
+          or { "Comprar", "mall_ma_buy_" .. id, (m.monedas or 0) >= d.precio, faltan(d.precio) },
+      }
+    end
+  end
+  return lista
+end
+
 function I.panelMall(mundo, p, w, h)
   local Mall = require("compartido.dominio.mall")
   local m = p.mall or { monedas = 0, addons = {} }
-  local px, py, pw, ph = w / 2 - 330, 50, 660, 600
+  local pw, ph = 720, 640
+  local px, py = w / 2 - pw / 2, 30
   caja(px, py, pw, ph, "Item Mall")
   I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
-  love.graphics.setColor(1, 0.85, 0.3)
-  love.graphics.print(Mall.MONEDA .. ": " .. Ayudas.num(m.monedas), px + 14, py + 40)
+  -- saldo de monedas
+  local saldo = Ayudas.num(m.monedas)
+  love.graphics.setFont(I.fuente)
+  local sw = I.fuente:getWidth(saldo)
+  local bx = px + pw - 84 - sw - 62
+  love.graphics.setColor(0.04, 0.06, 0.14, 0.9)
+  love.graphics.rectangle("fill", bx, py + 7, sw + 62, 26, 13, 13)
+  love.graphics.setColor(0.8, 0.62, 0.2, 0.85)
+  love.graphics.rectangle("line", bx + 0.5, py + 7.5, sw + 61, 25, 13, 13)
+  moneda(bx + 16, py + 20, 9)
+  love.graphics.setColor(1, 0.88, 0.35)
+  love.graphics.print(saldo, bx + 32, py + 11)
+  love.graphics.setColor(0.7, 0.66, 0.5)
+  love.graphics.setFont(pequena())
+  love.graphics.print("Monedas", bx + sw + 36, py + 13)
+  love.graphics.setFont(I.fuente)
+  -- pestañas
   I.mallTab = I.mallTab or "objetos"
-  I.boton(px + 230, py + 36, 80, 28, "Objetos", "mall_tab_obj", I.mallTab ~= "objetos")
-  I.boton(px + 314, py + 36, 80, 28, "Forja", "mall_tab_forja", I.mallTab ~= "forja")
-  I.boton(px + 398, py + 36, 80, 28, "Addons", "mall_tab_add", I.mallTab ~= "addons")
-  I.boton(px + 482, py + 36, 80, 28, "Monturas", "mall_tab_mont", I.mallTab ~= "monturas")
-  I.boton(px + 566, py + 36, 80, 28, "Mascotas", "mall_tab_masc", I.mallTab ~= "mascotas")
-  local y0 = py + 84
-  if I.mallTab == "objetos" or I.mallTab == "forja" then
-    -- la pestaña Forja vende solo paquetes de polvo de encantamiento; el resto va en "Objetos"
-    local objetos = {}
-    for _, o in ipairs(Mall.OBJETOS) do
-      if (o.polvo ~= nil) == (I.mallTab == "forja") then objetos[#objetos + 1] = o end
+  local gap = 6
+  local tabw = (pw - 28 - gap * (#TABS_MALL - 1)) / #TABS_MALL
+  local descripcion
+  for i, t in ipairs(TABS_MALL) do
+    local tx, ty = px + 14 + (i - 1) * (tabw + gap), py + 42
+    local activa = I.mallTab == t[1]
+    local hover = sobre(tx, ty, tabw, 30)
+    if activa then
+      descripcion = t[4]
+      relleno(tx, ty, tabw, 30, 8, { 0.45, 0.36, 0.14 }, { 0.26, 0.2, 0.08 }, 1)
+      love.graphics.setColor(1, 0.82, 0.3, 1)
+    else
+      relleno(tx, ty, tabw, 30, 8, hover and { 0.24, 0.32, 0.6 } or { 0.15, 0.2, 0.4 }, { 0.08, 0.1, 0.22 }, 1)
+      love.graphics.setColor(0.35, 0.48, 0.85, hover and 1 or 0.7)
     end
-    -- caben 7 filas; el resto se recorre con la rueda del ratón
-    local visibles = 5
-    I.mallScrollMax = math.max(0, #objetos - visibles)
-    I.mallScroll = math.max(0, math.min(I.mallScrollMax, I.mallScroll or 0))
-    if I.mallScrollMax > 0 then
-      love.graphics.setColor(0.65, 0.62, 0.55)
-      love.graphics.print("Rueda del ratón para ver más (" .. (I.mallScroll + 1) .. "-" .. (I.mallScroll + visibles) .. " de " .. #objetos .. ")", px + 14, py + 60)
-    end
-    for i, o in ipairs(objetos) do
-     if i > I.mallScroll and i <= I.mallScroll + visibles then
-      local y = y0 + (i - 1 - I.mallScroll) * 78
-      love.graphics.setColor(0.10, 0.13, 0.25)
-      love.graphics.rectangle("fill", px + 14, y, pw - 28, 72, 6, 6)
-      local def = Datos.item(o.id)
-      if def then
-        local t = def.tinte or { 1, 1, 1 }
-        love.graphics.setColor(t[1], t[2], t[3], 1)
-        Atlas.dibujar(def.hoja, def.sprite, px + 44, y + 36, 1.2, 16, 16, t)
-      end
-      love.graphics.setColor(0.95, 0.9, 0.75)
-      love.graphics.print(o.nombre, px + 76, y + 6)
-      love.graphics.setColor(0.72, 0.78, 0.68)
-      love.graphics.printf(o.texto, px + 76, y + 28, 330, "left")
-      love.graphics.setColor(1, 0.85, 0.3)
-      love.graphics.printf(Ayudas.num(o.precio) .. " mon.", px + 410, y + 28, 80, "right")
-      I.boton(px + 504, y + 20, 130, 32, "Comprar", "mall_buy_" .. o.id, (m.monedas or 0) >= o.precio,
-        "Te faltan " .. Ayudas.num(o.precio - (m.monedas or 0)) .. " Monedas Corona.")
-     end
-    end
-  elseif I.mallTab == "mascotas" then
-    -- mascotas recolectoras: salen solas a por todo lo que cae al suelo a tu alrededor y lo guardan en tu bolsa
-    local tengoP = {}
-    for _, mm in ipairs(p.mascotas or {}) do tengoP[mm.especie] = true end
-    local visiblesP = 3
-    I.mallScrollMax = math.max(0, #Mall.ORDEN_MASCOTAS - visiblesP)
-    I.mallScroll = math.max(0, math.min(I.mallScrollMax, I.mallScroll or 0))
-    love.graphics.setColor(0.65, 0.62, 0.55)
-    love.graphics.print("Recogen por ti todo el botín que cae cerca (objetos, oro y mercancías). Llámalas con N." .. (I.mallScrollMax > 0 and "  Rueda: ver más." or ""), px + 14, py + 60)
-    local reloj = love.timer.getTime()
-    for i, id in ipairs(Mall.ORDEN_MASCOTAS) do
-     if i > I.mallScroll and i <= I.mallScroll + visiblesP then
-      local d = Mascotas.especies[id]
-      local y = y0 + 8 + (i - 1 - I.mallScroll) * 118
-      love.graphics.setColor(0.10, 0.13, 0.25)
-      love.graphics.rectangle("fill", px + 14, y, pw - 28, 110, 8, 8)
-      local def = Personajes.de({ kind = "mascota", especie = id })
-      if def then
-        love.graphics.push()
-        love.graphics.translate(px + 70, y + 96)
-        love.graphics.scale(2.3, 2.3)
-        Personajes.dibujar(def, 1, true, reloj, 0, 0)
-        love.graphics.pop()
-      end
-      love.graphics.setColor(0.98, 0.9, 0.7)
-      love.graphics.print(d.nombre .. (tengoP[id] and (p.mascotaActiva and p.mascotas[p.mascotaActiva] and p.mascotas[p.mascotaActiva].especie == id and "   (contigo)" or "") or ""), px + 130, y + 8)
-      love.graphics.setColor(0.72, 0.78, 0.68)
-      love.graphics.printf(d.desc, px + 130, y + 30, 360, "left")
-      love.graphics.setColor(0.6, 0.85, 1)
-      love.graphics.print("Recoge en un radio de " .. d.radio .. " casillas", px + 130, y + 86)
-      if tengoP[id] then
-        I.boton(px + 504, y + 30, 130, 32, "La tienes", "mall_ma_ya", false, "Ya es tuya: llámala con N o en el criador de mascotas.")
-      else
-        love.graphics.setColor(1, 0.85, 0.3)
-        love.graphics.printf(Ayudas.num(d.precio) .. " mon.", px + 504, y + 76, 130, "center")
-        I.boton(px + 504, y + 30, 130, 32, "Comprar", "mall_ma_buy_" .. id, (m.monedas or 0) >= d.precio,
-          "Te faltan " .. Ayudas.num(d.precio - (m.monedas or 0)) .. " Monedas Corona.")
-      end
-     end
-    end
-  elseif I.mallTab == "monturas" then
-    local tengoM = {}
-    for _, id in ipairs(p.monturas or {}) do tengoM[id] = true end
-    local visiblesM = 3
-    I.mallScrollMax = math.max(0, #Mall.ORDEN_MONTURAS - visiblesM)
-    I.mallScroll = math.max(0, math.min(I.mallScrollMax, I.mallScroll or 0))
-    if I.mallScrollMax > 0 then
-      love.graphics.setColor(0.65, 0.62, 0.55)
-      love.graphics.print("Rueda del ratón para ver más (" .. (I.mallScroll + 1) .. "-" .. (I.mallScroll + visiblesM) .. " de " .. #Mall.ORDEN_MONTURAS .. ")", px + 14, py + 60)
-    end
-    for i, id in ipairs(Mall.ORDEN_MONTURAS) do
-     if i > I.mallScroll and i <= I.mallScroll + visiblesM then
-      local d = Mall.MONTURAS[id]
-      local y = y0 + (i - 1 - I.mallScroll) * 118
-      love.graphics.setColor(0.10, 0.13, 0.25)
-      love.graphics.rectangle("fill", px + 14, y, pw - 28, 110, 8, 8)
-      local def = Personajes.monturaDe(id, p.faccion)
-      -- vista previa con sus efectos (aura, alas y partículas), recortada a la tarjeta
-      love.graphics.setScissor((px + 14) * (I.escala or 1), y * (I.escala or 1), (pw - 28) * (I.escala or 1), 110 * (I.escala or 1))
-      love.graphics.push()
-      love.graphics.translate(px + 70, y + 100)
-      -- las monturas de FAO son de tamaños muy distintos: la vista previa las ajusta a la tarjeta
-      local esc = 1.7
-      if def and def.anim then
-        local dm = require("src.presentacion.render.mob_anim").DEFS[def.anim]
-        if dm then esc = math.min(1.7, 84 / math.max(1, dm.alto)) end
-      end
-      love.graphics.scale(esc, esc)
-      if def then Personajes.dibujar(def, 1, true, love.timer.getTime(), 0, 0) end
-      love.graphics.pop()
-      love.graphics.setScissor()
-      love.graphics.setColor(0.98, 0.9, 0.7)
-      love.graphics.print(d.nombre .. (p.montado == id and "   (montado)" or ""), px + 130, y + 8)
-      love.graphics.setColor(0.72, 0.78, 0.68)
-      love.graphics.printf(d.desc, px + 130, y + 30, 360, "left")
-      local M2 = Monturas.especies[id]
-      if M2 then
-        love.graphics.setColor(0.6, 0.85, 1)
-        love.graphics.print("Velocidad +" .. math.floor(M2.vel * 100) .. "%    Sin oficio", px + 130, y + 86)
-      end
-      if tengoM[id] then
-        I.boton(px + 504, y + 30, 130, 32, "La tienes", "mall_mt_ya", false, "Ya es tuya: pulsa O para montar.")
-      else
-        -- el precio va bajo el botón (a la izquierda chocaba con las descripciones largas)
-        love.graphics.setColor(1, 0.85, 0.3)
-        love.graphics.printf(Ayudas.num(d.precio) .. " mon.", px + 504, y + 76, 130, "center")
-        I.boton(px + 504, y + 30, 130, 32, "Comprar", "mall_mt_buy_" .. id, (m.monedas or 0) >= d.precio,
-          "Te faltan " .. Ayudas.num(d.precio - (m.monedas or 0)) .. " Monedas Corona.")
-      end
-     end
-    end
-  else
-    local tengo = {}
-    for _, id in ipairs(m.addons or {}) do tengo[id] = true end
-    -- caben 7 filas; el resto se recorre con la rueda del ratón
-    local visibles = 5
-    I.mallScrollMax = math.max(0, #Mall.ORDEN_ADDONS - visibles)
-    I.mallScroll = math.max(0, math.min(I.mallScrollMax, I.mallScroll or 0))
-    if I.mallScrollMax > 0 then
-      love.graphics.setColor(0.65, 0.62, 0.55)
-      love.graphics.print("Rueda del ratón para ver más (" .. (I.mallScroll + 1) .. "-" .. (I.mallScroll + visibles) .. " de " .. #Mall.ORDEN_ADDONS .. ")", px + 14, py + 60)
-    end
-    for i, id in ipairs(Mall.ORDEN_ADDONS) do
-     if i > I.mallScroll and i <= I.mallScroll + visibles then
-      local a = Mall.ADDONS[id]
-      local y = y0 + (i - 1 - I.mallScroll) * 78
-      love.graphics.setColor(0.10, 0.13, 0.25)
-      love.graphics.rectangle("fill", px + 14, y, pw - 28, 72, 6, 6)
-      -- vista previa del sprite
-      local skin = Personajes.skins[id]
-      if skin then Personajes.dibujar(skin, 1, false, 0, px + 44, y + 64) end
-      love.graphics.setColor(0.95, 0.9, 0.75)
-      love.graphics.print(a.nombre .. (m.addonActivo == id and "   (puesto)" or ""), px + 90, y + 6)
-      love.graphics.setColor(0.72, 0.78, 0.68)
-      love.graphics.printf(a.desc, px + 90, y + 28, 320, "left")
-      if tengo[id] then
-        I.boton(px + 504, y + 20, 130, 32, m.addonActivo == id and "Quitar" or "Poner", "mall_ad_" .. id)
-      else
-        love.graphics.setColor(1, 0.85, 0.3)
-        love.graphics.printf(Ayudas.num(a.precio) .. " mon.", px + 410, y + 28, 80, "right")
-        I.boton(px + 504, y + 20, 130, 32, "Comprar", "mall_ad_buy_" .. id, (m.monedas or 0) >= a.precio,
-          "Te faltan " .. Ayudas.num(a.precio - (m.monedas or 0)) .. " Monedas Corona.")
-      end
-     end
+    love.graphics.rectangle("line", tx + 0.5, ty + 0.5, tabw - 1, 29, 8, 8)
+    love.graphics.setColor(activa and 1 or 0.85, activa and 0.95 or 0.9, activa and 0.7 or 1)
+    love.graphics.printf(t[2], tx, ty + 6, tabw, "center")
+    I.registrar(tx, ty, tabw, 30, t[3])
+  end
+  -- tarjetas en dos columnas
+  local lista = tarjetasMall(p, m, Mall, I.mallTab)
+  local colW, cardH, sep = (pw - 28 - 12) / 2, 148, 10
+  local filas = math.ceil(#lista / 2)
+  local visibles = 3
+  I.mallScrollMax = math.max(0, filas - visibles)
+  I.mallScroll = math.max(0, math.min(I.mallScrollMax, I.mallScroll or 0))
+  love.graphics.setFont(pequena())
+  love.graphics.setColor(0.65, 0.66, 0.6)
+  love.graphics.print(descripcion or "", px + 16, py + 78)
+  if I.mallScrollMax > 0 then
+    love.graphics.printf("Rueda del ratón: " .. (I.mallScroll * 2 + 1) .. "-" .. math.min(#lista, (I.mallScroll + visibles) * 2) .. " de " .. #lista, px + 14, py + 78, pw - 28, "right")
+  end
+  love.graphics.setFont(I.fuente)
+  local gy = py + 96
+  for i, t in ipairs(lista) do
+    local fila, col = math.floor((i - 1) / 2), (i - 1) % 2
+    if fila >= I.mallScroll and fila < I.mallScroll + visibles then
+      I.tarjeta(px + 14 + col * (colW + 12), gy + (fila - I.mallScroll) * (cardH + sep), colW, cardH, t)
     end
   end
+  barraDesplazamiento(px + pw - 12, gy, visibles * cardH + (visibles - 1) * sep, I.mallScroll, visibles, filas)
   -- bonos activos
-  local yb = py + ph - 92
+  local yb = py + ph - 70
+  love.graphics.setColor(TEMA.borde[1], TEMA.borde[2], TEMA.borde[3], 0.4)
+  love.graphics.rectangle("fill", px + 14, yb - 6, pw - 28, 1)
+  love.graphics.setFont(pequena())
   love.graphics.setColor(0.85, 0.82, 0.7)
-  love.graphics.print("Bonos activos", px + 14, yb)
-  local x = px + 14
+  love.graphics.print("Bonos activos", px + 16, yb)
+  local x = px + 110
   local hay = false
   for _, id in ipairs(Mall.ORDEN_BONOS) do
     local resta = m.bonos and m.bonos[id]
     if resta and resta > 0 then
       hay = true
       local b = Mall.BONOS[id]
+      local txt = b.etiqueta .. " " .. tiempoCorto(resta)
+      local cw = pequena():getWidth(txt) + 14
+      love.graphics.setColor(b.color[1], b.color[2], b.color[3], 0.2)
+      love.graphics.rectangle("fill", x, yb - 2, cw, 20, 9, 9)
       love.graphics.setColor(b.color[1], b.color[2], b.color[3], 1)
-      love.graphics.print(b.etiqueta .. " " .. tiempoCorto(resta), x, yb + 22)
-      x = x + 130
+      love.graphics.print(txt, x + 7, yb)
+      x = x + cw + 6
     end
   end
   if not hay then
-    love.graphics.setColor(0.65, 0.62, 0.55)
-    love.graphics.print("Ninguno. Usa una tarjeta o pergamino desde la bolsa (clic).", px + 14, yb + 22)
+    love.graphics.setColor(0.6, 0.6, 0.55)
+    love.graphics.print("Ninguno. Usa una tarjeta o pergamino desde la bolsa (clic).", px + 110, yb)
   end
-  love.graphics.setColor(0.65, 0.62, 0.55)
-  love.graphics.printf("Las monedas las reparte un administrador por ahora. Los bonos siguen contando aunque no estés conectado.",
-    px + 14, py + ph - 38, pw - 28, "left")
+  love.graphics.setColor(0.6, 0.6, 0.55)
+  love.graphics.printf("Las monedas las reparte un administrador por ahora. Los bonos siguen contando aunque no estés conectado.", px + 16, yb + 26, pw - 32, "left")
+  love.graphics.setFont(I.fuente)
 end
 
 -- El objeto del mall que concede cada bono, para pintar su icono.
@@ -3150,65 +3284,86 @@ function I.panelGrupo(mundo, p, w, h)
 end
 
 function I.panelMascotas(mundo, p, w, h)
-  local px, py, pw, ph = w / 2 - 400, 60, 800, 520
-  caja(px, py, pw, ph, "Criador de mascotas")
+  local pw, ph = 720, 600
+  local px, py = w / 2 - pw / 2, 40
+  caja(px, py, pw, ph, "Tus mascotas")
   I.boton(px + pw - 72, py + 8, 60, 28, "Cerrar", "cerrar")
-  local reloj = love.timer.getTime()
-  -- tus mascotas
-  love.graphics.setColor(0.85, 0.78, 0.6)
-  love.graphics.print("Tus mascotas", px + 14, py + 40)
   local mias = p.mascotas or {}
+  -- cuántas tienes y cuál está fuera
+  love.graphics.setFont(pequena())
+  love.graphics.setColor(0.72, 0.74, 0.66)
+  local fuera1 = p.mascotaActiva and mias[p.mascotaActiva]
+  local fuera2 = p.recolectoraActiva and mias[p.recolectoraActiva]
+  local function nombreDe(m) return m and Mascotas.especies[m.especie] and Mascotas.especies[m.especie].nombre or nil end
+  local contigo = {}
+  if nombreDe(fuera1) then contigo[#contigo + 1] = nombreDe(fuera1) end
+  if nombreDe(fuera2) then contigo[#contigo + 1] = nombreDe(fuera2) end
+  love.graphics.print(#mias .. " de " .. Mascotas.MAX_MASCOTAS .. " mascotas  ·  " .. (#contigo > 0 and ("contigo: " .. table.concat(contigo, " y ")) or "ninguna fuera") .. "  ·  puede salir una de ataque y una recolectora a la vez", px + 16, py + 40)
+  love.graphics.setFont(I.fuente)
   if #mias == 0 then
-    love.graphics.setColor(0.7, 0.68, 0.6)
-    love.graphics.printf("Aun no tienes ninguna. Adopta una a la derecha.", px + 14, py + 70, 330, "left")
+    love.graphics.setColor(0.8, 0.78, 0.65)
+    love.graphics.printf("Aún no tienes ninguna mascota.", px + 20, py + 120, pw - 40, "center")
+    love.graphics.setFont(pequena())
+    love.graphics.setColor(0.65, 0.68, 0.6)
+    love.graphics.printf("El osito pardo se compra con oro en la tienda del mercado (la enfermera, pestaña Mascotas).\nLa cría de dragón, las pelusas y las recolectoras, con Monedas Corona en el Item Mall (L).", px + 40, py + 160, pw - 80, "center")
+    love.graphics.setFont(I.fuente)
   end
+  -- tarjetas en dos columnas
+  local colW, cardH, sep = (pw - 28 - 12) / 2, 148, 10
+  local filas = math.ceil(#mias / 2)
+  local visibles = 3
+  I.mascScrollMax = math.max(0, filas - visibles)
+  I.mascScroll = math.max(0, math.min(I.mascScrollMax, I.mascScroll or 0))
+  local gy = py + 62
   for i, m in ipairs(mias) do
     local d = Mascotas.especies[m.especie]
-    local y = py + 68 + (i - 1) * 62
-    love.graphics.setColor(0.10, 0.13, 0.25)
-    love.graphics.rectangle("fill", px + 14, y, 340, 56, 4, 4)
-    local def = Personajes.de({ kind = "mascota", especie = m.especie })
-    if def then Personajes.dibujar(def, 1, true, reloj, px + 44, y + 48) end
-    love.graphics.setColor(0.95, 0.9, 0.75)
-    love.graphics.print((d and d.nombre or m.especie) .. "  nv " .. m.nivel, px + 74, y + 4)
-    local sig = Mascotas.xpPara(m.nivel)
-    local tope = m.nivel >= math.min(Mascotas.NIVEL_MAX, p.nivel or 1)
-    love.graphics.setColor(0, 0, 0, 0.7)
-    love.graphics.rectangle("fill", px + 74, y + 26, 150, 8)
-    love.graphics.setColor(0.85, 0.7, 0.2)
-    love.graphics.rectangle("fill", px + 74, y + 26, 150 * (tope and 1 or math.min(1, (m.xp or 0) / sig)), 8)
-    love.graphics.setColor(0.7, 0.75, 0.65)
-    love.graphics.print(tope and "al nivel de su dueño" or ((m.xp or 0) .. "/" .. sig .. " xp"), px + 74, y + 38)
-    local fuera = p.mascotaActiva == i
-    I.boton(px + 252, y + 12, 94, 32, fuera and "Guardar" or "Invocar", "masc_inv_" .. i)
+    local fila, col = math.floor((i - 1) / 2), (i - 1) % 2
+    if d and fila >= I.mascScroll and fila < I.mascScroll + visibles then
+      local fuera = p.mascotaActiva == i or p.recolectoraActiva == i
+      local sig = Mascotas.xpPara(m.nivel)
+      local tope = m.nivel >= math.min(Mascotas.NIVEL_MAX, p.nivel or 1)
+      local n2 = d.evo and Mascotas.especies[d.evo]
+      local etiquetas = { { "nv " .. m.nivel, { 0.9, 0.82, 0.4 } } }
+      if d.radio then
+        etiquetas[#etiquetas + 1] = { "Recolectora", { 1, 0.82, 0.3 } }
+      else
+        etiquetas[#etiquetas + 1] = { "Etapa " .. (d.etapa or 1) .. "/3", { 0.5, 0.7, 1 } }
+      end
+      I.tarjeta(px + 14 + col * (colW + 12), gy + (fila - I.mascScroll) * (cardH + sep), colW, cardH, {
+        nombre = d.nombre,
+        texto = d.desc,
+        extra = n2 and ("Evoluciona a " .. n2.nombre .. " (nv " .. d.evoNivel .. ")") or (d.radio and ("Recoge el botín en " .. d.radio .. " casillas") or "Forma final"),
+        etiquetas = etiquetas,
+        cinta = fuera and "FUERA" or nil,
+        borde = fuera and { 0.35, 0.8, 0.45 } or nil,
+        barra = (not d.radio) and { tope and 1 or ((m.xp or 0) / sig), tope and "al nivel de su dueño" or ((m.xp or 0) .. " / " .. sig .. " xp") } or nil,
+        previa = function(cx, pies)
+          local def = Personajes.de({ kind = "mascota", especie = m.especie })
+          if def then
+            love.graphics.push()
+            love.graphics.translate(cx, pies)
+            love.graphics.scale(2.2, 2.2)
+            Personajes.dibujar(def, 1, true, love.timer.getTime(), 0, 0)
+            love.graphics.pop()
+          end
+        end,
+        boton = { fuera and "Guardar" or "Invocar", "masc_inv_" .. i },
+      })
+    end
   end
-  -- especies disponibles
-  local x2 = px + 390
-  love.graphics.setColor(0.85, 0.78, 0.6)
-  love.graphics.print("Adoptar", x2, py + 40)
-  for i, id in ipairs(Mascotas.orden) do
-    local d = Mascotas.especies[id]
-    local y = py + 68 + (i - 1) * 62
-    local tengo = false
-    for _, m in ipairs(mias) do if m.especie == id then tengo = true end end
-    local nivelOk = (p.nivel or 1) >= d.nivel
-    local oroOk = (p.oro or 0) >= d.precio
-    love.graphics.setColor(0.10, 0.13, 0.25)
-    love.graphics.rectangle("fill", x2, y, 396, 56, 4, 4)
-    local def = Personajes.de({ kind = "mascota", especie = id })
-    love.graphics.setColor(1, 1, 1, (nivelOk and 1 or 0.4))
-    if def then Personajes.dibujar(def, 1, false, reloj, x2 + 30, y + 48, nil, nivelOk and 1 or 0.4) end
-    love.graphics.setColor(nivelOk and 0.95 or 0.6, nivelOk and 0.9 or 0.58, nivelOk and 0.75 or 0.52)
-    love.graphics.print(d.nombre, x2 + 60, y + 2)
-    love.graphics.setColor(oroOk and 1 or 1, oroOk and 0.9 or 0.45, oroOk and 0.4 or 0.4)
-    love.graphics.print(d.precio .. " oro, nv " .. d.nivel, x2 + 60 + love.graphics.getFont():getWidth(d.nombre) + 10, y + 2)
-    love.graphics.setColor(0.7, 0.75, 0.65)
-    love.graphics.printf(d.desc, x2 + 60, y + 21, 230, "left")
-    I.boton(x2 + 296, y + 12, 94, 32, tengo and "Tuya" or "Adoptar", "masc_adoptar_" .. id, (not tengo) and nivelOk and oroOk)
+  -- barra de desplazamiento
+  if filas > visibles then
+    love.graphics.setColor(0, 0, 0, 0.45)
+    local alto = visibles * cardH + (visibles - 1) * sep
+    love.graphics.rectangle("fill", px + pw - 12, gy, 5, alto, 2, 2)
+    local th = math.max(24, alto * visibles / filas)
+    love.graphics.setColor(0.45, 0.6, 0.95, 0.9)
+    love.graphics.rectangle("fill", px + pw - 12, gy + (alto - th) * (I.mascScroll / math.max(1, filas - visibles)), 5, th, 2, 2)
   end
-  love.graphics.setColor(0.7, 0.68, 0.6)
-  love.graphics.printf("La mascota te sigue, pelea a tu lado y sube de nivel contigo (sin pasar del tuyo). Puede caer en combate y vuelve a los 30 s. Solo sale una a la vez y descansa durante las guerras. Tecla N: llamar o guardar la última. Las mascotas que recogen el botín por ti están en el Item Mall (L).",
-    px + 14, py + ph - 70, pw - 28, "left")
+  love.graphics.setFont(pequena())
+  love.graphics.setColor(0.65, 0.66, 0.6)
+  love.graphics.printf("Te siguen, pelean a tu lado y suben de nivel contigo (sin pasar el tuyo); evolucionan solas al llegar a ciertos niveles. Puede salir una de ataque y una recolectora a la vez; descansan durante las guerras y, si una cae en combate, vuelve a los 30 s. Tecla N: abrir o cerrar esta lista.", px + 16, py + ph - 62, pw - 32, "left")
+  love.graphics.setFont(I.fuente)
 end
 -- Piezas que se pueden encantar: lo que llevas puesto y lo que hay en la bolsa.
 local HUECOS_ENCANTO = { "arma", "escudo", "cabeza", "pecho", "piernas", "pies", "anillo", "amuleto" }
@@ -3473,8 +3628,9 @@ local CAT_ESCUDOS = { id = "escudos", nombre = "Escudos", huecos = { escudo = tr
 local CAT_ACCESORIOS = { id = "accesorios", nombre = "Accesorios", huecos = { anillo = true, amuleto = true } }
 local CAT_MOCHILAS = { id = "mochilas", nombre = "Mochilas", huecos = { mochila = true } }
 local CAT_VENDER = { id = "vender", nombre = "Vender" }
+local CAT_MASCOTAS = { id = "mascotas", nombre = "Mascotas" }
 local TIENDAS = {
-  mercado = { titulo = "Pociones", cats = { CAT_POCIONES, CAT_VENDER } },
+  mercado = { titulo = "Tienda del mercado", cats = { CAT_POCIONES, CAT_MASCOTAS, CAT_VENDER } },
 }
 for clase, nombre in pairs({ guerrero = "guerrero", lancero = "lancero", cazador = "arquero", mago = "mago", clerigo = "clérigo", nigromante = "nigromante" }) do
   TIENDAS["maestro_" .. clase] = { titulo = "Maestro " .. nombre, clase = clase, cats = { CAT_ARMAS, CAT_ARMADURA, CAT_ESCUDOS, CAT_ACCESORIOS, CAT_MOCHILAS, CAT_VENDER } }
@@ -3554,6 +3710,8 @@ function I.panelMercado(p, w, h)
   local filas = {}
   if I.mercadoTab == "vender" then
     for i, slot in ipairs(p.bolsa) do filas[#filas + 1] = { vender = i, slot = slot } end
+  elseif I.mercadoTab == "mascotas" then
+    for _, id in ipairs(Mascotas.orden) do filas[#filas + 1] = { mascota = id } end
   else
     for _, id in ipairs(I.listaItemsClase(p, I.mercadoTab)) do filas[#filas + 1] = { id = id } end
   end
@@ -3583,6 +3741,21 @@ function I.panelMercado(p, w, h)
           love.graphics.printf(vendible and (Ayudas.num(math.floor((it.precio or 1) * Datos.FACTOR_VENTA) * cant) .. " oro") or "—", x0 + ancho - 190, y + 12, 90, "right")
           I.boton(x0 + ancho - 90, y + 5, 80, 30, "Vender", "bolsa_" .. fila.vender, vendible, "Este objeto no se puede vender.")
         end
+      elseif fila.mascota then
+        local d = Mascotas.especies[fila.mascota]
+        local def = Personajes.de({ kind = "mascota", especie = fila.mascota })
+        if def then Personajes.dibujar(def, 1, false, love.timer.getTime(), x0 + 26, y + 36) end
+        local tengo = false
+        for _, mm in ipairs(p.mascotas or {}) do if Mascotas.mismaLinea(mm.especie, fila.mascota) then tengo = true end end
+        love.graphics.setColor(0.95, 0.9, 0.75)
+        love.graphics.print(d.nombre .. "  (evoluciona a " .. (d.evo and Mascotas.especies[d.evo] and (Mascotas.especies[d.evo].nombre .. " al nv " .. d.evoNivel) or "") .. ")", x0 + 56, y + 3)
+        love.graphics.setColor(0.7, 0.75, 0.65)
+        love.graphics.print(d.desc, x0 + 56, y + 21)
+        love.graphics.setColor(1, 0.9, 0.4)
+        love.graphics.printf(Ayudas.num(d.precio) .. " oro", x0 + ancho - 190, y + 12, 90, "right")
+        local ok = not tengo and (p.oro or 0) >= d.precio and (p.nivel or 1) >= (d.nivel or 1)
+        I.boton(x0 + ancho - 90, y + 5, 80, 30, tengo and "Tuya" or "Adoptar", "masc_adoptar_" .. fila.mascota, ok,
+          tengo and "Ya la tienes." or ("Te faltan " .. Ayudas.num(math.max(0, d.precio - (p.oro or 0))) .. " de oro."))
       else
         local it = Datos.item(fila.id)
         Atlas.dibujar(it.hoja, it.sprite, x0 + 24, y + 20, 0.9, 16, 16, it.tinte)

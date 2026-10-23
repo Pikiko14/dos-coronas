@@ -969,7 +969,7 @@ function entidadBase(e, sx, sy, mundo, jugador)
   elseif e.kind == "cuerpo" and def then
     -- el cuerpo del caído: misma imagen en gris
     alto = Personajes.dibujarGris(def, e.dir or 1, sx, pies, 0.9)
-  elseif def and def.anim and (e.kind == "monstruo" or e.kind == "npc" or e.kind == "guardia") then
+  elseif def and def.anim and (e.kind == "monstruo" or e.kind == "npc" or e.kind == "guardia" or e.kind == "mascota") then
     -- criatura con animación por cuadros: ataque, daño, carrera o espera
     local ahora = (mundo and mundo.tiempo) or 0
     local tinte = nil

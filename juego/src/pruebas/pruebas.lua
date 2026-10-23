@@ -301,8 +301,8 @@ function Pruebas.correr()
     -- con el ratón: pulsar un poder, arrastrarlo a otra casilla y soltar los intercambia; un clic corto lo lanza
     Interfaz.escala, Interfaz.panel = 1, nil
     pcall(Interfaz.hud, mundo, pj, 1280, 720)
-    local ys = 720 - 50 - 10 + 25
-    local function casilla(i) return 392 + (i - 1) * 54 + 25, ys end
+    -- (la barra va de 6 en 6 por fila: 6 poderes arriba y los demás abajo)
+    local function casilla(i) return 480 + ((i - 1) % 6) * 54 + 25, 720 - 50 - 10 - (1 - math.floor((i - 1) / 6)) * 54 + 25 end
     local antes = {}
     for i, v in ipairs(Ajustes.orden("cazador")) do antes[i] = v end
     local x1, y1 = casilla(1)
@@ -546,7 +546,7 @@ function Pruebas.correr()
     Interfaz.escala, Interfaz.panel = 1, nil
     pcall(Interfaz.hud, mundo, pj, 1280, 720)
     local lado0, consola0 = Interfaz.medidas()
-    fallar(errores, "con monturas el icono sale siempre, aunque no haya oficio activo", Interfaz.consumir(1198, 688) == "hud_monturas")
+    fallar(errores, "con monturas el icono sale siempre, aunque no haya oficio activo", Interfaz.consumir(1148, 688) == "hud_monturas")
     -- la colección de monturas se dibuja con normales, del mall y de transporte, y con el estado de cada una
     pj.monturas = { "caballo", "mnt_001", "mnt_104", "carreta" }
     pj.monturasEstado = { caballo = { hp = 300, max = 350 }, carreta = { caida = 40, hp = 0, max = 1100 } }
@@ -561,7 +561,7 @@ function Pruebas.correr()
     local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "el HUD con montura se dibuja", ok, tostring(err))
     local lado, consola = Interfaz.medidas()
-    local hallado = Interfaz.consumir(1198, 688) == "hud_monturas"
+    local hallado = Interfaz.consumir(1148, 688) == "hud_monturas"
     fallar(errores, "el icono de montura responde al clic", hallado)
     pj.montado = "caballo"
     ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
@@ -1304,7 +1304,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local CW, CH = 120, 130
     local cv = love.graphics.newCanvas(CW * 9, CH * 3)
     love.graphics.push("all")
-    love.graphics.setCanvas(cv)
+    love.graphics.setCanvas({ cv, stencil = true })
     love.graphics.clear(0.24, 0.4, 0.24, 1)
     for i, m in ipairs(lista) do
       local d = MobAnim.DEFS[m.id]
@@ -1334,7 +1334,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
         for _, dir in ipairs({ 0, 4 }) do
           local cv = love.graphics.newCanvas(CW * 10, CH * 12)
           love.graphics.push("all")
-          love.graphics.setCanvas(cv)
+          love.graphics.setCanvas({ cv, stencil = true })
           love.graphics.clear(0.23, 0.27, 0.34, 1)
           for f, clase in ipairs(clases) do
             for g, gen in ipairs({ "h", "m" }) do
@@ -1362,7 +1362,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       local CW, CH = 100, 110
       local cv = love.graphics.newCanvas(CW * 6, CH * 5)
       love.graphics.push("all")
-      love.graphics.setCanvas(cv)
+      love.graphics.setCanvas({ cv, stencil = true })
       love.graphics.clear(0.23, 0.27, 0.34, 1)
       for d5 = 0, 4 do
         for p = 0, 5 do
@@ -1388,7 +1388,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       local CW, CH = 100, 120
       local cv = love.graphics.newCanvas(CW * 12, CH * #monturas)
       love.graphics.push("all")
-      love.graphics.setCanvas(cv)
+      love.graphics.setCanvas({ cv, stencil = true })
       love.graphics.clear(0.23, 0.27, 0.34, 1)
       for fila, mid in ipairs(monturas) do
         for dir = 1, 4 do
@@ -1427,7 +1427,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
             for _, gen in ipairs({ "h", "m" }) do
               for _, tier in ipairs({ 1, 8 }) do
                 love.graphics.push("all")
-                love.graphics.setCanvas(cv)
+                love.graphics.setCanvas({ cv, stencil = true })
                 love.graphics.clear(0, 0, 0, 0)
                 local e = { kind = "jugador", id = 20000 + total, clase = clase, gen = gen, equipo = I.equipoDe(clase, tier), x = 10, y = 10, dir = 1,
                             montado = mid, mov = (total % 2 == 0), vivo = true, faccion = "albor", velx = 0, vely = 0, _f8 = oc }
@@ -1472,7 +1472,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       local filas = math.ceil(#ids / COLS)
       local cv = love.graphics.newCanvas(CW * COLS, CH * filas)
       love.graphics.push("all")
-      love.graphics.setCanvas(cv)
+      love.graphics.setCanvas({ cv, stencil = true })
       love.graphics.clear(0.23, 0.27, 0.34, 1)
       for n, mid in ipairs(ids) do
         local x, y = ((n - 1) % COLS) * CW, math.floor((n - 1) / COLS) * CH
@@ -1502,7 +1502,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       local CW, CH = 110, 120
       local cv = love.graphics.newCanvas(CW * 8, CH * 12)
       love.graphics.push("all")
-      love.graphics.setCanvas(cv)
+      love.graphics.setCanvas({ cv, stencil = true })
       love.graphics.clear(0.23, 0.27, 0.34, 1)
       for f, clase in ipairs(clases) do
         for g, gen in ipairs({ "h", "m" }) do
@@ -1536,7 +1536,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       local CW, CH = 100, 110
       local cv = love.graphics.newCanvas(CW * 8, CH * #filas)
       love.graphics.push("all")
-      love.graphics.setCanvas(cv)
+      love.graphics.setCanvas({ cv, stencil = true })
       love.graphics.clear(0.23, 0.27, 0.34, 1)
       for r, f in ipairs(filas) do
         for oc = 0, 7 do
@@ -1561,7 +1561,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       local CW, CH = 100, 110
       local cv = love.graphics.newCanvas(CW * 6, CH * 8)
       love.graphics.push("all")
-      love.graphics.setCanvas(cv)
+      love.graphics.setCanvas({ cv, stencil = true })
       love.graphics.clear(0.23, 0.27, 0.34, 1)
       for oc = 0, 7 do
         for p = 0, 5 do
@@ -1724,7 +1724,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "la pestana de monturas se dibuja", ok, tostring(err))
     local compra
-    for y = 110, 260, 4 do for x = 640, 1000, 4 do
+    for y = 110, 330, 4 do for x = 440, 1000, 4 do
       local id = Interfaz.consumir(x, y)
       if id == "mall_mt_buy_mnt_039" then compra = true end
     end end
@@ -1973,7 +1973,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
           love.graphics.pop()
           fallar(errores, "se dibuja la escena en " .. nombre .. ": " .. tostring(err), ok)
           love.graphics.push("all")
-          love.graphics.setCanvas(cv)
+          love.graphics.setCanvas({ cv, stencil = true })
           love.graphics.setColor(1, 1, 1, 1)
           love.graphics.draw(celda, (col - 1) * CW, (fila - 1) * CH)
           love.graphics.pop()
@@ -2549,6 +2549,52 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
   end)
   -- Asedio (MOBA) en el cliente: se dibujan nexos, torres, esbirros y el marcador, el panel de guerra tiene su botón y el minimapa los marca. Con DC_PRUEBA_MOBA=1 guarda juego/capturas/moba.png
   -- (escena junto a una torre con esbirros, y el panel de guerra con el asedio).
+  paso("mascotas: todas las formas y los paneles se dibujan sin errores", function()
+    local I = require("src.presentacion.interfaz")
+    local Personajes = require("src.presentacion.render.personajes")
+    local cv = love.graphics.newCanvas(1400, 260)
+    love.graphics.setCanvas({ cv, stencil = true })
+    love.graphics.clear(0.15, 0.3, 0.15, 1)
+    local ok, err = pcall(function()
+      local x = 70
+      for _, id in ipairs({ "osito_1", "osito_2", "osito_3", "dragon_1", "dragon_2", "dragon_3", "angel_1", "angel_2", "angel_3", "demonio_1", "demonio_2", "demonio_3" }) do
+        local def = Personajes.de({ kind = "mascota", especie = id })
+        fallar(errores, "la forma " .. id .. " tiene dibujo animado", def ~= nil and def.anim ~= nil)
+        Personajes.dibujar(def, 1, false, 0, x, 200)
+        x = x + 110
+      end
+    end)
+    love.graphics.setCanvas()
+    fallar(errores, "se dibuja sin errores", ok, tostring(err))
+    if os.getenv("DC_PRUEBA_MASCOTAS") then Log.volcar("capturas/mascotas_formas.png", cv:newImageData():encode("png"):getString()) end
+    -- los tres sitios donde se ven: tus mascotas (N), la tienda del mercado y el Item Mall
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Cria", faccion = "albor", clase = "guerrero", nivel = 30 })
+    pj.oro, pj.monedas = 5000, 3000
+    pj.mall = { monedas = 3000, addons = {} }
+    pj.mascotas = { { especie = "osito_2", nivel = 14, xp = 100 }, { especie = "dragon_1", nivel = 5, xp = 30 }, { especie = "perro_rastreador", nivel = 1, xp = 0 } }
+    pj.mascotaActiva = 1
+    local function foto(nombre, preparar)
+      local c2 = love.graphics.newCanvas(1280, 720)
+      love.graphics.push("all")
+      love.graphics.setCanvas({ c2, stencil = true })
+      love.graphics.clear(0.2, 0.3, 0.2, 1)
+      preparar()
+      local ok2, err2 = pcall(I.hud, mundo, pj, 1280, 720)
+      love.graphics.pop()
+      fallar(errores, "se dibuja " .. nombre, ok2, tostring(err2))
+      if os.getenv("DC_PRUEBA_MASCOTAS") then Log.volcar("capturas/mascotas_" .. nombre .. ".png", c2:newImageData():encode("png"):getString()) end
+    end
+    I.escala = 1
+    foto("hud", function() I.panel = nil end)
+    foto("lista", function() I.panel = "mascotas" end)
+    foto("tienda", function() I.panel, I.tienda, I.mercadoTab, I.scroll = "mercado", "mercado", "mascotas", 0 end)
+    foto("mall", function() I.panel, I.mallTab, I.mallScroll = "mall", "mascotas", 0 end)
+    foto("mall_objetos", function() I.panel, I.mallTab, I.mallScroll = "mall", "objetos", 0 end)
+    foto("mall_monturas", function() I.panel, I.mallTab, I.mallScroll = "mall", "monturas", 0 end)
+    foto("mall_addons", function() I.panel, I.mallTab, I.mallScroll = "mall", "addons", 0 end)
+    I.panel = nil
+  end)
   pasoMoba("asedio (MOBA): escena, marcador, minimapa y panel de guerra", function()
     local Dibujo = require("src.presentacion.render.dibujo")
     local mundo = Mundo.nuevo()
@@ -2760,7 +2806,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     fallar(errores, "la pestaña de mascotas del mall se dibuja", ok, tostring(err))
     local botones = {}
     for _, r in ipairs(Interfaz.rects) do botones[r.id] = true end
-    fallar(errores, "hay botones para comprar las que faltan", botones.mall_ma_buy_gallina_dorada and botones.mall_ma_buy_dragoncito and botones.mall_tab_obj)
+    fallar(errores, "hay botones para comprar las que faltan", botones.mall_ma_buy_dragon_1 and botones.mall_ma_buy_angel_1 and botones.mall_ma_buy_demonio_1 and botones.mall_tab_obj)
     Interfaz.mallTab, Interfaz.panel = nil, nil
     if os.getenv("DC_PRUEBA_PODERES_FAO") then
       Log.volcar("capturas/mall_mascotas.png", cv:newImageData():encode("png"):getString())
@@ -2797,7 +2843,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       if id == "hud_ayuda" then ayuda = id end
     end
     fallar(errores, "los botones del minimapa reciben clics", ayuda == "hud_ayuda", tostring(ayuda))
-    fallar(errores, "el hueco de la barra de poderes responde", Interfaz.consumir(392 + 25, 720 - consola - 34) == "hab_1")
+    fallar(errores, "el hueco de la barra de poderes responde", Interfaz.consumir(480 + 25, 720 - consola - 89) == "hab_1" and Interfaz.consumir(480 + 25, 720 - consola - 34) == "hab_7")
   end)
   paso("interfaz: clic derecho sobre un jugador abre el menú de trato, gremio y grupo", function()
     local Dibujo = require("src.presentacion.render.dibujo")
@@ -2897,14 +2943,14 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       return n
     end
     Interfaz.tienda = "mercado"
-    for _, tab in ipairs({ "pociones", "vender" }) do
+    for _, tab in ipairs({ "pociones", "mascotas", "vender" }) do
       Interfaz.mercadoTab = tab
       local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
       fallar(errores, "la enfermera dibuja " .. tab, ok, tostring(err))
     end
     Interfaz.mercadoTab = "pociones"
     Interfaz.hud(mundo, pj, 1280, 720)
-    fallar(errores, "la enfermera solo tiene pociones y vender", contarPestanas() == 2, tostring(contarPestanas()))
+    fallar(errores, "la enfermera tiene pociones, mascotas y vender", contarPestanas() == 3, tostring(contarPestanas()))
     Interfaz.tienda = "maestro_guerrero"
     for _, tab in ipairs({ "armas", "armadura", "escudos", "accesorios", "mochilas", "vender" }) do
       Interfaz.mercadoTab = tab
@@ -3660,7 +3706,7 @@ local function avanzarFoto(app)
     j.encantos = nil
     j.nivel = 14
     j.oro = 3000
-    j.mascotas = { { especie = "gatito", nivel = 6, xp = 120 }, { especie = "murcielago", nivel = 3, xp = 40 } }
+    j.mascotas = { { especie = "osito_1", nivel = 6, xp = 120 }, { especie = "dragon_1", nivel = 3, xp = 40 } }
     j.mascotaActiva = 1
   elseif foto.paso == "mascotas" then
     foto.paso = "gremio"

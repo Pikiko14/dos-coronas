@@ -154,14 +154,14 @@ function M.instalar(Mundo)
     if not d or not d.mall then return "Esa mascota no está en el mall." end
     p.mascotas = p.mascotas or {}
     for _, m in ipairs(p.mascotas) do
-      if m.especie == id then return "Ya tienes esa mascota." end
+      if Mascotas.mismaLinea(m.especie, id) then return "Ya tienes esa mascota." end
     end
     if #p.mascotas >= Mascotas.MAX_MASCOTAS then return "No puedes cuidar más mascotas." end
     if (p.monedas or 0) < d.precio then return "Te faltan monedas: cuesta " .. d.precio .. "." end
     p.monedas = p.monedas - d.precio
     p.mascotas[#p.mascotas + 1] = { especie = id, nivel = 1, xp = 0 }
     self:marcarProgreso(p)
-    self:mensaje("sistema", "", d.nombre .. " es tuya: recoge por ti todo lo que cae a tu alrededor. Pulsa N para llamarla o guardarla.", p)
+    self:mensaje("sistema", "", d.nombre .. " es tuya" .. (d.radio and ": recoge por ti todo lo que cae a tu alrededor." or ": evoluciona sola al subir de nivel.") .. " Pulsa N para abrir tus mascotas.", p)
     if p.modo ~= "batalla" and p.modo ~= "estandarte" and p.modo ~= "moba" then self:invocarMascota(p, #p.mascotas) end
     return nil
   end

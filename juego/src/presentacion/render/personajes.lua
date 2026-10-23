@@ -181,18 +181,18 @@ end
 
 -- Mascotas (compartido/dominio/mascotas.lua): la hoja y la casilla de cada especie.
 P.mascotas = {
-  gatito = { hoja = "Characters/Animal.png", idx = 1 },
-  murcielago = { hoja = "Characters/Monster3.png", idx = 0 },
-  limo = { hoja = "Characters/Monster2.png", idx = 2 },
-  flor = { hoja = "Characters/Monster2.png", idx = 0 },
-  hada = { hoja = "Characters/Monster2.png", idx = 3 },
-  avispa = { hoja = "Characters/Monster3.png", idx = 2 },
   -- recolectoras del Item Mall
   perro_rastreador = { hoja = "Characters/Animal.png", idx = 0 },
   gallina_dorada = { hoja = "Characters/Animal.png", idx = 2 },
   dragoncito = { hoja = "Characters/Monster2.png", idx = 1 },
   fantasma = { hoja = "Characters/Monster1.png", idx = 0 },
 }
+
+-- Formas de las mascotas de ataque (arte de FAO horneado por herramientas/generar_mobs/mascotas_fao.py: "masc_<forma>" en render/mob_anim_mascotas.lua).
+for id, d in pairs(require("compartido.dominio.mascotas").especies) do
+  local arte = "masc_" .. (d.sprite or id)
+  if MobAnim.DEFS[arte] then P.mascotas[id] = { anim = arte, hoja = "Characters/Animal.png", idx = 1 } end
+end
 
 -- Monturas de transporte (compartido/dominio/monturas.lua).
 P.monturas = {
@@ -253,7 +253,7 @@ function P.de(e)
   elseif k == "monstruo" then
     return P.monstruos[e.monstruo or ""] or P.monstruos.seta_azul
   elseif k == "mascota" then
-    return P.mascotas[e.especie or ""] or P.mascotas.gatito
+    return P.mascotas[e.especie or ""] or P.mascotas.osito_1
   elseif k == "esbirro" then
     return P.esbirros[e.especie or ""] or P.esbirros.esqueleto
   end
@@ -273,8 +273,8 @@ end
 
 -- Dibuja la criatura con los pies en (sx, sy). mov: está andando; reloj: segundos.
 function P.dibujar(def, dir, mov, reloj, sx, sy, tinte, alfa, sujeto, repetir, corteY)
-  if def.anim and def.altura then
-    -- montura con animación por cuadros
+  if def.anim then
+    -- montura o mascota con animación por cuadros
     return MobAnim.dibujar(def.anim, mov and "run" or "wait", 0, sx, sy, dir or 1, tinte, 0, sujeto, repetir, corteY)
   end
   if def.fao then return require("src.presentacion.render.fao").dibujar(def.fao, mov, sx, sy, tinte, alfa) end

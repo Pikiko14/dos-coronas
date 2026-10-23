@@ -100,7 +100,7 @@ local function sentenciasDe(pid, ex, hp, mp)
     filas = {}
     for i, m in ipairs(ex.mascotas) do
       filas[#filas + 1] = "(" .. pid .. "," .. i .. "," .. Pg.literal(m.especie) .. "," .. math.max(1, entero(m.nivel)) .. "," ..
-        entero(m.xp) .. "," .. Pg.literal(ex.mascotaActiva == i) .. ")"
+        entero(m.xp) .. "," .. Pg.literal(ex.mascotaActiva == i or ex.recolectoraActiva == i) .. ")"
     end
     cada("personaje_mascota", "slot, especie, nivel, xp, activa", filas)
   end
@@ -619,7 +619,10 @@ function M.cargar(personajeId)
       datos.mascotas = {}
       for _, r in ipairs(lista("SELECT slot, especie, nivel, xp, activa FROM personaje_mascota WHERE personaje_id = " .. pid .. " ORDER BY slot")) do
         datos.mascotas[#datos.mascotas + 1] = { especie = r.especie, nivel = tonumber(r.nivel) or 1, xp = tonumber(r.xp) or 0 }
-        if r.activa == "t" then datos.mascotaActiva = #datos.mascotas end
+        if r.activa == "t" then
+          if require("compartido.dominio.mascotas").esRecolectora(r.especie) then datos.recolectoraActiva = #datos.mascotas
+          else datos.mascotaActiva = #datos.mascotas end
+        end
       end
       datos.addons, datos.bonos = {}, {}
       for _, r in ipairs(lista("SELECT addon, activo FROM personaje_addon WHERE personaje_id = " .. pid)) do

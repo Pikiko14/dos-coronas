@@ -1,12 +1,8 @@
--- Mascotas: compañeras que siguen al jugador, pelean a su lado y suben de nivel con él.
--- No se les puede hacer daño ni mueren; cada especie ayuda de una manera distinta:
---   ataque (gatito): el que más pega.
---   vampiro (murciélago): cura al dueño con lo que muerde.
---   guardian (limo): reduce el daño que recibe el dueño.
---   sanador (flor): cura al dueño poco a poco.
---   mana (hada): le devuelve maná.
---   veneno (avispa): su picadura envenena.
--- Una mascota nunca pasa del nivel de su dueño.
+-- Mascotas de ataque como las de Free Angels Online: siguen al jugador, pelean a su lado, suben de nivel con él y EVOLUCIONAN SOLAS al llegar a ciertos niveles
+-- (mascotas.xml: cada forma apunta a la siguiente con evo y evoNivel). El osito se compra con oro en la tienda del mercado; el dragón, las dos pelusas y las
+-- recolectoras (que recogen el botín por ti), con Monedas Corona en el Item Mall. Una mascota nunca pasa del nivel de su dueño.
+-- Se pueden tener fuera DOS a la vez: una de ataque (p.mascotaActiva / p.mascotaId) y una recolectora (p.recolectoraActiva / p.recolectoraId).
+-- La recolectora es invulnerable y no ataca a nadie: solo recoge el botín.
 local Util = require("compartido.dominio.util")
 local Balance = require("compartido.dominio.balance")
 
@@ -15,11 +11,33 @@ require("compartido.dominio.configuracion").aplicar(M, "mascotas")
 
 
 -- Las especies están en compartido/datos/mascotas.xml; el orden del archivo es el de la tienda.
-M.especies, M.orden = require("compartido.dominio.configuracion").mapaOrden("mascotas", "especie", false)
--- Las recolectoras (Item Mall, se pagan con Monedas Corona) van aparte del criador: ORDEN_MALL es su orden en la tienda.
-local recolectoras, ordenMall = require("compartido.dominio.configuracion").mapaOrden("mascotas", "recolectora", false)
+local todas, ordenTodas = require("compartido.dominio.configuracion").mapaOrden("mascotas", "especie", false)
+M.especies = todas
+-- La tienda del mercado vende con oro la forma inicial de las líneas que no son del mall; el Item Mall, las suyas y las recolectoras (ORDEN_MALL).
+M.orden, M.ORDEN_MALL = {}, {}
+for _, id in ipairs(ordenTodas) do
+  local d = todas[id]
+  if (d.etapa or 1) == 1 then
+    if d.mall then M.ORDEN_MALL[#M.ORDEN_MALL + 1] = id else M.orden[#M.orden + 1] = id end
+  end
+end
+-- Las recolectoras del Item Mall (se pagan con Monedas Corona) tienen su propio elemento en el XML.
+local recolectoras, ordenRec = require("compartido.dominio.configuracion").mapaOrden("mascotas", "recolectora", false)
 for id, d in pairs(recolectoras) do M.especies[id] = d end
-M.ORDEN_MALL = ordenMall
+for _, id in ipairs(ordenRec) do M.ORDEN_MALL[#M.ORDEN_MALL + 1] = id end
+
+-- ¿Es la misma línea de evolución (o la misma recolectora)? Solo se puede tener una mascota de cada línea.
+function M.mismaLinea(a, b)
+  local x, y = M.especies[a], M.especies[b]
+  if not (x and y) then return a == b end
+  return (x.linaje or a) == (y.linaje or b)
+end
+
+-- ¿Es una recolectora (las del Item Mall que recogen el botín)?
+function M.esRecolectora(especie)
+  local d = M.especies[especie]
+  return d ~= nil and d.radio ~= nil
+end
 
 function M.xpPara(nivel)
   nivel = math.max(1, nivel or 1)
@@ -32,11 +50,11 @@ function M.atk(especie, nivel)
   return (3 + 1.7 * (nivel or 1)) * (d and d.atk or 1)
 end
 
--- Vida y defensas de una mascota: el limo guardián aguanta más.
+-- Vida y defensas de una mascota: crecen con la etapa.
 function M.aguante(especie, nivel)
   local d = M.especies[especie]
   nivel = nivel or 1
-  local mul = (d and d.rol == "guardian") and 1.6 or 1
+  local mul = 1 + 0.25 * ((d and d.etapa or 1) - 1)
   return {
     hpMax = math.floor((50 + 22 * nivel) * mul),
     def = 2 + 1.4 * nivel,
@@ -44,12 +62,14 @@ function M.aguante(especie, nivel)
   }
 end
 
+-- (Ya no hay mascotas que protejan al dueño: todas son de ataque.)
+function M.proteccion() return 0 end
 
--- Reducción de daño que da el limo guardián al dueño (0 si no es esa especie).
-function M.proteccion(especie, nivel)
-  local d = M.especies[especie]
-  if not d or d.rol ~= "guardian" then return 0 end
-  return math.min(0.2, 0.06 + 0.005 * (nivel or 1))
+-- La forma a la que evoluciona una mascota concreta si ya tiene el nivel (o nil).
+function M.siguienteForma(m)
+  local d = M.especies[m.especie]
+  if not (d and d.evo and M.especies[d.evo] and (m.nivel or 1) >= (d.evoNivel or 99)) then return nil end
+  return d.evo
 end
 
 function M.instalar(Mundo)
@@ -76,11 +96,19 @@ function M.instalar(Mundo)
     end
   end
 
-  function Mundo:retirarMascota(p)
-    local e = p.mascotaId and self.entidades[p.mascotaId]
-    if e then e.borrar = true end
-    p.mascotaId = nil
-    p.mascotaBono = 0
+  -- Guarda la mascota de ataque ("ataque"), la recolectora ("recolectora") o las dos (sin argumento).
+  function Mundo:retirarMascota(p, cual)
+    if cual ~= "recolectora" then
+      local e = p.mascotaId and self.entidades[p.mascotaId]
+      if e then e.borrar = true end
+      p.mascotaId = nil
+      p.mascotaBono = 0
+    end
+    if cual ~= "ataque" then
+      local r = p.recolectoraId and self.entidades[p.recolectoraId]
+      if r then r.borrar = true end
+      p.recolectoraId = nil
+    end
   end
 
   function Mundo:adoptarMascota(p, especie)
@@ -88,9 +116,10 @@ function M.instalar(Mundo)
     local d = M.especies[especie]
     if not d then return "Esa mascota no existe." end
     if d.mall then return "Esa mascota solo se compra en el Item Mall." end
+    if (d.etapa or 1) > 1 then return "Esa forma solo se consigue evolucionando." end
     p.mascotas = p.mascotas or {}
     for _, m in ipairs(p.mascotas) do
-      if m.especie == especie then return "Ya tienes esa mascota." end
+      if M.mismaLinea(m.especie, especie) then return "Ya tienes esa mascota." end
     end
     if #p.mascotas >= M.MAX_MASCOTAS then return "No puedes cuidar más mascotas." end
     if (p.nivel or 1) < d.nivel then return "Necesitas nivel " .. d.nivel .. "." end
@@ -108,26 +137,30 @@ function M.instalar(Mundo)
     idx = tonumber(idx)
     local m = idx and p.mascotas and p.mascotas[idx]
     if not m then return "No tienes esa mascota." end
-    local estaba = p.mascotaActiva == idx and p.mascotaId and self.entidades[p.mascotaId]
-    self:retirarMascota(p)
+    -- hay dos ranuras: la de ataque y la de recolectora; invocar una no toca la otra
+    local rec = M.esRecolectora(m.especie)
+    local campoActiva, campoId = rec and "recolectoraActiva" or "mascotaActiva", rec and "recolectoraId" or "mascotaId"
+    local estaba = p[campoActiva] == idx and p[campoId] and self.entidades[p[campoId]]
+    self:retirarMascota(p, rec and "recolectora" or "ataque")
     if estaba then
-      p.mascotaActiva = nil
+      p[campoActiva] = nil
       self:marcarProgreso(p)
       return nil
     end
-    p.mascotaActiva = idx
+    if not rec then self:evolucionarMascota(p, m) end
+    p[campoActiva] = idx
     local d = M.especies[m.especie]
     local id = self:idNuevo()
     self.entidades[id] = {
       id = id, kind = "mascota", especie = m.especie, nombre = d.nombre .. " de " .. p.nombre,
-      dueno = p.id, faccion = p.faccion, nivel = m.nivel,
+      dueno = p.id, faccion = p.faccion, nivel = m.nivel, reg = m, recolectora = rec or nil, invulnerable = rec or nil,
       x = p.x, y = p.y, z = p.z or 0, modo = p.modo, casaId = p.casaId, dir = p.dir or 1,
       vivo = true, cds = {}, velx = 0, vely = 0, tipoDano = "fisico",
     }
     local ag = M.aguante(m.especie, m.nivel)
     local ent = self.entidades[id]
     ent.hpMax, ent.hp, ent.def, ent.mdef = ag.hpMax, ag.hpMax, ag.def, ag.mdef
-    p.mascotaId = id
+    p[campoId] = id
     self:colocarCerca(self.entidades[id], p.x, p.y)
     self:actualizarBonoMascota(p)
     self:marcarProgreso(p)
@@ -146,16 +179,41 @@ function M.instalar(Mundo)
       subio = true
     end
     if subio then
-      local e = self.entidades[p.mascotaId]
-      if e then
-        local ag = M.aguante(m.especie, m.nivel)
-        e.nivel, e.hpMax, e.def, e.mdef = m.nivel, ag.hpMax, ag.def, ag.mdef
-        e.hp = e.hpMax
-      end
+      self:mensaje("sistema", "", M.especies[m.especie].nombre .. " sube al nivel " .. m.nivel .. ".", p)
+      self:evolucionarMascota(p, m)
+      self:refrescarMascota(p, m)
       self:actualizarBonoMascota(p)
       self:marcarProgreso(p)
-      self:mensaje("sistema", "", M.especies[m.especie].nombre .. " sube al nivel " .. m.nivel .. ".", p)
     end
+  end
+
+  -- Pone la entidad de la mascota activa al día con su forma, nivel y aguante.
+  function Mundo:refrescarMascota(p, m)
+    local e = p.mascotaId and self.entidades[p.mascotaId]
+    if not e then return end
+    local d = M.especies[m.especie]
+    local ag = M.aguante(m.especie, m.nivel)
+    e.especie, e.nombre = m.especie, d.nombre .. " de " .. p.nombre
+    e.nivel, e.hpMax, e.def, e.mdef = m.nivel, ag.hpMax, ag.def, ag.mdef
+    e.hp = e.hpMax
+  end
+
+  -- Evolución automática: si la mascota ya tiene el nivel de su forma, pasa a la siguiente (y otra vez, si también cumple la nueva).
+  function Mundo:evolucionarMascota(p, m)
+    local evolucion = false
+    for _ = 1, 3 do
+      local sig = M.siguienteForma(m)
+      if not sig then break end
+      local antes = M.especies[m.especie]
+      m.especie = sig
+      evolucion = true
+      self:mensaje("sistema", "", "¡" .. antes.nombre .. " evoluciona y se convierte en " .. M.especies[sig].nombre .. "!", p)
+    end
+    if evolucion then
+      self:refrescarMascota(p, m)
+      self:marcarProgreso(p)
+    end
+    return evolucion
   end
 
   -- La mascota hostil más cercana a la que puede atacar: el objetivo del dueño o quien lo ataque.
@@ -191,8 +249,9 @@ function M.instalar(Mundo)
 
   function Mundo:actualizarMascota(e, dt)
     local dueno = self.entidades[e.dueno]
-    if not dueno or dueno.mascotaId ~= e.id then e.borrar = true return end
-    local m = self:mascotaActiva(dueno)
+    local propia = dueno and ((e.recolectora and dueno.recolectoraId == e.id) or (not e.recolectora and dueno.mascotaId == e.id))
+    if not propia then e.borrar = true return end
+    local m = e.reg
     if not m then e.borrar = true return end
     -- en las guerras no hay mascotas: vuelve al terminar
     if dueno.modo == "batalla" or dueno.modo == "estandarte" or dueno.modo == "moba" then self:retirarMascota(dueno) return end
@@ -210,7 +269,7 @@ function M.instalar(Mundo)
     if not dueno.vivo then return end
     local d = M.especies[m.especie]
     e.cds = e.cds or {}
-    local blanco = blancoDe(self, e, dueno)
+    local blanco = (not e.recolectora) and blancoDe(self, e, dueno) or nil       -- (la recolectora no ataca a nadie)
     local dx, dy = 0, 0
     local botin = d.radio and self:botinParaMascota(e, dueno, d.radio)
     if botin then
@@ -248,26 +307,13 @@ function M.instalar(Mundo)
           local atk = M.atk(m.especie, m.nivel)
           local dano, critico = Balance.tirarDano(atk, blanco.def or 0, 1)
           dano = math.max(1, math.floor(dano * Balance.modNivel(m.nivel, blanco.nivel) + 0.5))
+          self:marcarAtaque(e, blanco, false, true)
           self:efecto("impacto", blanco.x, blanco.y, 0.3)
           self:danar(blanco, dano, dueno, critico)
-          if d.rol == "vampiro" and dueno.vivo then self:curar(dueno, math.max(1, math.floor(dano * 0.35))) end
-          if d.rol == "veneno" and blanco.vivo and math.random() < 0.3 then
-            self:aplicarEstado(blanco, "veneno", 5, 0.1, { id = dueno.id, atk = atk * 2.2, matk = atk * 2.2, nivel = m.nivel, tipoDano = "fisico" })
-          end
         end
       end
     elseif dd > 2.4 then
       dx, dy = dueno.x - e.x, dueno.y - e.y
-    end
-    -- ayuda de la especie al dueño mientras pelea
-    if d.rol == "sanador" and dueno.vivo and (e.cds.ayuda or 0) <= self.tiempo and dueno.hp < dueno.hpMax then
-      e.cds.ayuda = self.tiempo + 5
-      self:curar(dueno, math.floor(dueno.hpMax * 0.025 + 2 * m.nivel))
-    elseif d.rol == "mana" and dueno.vivo and (e.cds.ayuda or 0) <= self.tiempo and dueno.mp < dueno.mpMax then
-      e.cds.ayuda = self.tiempo + 4
-      local v = math.floor(dueno.mpMax * 0.02 + m.nivel)
-      dueno.mp = math.min(dueno.mpMax, dueno.mp + v)
-      self:numero(dueno, "+" .. v .. " mp", { 0.45, 0.65, 1 })
     end
     local ddx, ddy = 0, 0
     if dx ~= 0 or dy ~= 0 then

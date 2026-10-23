@@ -850,8 +850,8 @@ function Mundo:puedeDanar(origen, objetivo)
       and (origen.kind == "guardia" or ((origen.kind == "jugador" or origen.kind == "bot") and origen.job == "hunter")) or false
   end
   if kind == "mascota" then
-    -- solo las criaturas hostiles pueden herir a una mascota
-    return origen.kind == "monstruo"
+    -- solo las criaturas hostiles pueden herir a una mascota (a la recolectora, a nadie)
+    return origen.kind == "monstruo" and not objetivo.recolectora
   end
   if kind == "caravana" then
     -- a una caravana solo la atacan los bandidos
@@ -1775,12 +1775,12 @@ function Mundo:actualizarJugador(e, dt)
   end
   if e.kind == "jugador" then self:beberAutopocion(e) end
   -- la mascota vuelve sola tras una muerte o una guerra
-  if e.kind == "jugador" and e.mascotaActiva and not e.mascotaId and e.modo ~= "batalla" and e.modo ~= "estandarte" and e.modo ~= "moba"
-    and (e.mascotaDescanso or 0) <= self.tiempo then
+  if e.kind == "jugador" and (e.mascotaActiva or e.recolectoraActiva) and e.modo ~= "batalla" and e.modo ~= "estandarte" and e.modo ~= "moba" then
     e.mascotaEspera = (e.mascotaEspera or 0) - dt
     if e.mascotaEspera <= 0 then
       e.mascotaEspera = 2
-      self:invocarMascota(e, e.mascotaActiva)
+      if e.mascotaActiva and not e.mascotaId and (e.mascotaDescanso or 0) <= self.tiempo then self:invocarMascota(e, e.mascotaActiva) end
+      if e.recolectoraActiva and not e.recolectoraId then self:invocarMascota(e, e.recolectoraActiva) end
     end
   end
   e.buffs = e.buffs or {}
@@ -3276,7 +3276,6 @@ function Mundo:interactuar(p)
     if mejor.rol == "comercio" then return { panel = "mercancias" } end
     if mejor.rol == "establo" then return { panel = "establo" } end
     if mejor.rol == "subastas" then return { panel = "subastas" } end
-    if mejor.rol == "criador" then return { panel = "mascotas" } end
     if mejor.rol == "gremio" then return { panel = "gremio" } end
     if mejor.rol == "mayordomo" then return { panel = "vivienda", ciudad = self:ciudadEn(p.x, p.y) and self:ciudadEn(p.x, p.y).id } end
     if mejor.rol == "encargos" or mejor.rol == "misiones" then
@@ -3551,7 +3550,7 @@ function Mundo:exportar(p)
     equipo = p.equipo, bolsa = p.bolsa, misiones = misiones,
     casas = p.casas, vinculo = p.vinculo, caceria = p.caceria,
     habilidades = p.mobaOrig and p.mobaOrig.habilidades or p.habilidades, encantos = p.encantos,
-    mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
+    mascotas = p.mascotas, mascotaActiva = p.mascotaActiva, recolectoraActiva = p.recolectoraActiva,
     job = p.oficioElegido, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
     monturas = p.monturas, monturaPreferida = p.monturaPreferida, diaria = p.diaria,
     autoPocion = p.autoPocion and true or false,
@@ -3572,7 +3571,39 @@ function Mundo:aplicarGuardado(p, data)
   p.bolsa = data.bolsa or p.bolsa
   p.encantos = data.encantos or {}
   p.mascotas = data.mascotas or {}
-  p.mascotaActiva = data.mascotaActiva
+  p.mascotaActiva, p.recolectoraActiva = data.mascotaActiva, data.recolectoraActiva
+  -- mascotas del sistema anterior (gatito, murciélago, limo, flor, hada, avispa): pasan a la forma inicial de una línea de ataque (osito, dragón, pelusa angelical e infernal); las que sobran se devuelven en oro (su precio)
+  do
+    local MIGRAR = { gatito = { "osito_1", 240 }, murcielago = { "dragon_1", 800 }, limo = { "angel_1", 1450 }, flor = { "demonio_1", 2550 }, hada = { nil, 4150 }, avispa = { nil, 6700 } }
+    local dueno = {}
+    for _, m in ipairs(p.mascotas) do if Mascotas.especies[m.especie] then dueno[m.especie] = true end end
+    local nuevas, activa, activaRec, devuelto = {}, nil, nil, 0
+    -- (antes solo había una ranura: si la mascota activa guardada era una recolectora, pasa a la ranura de recolectora)
+    local indiceActivo = p.mascotaActiva
+    local recActiva = p.recolectoraActiva
+    local function marcar(i)
+      if indiceActivo == i then
+        if Mascotas.esRecolectora(nuevas[#nuevas].especie) then activaRec = #nuevas else activa = #nuevas end
+      end
+      if recActiva == i then activaRec = #nuevas end
+    end
+    for i, m in ipairs(p.mascotas) do
+      local cambio = MIGRAR[m.especie]
+      if Mascotas.especies[m.especie] or not cambio then
+        nuevas[#nuevas + 1] = m
+        marcar(i)
+      elseif cambio[1] and not dueno[cambio[1]] then
+        dueno[cambio[1]] = true
+        m.especie = cambio[1]
+        nuevas[#nuevas + 1] = m
+        marcar(i)
+      else
+        devuelto = devuelto + cambio[2]
+      end
+    end
+    p.mascotas, p.mascotaActiva, p.recolectoraActiva = nuevas, activa, activaRec
+    if devuelto > 0 then p.oro = (p.oro or 0) + devuelto end
+  end
   p.oficioElegido, p.oficios = data.job, data.oficios or {}
   p.carga, p.cargaRobada = data.carga or {}, data.cargaRobada or {}
   -- el oficio empieza desactivado; si traes carga, sigue activo para poder venderla
@@ -3806,7 +3837,7 @@ function Mundo:construirTu(p)
       atk = p.atk, def = p.def, matk = p.matk, mdef = p.mdef, spd = p.spd, clase = p.clase, faccion = p.faccion,
       nombre = p.nombre, modo = p.modo, casaId = p.casaId, casaTamano = p.casaTamano, objetivo = p.objetivo,
       z = p.z or 0, habilidades = p.habilidades, encantos = p.encantos, xpSig = Datos.xpPara(p.nivel),
-      mascotas = p.mascotas, mascotaActiva = p.mascotaActiva,
+      mascotas = p.mascotas, mascotaActiva = p.mascotaActiva, recolectoraActiva = p.recolectoraActiva,
       job = p.job, oficioElegido = p.oficioElegido, oficios = p.oficios, carga = p.carga, cargaRobada = p.cargaRobada,
       capacidadCarga = p.capacidadCarga, pesoCarga = p.pesoCarga, monturas = p.monturas, montado = p.montado,
       buscadoResta = self:esBuscado(p) and (p.buscado - self.tiempo) or nil, recompensa = self:esBuscado(p) and p.recompensa or nil,
@@ -4197,8 +4228,8 @@ function Mundo:accion(pid, nombre, datos)
   end
   if nombre == "mascota_adoptar" then
     local err
-    if self:npcCerca(p, "criador") then err = self:adoptarMascota(p, datos.especie)
-    else err = "Acércate al criador de mascotas." end
+    if self:npcCerca(p, "mercado") then err = self:adoptarMascota(p, datos.especie)
+    else err = "Las mascotas se compran en la tienda del mercado: acércate a la enfermera." end
     if err then self:mensaje("sistema", "", err, p) end
   end
   if nombre == "diaria_reclamar" then

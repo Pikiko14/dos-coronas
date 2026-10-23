@@ -191,8 +191,8 @@ section.oscura { background: var(--fondo2); }
 .barra.atq i { background: linear-gradient(90deg, #e07a3d, #ffbd8a); }
 .barra.mag i { background: linear-gradient(90deg, #9d5be8, #d6b1ff); }
 .barra.def i { background: linear-gradient(90deg, #8a96b5, #dfe6ff); }
-.poderes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 22px; }
-.poder { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: rgba(255, 255, 255, .03); border: 1px solid rgba(255, 255, 255, .05); }
+.poderes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+.poder { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: rgba(255, 255, 255, .03); border: 1px solid rgba(255, 255, 255, .05); }
 .poder .tecla { flex: none; width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-weight: 800; font-size: .9rem; background: linear-gradient(180deg, #2c3a78, #161f46); border: 1px solid var(--linea-fuerte); color: var(--oro-claro); }
 .poder b { display: block; color: var(--oro-claro); font-size: .98rem; }
 .poder span { font-size: .88rem; color: var(--suave); line-height: 1.4; display: block; }
@@ -322,7 +322,7 @@ footer nav { margin: 14px 0; display: flex; gap: 22px; justify-content: center; 
   .corona { padding: 38px 26px; }
   .rejilla.c3, .rejilla.c2 { grid-template-columns: 1fr; }
   .barras { grid-template-columns: repeat(2, 1fr); }
-  .poderes { grid-template-columns: 1fr; }
+  .poderes { grid-template-columns: repeat(3, 1fr); }
   .mazmorra { grid-template-columns: 1fr; text-align: center; }
   .mazmorra img { margin: 0 auto; width: 120px; }
   .meta { grid-template-columns: 1fr; }
@@ -356,3 +356,7 @@ footer nav { margin: 14px 0; display: flex; gap: 22px; justify-content: center; 
   .bloque-doble.inv > :first-child { order: 0; }
   .escalones { font-size: .55rem; }
 }
+
+@media (max-width: 1180px) { .poderes { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 760px) { .poderes { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 460px) { .poderes { grid-template-columns: 1fr; } }
