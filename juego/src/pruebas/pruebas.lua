@@ -596,7 +596,7 @@ function Pruebas.correr()
     fallar(errores, "los pergaminos tienen tinte", it and it.tinte and it.mall == true)
     local exp = Datos.item("tarjeta_exp")
     fallar(errores, "la experiencia doble usa el icono x2", exp and exp.hoja == "bonos" and exp.sprite == 0)
-Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    local okS, errS = pcall(Interfaz.hud, mundo, pj, 1280, 720)    fallar(errores, "el mall se dibuja desplazado", okS, tostring(errS))    fallar(errores, "hay más addons que filas (necesita rueda)", (Interfaz.mallScrollMax or 0) >= 7, tostring(Interfaz.mallScrollMax))
+Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    local okS, errS = pcall(Interfaz.hud, mundo, pj, 1280, 720)    fallar(errores, "el mall se dibuja desplazado", okS, tostring(errS))    fallar(errores, "hay más apariencias que filas (necesita rueda)", (Interfaz.mallScrollMax or 0) >= 1, tostring(Interfaz.mallScrollMax))
     Interfaz.mallTab, Interfaz.mallScroll = "objetos", 1
     local okO, errO = pcall(Interfaz.hud, mundo, pj, 1280, 720)
     fallar(errores, "los objetos del mall también se desplazan", okO and Interfaz.mallScrollMax >= 1, tostring(errO))    Interfaz.mallScroll, Interfaz.panel = 0, nil
@@ -617,7 +617,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local todas = true
     for _, id in ipairs(Mall.ORDEN_ADDONS) do
       local def = P.skins[id]
-      todas = todas and def ~= nil and ((def.generada and require("src.presentacion.render.propias").hoja(def.generada) ~= nil) or (def.hoja and require("src.presentacion.render.arte").img(def.hoja) ~= nil))
+      if id:sub(1, 3) ~= "pd_" then todas = todas and def ~= nil and ((def.generada and require("src.presentacion.render.propias").hoja(def.generada) ~= nil) or (def.hoja and require("src.presentacion.render.arte").img(def.hoja) ~= nil)) end    -- (las apariencias PD se dibujan por capas, no con hoja propia)
     end
     fallar(errores, "todos los addons tienen sprite", todas)
     local base = { kind = "jugador", clase = "mago", faccion = "albor" }
@@ -1160,6 +1160,65 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
       if not (c and c[1] == "mall_addon_comprar" and c[2].id == id) or #id > 24 then bien = false end
     end
     fallar(errores, "cada addon se compra desde su botón con el id completo", bien)
+  end)
+  -- Apariencias (PD de FAO): 10 sets completos, cada uno con las seis ranuras (cabeza, pecho, manos, pies, espalda y arma de cada familia) para los dos géneros.
+  -- Con DC_PRUEBA_APARIENCIAS=1 guarda juego/capturas/apariencias.png (una fila por set, los seis oficios) y apariencias_mall.png (la pestaña del Item Mall).
+  paso("apariencias PD: sets completos, dibujo en los seis oficios y pestaña del mall", function()
+    local Fao = require("src.presentacion.render.fao")
+    local Mall = require("compartido.dominio.mall")
+    local datosAp = require("src.presentacion.render.fao_datos_apariencias")
+    local ids = {}
+    for _, id in ipairs(Mall.ORDEN_ADDONS) do if id:sub(1, 3) == "pd_" then ids[#ids + 1] = id end end
+    fallar(errores, "hay 10 sets de apariencia en el mall con precio", #ids == 10 and Mall.ADDONS[ids[1]].precio > 0, tostring(#ids))
+    local famil = { "espada", "hacha", "lanza", "arco", "baston", "maza", "baculo" }
+    for _, id in ipairs(ids) do
+      local set = datosAp.sets[id]
+      fallar(errores, id .. " tiene datos", set ~= nil)
+      for _, g in ipairs({ "h", "m" }) do
+        local f = set and set[g] or {}
+        local completo = f.cabeza and f.pecho and f.piernas and f.pies and f.espalda and f.arma
+        for _, fam in ipairs(famil) do completo = completo and f.arma and f.arma[fam] end
+        fallar(errores, id .. " (" .. g .. ") tiene todas las ranuras", completo and true or false)
+      end
+    end
+    Fao.forzar(nil)
+    fallar(errores, "las capas de FAO están activas", Fao.activo())
+    local clases = { "guerrero", "lancero", "cazador", "mago", "clerigo", "nigromante" }
+    local vista = os.getenv("DC_PRUEBA_APARIENCIAS") ~= nil
+    local CW, CH = 120, 150
+    local cv = love.graphics.newCanvas(CW * #clases, CH * #ids)
+    local ok, err = pcall(function()
+      love.graphics.setCanvas({ cv, stencil = true })
+      love.graphics.clear(0.25, 0.3, 0.38, 1)
+      for r, id in ipairs(ids) do
+        for c, clase in ipairs(clases) do
+          local e = { id = "ap", kind = "jugador", clase = clase, genero = (c % 2 == 0) and "m" or "h", addon = id, x = 5, y = 5, vivo = true, dir = 1, equipo = {} }
+          e._f8 = (c % 3 == 0) and 6 or 2          -- (algunos de espaldas, para ver las alas y la capa por delante)
+          love.graphics.push()
+          Fao.dibujar(e, false, (c - 0.5) * CW, r * CH - 20, nil, 1, { anim = "wait", paso = 0, d5 = (c % 3 == 0) and 1 or 0 })
+          love.graphics.pop()
+        end
+      end
+      love.graphics.setCanvas()
+    end)
+    love.graphics.setCanvas()
+    fallar(errores, "los sets se dibujan en los seis oficios y los dos géneros", ok, tostring(err))
+    if vista then Log.volcar("capturas/apariencias.png", cv:newImageData():encode("png"):getString()) end
+    -- la pestaña del Item Mall
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Moda", faccion = "albor", clase = "guerrero", nivel = 20 })
+    pj.mall = { monedas = 3000, addons = { ids[1] }, addonActivo = ids[1] }
+    local pan = love.graphics.newCanvas(1280, 720)
+    love.graphics.push("all")
+    love.graphics.setCanvas({ pan, stencil = true })
+    love.graphics.clear(0.1, 0.1, 0.12, 1)
+    local Interfaz = require("src.presentacion.interfaz")
+    Interfaz.escala, Interfaz.panel, Interfaz.mallTab, Interfaz.mallScroll = 1, "mall", "addons", 0
+    local okm, errm = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+    love.graphics.pop()
+    fallar(errores, "la pestaña Apariencia se dibuja: " .. tostring(errm), okm)
+    if vista then Log.volcar("capturas/apariencias_mall.png", pan:newImageData():encode("png"):getString()) end
+    Interfaz.panel = nil
   end)
   paso("skins exclusivas dibujadas por código", function()
     local P = require("src.presentacion.render.personajes")
@@ -1775,7 +1834,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 7, "mall"    l
     local cv = love.graphics.newCanvas(300, 300)
     local n = 0
     local ids = {}
-    for id in pairs(Mall.ADDONS) do ids[#ids + 1] = id end
+    for id in pairs(Mall.ADDONS) do if id:sub(1, 3) ~= "pd_" then ids[#ids + 1] = id end end
     table.sort(ids)
     local monturas = {}
     for id in pairs(Monturas.especies) do monturas[#monturas + 1] = id end

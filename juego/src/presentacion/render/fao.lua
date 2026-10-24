@@ -70,6 +70,12 @@ function M.activo()
           end
         end
       end
+      -- apariencias (PD de FAO, herramientas/generar_personajes/apariencias.py): sus capas y sus sets, aparte del equipo
+      local ok5, apar = pcall(require, "src.presentacion.render.fao_datos_apariencias")
+      if datos and ok5 then
+        for cap, meta in pairs(apar.capas) do datos.capas[cap] = meta end
+        datos.apariencias = apar.sets
+      end
       -- orden de los dibujos de más sencillo a más elaborado (ordenar_escalones.py): el escalón t toma el dibujo del escalón original orden[t]; el escudo se queda con el suyo
       local ok4, orden = pcall(require, "src.presentacion.render.fao_orden")
       if datos and ok4 and not datos._ordenado then        -- (activo() puede repetirse con el mismo módulo: el orden se aplica una sola vez)
@@ -102,6 +108,13 @@ local PRINCIPAL = { guerrero = "espada", lancero = "lanza", cazador = "arco", ma
 -- Orden de dibujo (de atrás hacia delante) de las capas delanteras; las traseras van todas detrás del cuerpo.
 local ORDEN = { "pies", "pecho", "piernas", "cabeza", "escudo", "arma" }
 local ORDEN_TRAS = { "arma", "escudo", "cabeza", "piernas", "pecho", "pies" }
+-- La espalda de una apariencia (alas, capa) va detrás del cuerpo si mira de frente o de lado y encima de todo si da la espalda (hojas 1 y 2).
+local ORDEN_ESPALDA_ATRAS = { "espalda", "pies", "pecho", "piernas", "cabeza", "escudo", "arma" }
+local ORDEN_ESPALDA_DELANTE = { "pies", "pecho", "piernas", "cabeza", "escudo", "arma", "espalda" }
+local function ordenDe(c, d5)
+  if not c.espalda then return ORDEN end
+  return (d5 == 1 or d5 == 2) and ORDEN_ESPALDA_DELANTE or ORDEN_ESPALDA_ATRAS
+end
 
 -- ---------------------------------------------------------------- qué lleva puesto
 local function escalon(id)
@@ -109,7 +122,7 @@ local function escalon(id)
 end
 
 -- Capas de un personaje: { cuerpo = "p001b", pecho = "i086b", ... }. equipo: hueco -> id de objeto (o nil: todo de escalón 1).
-local function capasDe(clase, gen, equipo)
+local function capasDe(clase, gen, equipo, apar)
   local L = datos.looks[clase] and datos.looks[clase][gen]
   if not L then return nil end
   local res = { cuerpo = datos.cuerpo[gen] }
@@ -141,6 +154,23 @@ local function capasDe(clase, gen, equipo)
         res._brillo = res._brillo or {}
         res._brillo[hueco] = { br[1], br[2], br[3], br[4], br == BRILLO.definitiva }
       end
+    end
+  end
+  -- una apariencia (set de PD) sustituye el dibujo de todas las ranuras: lo que lleva puesto no cambia, solo cómo se ve
+  local set = apar and datos.apariencias and datos.apariencias[apar]
+  local s = set and set[gen]
+  if s then
+    for _, hueco in ipairs({ "cabeza", "pecho", "piernas", "pies" }) do
+      res[hueco] = s[hueco]
+      if res._brillo then res._brillo[hueco] = nil end
+    end
+    res.espalda = s.espalda
+    local fam = equipo and equipo.arma and tostring(equipo.arma):match("^%a+_(%a+)_%d+")
+    if fam == "arma" or not fam then fam = PRINCIPAL[clase] end
+    local arma = s.arma and (s.arma[fam] or s.arma[PRINCIPAL[clase]])
+    if arma then
+      res.arma = arma
+      if res._brillo then res._brillo.arma = nil end
     end
   end
   return res
@@ -316,7 +346,7 @@ end
 function M.dibujar(e, mov, sx, sy, tinte, alfa, estado)
   local gen = e.gen or e.genero or "h"
   local clase = e.clase or "guerrero"
-  local c = capasDe(clase, gen, e.equipo)
+  local c = capasDe(clase, gen, e.equipo, e.addon)
   if not c then return 40 end
   local atq = e._faoAtq
   local anim, paso = "wait", 0
@@ -365,9 +395,11 @@ function M.dibujar(e, mov, sx, sy, tinte, alfa, estado)
   end
   love.graphics.setColor(col[1], col[2], col[3], alfa or 1)
   local k = ESCALA_JUEGO
+  local orden = ordenDe(c, d5)
+  if orden[1] == "espalda" then capaAnim(c.espalda, anim, paso, d5, false, flip, sx, sy, k) end
   capaAnim(c.cuerpo, anim, paso, d5, false, flip, sx, sy, k)
-  for _, hueco in ipairs(ORDEN) do
-    if c[hueco] then
+  for _, hueco in ipairs(orden) do
+    if c[hueco] and not (hueco == "espalda" and orden[1] == "espalda") then
       brilloActual = c._brillo and c._brillo[hueco]
       capaAnim(c[hueco], anim, paso, d5, hueco == "arma", flip, sx, sy, k)
       brilloActual = nil
@@ -395,7 +427,7 @@ function M.dibujarMontado(e, nomMontura, sx, pies, tinte, alfa, subir)
   if not dx then return false end
   local gen = e.gen or e.genero or "h"
   local clase = e.clase or "guerrero"
-  local c = capasDe(clase, gen, e.equipo)
+  local c = capasDe(clase, gen, e.equipo, e.addon)
   if not c then return false end
   local atq = e._faoAtq
   local anim, paso = estadoM, pasoM
@@ -415,9 +447,11 @@ function M.dibujarMontado(e, nomMontura, sx, pies, tinte, alfa, subir)
   love.graphics.setColor(col[1], col[2], col[3], alfa or 1)
   -- El jinete conserva siempre su tamaño original (también sobre las monturas pequeñas): lo que se ajusta es dónde se sienta (monturas.py).
   local x, y, k = sx + dx, pies + dy - (subir or 0), ESCALA_JUEGO
+  local orden = ordenDe(c, d5)
+  if orden[1] == "espalda" then capaAnim(c.espalda, anim, paso, d5, false, flip, x, y, k, "m") end
   capaAnim(c.cuerpo, anim, paso, d5, false, flip, x, y, k, "m")
-  for _, hueco in ipairs(ORDEN) do
-    if c[hueco] then
+  for _, hueco in ipairs(orden) do
+    if c[hueco] and not (hueco == "espalda" and orden[1] == "espalda") then
       brilloActual = c._brillo and c._brillo[hueco]
       capaAnim(c[hueco], anim, paso, d5, hueco == "arma", flip, x, y, k, "m")
       brilloActual = nil
@@ -427,16 +461,20 @@ function M.dibujarMontado(e, nomMontura, sx, pies, tinte, alfa, subir)
 end
 
 -- Retrato estático (selección y creación de personaje): de frente, en reposo. equipo = nil -> equipo de escalón 1.
-function M.retrato(clase, gen, equipo, sx, sy, k)
+function M.retrato(clase, gen, equipo, sx, sy, k, apar)
   k = (k or 1) * 0.5     -- (las hojas están a tamaño original)
   local e = { clase = clase, gen = gen, equipo = equipo, id = 0 }
   e._f8 = 2
-  local c = capasDe(clase, gen or "h", equipo)
+  local c = capasDe(clase, gen or "h", equipo, apar)
   if not c then return end
   love.graphics.setColor(1, 1, 1, 1)
   local idx = 0
+  local orden = ordenDe(c, 0)
+  if orden[1] == "espalda" then capa(c.espalda, "wait", "f", idx, false, sx, sy, k) end
   capa(c.cuerpo, "wait", "f", idx, false, sx, sy, k)
-  for _, hueco in ipairs(ORDEN) do if c[hueco] then capa(c[hueco], "wait", "f", idx, false, sx, sy, k) end end
+  for _, hueco in ipairs(orden) do
+    if c[hueco] and not (hueco == "espalda" and orden[1] == "espalda") then capa(c[hueco], "wait", "f", idx, false, sx, sy, k) end
+  end
 end
 
 return M

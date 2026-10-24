@@ -43,7 +43,7 @@
   <objeto id="pergamino_mdef" nombre="Pergamino de defensa mágica" bono="mdef" precio="20" sprite="697" texto="+15% de defensa mágica durante 30 minutos."/>
   <objeto id="pergamino_matk" nombre="Pergamino de ataque mágico" bono="matk" precio="20" sprite="697" texto="+15% de ataque mágico durante 30 minutos."/>
   <objeto id="pergamino_mvel" nombre="Pergamino de velocidad mágica" bono="mvel" precio="30" sprite="697" texto="Poderes un 20% más rápidos (30 min)."/>
-  <!-- ---- addons (skins de personaje), en el orden en que salen en la tienda ---- -->
+  <!-- ---- addons (skins de personaje, ocultos en la tienda), en el orden en que salen, en el orden en que salen en la tienda ---- -->
   <addon id="skin_hada_cristal" nombre="Hada de cristal" desc="Exclusiva: alas de hielo, melena celeste y tiara de cristal." precio="700"/>
   <addon id="skin_caballero_solar" nombre="Caballero solar" desc="Exclusiva: armadura dorada, penacho rojo y emblema de sol." precio="700"/>
   <!-- addons de clase: uno o dos por cada oficio de combate -->
@@ -95,6 +95,17 @@
   <addon id="skin_enmascarado" nombre="Enmascarado" desc="Máscara azul y capa violeta." precio="350"/>
   <addon id="skin_centinela" nombre="Centinela verde" desc="Yelmo verde y mirada fija." precio="350"/>
   <addon id="skin_caballero_oscuro" nombre="Caballero oscuro" desc="Armadura negra con cuernos." precio="500"/>
+  <!-- ---- apariencias: sets completos de PD de FAO (ids pd_...); se compran y se ponen como un addon, pero se ven por capas (fao.lua) ---- -->
+  <addon id="pd_ciudad_demoniaca" nombre="Ciudad Demoníaca" desc="Armadura infernal con alas de murciélago y armas de la ciudad maldita." precio="900"/>
+  <addon id="pd_espacio_tiempo" nombre="Espacio-Tiempo" desc="Armadura de viajero del tiempo con capa y armas de reloj." precio="900"/>
+  <addon id="pd_noche_brujas" nombre="Noche de Brujas" desc="Calabaza y brujería: disfraz completo con alas oscuras." precio="700"/>
+  <addon id="pd_armadura_dorada" nombre="Armadura Dorada" desc="Coraza dorada de caballero con capa y arma a juego." precio="1000"/>
+  <addon id="pd_sacerdote_sagrado" nombre="Sacerdote Sagrado" desc="Túnica sagrada con alas de ángel y armas blancas." precio="800"/>
+  <addon id="pd_esperanza" nombre="Esperanza" desc="Túnica de la esperanza con capa y báculo de corazón." precio="800"/>
+  <addon id="pd_rey_guerra" nombre="Rey de la Guerra" desc="Atuendo real de guerra, dorado y azul, con capa." precio="1100"/>
+  <addon id="pd_lobo_nevado" nombre="Lobo Nevado" desc="Traje de lobo de las nieves con armas de hielo." precio="700"/>
+  <addon id="pd_imperial" nombre="Imperial" desc="Vestido imperial con capa y armas de la corte." precio="800"/>
+  <addon id="pd_pasion" nombre="Pasión" desc="Traje de gala rojo con alas oscuras y armas elegantes." precio="700"/>
   <!-- ---- monturas exclusivas ---- -->
   <montura id="mnt_039" nombre="Hámster tostado" desc="Mágica, nivel 5. Velocidad +38%. Se pelea montado." precio="700"/>
   <montura id="mnt_040" nombre="Lobo Aullador" desc="Física, nivel 5. Velocidad +38%. Se pelea montado." precio="700"/>

@@ -163,11 +163,14 @@ end
 -- addon (opcional): el aspecto del addon activo del personaje en lugar del de su clase.
 function I.persona(claseId, x, y, zoom, faccion, addon, genero, equipo)
   local Fao = require("src.presentacion.render.fao")
-  if not addon and Fao.activo() then
+  -- (una apariencia de PD, ids "pd_...", se dibuja por capas como el equipo; los addons antiguos son aspectos aparte)
+  local apar = type(addon) == "string" and addon:sub(1, 3) == "pd_" and addon or nil
+  if (not addon or apar) and Fao.activo() then
     -- personaje por capas: se dibuja de frente, con su equipo (o el de escalón 1 si no hay)
-    Fao.retrato(claseId or "guerrero", genero or "h", equipo, x, y, (zoom or 1) * 1.6)
+    Fao.retrato(claseId or "guerrero", genero or "h", equipo, x, y, (zoom or 1) * 1.6, apar)
     return
   end
+  if apar then addon = nil end
   local c = Personajes.clases[claseId or "guerrero"] or Personajes.clases.guerrero
   local def = c[faccion or "albor"] or c.albor
   if addon then def = Personajes.de({ kind = "jugador", clase = claseId, faccion = faccion, addon = addon }) or def end
@@ -638,7 +641,7 @@ function I.personajes(lista, usuario, w, h, errorTxt)
       aureola(x + cw / 2, y0 + ch * 0.42, cw * 0.46, ch * 0.34, col, hover and 1.1 or 0.8)
       love.graphics.setStencilTest()
       local bob = hover and math.sin(t * 3) * 2 or 0
-      I.persona(pj.clase, x + cw / 2, y0 + ch * 0.57 + bob, math.min(2.0, ch / 225), pj.faccion, (type(pj.addon) == "string" and Personajes.skins[pj.addon]) and pj.addon or nil, pj.genero)
+      I.persona(pj.clase, x + cw / 2, y0 + ch * 0.57 + bob, math.min(2.0, ch / 225), pj.faccion, (type(pj.addon) == "string" and (Personajes.skins[pj.addon] or pj.addon:sub(1, 3) == "pd_")) and pj.addon or nil, pj.genero)
       love.graphics.setFont(fuentePortada("subtitulo22", 22))
       textoSombra(pj.nombre, x + 8, y0 + ch * 0.58 + 8, cw - 16, "center", { 1, 0.96, 0.86 })
       love.graphics.setFont(I.fuente)
@@ -3008,8 +3011,8 @@ local COL_MALL = {
 local TABS_MALL = {
   { "objetos", "Objetos", "mall_tab_obj", "Bonos, pociones y pergaminos para ir más rápido." },
   { "forja", "Forja", "mall_tab_forja", "Polvo arcano para encantar tu equipo." },
-  -- (los addons están ocultos en el Item Mall por ahora; se reactivan descomentando esta línea)
-  -- { "addons", "Addons", "mall_tab_add", "Aspectos de personaje únicos." },
+  -- (los addons antiguos están ocultos; la pestaña enseña los sets de apariencia, ids "pd_...": mismo mecanismo de compra y de "poner")
+  { "addons", "Apariencia", "mall_tab_add", "Sets completos de FAO. Solo cambian el aspecto, no las estadísticas." },
   { "monturas", "Monturas", "mall_tab_mont", "Monturas exclusivas: sin oficio y se pelea montado. Colección: U, montar: O." },
   { "mascotas", "Mascotas", "mall_tab_masc", "Mascotas de ataque que evolucionan solas y recolectoras de botín. Tus mascotas: N." },
 }
@@ -3042,24 +3045,18 @@ local function tarjetasMall(p, m, Mall, pestana)
     for _, id in ipairs(Mall.ORDEN_ADDONS) do
       local a = Mall.ADDONS[id]
       local puesto = m.addonActivo == id
-      lista[#lista + 1] = {
+      if id:sub(1, 3) == "pd_" then lista[#lista + 1] = {
         nombre = a.nombre, texto = a.desc, precio = (not tengo[id]) and a.precio or nil,
-        etiquetas = { { "Aspecto", COL_MALL.morado } },
+        etiquetas = { { "6 ranuras", COL_MALL.morado }, { "Solo aspecto", COL_MALL.gris } },
         cinta = puesto and "PUESTO" or (tengo[id] and "TUYO" or nil),
         borde = tengo[id] and { 0.35, 0.75, 0.45 } or nil,
         previa = function(cx, pies)
-          local skin = Personajes.skins[id]
-          if skin then
-            love.graphics.push()
-            love.graphics.translate(cx, pies)
-            love.graphics.scale(1.8, 1.8)
-            Personajes.dibujar(skin, 1, false, 0, 0, 0)
-            love.graphics.pop()
-          end
+          -- tu personaje con el set puesto (tu oficio, tu género y tu arma)
+          I.persona(p.clase, cx, pies + 4, 1.5, p.faccion, id, p.genero or p.gen, p.equipo)
         end,
         boton = tengo[id] and { puesto and "Quitar" or "Poner", "mall_ad_" .. id }
           or { "Comprar", "mall_ad_buy_" .. id, (m.monedas or 0) >= a.precio, faltan(a.precio) },
-      }
+      } end
     end
   elseif pestana == "monturas" then
     local tengo = {}
