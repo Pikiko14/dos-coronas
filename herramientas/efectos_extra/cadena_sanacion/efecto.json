@@ -1,25 +1,25 @@
 {
  "id_dos_coronas": "cadena_sanacion",
  "clase": "clerigo",
- "nombre": "Cadena de sanación",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Cadena de luz",
+ "poder_fao": "(secuencia propia: paquete clerigo_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    283,
+    345
    ],
    "origin": [
-    128,
-    128
+    140,
+    341
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
+  "inferida": false,
   "duracion_s": 1.0,
   "golpes_s": [
    0.3
@@ -27,14 +27,15 @@
   "capas": [
    {
     "s": "fx",
-    "w": "T",
+    "w": "GT",
     "t0": 0.0,
-    "ms": 0.06,
-    "sc": 0.8,
+    "ms": 0.12,
+    "sc": 0.9,
     "a": 1.0,
-    "modo": "once"
+    "modo": "once",
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "clerigo/cadena_sanacion del paquete de poderes."
+ "nota": "clerigo_sprites/06_cadena_luz (640x640, recortado a 283x345)."
 }

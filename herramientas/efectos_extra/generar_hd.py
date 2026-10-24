@@ -50,6 +50,18 @@ EFECTOS = [
     ("mago", "mago_sprites", "meteoro", "Meteorito", "04_meteorito", "partido",
      [L("T", 0.0, 0.1, 0.9, "caida", t1=0.45, off=[-260, -260], s="caida"), L("GT", 0.45, 0.1, 1.1, s="impacto")], 1.2, [0.45]),
 
+    # clérigo: los instantáneos (proyectiles, golpes) duran lo que su secuencia; los que se quedan (escudo, santuario, tormenta) mantienen o repiten sus cuadros mientras duran
+    ("clerigo", "clerigo_sprites", "curar", "Cura divina", "01_cura_divina", "suelo", [L("GT", 0.0, 0.12, 0.8)], 1.1, [0.3]),
+    ("clerigo", "clerigo_sprites", "bendicion", "Lanza de serafín", "09_lanza_serafin", "centro", vuelo(0.7, 0.45), 0.55, [0.45]),
+    ("clerigo", "clerigo_sprites", "castigo", "Bendición sagrada", "02_bendicion_sagrada", "centro", [L("C", 0.0, 0.05, 0.55, "vuelo", t1=0.4)], 0.5, [0.4]),
+    ("clerigo", "clerigo_sprites", "consagrar", "Luz purificadora", "04_luz_purificadora", "suelo", [L("GC", 0.0, 0.11, 1.0)], 1.0, [0.4]),
+    ("clerigo", "clerigo_sprites", "sanacion", "Santuario", "08_santuario", "suelo", [L("GC", 0.0, 0.12, 1.0, "hold", t1=2.0)], 2.0, [0.4]),
+    ("clerigo", "clerigo_sprites", "juicio", "Martillo de justicia", "05_martillo_justicia", "suelo", [L("GT", 0.0, 0.11, 0.85)], 1.0, [0.5]),
+    ("clerigo", "clerigo_sprites", "escudo_divino", "Escudo de fe", "03_escudo_fe", "centro", [L("T", 0.0, 0.12, 0.7, "hold", t1=2.5)], 2.5, []),
+    ("clerigo", "clerigo_sprites", "cadena_sanacion", "Cadena de luz", "06_cadena_luz", "suelo", [L("GT", 0.0, 0.12, 0.9)], 1.0, [0.3]),
+    ("clerigo", "clerigo_sprites", "tormenta_divina", "Juicio celestial", "10_juicio_celestial", "suelo", [L("GT", 0.0, 0.12, 1.0, "loop", t1=1.4)], 1.6, [0.1, 0.45, 0.8]),
+    ("clerigo", "clerigo_sprites", "resurreccion", "Resurrección", "07_resurreccion", "suelo", [L("GT", 0.0, 0.14, 0.9)], 1.2, [0.7]),
+
     ("cazador", "arquero_hd", "disparo", "Flecha de viento", "05_flecha_viento", "centro", vuelo(0.6, 0.4), 0.6, [0.4]),
     ("cazador", "arquero_hd", "lluvia", "Lluvia de flechas", "07_lluvia_flechas", "suelo", [L("GT", 0.05, 0.13, 0.9)], 1.2, [0.5, 0.8]),
     ("cazador", "arquero_hd", "trampa", "Trampa de espinas", "08_trampa_espinas", "suelo", [L("GC", 0.05, 0.14, 0.7)], 1.2, []),
@@ -62,7 +74,9 @@ EFECTOS = [
     ("cazador", "arquero_hd", "marca_cazador", "Flecha ígnea", "01_flecha_ignea", "centro", vuelo(0.6, 0.45), 0.6, [0.45]),
 ]
 ANCLAS, MS = {}, {}
-for paquete in sorted({e[1] for e in EFECTOS}):
+PRESENTES = {e[1] for e in EFECTOS if os.path.exists(os.path.join(FUENTE, e[1], "animaciones.json"))}      # (solo se regeneran los paquetes que están en la carpeta)
+EFECTOS = [e for e in EFECTOS if e[1] in PRESENTES]
+for paquete in sorted(PRESENTES):
     j = json.load(open(os.path.join(FUENTE, paquete, "animaciones.json")))
     MS[paquete] = j["suggested_frame_ms"]
     for s in j["spells"]:

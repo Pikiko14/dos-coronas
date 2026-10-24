@@ -75,19 +75,19 @@
     <estado tipo="quemar" dur="5" prob="1"/>
   </habilidad>
   <!--  clerigo  -->
-  <habilidad id="curar" nombre="Curación" clase="clerigo" tipo="aliado" cd="2.1" cura="28" curaN="5" desc="Restaura vida a un aliado o a ti." mana="16" rango="6.5"/>
-  <habilidad id="bendicion" nombre="Rayo bendito" clase="clerigo" tipo="enemigo" cd="4" coef="1.5" dano="magico" desc="Un rayo bendito que hiere al enemigo. Se aprende al nivel 5." mana="16" proyectil="sagrado" rango="6.4"/>
-  <habilidad id="castigo" nombre="Castigo" clase="clerigo" tipo="enemigo" cd="1.35" coef="1.12" dano="magico" desc="Luz que hiere. El clérigo también ataca." mana="10" proyectil="sagrado" rango="6.4">
+  <habilidad id="curar" nombre="Cura divina" clase="clerigo" tipo="aliado" cd="2.1" cura="28" curaN="5" desc="Un loto de luz restaura la vida de un aliado o la tuya." mana="16" rango="6.5"/>
+  <habilidad id="bendicion" nombre="Lanza de serafín" clase="clerigo" tipo="enemigo" cd="4" coef="1.5" dano="magico" desc="Una lanza alada de luz que hiere al enemigo. Se aprende al nivel 5." mana="16" proyectil="sagrado" rango="6.4"/>
+  <habilidad id="castigo" nombre="Bendición sagrada" clase="clerigo" tipo="enemigo" cd="1.35" coef="1.12" dano="magico" desc="Un orbe alado de luz que hiere. El clérigo también ataca." mana="10" proyectil="sagrado" rango="6.4">
     <estado tipo="quemar" prob="0.2"/>
   </habilidad>
-  <habilidad id="consagrar" nombre="Consagración" clase="clerigo" tipo="mixto" cd="10" coef="1.5" cura="18" curaN="2" dano="magico" desc="Daña enemigos y cura aliados a tu alrededor." mana="28" rango="2.8">
+  <habilidad id="consagrar" nombre="Luz purificadora" clase="clerigo" tipo="mixto" cd="10" coef="1.5" cura="18" curaN="2" dano="magico" desc="Una columna de luz purificadora: daña enemigos y cura aliados a tu alrededor." mana="28" rango="2.8">
     <estado tipo="aturdir" dur="1" prob="0.15"/>
   </habilidad>
-  <habilidad id="sanacion" nombre="Luz sanadora" clase="clerigo" tipo="aliados" cd="15" cura="22" curaN="4" desc="Cura a todos los aliados cercanos." mana="38" rango="4.5"/>
-  <habilidad id="juicio" nombre="Juicio divino" clase="clerigo" tipo="enemigo" aturde="1.2" cd="16" coef="2.3" dano="magico" desc="Un haz de luz que hiere y aturde." mana="34" proyectil="sagrado" rango="6.4"/>
-  <habilidad id="escudo_divino" nombre="Escudo divino" clase="clerigo" tipo="aliado" buff="escudo" cd="18" dur="10" desc="Un escudo de luz absorbe el daño de un aliado o el tuyo." mana="45" rango="6.5"/>
-  <habilidad id="cadena_sanacion" nombre="Cadena de sanación" clase="clerigo" tipo="aliado" rebotes="2" cura="20" curaN="3" cd="9" desc="Cura a un aliado y la luz salta a otros dos cercanos." mana="36" rango="6.5"/>
-  <habilidad id="tormenta_divina" nombre="Tormenta divina" clase="clerigo" tipo="punto" aoe="3.2" pulsos="3" cd="24" coef="1.2" dano="magico" cura="14" curaN="2" desc="Una tormenta de luz castiga tres veces la zona y cura a tus aliados dentro." mana="70" rango="7.5"/>
+  <habilidad id="sanacion" nombre="Santuario" clase="clerigo" tipo="aliados" cd="15" cura="22" curaN="4" desc="Un santuario de luz cura a todos los aliados cercanos." mana="38" rango="4.5"/>
+  <habilidad id="juicio" nombre="Martillo de justicia" clase="clerigo" tipo="enemigo" aturde="1.2" cd="16" coef="2.3" dano="magico" desc="Un martillo de luz cae sobre el enemigo: lo hiere y lo aturde." mana="34" proyectil="sagrado" rango="6.4"/>
+  <habilidad id="escudo_divino" nombre="Escudo de fe" clase="clerigo" tipo="aliado" buff="escudo" cd="18" dur="10" desc="Un escudo de fe absorbe el daño de un aliado o el tuyo." mana="45" rango="6.5"/>
+  <habilidad id="cadena_sanacion" nombre="Cadena de luz" clase="clerigo" tipo="aliado" rebotes="2" cura="20" curaN="3" cd="9" desc="Un halo de luz cura a un aliado y salta a otros dos cercanos." mana="36" rango="6.5"/>
+  <habilidad id="tormenta_divina" nombre="Juicio celestial" clase="clerigo" tipo="punto" aoe="3.2" pulsos="3" cd="24" coef="1.2" dano="magico" cura="14" curaN="2" desc="Una espada celestial castiga tres veces la zona y cura a tus aliados dentro." mana="70" rango="7.5"/>
   <habilidad id="resurreccion" nombre="Resurrección" clase="clerigo" tipo="resucitar" cd="90" desc="Devuelve a la vida a un aliado caído cerca de ti, con la mitad de su vida." mana="100" rango="6"/>
   <!--  lancero  -->
   <habilidad id="estocada" nombre="Estocada" clase="lancero" tipo="enemigo" cd="1.3" coef="1.12" desc="Una estocada larga con la lanza." mana="9" rango="2.5">

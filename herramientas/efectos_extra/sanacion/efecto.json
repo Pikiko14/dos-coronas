@@ -1,40 +1,42 @@
 {
  "id_dos_coronas": "sanacion",
  "clase": "clerigo",
- "nombre": "Luz sanadora",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Santuario",
+ "poder_fao": "(secuencia propia: paquete clerigo_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    420,
+    402
    ],
    "origin": [
-    128,
-    128
+    210,
+    400
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.2,
+  "inferida": false,
+  "duracion_s": 2.0,
   "golpes_s": [
-   0.5
+   0.4
   ],
   "capas": [
    {
     "s": "fx",
     "w": "GC",
-    "t0": 0.05,
-    "ms": 0.07,
+    "t0": 0.0,
+    "ms": 0.12,
     "sc": 1.0,
     "a": 1.0,
-    "modo": "once"
+    "modo": "hold",
+    "mezcla": "alpha",
+    "t1": 2.0
    }
   ]
  },
- "nota": "clerigo/cura_area del paquete de poderes."
+ "nota": "clerigo_sprites/08_santuario (640x640, recortado a 420x402)."
 }

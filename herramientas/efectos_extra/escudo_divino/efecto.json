@@ -1,40 +1,40 @@
 {
  "id_dos_coronas": "escudo_divino",
  "clase": "clerigo",
- "nombre": "Escudo divino",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Escudo de fe",
+ "poder_fao": "(secuencia propia: paquete clerigo_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    367,
+    375
    ],
    "origin": [
-    128,
-    128
+    183,
+    187
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.05,
-  "golpes_s": [
-   0.2
-  ],
+  "inferida": false,
+  "duracion_s": 2.5,
+  "golpes_s": [],
   "capas": [
    {
     "s": "fx",
     "w": "T",
     "t0": 0.0,
-    "ms": 0.065,
+    "ms": 0.12,
     "sc": 0.7,
     "a": 1.0,
-    "modo": "once"
+    "modo": "hold",
+    "mezcla": "alpha",
+    "t1": 2.5
    }
   ]
  },
- "nota": "clerigo/escudo_divino del paquete de poderes."
+ "nota": "clerigo_sprites/03_escudo_fe (640x640, recortado a 367x375)."
 }

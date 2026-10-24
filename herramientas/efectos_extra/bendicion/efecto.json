@@ -1,40 +1,43 @@
 {
  "id_dos_coronas": "bendicion",
  "clase": "clerigo",
- "nombre": "Rayo bendito",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Lanza de serafín",
+ "poder_fao": "(secuencia propia: paquete clerigo_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    401,
+    331
    ],
    "origin": [
-    128,
-    128
+    200,
+    165
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.1,
+  "inferida": false,
+  "duracion_s": 0.55,
   "golpes_s": [
-   0.4
+   0.45
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "GT",
-    "t0": 0.1,
-    "ms": 0.06,
-    "sc": 0.8,
+    "w": "C",
+    "t0": 0.0,
+    "ms": 0.05,
+    "sc": 0.7,
     "a": 1.0,
-    "modo": "once"
+    "modo": "vuelo",
+    "mezcla": "alpha",
+    "t1": 0.45,
+    "giro": "libre"
    }
   ]
  },
- "nota": "clerigo/luz_sagrada del paquete de poderes."
+ "nota": "clerigo_sprites/09_lanza_serafin (640x640, recortado a 401x331)."
 }

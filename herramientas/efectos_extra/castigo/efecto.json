@@ -1,40 +1,42 @@
 {
  "id_dos_coronas": "castigo",
  "clase": "clerigo",
- "nombre": "Castigo",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Bendición sagrada",
+ "poder_fao": "(secuencia propia: paquete clerigo_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    304,
+    301
    ],
    "origin": [
-    128,
-    128
+    152,
+    150
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.9,
+  "inferida": false,
+  "duracion_s": 0.5,
   "golpes_s": [
-   0.3
+   0.4
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "GT",
-    "t0": 0.05,
+    "w": "C",
+    "t0": 0.0,
     "ms": 0.05,
-    "sc": 0.75,
+    "sc": 0.55,
     "a": 1.0,
-    "modo": "once"
+    "modo": "vuelo",
+    "mezcla": "alpha",
+    "t1": 0.4
    }
   ]
  },
- "nota": "clerigo/purificacion del paquete de poderes."
+ "nota": "clerigo_sprites/02_bendicion_sagrada (640x640, recortado a 304x301)."
 }

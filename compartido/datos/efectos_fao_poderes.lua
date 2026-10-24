@@ -9,23 +9,23 @@ return {
   barrido = { clase = "lancero", dur = 0.95, golpes = { 0.3 }, capas = {
     { s = "barrido__fx", w = "GC", t0 = 0.05, ms = 0.055, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
-  bendicion = { clase = "clerigo", dur = 1.1, golpes = { 0.4 }, capas = {
-    { s = "bendicion__fx", w = "GT", t0 = 0.1, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
+  bendicion = { clase = "clerigo", dur = 0.55, golpes = { 0.45 }, capas = {
+    { s = "bendicion__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.7, a = 1, modo = "vuelo", t1 = 0.45, giro = "libre", dir = false, mezcla = "alpha" },
   } },
   cadena_sanacion = { clase = "clerigo", dur = 1, golpes = { 0.3 }, capas = {
-    { s = "cadena_sanacion__fx", w = "T", t0 = 0, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
+    { s = "cadena_sanacion__fx", w = "GT", t0 = 0, ms = 0.12, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
   carga = { clase = "guerrero", dur = 0.6, golpes = { 0.35 }, capas = {
     { s = "carga__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.65, a = 1, modo = "vuelo", t1 = 0.35, giro = "libre", dir = false, mezcla = "alpha" },
   } },
-  castigo = { clase = "clerigo", dur = 0.9, golpes = { 0.3 }, capas = {
-    { s = "castigo__fx", w = "GT", t0 = 0.05, ms = 0.05, sc = 0.75, a = 1, modo = "once", dir = false, mezcla = "add" },
+  castigo = { clase = "clerigo", dur = 0.5, golpes = { 0.4 }, capas = {
+    { s = "castigo__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.55, a = 1, modo = "vuelo", t1 = 0.4, dir = false, mezcla = "alpha" },
   } },
-  consagrar = { clase = "clerigo", dur = 1.2, golpes = { 0.5 }, capas = {
-    { s = "consagrar__fx", w = "GC", t0 = 0.05, ms = 0.07, sc = 0.95, a = 1, modo = "once", dir = false, mezcla = "add" },
+  consagrar = { clase = "clerigo", dur = 1, golpes = { 0.4 }, capas = {
+    { s = "consagrar__fx", w = "GC", t0 = 0, ms = 0.11, sc = 1, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
-  curar = { clase = "clerigo", dur = 1.05, golpes = { 0.3 }, capas = {
-    { s = "curar__fx", w = "GT", t0 = 0.05, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
+  curar = { clase = "clerigo", dur = 1.1, golpes = { 0.3 }, capas = {
+    { s = "curar__fx", w = "GT", t0 = 0, ms = 0.12, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
   disparo = { clase = "cazador", dur = 0.6, golpes = { 0.4 }, capas = {
     { s = "disparo__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.6, a = 1, modo = "vuelo", t1 = 0.4, giro = "libre", dir = false, mezcla = "alpha" },
@@ -51,8 +51,8 @@ return {
   escudo = { clase = "mago", dur = 1.1, golpes = {  }, capas = {
     { s = "escudo__fx", w = "GT", t0 = 0, ms = 0.12, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
-  escudo_divino = { clase = "clerigo", dur = 1.05, golpes = { 0.2 }, capas = {
-    { s = "escudo_divino__fx", w = "T", t0 = 0, ms = 0.065, sc = 0.7, a = 1, modo = "once", dir = false, mezcla = "add" },
+  escudo_divino = { clase = "clerigo", dur = 2.5, golpes = {  }, capas = {
+    { s = "escudo_divino__fx", w = "T", t0 = 0, ms = 0.12, sc = 0.7, a = 1, modo = "hold", t1 = 2.5, dir = false, mezcla = "alpha" },
   } },
   escudo_huesos = { clase = "nigromante", dur = 1, golpes = {  }, capas = {
     { s = "escudo_huesos__fx", w = "C", t0 = 0, ms = 0.12, sc = 0.7, a = 1, modo = "once", dir = false, mezcla = "alpha" },
@@ -93,8 +93,8 @@ return {
   jabalina = { clase = "lancero", dur = 1.1, golpes = { 0.5 }, capas = {
     { s = "jabalina__fx", w = "GT", t0 = 0.1, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
-  juicio = { clase = "clerigo", dur = 1.05, golpes = { 0.5 }, capas = {
-    { s = "juicio__fx", w = "GT", t0 = 0.05, ms = 0.06, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "add" },
+  juicio = { clase = "clerigo", dur = 1, golpes = { 0.5 }, capas = {
+    { s = "juicio__fx", w = "GT", t0 = 0, ms = 0.11, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
   juicio_final = { clase = "lancero", dur = 1.3, golpes = { 0.5, 0.8, 1.1 }, capas = {
     { s = "juicio_final__fx", w = "GT", t0 = 0.05, ms = 0.075, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
@@ -151,14 +151,14 @@ return {
   rayo_hielo = { clase = "mago", dur = 0.55, golpes = { 0.45 }, capas = {
     { s = "rayo_hielo__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.6, a = 1, modo = "vuelo", t1 = 0.45, giro = "libre", dir = false, mezcla = "alpha" },
   } },
-  resurreccion = { clase = "clerigo", dur = 1.2, golpes = { 0.5 }, capas = {
-    { s = "resurreccion__fx", w = "GT", t0 = 0, ms = 0.07, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "add" },
+  resurreccion = { clase = "clerigo", dur = 1.2, golpes = { 0.7 }, capas = {
+    { s = "resurreccion__fx", w = "GT", t0 = 0, ms = 0.14, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
   salto_impacto = { clase = "guerrero", dur = 1.4, golpes = { 0.6 }, capas = {
     { s = "salto_impacto__fx", w = "GT", t0 = 0.35, ms = 0.1, sc = 1, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
-  sanacion = { clase = "clerigo", dur = 1.2, golpes = { 0.5 }, capas = {
-    { s = "sanacion__fx", w = "GC", t0 = 0.05, ms = 0.07, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
+  sanacion = { clase = "clerigo", dur = 2, golpes = { 0.4 }, capas = {
+    { s = "sanacion__fx", w = "GC", t0 = 0, ms = 0.12, sc = 1, a = 1, modo = "hold", t1 = 2, dir = false, mezcla = "alpha" },
   } },
   tajo = { clase = "guerrero", dur = 1, golpes = { 0.3 }, capas = {
     { s = "tajo__fx", w = "C", t0 = 0, ms = 0.1, sc = 1.4, a = 1, modo = "once", dir = false, mezcla = "alpha" },
@@ -175,8 +175,8 @@ return {
   torbellino_lanzas = { clase = "lancero", dur = 1.7, golpes = { 0.4, 0.8, 1.2, 1.6 }, capas = {
     { s = "torbellino_lanzas__fx", w = "GC", t0 = 0, ms = 0.1, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "add" },
   } },
-  tormenta_divina = { clase = "clerigo", dur = 1.2, golpes = { 0.5, 0.75, 1 }, capas = {
-    { s = "tormenta_divina__fx", w = "GT", t0 = 0.05, ms = 0.07, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
+  tormenta_divina = { clase = "clerigo", dur = 1.6, golpes = { 0.1, 0.45, 0.8 }, capas = {
+    { s = "tormenta_divina__fx", w = "GT", t0 = 0, ms = 0.12, sc = 1, a = 1, modo = "loop", t1 = 1.4, dir = false, mezcla = "alpha" },
   } },
   tormenta_lanzas = { clase = "lancero", dur = 1.2, golpes = { 0.5 }, capas = {
     { s = "tormenta_lanzas__fx", w = "GT", t0 = 0.05, ms = 0.07, sc = 0.95, a = 1, modo = "once", dir = false, mezcla = "add" },

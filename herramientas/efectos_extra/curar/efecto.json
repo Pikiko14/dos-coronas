@@ -1,26 +1,26 @@
 {
  "id_dos_coronas": "curar",
  "clase": "clerigo",
- "nombre": "Curación",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Cura divina",
+ "poder_fao": "(secuencia propia: paquete clerigo_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    341,
+    349
    ],
    "origin": [
-    128,
-    128
+    171,
+    346
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.05,
+  "inferida": false,
+  "duracion_s": 1.1,
   "golpes_s": [
    0.3
   ],
@@ -28,13 +28,14 @@
    {
     "s": "fx",
     "w": "GT",
-    "t0": 0.05,
-    "ms": 0.06,
+    "t0": 0.0,
+    "ms": 0.12,
     "sc": 0.8,
     "a": 1.0,
-    "modo": "once"
+    "modo": "once",
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "clerigo/cura del paquete de poderes."
+ "nota": "clerigo_sprites/01_cura_divina (640x640, recortado a 341x349)."
 }
