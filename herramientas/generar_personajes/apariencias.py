@@ -146,6 +146,42 @@ def previa():
     print("previa en", ruta)
 
 
+RANURAS_ICONO = ("cabeza", "pecho", "piernas", "pies", "espalda", "arma")      # orden de los seis iconos de cada set en la lámina
+
+
+def hacer_iconos():
+    """Lámina de iconos de las piezas (32 px, 8 columnas): seis por set, en el orden de RANURAS_ICONO; cada icono es el dibujo de la pieza (de frente, versión masculina)."""
+    from PIL import Image
+    n = len(SETS) * len(RANURAS_ICONO)
+    hoja = Image.new("RGBA", (256, ((n + 7) // 8) * 32), (0, 0, 0, 0))
+    for i, s in enumerate(SETS):
+        p = piezas_de(s, "h")
+        for k, ranura in enumerate(RANURAS_ICONO):
+            par = p["arma"].get("espada") if ranura == "arma" else p.get(ranura)
+            if not par:
+                continue
+            cap, cod = par
+            clave = "shape/chr/%s/%d_wait.spr" % (cap, cod)
+            im = None
+            for fr, _o in reversed(pak_fao.cuadros_spr(clave)):
+                if fr is not None:
+                    im = fr.convert("RGBA")
+                    break
+            if im is None:
+                continue
+            caja = im.getchannel("A").point(lambda a: 255 if a > 20 else 0).getbbox()
+            if not caja:
+                continue
+            im = im.crop(caja)
+            esc = 28.0 / max(im.size)
+            im = im.resize((max(1, round(im.width * esc)), max(1, round(im.height * esc))), Image.LANCZOS)
+            idx = i * len(RANURAS_ICONO) + k
+            hoja.alpha_composite(im, ((idx % 8) * 32 + (32 - im.width) // 2, (idx // 8) * 32 + (32 - im.height) // 2))
+    ruta = os.path.join(RAIZ, "juego", "arte", "hojas", "apariencias_iconos.png")
+    hoja.save(ruta, optimize=True)
+    print("iconos:", n, "->", ruta)
+
+
 def lua(v, nivel=0):
     pad = "  " * (nivel + 1)
     if isinstance(v, dict):
@@ -163,12 +199,15 @@ def main():
     if "--previa" in sys.argv:
         previa()
         return
+    if "--iconos" in sys.argv:
+        hacer_iconos()
+        return
     previas = set()
     if os.path.exists(LUA):
         previas = set(re.findall(r'^    (i\d+\w*) = \{', open(LUA, encoding="utf-8").read(), re.M))
     meta, total, sets = {}, 0, {}
     for s in SETS:
-        sets[s["id"]] = {"nombre": s["nombre"], "precio": s["precio"], "h": {}, "m": {}}
+        sets[s["id"]] = {"nombre": s["nombre"], "precio": s["precio"], "icono": SETS.index(s) * len(RANURAS_ICONO), "h": {}, "m": {}}
         for gen in ("h", "m"):
             fila = {"arma": {}}
             p = piezas_de(s, gen)
@@ -199,6 +238,7 @@ def main():
         f.write("-- GENERADO por herramientas/generar_personajes/apariencias.py: capas y sets de apariencia (PD de FAO). No editar a mano.\n")
         f.write("return " + lua({"capas": meta, "sets": sets}) + "\n")
     print("escrito", LUA)
+    hacer_iconos()
 
 
 if __name__ == "__main__":

@@ -17,6 +17,7 @@ local HOJAS = {
   "armas.png",
   "equipo_altos.png",
   "equipo_fao.png",
+  "apariencias_iconos.png",
 }
 
 local alias = {
@@ -36,6 +37,7 @@ local alias = {
   armas = "armas.png",
   altos = "equipo_altos.png",
   fao = "equipo_fao.png",
+  apar = "apariencias_iconos.png",
 }
 
 local CARPETA = "arte/hojas"

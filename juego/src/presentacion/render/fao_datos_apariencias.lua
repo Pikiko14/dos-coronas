@@ -31435,6 +31435,7 @@ return {
     pd_ciudad_demoniaca = {
       nombre = "Ciudad Demoníaca",
       precio = 900,
+      icono = 0,
       h = {
         arma = {
           espada = "i2526b",
@@ -31471,6 +31472,7 @@ return {
     pd_espacio_tiempo = {
       nombre = "Espacio-Tiempo",
       precio = 900,
+      icono = 6,
       h = {
         arma = {
           espada = "i4615b",
@@ -31507,6 +31509,7 @@ return {
     pd_imperial = {
       nombre = "Imperial",
       precio = 800,
+      icono = 12,
       h = {
         arma = {
           espada = "i3267b",
@@ -31543,6 +31546,7 @@ return {
     pd_armadura_dorada = {
       nombre = "Armadura Dorada",
       precio = 1000,
+      icono = 18,
       h = {
         arma = {
           espada = "i5084bl",
@@ -31579,6 +31583,7 @@ return {
     pd_sacerdote_sagrado = {
       nombre = "Sacerdote Sagrado",
       precio = 800,
+      icono = 24,
       h = {
         arma = {
           espada = "i3267b",
@@ -31615,6 +31620,7 @@ return {
     pd_esperanza = {
       nombre = "Esperanza",
       precio = 800,
+      icono = 30,
       h = {
         arma = {
           espada = "i4615b",
@@ -31651,6 +31657,7 @@ return {
     pd_gala_esmeralda = {
       nombre = "Gala Esmeralda",
       precio = 700,
+      icono = 36,
       h = {
         arma = {
           espada = "i5084bl",
@@ -31687,6 +31694,7 @@ return {
     pd_lobo_nevado = {
       nombre = "Lobo Nevado",
       precio = 700,
+      icono = 42,
       h = {
         arma = {
           espada = "i2268b",
@@ -31723,6 +31731,7 @@ return {
     pd_lobo_gris = {
       nombre = "Lobo Gris",
       precio = 700,
+      icono = 48,
       h = {
         arma = {
           espada = "i4615b",
@@ -31759,6 +31768,7 @@ return {
     pd_pasion = {
       nombre = "Pasión",
       precio = 700,
+      icono = 54,
       h = {
         arma = {
           espada = "i5084bl",
@@ -31795,6 +31805,7 @@ return {
     pd_marfil = {
       nombre = "Armadura de Marfil",
       precio = 800,
+      icono = 60,
       h = {
         arma = {
           espada = "i2526b",
@@ -31831,6 +31842,7 @@ return {
     pd_nieve = {
       nombre = "Túnica de Nieve",
       precio = 700,
+      icono = 66,
       h = {
         arma = {
           espada = "i5084bl",
@@ -31867,6 +31879,7 @@ return {
     pd_vikingo_acero = {
       nombre = "Vikingo de Acero",
       precio = 900,
+      icono = 72,
       h = {
         arma = {
           espada = "i4615b",
@@ -31903,6 +31916,7 @@ return {
     pd_cobrizo = {
       nombre = "Guerrero Cobrizo",
       precio = 700,
+      icono = 78,
       h = {
         arma = {
           espada = "i3267b",
@@ -31939,6 +31953,7 @@ return {
     pd_sombras = {
       nombre = "Cazador de Sombras",
       precio = 800,
+      icono = 84,
       h = {
         arma = {
           espada = "i2268b",
@@ -31975,6 +31990,7 @@ return {
     pd_escarlata = {
       nombre = "Guardia Escarlata",
       precio = 800,
+      icono = 90,
       h = {
         arma = {
           espada = "i3468b",
@@ -32011,6 +32027,7 @@ return {
     pd_barbaro_norte = {
       nombre = "Bárbaro del Norte",
       precio = 900,
+      icono = 96,
       h = {
         arma = {
           espada = "i4959b",
@@ -32047,6 +32064,7 @@ return {
     pd_zafiro = {
       nombre = "Mago Zafiro",
       precio = 700,
+      icono = 102,
       h = {
         arma = {
           espada = "i2526b",
@@ -32083,6 +32101,7 @@ return {
     pd_alado_plata = {
       nombre = "Alado Plateado",
       precio = 1000,
+      icono = 108,
       h = {
         arma = {
           espada = "i5084bl",
@@ -32119,6 +32138,7 @@ return {
     pd_escarcha = {
       nombre = "Caballero de Escarcha",
       precio = 900,
+      icono = 114,
       h = {
         arma = {
           espada = "i4615b",
@@ -32155,6 +32175,7 @@ return {
     pd_dorado = {
       nombre = "Guerrero Dorado",
       precio = 1100,
+      icono = 120,
       h = {
         arma = {
           espada = "i3267b",
@@ -32191,6 +32212,7 @@ return {
     pd_hechicero_azul = {
       nombre = "Hechicero Azul",
       precio = 700,
+      icono = 126,
       h = {
         arma = {
           espada = "i2268b",
@@ -32227,6 +32249,7 @@ return {
     pd_lunar = {
       nombre = "Sacerdote Lunar",
       precio = 800,
+      icono = 132,
       h = {
         arma = {
           espada = "i3468b",
@@ -32263,6 +32286,7 @@ return {
     pd_brasa = {
       nombre = "Brasa Ardiente",
       precio = 800,
+      icono = 138,
       h = {
         arma = {
           espada = "i4959b",
@@ -32299,6 +32323,7 @@ return {
     pd_rey_vikingo = {
       nombre = "Rey Vikingo",
       precio = 1000,
+      icono = 144,
       h = {
         arma = {
           espada = "i2526b",
@@ -32335,6 +32360,7 @@ return {
     pd_violeta = {
       nombre = "Yelmo Violeta",
       precio = 800,
+      icono = 150,
       h = {
         arma = {
           espada = "i5084bl",
@@ -32371,6 +32397,7 @@ return {
     pd_cuernos_oro = {
       nombre = "Cuernos de Oro",
       precio = 900,
+      icono = 156,
       h = {
         arma = {
           espada = "i4615b",
@@ -32407,6 +32434,7 @@ return {
     pd_sombrio = {
       nombre = "Cazacuernos Sombrío",
       precio = 900,
+      icono = 162,
       h = {
         arma = {
           espada = "i3267b",
@@ -32443,6 +32471,7 @@ return {
     pd_cristal_plata = {
       nombre = "Cristal de Plata",
       precio = 1000,
+      icono = 168,
       h = {
         arma = {
           espada = "i2268b",
@@ -32479,6 +32508,7 @@ return {
     pd_lobo_sombrio = {
       nombre = "Lobo Sombrío",
       precio = 800,
+      icono = 174,
       h = {
         arma = {
           espada = "i3468b",

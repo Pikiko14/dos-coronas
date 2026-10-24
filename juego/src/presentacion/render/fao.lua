@@ -471,6 +471,16 @@ function M.dibujarMontado(e, nomMontura, sx, pies, tinte, alfa, subir)
   return true
 end
 
+-- Icono (casilla de la lámina "apar") de la pieza de una ranura de un set de apariencia, o nil. Seis por set: cabeza, pecho, piernas (manos), pies, espalda, arma.
+local RANURA_ICONO = { cabeza = 0, pecho = 1, piernas = 2, pies = 3, espalda = 4, arma = 5 }
+function M.iconoApariencia(id, ranura)
+  if not M.activo() or not datos.apariencias then return nil end
+  local set = datos.apariencias[id]
+  local k = RANURA_ICONO[ranura]
+  if not (set and set.icono and k) then return nil end
+  return set.icono + k
+end
+
 -- Retrato estático (selección y creación de personaje): de frente, en reposo. equipo = nil -> equipo de escalón 1.
 function M.retrato(clase, gen, equipo, sx, sy, k, apar)
   k = (k or 1) * 0.5     -- (las hojas están a tamaño original)

@@ -4098,13 +4098,18 @@ function I.panelEquipo(mundo, p, w, h)
     love.graphics.rectangle("line", x + 0.5, yy + 0.5, S - 1, S - 1, 5, 5)
     love.graphics.setLineWidth(1)
     love.graphics.setFont(f)
-    if ad then
+    local ico = set and require("src.presentacion.render.fao").iconoApariencia(set, ranura)
+    if ico then
+      love.graphics.setColor(1, 1, 1, 1)
+      Atlas.dibujar("apar", ico, x + S / 2, yy + S / 2, (S - 6) / 32, 16, 16)
+    elseif ad then
       love.graphics.setColor(0.86, 0.8, 1)
       love.graphics.printf(ad.nombre, x + 3, yy + 8, S - 6, "center")
     else
       love.graphics.setColor(0.45, 0.5, 0.62, 0.7)
       love.graphics.printf("libre", x + 3, yy + 20, S - 6, "center")
     end
+    if hover and ad then fichaDe = { texto = ad.nombre .. "  (clic: cambiar)" } end
     love.graphics.setColor(0.72, 0.75, 0.85)
     love.graphics.printf(nombre, x - 6, yy + S + 2, S + 12, "center")
     I.registrar(x, yy, S, S, "apar_slot_" .. ranura)
@@ -4151,6 +4156,7 @@ function I.panelEquipo(mundo, p, w, h)
     local fy = ly + 34
     local function fila(texto2, id, actual, vistaId)
       local hv = sobre(lx + 6, fy, anchoL - 12, filaH - 2)
+      local icoFila = vistaId and require("src.presentacion.render.fao").iconoApariencia(vistaId, I.ropero)
       love.graphics.setColor(hv and 0.2 or 0.1, hv and 0.28 or 0.14, hv and 0.5 or 0.26, 0.95)
       love.graphics.rectangle("fill", lx + 6, fy, anchoL - 12, filaH - 2, 5, 5)
       if actual then
@@ -4159,7 +4165,12 @@ function I.panelEquipo(mundo, p, w, h)
       end
       love.graphics.setColor(0.95, 0.92, 0.82)
       love.graphics.setFont(f)
-      love.graphics.print(texto2, lx + 14, fy + 5)
+      if icoFila then
+        love.graphics.setColor(1, 1, 1, 1)
+        Atlas.dibujar("apar", icoFila, lx + 22, fy + filaH / 2 - 1, 22 / 32, 16, 16)
+        love.graphics.setColor(0.95, 0.92, 0.82)
+      end
+      love.graphics.print(texto2, lx + (icoFila and 38 or 14), fy + 5)
       I.registrar(lx + 6, fy, anchoL - 12, filaH - 2, id)
       if hv then I.roperoVista = vistaId or false end
       fy = fy + filaH
@@ -4173,7 +4184,17 @@ function I.panelEquipo(mundo, p, w, h)
       love.graphics.printf("Aún no tienes ningún set: se compran en el Item Mall (L), pestaña Apariencia.", lx + 10, fy + 4, anchoL - 20, "left")
     end
   end
-  if fichaDe and fichaDe[1] then fichaPieza(fichaDe[1], fichaDe[2], fichaDe[3], mx0, my0, w, h, "Clic: quitar la pieza") end
+  if fichaDe and fichaDe.texto then
+    local tw = f:getWidth(fichaDe.texto) + 20
+    local tx = math.min(w - tw - 6, mx0 + 14)
+    love.graphics.setColor(0.04, 0.06, 0.14, 0.96)
+    love.graphics.rectangle("fill", tx, my0 + 14, tw, 24, 6, 6)
+    love.graphics.setColor(0.7, 0.55, 1, 0.9)
+    love.graphics.rectangle("line", tx + 0.5, my0 + 14.5, tw - 1, 23, 6, 6)
+    love.graphics.setFont(f)
+    love.graphics.setColor(0.95, 0.92, 1)
+    love.graphics.print(fichaDe.texto, tx + 10, my0 + 19)
+  elseif fichaDe and fichaDe[1] then fichaPieza(fichaDe[1], fichaDe[2], fichaDe[3], mx0, my0, w, h, "Clic: quitar la pieza") end
 end
 
 local ORDEN_HUECO = { arma = 1, escudo = 2, cabeza = 3, pecho = 4, piernas = 5, pies = 6, anillo = 7, amuleto = 8, mochila = 9 }
