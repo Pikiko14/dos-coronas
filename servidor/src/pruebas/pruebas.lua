@@ -1592,6 +1592,7 @@ function Pruebas.correr()
     fallar(errores, "las duraciones se leen de una lista", h and #h == 2 and h[1] == 2 and h[2] == 48)
     fallar(errores, "una lista mala no cambia nada", Ajustes.horas("abc") == nil)
     -- aplicar valores propios al crear el mundo
+    local vida0 = Datos.MONSTRUO_HP
     local gato0 = Datos.statsMonstruo(Datos.monstruo("seta_azul")).hp
     local xp0 = Balance.xpPara(1)
     local mundo = Servicio.crearMundo({ ajustes = {
@@ -1600,7 +1601,7 @@ function Pruebas.correr()
       eventos = { minJugadores = 2, duracionBatalla = 600, duracionEstandarte = 120 },
     } })
     fallar(errores, "sube la dificultad de experiencia", Balance.xpPara(1) == xp0 * 2, xp0 .. " -> " .. Balance.xpPara(1))
-    fallar(errores, "las criaturas nacen con la vida nueva", math.abs(Datos.statsMonstruo(Datos.monstruo("seta_azul")).hp - gato0 * 2) <= 1)
+    fallar(errores, "las criaturas nacen con la vida nueva", math.abs(Datos.statsMonstruo(Datos.monstruo("seta_azul")).hp - gato0 * 6 / vida0) <= 4)
     fallar(errores, "subastas ajustadas", Subastas.COMISION == 0.1 and #Subastas.DURACIONES == 2 and Subastas.DURACIONES[2] == 48)
     fallar(errores, "gremios ajustados", Gremios.COSTE == 99)
     fallar(errores, "eventos ajustados", Datos.JUGADORES_EVENTO == 2 and mundo.instancia.batalla.duracion == 600 and mundo.instancia.estandarte.duracion == 120)
