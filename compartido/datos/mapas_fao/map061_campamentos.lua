@@ -5,84 +5,84 @@ return {
     monstruo = "seta_azul",
     cantidad = 3,
     radio = 4,
-    x = 89.75,
-    y = 30.75
+    x = 33.75,
+    y = 43.75
   },
   {
     monstruo = "larva_verde",
     cantidad = 3,
     radio = 4,
-    x = 90.75,
-    y = 15.75
+    x = 27.25,
+    y = 18.25
   },
   {
     monstruo = "polilla_rosa",
     cantidad = 3,
     radio = 4,
-    x = 15.75,
-    y = 12.75
+    x = 91.75,
+    y = 44.25
   },
   {
     monstruo = "libelula_cian",
     cantidad = 3,
     radio = 5,
-    x = 43.25,
-    y = 11.25
+    x = 76.25,
+    y = 48.25
   },
   {
     monstruo = "rabano_guerrero",
     cantidad = 3,
     radio = 4,
-    x = 29.75,
-    y = 6.75
+    x = 7.25,
+    y = 26.75
   },
   {
     monstruo = "girasol_lancero",
     cantidad = 2,
     radio = 4,
-    x = 7.25,
-    y = 48.25
+    x = 87.75,
+    y = 9.25
   },
   {
     monstruo = "flor_lanza",
     cantidad = 2,
     radio = 4,
-    x = 18.75,
-    y = 28.25
+    x = 12.75,
+    y = 44.25
   },
   {
     monstruo = "pinguino_aprendiz",
     cantidad = 3,
     radio = 4,
-    x = 61.25,
-    y = 6.75
+    x = 88.75,
+    y = 23.25
   },
   {
     monstruo = "seta_azul",
     cantidad = 3,
     radio = 4,
-    x = 20.25,
-    y = 55.75
+    x = 74.25,
+    y = 33.25
   },
   {
     monstruo = "larva_verde",
     cantidad = 3,
     radio = 4,
-    x = 23.75,
-    y = 40.25
+    x = 65.75,
+    y = 7.25
   },
   {
     monstruo = "polilla_rosa",
     cantidad = 3,
     radio = 4,
-    x = 6.75,
-    y = 27.75
+    x = 20.75,
+    y = 53.25
   },
   {
     monstruo = "libelula_cian",
     cantidad = 3,
     radio = 5,
-    x = 77.75,
-    y = 30.25
+    x = 64.25,
+    y = 45.75
   }
 }

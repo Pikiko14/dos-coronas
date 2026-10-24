@@ -29,7 +29,13 @@ function M.instalar(Mundo)
     if not (mapa and mapa.mpc and mapa.mpc.puntos) then return nil end
     local zonas = {}
     for _, p in ipairs(mapa.mpc.puntos) do zonas[p.id] = p.puntos end
-    local function celdas(ids)
+    -- las zonas 84 y 86 del mapa llegan casi hasta el centro: solo cuenta de cada una el tercio de su lado (Albor a la izquierda, Umbra a la derecha)
+    local function enLado(x, lado)
+      if lado == "albor" then return x <= mapa.w * 0.36 end
+      if lado == "umbra" then return x >= mapa.w * 0.64 end
+      return true
+    end
+    local function celdas(ids, lado)
       local lista = {}
       for _, id in ipairs(ids) do
         local poli = zonas[id]
@@ -43,7 +49,7 @@ function M.instalar(Mundo)
               for dx = -1, 1 do for dy = -1, 1 do
                 if libre and not Mapa.transitable(mapa, x + dx, y + dy) then libre = false end
               end end
-              if libre and MapaMpc.puntoEnPoligono(poli, (x + 0.5) * MapaMpc.CELDA, (y + 0.5) * MapaMpc.CELDA) then
+              if libre and enLado(x + 0.5, lado) and MapaMpc.puntoEnPoligono(poli, (x + 0.5) * MapaMpc.CELDA, (y + 0.5) * MapaMpc.CELDA) then
                 lista[#lista + 1] = { x = x + 0.5, y = y + 0.5 }
               end
             end
@@ -52,7 +58,7 @@ function M.instalar(Mundo)
       end
       return lista
     end
-    local bases = { albor = celdas(M.ZONAS.albor), umbra = celdas(M.ZONAS.umbra) }
+    local bases = { albor = celdas(M.ZONAS.albor, "albor"), umbra = celdas(M.ZONAS.umbra, "umbra") }
     local centro = celdas(M.CENTRO)
     if #bases.albor == 0 or #bases.umbra == 0 or #centro == 0 then return nil end
     -- el cristal sale en la casilla del centro más cercana al medio de las zonas 81 y 82
@@ -64,7 +70,7 @@ function M.instalar(Mundo)
       local d = (c.x - cx) ^ 2 + (c.y - cy) ^ 2
       if d < md then mejor, md = c, d end
     end
-    self._cristal = { bases = bases, zonas = zonas, centro = { x = mejor.x, y = mejor.y } }
+    self._cristal = { bases = bases, zonas = zonas, ancho = mapa.w, centro = { x = mejor.x, y = mejor.y } }
     -- (las reapariciones y entradas «normales» del mapa también caen en su base)
     mapa.spawns = mapa.spawns or {}
     mapa.spawns.albor = { x = bases.albor[1].x, y = bases.albor[1].y }
@@ -94,6 +100,7 @@ function M.instalar(Mundo)
   function Mundo:enZonaPropia(p)
     local c = self:prepararCristal()
     if not c then return false end
+    if (p.faccion == "albor" and p.x > c.ancho * 0.36) or (p.faccion == "umbra" and p.x < c.ancho * 0.64) then return false end
     for _, id in ipairs(M.ZONAS[p.faccion] or {}) do
       local poli = c.zonas[id]
       if poli and MapaMpc.puntoEnPoligono(poli, p.x * MapaMpc.CELDA, p.y * MapaMpc.CELDA) then return true end

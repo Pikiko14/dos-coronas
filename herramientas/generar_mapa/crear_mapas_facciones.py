@@ -272,15 +272,15 @@ def jardin():
     # ---- árboles: borde del mapa (con hueco en la entrada) y arboledas
     entrada = np.hypot(xs - CX, ys - (H - 6)) < 13
     borde = m.borde_bosque(11, 9, entrada)
-    arboles = [5208, 5210, 5214, 5223, 5226, 5228, 5231, 5236]
-    m.esparcir(arboles, 150, borde & ~m.camino, 3.2, True, 2)
-    m.esparcir([5217, 5216, 5220], 5, borde & ~m.camino, 4, True, 2)              # alguno otoñal, para romper el verde
+    arboles = [5231, 5233, 5236, 5237, 5224, 5226]
+    m.esparcir(arboles, 95, borde & ~m.camino, 3.6, True, 2)
+    m.esparcir([5298, 5300, 5301], 22, borde & ~m.camino, 4, True, 2)               # cerezos entre el verde: un mismo aire en todo el mapa
     # cerezos y melocotoneros: alrededor de la plaza, en grupos
     cerezos = [5298, 5300, 5301]
     for ang in np.linspace(0, 2 * math.pi, 9)[:-1]:
         gx, gy = CX + math.cos(ang) * 34 + m.rng.uniform(-3, 3), CY + math.sin(ang) * 26 + m.rng.uniform(-3, 3)
         zona = (np.hypot(xs - gx, ys - gy) < 7) & ~m.camino
-        m.esparcir(cerezos + [5310, 5312], 4, zona, 3.4, True, 2, 1)
+        m.esparcir(cerezos, 4, zona, 3.4, True, 2, 1)
     # bosquecillos sueltos en la pradera
     for gx, gy in ((40, 30), (62, 96), (140, 100), (170, 78), (26, 100), (125, 20)):
         zona = (np.hypot(xs - gx, ys - gy) < 9) & ~m.camino
@@ -304,9 +304,10 @@ def jardin():
     for x in (CX + 24, CX + 34, CX - 24, CX - 34):
         m.poner(7154, x, CY + 3.6, 1.5, True)
     # entrada: arco, estandartes y farolas
-    m.poner(8800, CX, H - 15, 3, True, 7)
-    m.poner(9721, CX - 7, H - 11, 2, True)
-    m.poner(9721, CX + 7, H - 11, 2, True)
+    m.poner(9721, CX - 6.5, H - 14, 2, True)
+    m.poner(9721, CX + 6.5, H - 14, 2, True)
+    m.poner(7154, CX - 4, H - 11, 1.5, True)
+    m.poner(7154, CX + 4, H - 11, 1.5, True)
     zona_entrada(m, CX, H - 6)
     # mirador al norte, templete junto al lago, pozos y casas del árbol
     m.poner(8538, CX, 20, 5, True, 6)
@@ -319,14 +320,14 @@ def jardin():
     m.poner(8771, 168, 52, 4, True, 3)
     # ---- la hierba y las flores (campos de flores donde el ruido es alto)
     libre = ~(m.camino | m.agua | m.occ)
-    flores = [5400, 5401, 5402, 5403, 5404, 5405, 5409, 5410, 5411, 5412, 5414, 5415, 5417, 5419, 5421, 5423, 5425, 5427, 5429, 5431, 5433, 5435, 5437, 5439]
+    flores = [5400, 5401, 5402, 5403, 5410, 5411, 5412, 5413, 5414, 5415, 5421, 5422, 5435, 5436, 5404, 5409]        # blancas, rosas y amarillas: paleta suave
     pesos = None
-    m.esparcir(flores, 520, libre, 1.1, False, 1, 0, 30, pesos, n3 * 0.5 + n2 * 0.6)
-    m.esparcir(flores, 110, libre & (n1 < 0.5), 1.1, False, 1, 1)
-    m.esparcir([5019, 5020, 5035, 5051, 5081, 5074, 5077], 360, libre, 0.8)
+    m.esparcir(flores, 330, libre, 1.1, False, 1, 0, 30, pesos, n3 * 0.5 + n2 * 0.6)
+    m.esparcir(flores, 60, libre & (n1 < 0.5), 1.1, False, 1, 1)
+    m.esparcir([5019, 5020, 5035, 5051, 5081, 5074, 5075], 360, libre, 0.8)
     # flores y cañas de la orilla
     orilla = arena & ~lago
-    m.esparcir([5025, 5027, 5409, 5404], 36, orilla, 1.2)
+    m.esparcir([5025, 5027, 5400, 5404], 30, orilla, 1.2)
     ys2, xs2 = np.nonzero(lago)
     for _ in range(40):
         k = m.rng.randrange(len(xs2))
@@ -375,20 +376,19 @@ def necropolis():
     borde = m.borde_bosque(12, 10, entrada)
     riscos = [6200, 6201, 6202, 6215, 6216, 6219, 6220]
     m.esparcir(riscos, 70, borde & ~m.camino, 5, True, 4)
-    m.esparcir([14031, 14032, 14033, 14034, 6001, 6003, 6004, 6011, 6082], 36, borde & ~m.camino, 3, True, 3)
+    m.esparcir([14031, 14032, 14033, 14034], 36, borde & ~m.camino, 3, True, 3)
     m.esparcir([14026, 14027, 14028, 14029, 14030], 70, borde & ~m.camino, 3.2, True, 2)
-    m.esparcir([5532, 5535, 5540], 14, borde & ~m.camino, 2.5, True, 2)
     # riscos sueltos y árboles muertos por el campo
     libre0 = ~(m.camino | m.agua | m.occ | cem)
     m.esparcir(riscos[:3], 8, libre0, 6, True, 4, 3)
     m.esparcir([14026, 14027, 14028, 14029, 14030], 30, libre0, 3.5, True, 2, 3)
-    m.esparcir([14031, 14033, 6001, 6082], 14, libre0, 3, True, 3, 2)
+    m.esparcir([14031, 14033, 14034], 14, libre0, 3, True, 3, 2)
     # ---- plaza ritual
     m.poner(13451, CX, CY + 3.5, 6, True, 7)                                       # altar de cristal oscuro
     for dx, dy, oid in ((-17, 0, 7239), (17, 0, 7240), (0, -15, 7241), (0, 16, 7242)):
         m.poner(oid, CX + dx, CY + dy + 2, 2.5, True, 2)
     m.anillo([8204, 8205, 8206], CX, CY, 13, 14, 1, 0.3)
-    m.anillo([6645, 6649, 6657], CX, CY, 15.5, 6, 2, 0.5, False)
+    m.anillo([6644, 6648, 6652], CX, CY, 15.5, 6, 2, 0.5, False)
     for dx, dy in ((-8.5, -10.5), (8.5, -10.5), (-8.5, 10.5), (8.5, 10.5)):
         m.poner(8248, CX + dx, CY + dy + 3, 1.5, True)
     m.poner(8249, CX, CY - 20, 3, True, 3)
@@ -428,11 +428,6 @@ def necropolis():
         px, py = 156 + math.cos(a) * 25, 64 + math.sin(a) * 15.5
         if m.libre(px, py, 2.2):
             m.poner(m.rng.choice([6644, 6648, 6652, 6656, 6647]), px, py, 2.2, True, 2)
-    for _ in range(10):
-        a = m.rng.uniform(0, 2 * math.pi)
-        px, py = 156 + math.cos(a) * 27, 64 + math.sin(a) * 17
-        if m.libre(px, py, 2):
-            m.poner(m.rng.choice([5505, 5514, 5531]), px, py, 2)
     m.poner(7587, 128, 72, 3, True, 2)
     m.poner(7588, 128, 54, 3, True, 2)
     ye, xe = np.nonzero(est)
@@ -441,11 +436,10 @@ def necropolis():
         m.poner(m.rng.choice([9748, 9749, 9753]), xe[k] + 0.5, ye[k] + 0.5)
     # ---- detalles por el campo
     libre = ~(m.camino | m.agua | m.occ)
-    m.esparcir([6047, 6051, 6059, 6063, 6064, 6065], 40, libre & (n1 > 0.3), 1.6)
-    m.esparcir([8205, 8206, 8201, 8203], 40, libre, 1.2, False, 1, 0)
-    m.esparcir([6644, 6648, 6652, 6656, 6645, 6649], 24, libre & (n3 > 0.55), 2, True, 2)
-    m.esparcir([5505, 5514, 5531, 5535, 5532], 34, libre & (n2 > 0.5), 1.8, False, 1, 0)
-    m.esparcir([9750, 9751, 5019, 5020, 5052], 180, libre, 0.8)
+    m.esparcir([6047, 6051, 6059, 6063, 6064, 6065], 16, libre & (n1 > 0.3), 1.6)
+    m.esparcir([8205, 8206], 16, libre, 1.2, False, 1, 0)
+    m.esparcir([6644, 6648, 6652, 6656], 14, libre & (n3 > 0.55), 2, True, 2)
+    m.esparcir([9750, 9751], 40, libre, 0.8)
     zl = np.nonzero(libre & (n1 > 0.3))
     for _ in range(40):
         k = m.rng.randrange(len(zl[0]))
