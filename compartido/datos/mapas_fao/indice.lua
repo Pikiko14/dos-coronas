@@ -6,4 +6,5 @@ return {
   cienaga_alta = 50,
   jardin_amanecer = 61,
   necropolis_ocaso = 62,
+  map133 = 133,
 }
