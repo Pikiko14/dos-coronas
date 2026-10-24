@@ -31,6 +31,12 @@ do
   end
 end
 M.AJUSTES = AJUSTES
+-- tamaño de la montura: el de su definición por el factor `escala` de sus ajustes (1 si no tiene); el asiento del jinete se escala con ella
+local function escalaDe(nombre, d)
+  local a = AJUSTES[nombre]
+  return d.escala * ((a and a.escala) or 1)
+end
+M.escalaDe = escalaDe
 function M.ultimo(nombre) return ultimoPaso[nombre] end
 
 local cache = {}
@@ -131,7 +137,7 @@ local function dibujar(nombre, tipo, i, u, sx, pies, dir, alfa, tinte, hoja5, fl
     i = math.max(0, math.min(t.n - 1, i))
     voltear = (d.mira == "izq") == ((dir or 1) == 3)
   end
-  local e = d.escala
+  local e = escalaDe(nombre, d)
   local c = tinte or { 1, 1, 1 }
   local k = d.tinte
   if k then c = { c[1] * k[1], c[2] * k[2], c[3] * k[3] } end
@@ -181,7 +187,7 @@ function M.dibujar(nombre, estado, u, sx, pies, dir, tinte, semilla, sujeto, rep
     local h5, f5 = hoja5, flip5
     if not h5 then h5, f5 = HOJA_MUNDO[dir or 1][1], HOJA_MUNDO[dir or 1][2] end
     local dx = ASIENTO[nombre][estado][(i * 5 + h5) * 2 + 1]
-    if dx then corrido = (f5 and -dx or dx) * d.escala end
+    if dx then corrido = (f5 and -dx or dx) * escalaDe(nombre, d) end
   end
   if d and (d.dirs2 or d.dirs5) and (estado == "wait" or estado == "run") then
     ultimoPaso[nombre] = { estado = estado, paso = i, hoja = hoja5, flip = flip5, corrido = corrido }
@@ -208,7 +214,7 @@ function M.asiento(nombre, dir)
   end
   local dx, dy = datos[u.estado][k + 1], datos[u.estado][k + 2]
   if not dx then return nil end
-  local e = d.escala
+  local e = escalaDe(nombre, d)
   local aj = AJUSTES[nombre] and AJUSTES[nombre][hoja]
   local ax, ay = aj and aj[1] or 0, aj and aj[2] or 0
   return (flip and -dx or dx) * e - (u.corrido or 0) + (flip and -ax or ax), 2 + dy * e + ay, u.paso, u.estado, hoja, flip

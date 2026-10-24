@@ -49,7 +49,7 @@ local function tieneAjustes(anim)
   local a = MobAnim.AJUSTES[anim]
   if not a then return false end
   for h = 0, 4 do if a[h] and (a[h][1] ~= 0 or a[h][2] ~= 0) then return true end end
-  return false
+  return a.escala ~= nil and math.abs(a.escala - 1) > 1e-6
 end
 
 local function avisar(t) E.aviso, E.avisoHasta = t, love.timer.getTime() + 4 end
@@ -144,7 +144,8 @@ function M.dibujar(app, w, h)
     local hoja, flip = hojaActual()
     local aj = ajusteDe(a.anim, hoja)
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.print(string.format("%s  %s   hoja %d%s   ajuste dx %g  dy %g", a.id, a.nombre, hoja, flip and " (volteada)" or "", aj[1], aj[2]), x0, h - 96)
+    love.graphics.print(string.format("%s  %s   hoja %d%s   ajuste dx %g  dy %g   tamaño x%g", a.id, a.nombre, hoja, flip and " (volteada)" or "", aj[1], aj[2],
+      (MobAnim.AJUSTES[a.anim] and MobAnim.AJUSTES[a.anim].escala) or 1), x0, h - 96)
     love.graphics.setColor(0.7, 0.75, 0.9, 1)
     love.graphics.printf("Arrastra al jinete con el ratón. ←/→ cambian de dirección y ↑/↓ de montura. Cada dirección base se ajusta por separado (las volteadas comparten con su simétrica).",
       x0, h - 74, w - x0 - 10, "left")
@@ -156,6 +157,16 @@ function M.dibujar(app, w, h)
       local t = MobAnim.AJUSTES[a.anim] or {}
       MobAnim.AJUSTES[a.anim] = t
       for hh = 0, 4 do t[hh] = { aj[1], aj[2] } end
+    end)
+    boton(x0 + 920, y - 34, 90, 28, "Tamaño -", function()
+      local t = MobAnim.AJUSTES[a.anim] or {}
+      MobAnim.AJUSTES[a.anim] = t
+      t.escala = math.max(0.3, math.floor(((t.escala or 1) - 0.05) * 100 + 0.5) / 100)
+    end)
+    boton(x0 + 1016, y - 34, 90, 28, "Tamaño +", function()
+      local t = MobAnim.AJUSTES[a.anim] or {}
+      MobAnim.AJUSTES[a.anim] = t
+      t.escala = math.min(3, math.floor(((t.escala or 1) + 0.05) * 100 + 0.5) / 100)
     end)
     boton(x0 + 660, y, 120, 28, "Anterior", function() E.sel = math.max(1, E.sel - 1) end)
     boton(x0 + 790, y, 120, 28, "Siguiente", function() E.sel = math.min(#E.lista, E.sel + 1) end)

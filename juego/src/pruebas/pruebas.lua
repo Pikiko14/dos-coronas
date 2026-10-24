@@ -1582,7 +1582,12 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
     fallar(errores, "el editor lista las monturas de FAO", #Ed.estado.lista > 100, tostring(#Ed.estado.lista))
     Ed.estado.sel = 1
     for i, m in ipairs(Ed.estado.lista) do if m.id == "mnt_296" then Ed.estado.sel = i end end
-    Ed.estado.oct = 4
+    Ed.estado.oct = tonumber(os.getenv("DC_EDITOR_OCT") or 4)
+    Ed.estado.clase = os.getenv("DC_EDITOR_CLASE") or Ed.estado.clase
+    Ed.estado.gen = os.getenv("DC_EDITOR_GEN") or Ed.estado.gen
+    if os.getenv("DC_EDITOR_MONTURA") then
+      for i, m in ipairs(Ed.estado.lista) do if m.id == os.getenv("DC_EDITOR_MONTURA") then Ed.estado.sel = i end end
+    end
     local cv = love.graphics.newCanvas(1280, 720)
     local function pintar()
       love.graphics.push("all")
@@ -1593,26 +1598,30 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
     local ok, err = pcall(pintar)
     fallar(errores, "el editor se dibuja: " .. tostring(err), ok)
     local anim = Ed.estado.lista[Ed.estado.sel].anim
+    local previo = MobAnim.AJUSTES[anim]
     MobAnim.AJUSTES[anim] = nil
     Ed.raton(700, 400, 1)
     Ed.mover(708, 396, 8, -4)
     Ed.soltar()
-    local a = MobAnim.AJUSTES[anim] and MobAnim.AJUSTES[anim][3]
+    local a
+    for h = 0, 4 do if MobAnim.AJUSTES[anim] and MobAnim.AJUSTES[anim][h] then a = MobAnim.AJUSTES[anim][h] end end
     fallar(errores, "arrastrar mueve al jinete (px de pantalla: pantalla / zoom)", a and math.abs(a[1] - 2) < 1e-6 and math.abs(a[2] + 1) < 1e-6, a and (a[1] .. "," .. a[2]) or "-")
+    MobAnim.AJUSTES[anim] = previo
     pcall(pintar)
     if os.getenv("DC_PRUEBA_EDITOR") then Log.volcar("capturas/editor_monturas.png", cv:newImageData():encode("png"):getString()) end
-    MobAnim.AJUSTES[anim] = nil
   end)
   -- El ajuste a mano del asiento (personal) desplaza al jinete y es inactivo para un jugador normal.
   paso("monturas FAO: ajuste a mano del asiento del jinete", function()
     local MobAnim = require("src.presentacion.render.mob_anim")
     local Ajuste = require("src.presentacion.ajuste_montura")
     fallar(errores, "sin partida ni personal no hace nada", Ajuste.tecla({ estado = "juego", jugador = { montado = "mnt_001" } }, "kp4") == false)
+    local guardado = MobAnim.AJUSTES.mnt_001           -- (puede haber ajustes reales guardados: se devuelven al acabar)
+    MobAnim.AJUSTES.mnt_001 = nil
     MobAnim.dibujar("mnt_001", "wait", 0, 100, 100, 1, nil, 0, nil)
     local dx0, dy0 = MobAnim.asiento("mnt_001", 1)
     MobAnim.AJUSTES.mnt_001 = { [0] = { 3, -4 }, [1] = { 3, -4 }, [2] = { 3, -4 }, [3] = { 3, -4 }, [4] = { 3, -4 } }
     local dx1, dy1 = MobAnim.asiento("mnt_001", 1)
-    MobAnim.AJUSTES.mnt_001 = nil
+    MobAnim.AJUSTES.mnt_001 = guardado
     fallar(errores, "el ajuste mueve al jinete respecto al asiento", dx0 and dx1 and math.abs(math.abs(dx1 - dx0) - 3) < 1e-6 and math.abs(dy1 - dy0 + 4) < 1e-6, tostring(dx1 and dx1 - dx0) .. "," .. tostring(dy1 and dy1 - dy0))
   end)
   -- Jinete sentado sobre las monturas de FAO por el camino real del juego (Dibujo.entidad): DC_PRUEBA_MONTADO=<clase> (DC_GEN, DC_TIER) guarda

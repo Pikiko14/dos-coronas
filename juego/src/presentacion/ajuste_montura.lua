@@ -34,6 +34,8 @@ local function guardar()
       local a = MobAnim.AJUSTES[id][h]
       if a and (a[1] ~= 0 or a[2] ~= 0) then filas[#filas + 1] = string.format("[%d] = { %g, %g }", h, a[1], a[2]) end
     end
+    local esc = MobAnim.AJUSTES[id].escala
+    if esc and math.abs(esc - 1) > 1e-6 then filas[#filas + 1] = string.format("escala = %g", esc) end
     if #filas > 0 then t[#t + 1] = string.format("  %s = { %s },\n", id, table.concat(filas, ", ")) end
   end
   t[#t + 1] = "}\n"
