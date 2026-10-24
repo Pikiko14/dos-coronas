@@ -1,5 +1,5 @@
 -- Ajuste del asiento del jinete montado, desde el juego. Solo para personal (staff "gm") o con DC_AJUSTE_MONTURAS=1.
--- Montado en una montura de FAO: teclado numérico 4 / 6 / 8 / 2 (y 9 / 7: adelante / atrás) mueven al jinete 1 px (Mayús: 5 px) a izquierda / derecha / arriba / abajo en la
+-- Montado en una montura de FAO (+ sube y - baja al jinete): teclado numérico 4 / 6 / 8 / 2 (y 9 / 7: adelante / atrás) mueven al jinete 1 px (Mayús: 5 px) a izquierda / derecha / arriba / abajo en la
 -- dirección que está mirando la montura (cada una de las cinco hojas se ajusta por separado; las volteadas comparten), 0 reinicia esa dirección y
 -- F9 guarda: en desarrollo escribe src/presentacion/render/montura_ajustes.lua y en un paquete montura_ajustes.lua en la carpeta de datos.
 local MobAnim = require("src.presentacion.render.mob_anim")
@@ -63,6 +63,8 @@ function M.tecla(app, tecla)
   if M.modo then
     tecla = ({ left = "kp4", right = "kp6", up = "kp8", down = "kp2", pageup = "kp9", pagedown = "kp7", ["0"] = "kp0", delete = "kp0" })[tecla] or tecla
   end
+  -- la tecla + sube al jinete y la tecla - lo baja (también las del teclado numérico), con o sin el modo F8
+  tecla = ({ ["+"] = "kp8", ["kp+"] = "kp8", ["="] = "kp8", ["-"] = "kp2", ["kp-"] = "kp2" })[tecla] or tecla
   local paso = (love.keyboard.isDown("lshift", "rshift") and 5 or 1)
   local dx, dy = 0, 0
   local u0 = MobAnim.ultimo(id)
@@ -103,7 +105,7 @@ function M.dibujar(app, w, h)
   local id, hoja = actual(app)
   if not id then return end
   local a = MobAnim.AJUSTES[id] and hoja and MobAnim.AJUSTES[id][hoja]
-  local texto = string.format("Ajuste de montura %s  hoja %s  dx %g  dy %g   [F8 %s: flechas = izquierda/derecha/arriba/abajo, RePág/AvPág = adelante/atrás (o numérico 4/6/8/2 y 9/7), Mayús x5, 0 reinicia, F9 guarda]",
+  local texto = string.format("Ajuste de montura %s  hoja %s  dx %g  dy %g   [F8 %s: flechas = izquierda/derecha/arriba/abajo, RePág/AvPág = adelante/atrás (o numérico 4/6/8/2 y 9/7), + sube y - baja, Mayús x5, 0 reinicia, F9 guarda]",
     id, tostring(hoja), a and a[1] or 0, a and a[2] or 0, M.modo and "ACTIVO" or "apagado")
   if aviso and love.timer.getTime() < avisoHasta then texto = texto .. "\n" .. aviso end
   love.graphics.push("all")
