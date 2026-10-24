@@ -3864,6 +3864,7 @@ function I.panelBolsa(mundo, p, w, h)
       mx, my = mx / s, my / s
       if it and mx >= x and mx <= x + 56 and my >= y and my <= y + 56 then
         I.pista = it.nombre .. " — " .. I.statsTexto(it) .. (it.texto and ("  " .. it.texto) or "")
+          .. ((I.panel == "mercado" and I.venderListo == i) and ("  ►  Clic otra vez para VENDER" .. ((slot.cant or 1) > 1 and (" las " .. slot.cant) or "")) or "")
       end
     end
     I.registrar(x, y, 56, 56, "bolsa_" .. i)

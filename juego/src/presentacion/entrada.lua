@@ -319,10 +319,18 @@ function Entrada.manejar(app, id)
     local i = tonumber(id:sub(7))
     Interfaz.sel = i
     if Interfaz.panel == "mercado" then
-      app.actuar("vender", { i = i })
+      -- vender es de un solo clic y se lleva TODA la pila: la primera pulsación solo marca la casilla y la segunda, en la misma, vende
+      -- (al vender, la lista se corre: sin esta confirmación dos clics seguidos vendían dos objetos distintos)
+      if Interfaz.venderListo == i then
+        app.actuar("vender", { i = i })
+        Interfaz.venderListo, Interfaz.sel = nil, nil
+      else
+        Interfaz.venderListo = i
+      end
     elseif Interfaz.panel == "comercio" then
       app.actuar("comercio_item", { i = i })
     elseif Interfaz.arrastre and Interfaz.arrastre ~= i then
+      Interfaz.venderListo = nil
       app.actuar("mover_bolsa", { a = Interfaz.arrastre, b = i })
       Interfaz.arrastre = nil
     elseif Interfaz.arrastre == i then

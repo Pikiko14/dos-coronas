@@ -1642,6 +1642,65 @@ function Pruebas.correr()
       fallar(errores, clase .. " recibe equipo de su oficio y de ninguno ajeno", propias > 0 and ajenas == 0, propias .. " propias, " .. ajenas .. " ajenas")
     end
   end)
+  paso("bolsa: hacer clic y equipar en cualquier casilla no pierde objetos", function()
+    local Datos2 = require("compartido.dominio.datos")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local p = mundo:crearPersonaje({ nombre = "Mochi", faccion = "albor", clase = "cazador", nivel = 30 })
+    local ids = { "pocion_vida", "mochila_1", "pocion_mana", "cazador_arma_3_s", "cazador_pecho_2", "mochila_2", "mochila_3", "polvo_arcano", "cazador_pies_3", "anillo_2" }
+    local function total()
+      local n = #p.bolsa
+      for _, id in pairs(p.equipo) do if id then n = n + 1 end end
+      return n
+    end
+    math.randomseed(11)
+    local perdidas = nil
+    for ronda = 1, 300 do
+      p.bolsa, p.equipo.mochila = {}, "mochila_2"
+      for i = 1, 7 do
+        local id = ids[math.random(#ids)]
+        if Datos2.item(id) then p.bolsa[#p.bolsa + 1] = { id = id, cant = 1 } end
+      end
+      local antes = total()
+      for _ = 1, 8 do
+        local i = math.random(1, Datos2.capacidadBolsa(p.equipo))
+        local accion = math.random(3)
+        if accion == 1 then mundo:equipar(p, i)
+        elseif accion == 2 then mundo:accion(p.id, "mover_bolsa", { a = i, b = math.random(1, Datos2.capacidadBolsa(p.equipo)) })
+        else mundo:desequipar(p, ({ "mochila", "arma", "pecho", "pies" })[math.random(4)]) end
+      end
+      if #p.bolsa == 0 and antes > 0 then perdidas = "ronda " .. ronda end
+      if total() < antes - 3 then perdidas = perdidas or ("ronda " .. ronda .. ": " .. antes .. " -> " .. total()) end
+      for _, sl in ipairs(p.bolsa) do if not sl or not sl.id then perdidas = perdidas or "casilla rota" end end
+    end
+    fallar(errores, "ningún clic deja la bolsa vacía ni rota", perdidas == nil, tostring(perdidas))
+  end)
+  paso("bolsa: equipar o usar cualquier objeto del juego con dos clics no vacía la bolsa", function()
+    local Datos2 = require("compartido.dominio.datos")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local p = mundo:crearPersonaje({ nombre = "Todo", faccion = "albor", clase = "cazador", nivel = 50 })
+    local todos = {}
+    for id in pairs(Datos2.items) do todos[#todos + 1] = id end
+    table.sort(todos)
+    local malos = {}
+    for _, id in ipairs(todos) do
+      p.bolsa, p.equipo.mochila, p.hp = {}, "mochila_3", p.hpMax
+      for i = 1, 6 do p.bolsa[i] = { id = "polvo_arcano", cant = 5 } end
+      p.bolsa[3] = { id = id, cant = (Datos2.item(id).apila and 3 or 1) }
+      local ok, err = pcall(function()
+        mundo:equipar(p, 3)
+        mundo:equipar(p, 3)
+      end)
+      local n = 0
+      for _ in ipairs(p.bolsa) do n = n + 1 end
+      local real = 0
+      for k in pairs(p.bolsa) do real = real + 1 end
+      if not ok then malos[#malos + 1] = id .. ": " .. tostring(err)
+      elseif n < 5 or n ~= real then malos[#malos + 1] = id .. ": bolsa con " .. n .. " casillas (" .. real .. " reales)" end
+    end
+    fallar(errores, "ningún objeto rompe la bolsa al equiparlo o usarlo", #malos == 0, table.concat(malos, " | "):sub(1, 400))
+  end)
   paso("asedio programado: todos los días a las 17, con un jugador por corona", function()
     local function hora(h, m, dia) return os.time({ year = 2030, month = 3, day = dia or 10, hour = h, min = m or 0, sec = 0 }) end
     local mundo = Mundo.nuevo()
