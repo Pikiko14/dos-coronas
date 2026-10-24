@@ -135,6 +135,11 @@ local function sentenciasDe(pid, ex, hp, mp)
   end
   cada("personaje_addon", "addon, activo", filas)
   filas = {}
+  for _, r in ipairs(ordenadas(ex.aparienciaSlots)) do
+    filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(r) .. "," .. Pg.literal(ex.aparienciaSlots[r]) .. ")"
+  end
+  cada("personaje_apariencia", "ranura, set_id", filas)
+  filas = {}
   for _, id in ipairs(ordenadas(ex.bonos)) do
     filas[#filas + 1] = "(" .. pid .. "," .. Pg.literal(id) .. "," .. entero(ex.bonos[id]) .. ")"
   end
@@ -250,6 +255,12 @@ function M.abrir()
       addon TEXT NOT NULL,
       activo BOOLEAN NOT NULL DEFAULT FALSE,
       PRIMARY KEY (personaje_id, addon)
+    );
+    CREATE TABLE IF NOT EXISTS personaje_apariencia (
+      personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
+      ranura TEXT NOT NULL,
+      set_id TEXT NOT NULL,
+      PRIMARY KEY (personaje_id, ranura)
     );
     CREATE TABLE IF NOT EXISTS personaje_bono (
       personaje_id BIGINT NOT NULL REFERENCES personajes(id) ON DELETE CASCADE,
@@ -628,6 +639,10 @@ function M.cargar(personajeId)
       for _, r in ipairs(lista("SELECT addon, activo FROM personaje_addon WHERE personaje_id = " .. pid)) do
         datos.addons[r.addon] = true
         if r.activo == "t" then datos.addonActivo = r.addon end
+      end
+      datos.aparienciaSlots = {}
+      for _, r in ipairs(lista("SELECT ranura, set_id FROM personaje_apariencia WHERE personaje_id = " .. pid)) do
+        datos.aparienciaSlots[r.ranura] = r.set_id
       end
       for _, r in ipairs(lista("SELECT bono, fin FROM personaje_bono WHERE personaje_id = " .. pid)) do
         datos.bonos[r.bono] = tonumber(r.fin) or 0

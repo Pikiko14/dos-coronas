@@ -1701,6 +1701,47 @@ function Pruebas.correr()
     end
     fallar(errores, "ningún objeto rompe la bolsa al equiparlo o usarlo", #malos == 0, table.concat(malos, " | "):sub(1, 400))
   end)
+  paso("apariencias PD: cada ranura puede llevar la pieza de un set distinto y se guarda", function()
+    local Mall = require("compartido.dominio.mall")
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local p = mundo:crearPersonaje({ nombre = "Ropero", faccion = "albor", clase = "guerrero", nivel = 20 })
+    p.monedas = 20000
+    fallar(errores, "no se pone un set que no se tiene", mundo:ponerApariencia(p, "cabeza", "pd_marfil") ~= nil)
+    fallar(errores, "se compra el primer set", mundo:comprarAddon(p, "pd_marfil") == nil and mundo:comprarAddon(p, "pd_zafiro") == nil)
+    fallar(errores, "pone la cabeza de un set", mundo:ponerApariencia(p, "cabeza", "pd_marfil") == nil and p.aparienciaSlots.cabeza == "pd_marfil")
+    fallar(errores, "y el pecho de otro", mundo:ponerApariencia(p, "pecho", "pd_zafiro") == nil and p.aparienciaSlots.pecho == "pd_zafiro")
+    fallar(errores, "una ranura que no existe se rechaza", mundo:ponerApariencia(p, "cola", "pd_marfil") ~= nil)
+    fallar(errores, "un addon que no es apariencia se rechaza", mundo:ponerApariencia(p, "arma", "skin_rey") ~= nil)
+    local foto = mundo:foto(p.id)
+    fallar(errores, "el cliente recibe las ranuras en su resumen del mall", foto.tu.mall and foto.tu.mall.aparienciaSlots and foto.tu.mall.aparienciaSlots.pecho == "pd_zafiro")
+    -- lo que ven los demás
+    local otro = mundo:crearPersonaje({ nombre = "Mirón", faccion = "albor", clase = "mago", nivel = 5 })
+    otro.x, otro.y, otro.modo = p.x + 1, p.y, p.modo
+    local fo = mundo:foto(otro.id)
+    local visto
+    for _, e in pairs(fo.ents or {}) do if e.id == p.id then visto = e end end
+    fallar(errores, "los demás ven la apariencia por ranuras", visto and visto.apar and visto.apar.cabeza == "pd_marfil" and visto.apar.pecho == "pd_zafiro")
+    -- se guarda y se recupera
+    local datos = mundo:exportar(p)
+    local q = mundo:crearPersonaje({ nombre = "Ropero", faccion = "albor", clase = "guerrero", nivel = 20 })
+    mundo:aplicarGuardado(q, datos)
+    fallar(errores, "al volver a entrar conserva las dos piezas", q.aparienciaSlots and q.aparienciaSlots.cabeza == "pd_marfil" and q.aparienciaSlots.pecho == "pd_zafiro")
+    -- quitar una pieza deja las otras
+    fallar(errores, "quita solo una pieza", mundo:quitarApariencia(p, "cabeza") == nil and p.aparienciaSlots.cabeza == nil and p.aparienciaSlots.pecho == "pd_zafiro")
+    -- poner el set entero y quitarlo entero
+    fallar(errores, "pone el set entero", mundo:alternarAddon(p, "pd_marfil") == nil and p.aparienciaSlots.arma == "pd_marfil" and p.aparienciaSlots.pies == "pd_marfil")
+    fallar(errores, "lo quita entero", mundo:alternarAddon(p, "pd_marfil") == nil and next(p.aparienciaSlots) == nil)
+    -- por la ruta del servidor
+    local Autoridad = require("src.dominio.autoridad")
+    local ok, limpio = Autoridad.aceptar(mundo, p, "apariencia_poner", { ranura = "arma", set = "pd_zafiro" })
+    fallar(errores, "la autoridad acepta poner una pieza", ok and limpio.ranura == "arma" and limpio.set == "pd_zafiro")
+    fallar(errores, "y rechaza datos mal formados", not (Autoridad.aceptar(mundo, p, "apariencia_poner", { ranura = 5, set = {} })))
+    mundo:accion(p.id, "apariencia_poner", { ranura = "arma", set = "pd_zafiro" })
+    fallar(errores, "la acción llega al mundo", p.aparienciaSlots.arma == "pd_zafiro")
+    mundo:accion(p.id, "apariencia_quitar", { ranura = "arma" })
+    fallar(errores, "y quitar también", p.aparienciaSlots.arma == nil)
+  end)
   paso("asedio programado: todos los días a las 17, con un jugador por corona", function()
     local function hora(h, m, dia) return os.time({ year = 2030, month = 3, day = dia or 10, hour = h, min = m or 0, sec = 0 }) end
     local mundo = Mundo.nuevo()

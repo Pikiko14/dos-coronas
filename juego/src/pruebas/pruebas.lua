@@ -1308,6 +1308,38 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
       end
     end
     foto("personaje_panel", armaX or 800, armaY or 160)
+    -- ropero de apariencias: seis ranuras, cada una con la pieza de un set distinto
+    pj.mall = { monedas = 1682, addons = { "pd_marfil", "pd_zafiro", "pd_dorado" }, aparienciaSlots = { cabeza = "pd_marfil", pecho = "pd_zafiro", arma = "pd_dorado" } }
+    Interfaz.personajeTab, Interfaz.ropero = "apariencia", "pecho"
+    foto("personaje_ropero_sin_ratón", 5, 5)
+    local ranuras = 0
+    for _, r in ipairs({ "cabeza", "pecho", "piernas", "pies", "espalda", "arma" }) do
+      local hallada = false
+      for yy = 130, 600, 6 do
+        for xx = 480, 940, 6 do
+          if Interfaz.consumir(xx, yy) == "apar_slot_" .. r then hallada = true end
+        end
+      end
+      if hallada then ranuras = ranuras + 1 end
+    end
+    fallar(errores, "el ropero tiene seis ranuras", ranuras == 6, tostring(ranuras))
+    local fx, fy
+    for yy = 130, 600, 3 do
+      for xx = 500, 940, 3 do
+        if not fx and Interfaz.consumir(xx, yy) == "apar_poner_pecho_pd_dorado" then fx, fy = xx, yy end
+      end
+    end
+    fallar(errores, "la lista del pecho ofrece cada set que tiene", fx ~= nil)
+    foto("personaje_ropero", fx or 700, fy or 300)
+    -- un clic en un set manda poner esa pieza en esa ranura
+    local Entrada = require("src.presentacion.entrada")
+    local llamadas = {}
+    local app = { jugador = pj, mundo = mundo, estado = "juego", zoom = 1, actuar = function(n, d) llamadas[#llamadas + 1] = { n, d } end }
+    Entrada.manejar(app, "apar_poner_pecho_pd_dorado")
+    fallar(errores, "elegir un set manda apariencia_poner con ranura y set", llamadas[1] and llamadas[1][1] == "apariencia_poner" and llamadas[1][2].ranura == "pecho" and llamadas[1][2].set == "pd_dorado")
+    Entrada.manejar(app, "apar_quitar_pecho")
+    fallar(errores, "quitar manda apariencia_quitar", llamadas[2] and llamadas[2][1] == "apariencia_quitar" and llamadas[2][2].ranura == "pecho")
+    Interfaz.personajeTab, Interfaz.ropero = "equipo", nil
     Interfaz.panel = nil
   end)
   paso("skins exclusivas dibujadas por código", function()

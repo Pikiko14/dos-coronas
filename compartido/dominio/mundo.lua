@@ -1334,7 +1334,7 @@ Mundo.AUTOPOCION_UMBRAL = 0.5 -- con la autopoción encendida, bebe vida al baja
 function Mundo:dejarCuerpo(e)
   local id = self:idNuevo()
   self.entidades[id] = {
-    id = id, kind = "cuerpo", nombre = e.nombre, faccion = e.faccion, clase = e.clase, job = e.job, addon = e.addonActivo, genero = e.genero, equipo = e.equipo,
+    id = id, kind = "cuerpo", nombre = e.nombre, faccion = e.faccion, clase = e.clase, job = e.job, addon = e.addonActivo, apar = e.aparienciaSlots, genero = e.genero, equipo = e.equipo,
     dir = e.dir or 1, x = e.x, y = e.y, z = e.z or 0, modo = e.modo, vivo = true,
     hasta = self.tiempo + Mundo.CUERPO_SEG,
   }
@@ -3578,7 +3578,7 @@ function Mundo:exportar(p)
     autoPocionUmbral = p.autoPocionUmbral or Mundo.AUTOPOCION_UMBRAL,
     autoMana = p.autoMana and true or false,
     autoManaUmbral = p.autoManaUmbral or Mundo.AUTOPOCION_UMBRAL,
-    monedas = p.monedas, regaloMall = p.regaloMall, addons = p.addons, addonActivo = p.addonActivo, bonos = p.bonos,
+    monedas = p.monedas, regaloMall = p.regaloMall, addons = p.addons, addonActivo = p.addonActivo, aparienciaSlots = p.aparienciaSlots, bonos = p.bonos,
     z = z,
   }
 end
@@ -3648,6 +3648,23 @@ function Mundo:aplicarGuardado(p, data)
   p.regaloMall = true
   p.addons, p.addonActivo = data.addons or {}, data.addonActivo
   if p.addonActivo and not p.addons[p.addonActivo] then p.addonActivo = nil end
+  -- apariencias por ranura: solo las de sets que tiene; un guardado antiguo con un set puesto entero (addonActivo pd_...) lo lleva en las seis ranuras
+  do
+    local Mall = require("compartido.dominio.mall")
+    local origen = data.aparienciaSlots
+    if not origen and Mall.esApariencia(p.addonActivo) then
+      origen = {}
+      for _, r in ipairs(Mall.RANURAS_APARIENCIA) do origen[r] = p.addonActivo end
+    end
+    if Mall.esApariencia(p.addonActivo) then p.addonActivo = nil end
+    p.aparienciaSlots = nil
+    for r, set in pairs(origen or {}) do
+      if Mall.RANURA_VALIDA[r] and Mall.esApariencia(set) and p.addons[set] then
+        p.aparienciaSlots = p.aparienciaSlots or {}
+        p.aparienciaSlots[r] = set
+      end
+    end
+  end
   p.bonos = {}
   for bono, fin in pairs(data.bonos or {}) do
     if tonumber(fin) and tonumber(fin) > self:reloj() then p.bonos[bono] = tonumber(fin) end
@@ -3789,7 +3806,7 @@ function Mundo:compactar(e)
     atqN = (e.atqN and self.tiempo - (e.atqT or -9) < 1.2) and e.atqN or nil, atqX = (e.atqN and self.tiempo - (e.atqT or -9) < 1.2) and e.atqX or nil, atqY = (e.atqN and self.tiempo - (e.atqT or -9) < 1.2) and e.atqY or nil, atqL = (e.atqN and self.tiempo - (e.atqT or -9) < 1.2) and e.atqLejos or nil,
     burbuja = e.burbuja,
     est = self:estadosVisibles(e), especie = e.especie, gremio = e.gremioEtiqueta,
-    montado = e.montado, monturaFrac = (e.montado and e.job and require("compartido.dominio.monturas").especies[e.montado] and require("compartido.dominio.monturas").especies[e.montado].requiereOficio) and (function() local hp, mx = self:vidaMontura(e, e.montado) return hp / mx end)() or nil, job = e.job, addon = e.kind == "jugador" and e.addonActivo or nil,
+    montado = e.montado, monturaFrac = (e.montado and e.job and require("compartido.dominio.monturas").especies[e.montado] and require("compartido.dominio.monturas").especies[e.montado].requiereOficio) and (function() local hp, mx = self:vidaMontura(e, e.montado) return hp / mx end)() or nil, job = e.job, addon = e.kind == "jugador" and e.addonActivo or nil, apar = e.kind == "jugador" and copiaSup(e.aparienciaSlots) or nil,
     item = e.kind == "loot" and e.item or nil, bien = e.kind == "loot" and e.bien or nil,
     oroSuelo = (e.kind == "loot" and (e.oro or 0) > 0) and true or nil, buscado = (e.kind == "jugador" and self:esBuscado(e)) and true or nil,
     categoria = e.categoria, enGrupo = (e.kind == "jugador" and e.grupoId) and true or nil,
@@ -4365,7 +4382,7 @@ function Mundo:accion(pid, nombre, datos)
   if nombre:sub(1, 7) == "gremio_" and p then return self:accionGremio(p, nombre, datos or {}) end
   if nombre:sub(1, 6) == "grupo_" and p then return self:accionGrupo(p, nombre, datos or {}) end
   if nombre:sub(1, 8) == "subasta_" and p then return self:accionSubasta(p, nombre, datos or {}) end
-  if nombre:sub(1, 5) == "mall_" and p then return self:accionMall(p, nombre, datos or {}) end
+  if (nombre:sub(1, 5) == "mall_" or nombre:sub(1, 11) == "apariencia_") and p then return self:accionMall(p, nombre, datos or {}) end
   if p and (nombre:sub(1, 7) == "oficio_" or nombre:sub(1, 10) == "mercancia_" or nombre:sub(1, 8) == "montura_"
     or nombre == "robar" or nombre == "perista_vender" or nombre == "escoltar") then
     return self:accionOficio(p, nombre, datos or {})

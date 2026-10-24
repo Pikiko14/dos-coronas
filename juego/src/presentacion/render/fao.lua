@@ -156,21 +156,32 @@ local function capasDe(clase, gen, equipo, apar)
       end
     end
   end
-  -- una apariencia (set de PD) sustituye el dibujo de todas las ranuras: lo que lleva puesto no cambia, solo cómo se ve
-  local set = apar and datos.apariencias and datos.apariencias[apar]
-  local s = set and set[gen]
-  if s then
-    for _, hueco in ipairs({ "cabeza", "pecho", "piernas", "pies" }) do
-      res[hueco] = s[hueco]
-      if res._brillo then res._brillo[hueco] = nil end
+  -- una apariencia (set de PD) sustituye el dibujo de la ranura que cubre: lo que lleva puesto no cambia, solo cómo se ve. apar es el id de un set (entero) o una
+  -- tabla { cabeza = set, pecho = set, ... }: cada ranura puede venir de un set distinto
+  if apar then
+    local function de(ranura)
+      local id = type(apar) == "table" and apar[ranura] or (type(apar) == "string" and apar) or nil
+      local set = id and datos.apariencias and datos.apariencias[id]
+      return set and set[gen]
     end
-    res.espalda = s.espalda
-    local fam = equipo and equipo.arma and tostring(equipo.arma):match("^%a+_(%a+)_%d+")
-    if fam == "arma" or not fam then fam = PRINCIPAL[clase] end
-    local arma = s.arma and (s.arma[fam] or s.arma[PRINCIPAL[clase]])
-    if arma then
-      res.arma = arma
-      if res._brillo then res._brillo.arma = nil end
+    for _, hueco in ipairs({ "cabeza", "pecho", "piernas", "pies" }) do
+      local s = de(hueco)
+      if s then
+        res[hueco] = s[hueco]
+        if res._brillo then res._brillo[hueco] = nil end
+      end
+    end
+    local e2 = de("espalda")
+    if e2 then res.espalda = e2.espalda end
+    local sa = de("arma")
+    if sa then
+      local fam = equipo and equipo.arma and tostring(equipo.arma):match("^%a+_(%a+)_%d+")
+      if fam == "arma" or not fam then fam = PRINCIPAL[clase] end
+      local arma = sa.arma and (sa.arma[fam] or sa.arma[PRINCIPAL[clase]])
+      if arma then
+        res.arma = arma
+        if res._brillo then res._brillo.arma = nil end
+      end
     end
   end
   return res
@@ -346,7 +357,7 @@ end
 function M.dibujar(e, mov, sx, sy, tinte, alfa, estado)
   local gen = e.gen or e.genero or "h"
   local clase = e.clase or "guerrero"
-  local c = capasDe(clase, gen, e.equipo, e.addon)
+  local c = capasDe(clase, gen, e.equipo, e.apar or e.addon)
   if not c then return 40 end
   local atq = e._faoAtq
   local anim, paso = "wait", 0
@@ -427,7 +438,7 @@ function M.dibujarMontado(e, nomMontura, sx, pies, tinte, alfa, subir)
   if not dx then return false end
   local gen = e.gen or e.genero or "h"
   local clase = e.clase or "guerrero"
-  local c = capasDe(clase, gen, e.equipo, e.addon)
+  local c = capasDe(clase, gen, e.equipo, e.apar or e.addon)
   if not c then return false end
   local atq = e._faoAtq
   local anim, paso = estadoM, pasoM

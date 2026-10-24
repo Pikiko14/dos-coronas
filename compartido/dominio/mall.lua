@@ -23,6 +23,12 @@ M.OBJETOS = Config.registros("mall", "objeto")
 -- (render/personajes.lua, P.skins).
 M.ADDONS, M.ORDEN_ADDONS = Config.mapaOrden("mall", "addon", false)
 
+-- Apariencias (PD de FAO): sets de seis piezas, una por ranura; cada ranura puede llevar la pieza de un set distinto (p.aparienciaSlots = { cabeza = "pd_x", ... }).
+M.RANURAS_APARIENCIA = { "cabeza", "pecho", "piernas", "pies", "espalda", "arma" }
+M.RANURA_VALIDA = {}
+for _, r in ipairs(M.RANURAS_APARIENCIA) do M.RANURA_VALIDA[r] = true end
+function M.esApariencia(id) return type(id) == "string" and id:sub(1, 3) == "pd_" end
+
 M.MONTURAS, M.ORDEN_MONTURAS = Config.mapaOrden("mall", "montura", false)
 
 -- Mascotas recolectoras: las especies están en mascotas.xml (<recolectora>), con su precio en monedas.
@@ -168,11 +174,40 @@ function M.instalar(Mundo)
     return nil
   end
 
-  -- Pone o quita un addon que ya tienes.
+  -- Pone o quita un addon que ya tienes. Un set de apariencia (ids pd_...) se pone o se quita entero: sus seis piezas (una por ranura).
   function Mundo:alternarAddon(p, id)
     if p.kind ~= "jugador" then return "Solo los jugadores llevan addons." end
     if not (p.addons and p.addons[id]) then return "Aún no tienes ese addon." end
+    if M.esApariencia(id) then
+      local entero = true
+      for _, r in ipairs(M.RANURAS_APARIENCIA) do if not (p.aparienciaSlots and p.aparienciaSlots[r] == id) then entero = false end end
+      p.aparienciaSlots = p.aparienciaSlots or {}
+      for _, r in ipairs(M.RANURAS_APARIENCIA) do p.aparienciaSlots[r] = (not entero) and id or nil end
+      self:marcarProgreso(p)
+      return nil
+    end
     p.addonActivo = (p.addonActivo ~= id) and id or nil
+    self:marcarProgreso(p)
+    return nil
+  end
+
+  -- Pone la pieza de una ranura (cabeza, pecho, piernas = manos, pies, espalda o arma) de un set de apariencia que ya tienes; cada ranura puede llevar un set distinto.
+  function Mundo:ponerApariencia(p, ranura, set)
+    if p.kind ~= "jugador" then return "Solo los jugadores llevan apariencias." end
+    if not M.RANURA_VALIDA[ranura] then return "Esa ranura no existe." end
+    if not (M.esApariencia(set) and M.ADDONS[set]) then return "Ese set no existe." end
+    if not (p.addons and p.addons[set]) then return "Aún no tienes ese set." end
+    p.aparienciaSlots = p.aparienciaSlots or {}
+    p.aparienciaSlots[ranura] = set
+    self:marcarProgreso(p)
+    return nil
+  end
+
+  -- Quita la apariencia de una ranura: vuelve a verse la pieza de equipo que llevas puesta.
+  function Mundo:quitarApariencia(p, ranura)
+    if p.kind ~= "jugador" then return "Solo los jugadores llevan apariencias." end
+    if not M.RANURA_VALIDA[ranura] then return "Esa ranura no existe." end
+    if p.aparienciaSlots then p.aparienciaSlots[ranura] = nil end
     self:marcarProgreso(p)
     return nil
   end
@@ -183,6 +218,8 @@ function M.instalar(Mundo)
     if nombre == "mall_comprar" then err = self:comprarMall(p, tostring(datos.id))
     elseif nombre == "mall_addon_comprar" then err = self:comprarAddon(p, tostring(datos.id))
     elseif nombre == "mall_addon" then err = self:alternarAddon(p, tostring(datos.id))
+    elseif nombre == "apariencia_poner" then err = self:ponerApariencia(p, tostring(datos.ranura), tostring(datos.set))
+    elseif nombre == "apariencia_quitar" then err = self:quitarApariencia(p, tostring(datos.ranura))
     elseif nombre == "mall_montura_comprar" then err = self:comprarMonturaMall(p, tostring(datos.id))
     elseif nombre == "mall_mascota_comprar" then err = self:comprarMascotaMall(p, tostring(datos.id))
     end
@@ -224,7 +261,12 @@ function M.instalar(Mundo)
     local addons = {}
     for id in pairs(p.addons or {}) do addons[#addons + 1] = id end
     table.sort(addons)
-    return { monedas = p.monedas or 0, bonos = bonos, addons = addons, addonActivo = p.addonActivo }
+    local slots
+    for r, set in pairs(p.aparienciaSlots or {}) do
+      slots = slots or {}
+      slots[r] = set
+    end
+    return { monedas = p.monedas or 0, bonos = bonos, addons = addons, addonActivo = p.addonActivo, aparienciaSlots = slots }
   end
 end
 

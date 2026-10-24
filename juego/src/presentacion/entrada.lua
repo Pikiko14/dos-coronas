@@ -154,7 +154,7 @@ function Entrada.manejar(app, id)
     end
     return
   end
-  if id == "cerrar" then Interfaz.panel = nil return end
+  if id == "cerrar" then Interfaz.panel, Interfaz.ropero = nil, nil return end
   if id == "hud_bolsa" then Interfaz.panel = "bolsa" return end
   if id == "hud_equipo" then Interfaz.panel = "equipo" return end
   if id == "hud_arbol" then Interfaz.panel = (Interfaz.panel ~= "arbol") and "arbol" or nil return end
@@ -342,6 +342,21 @@ function Entrada.manejar(app, id)
     return
   end
   if id:sub(1, 6) == "equip_" then app.actuar("desequipar", { hueco = id:sub(7) }) return end
+  -- ropero de apariencias (panel Personaje, pestaña Apariencia): una ranura abre la lista de sets, el set elegido se pone en esa ranura
+  if id == "pj_tab_equipo" or id == "pj_tab_apariencia" then Interfaz.personajeTab, Interfaz.ropero = id:sub(8), nil return end
+  if id:sub(1, 10) == "apar_slot_" then
+    local r = id:sub(11)
+    Interfaz.ropero = (Interfaz.ropero ~= r) and r or nil
+    return
+  end
+  if id:sub(1, 12) == "apar_quitar_" then app.actuar("apariencia_quitar", { ranura = id:sub(13) }) Interfaz.ropero = nil return end
+  if id:sub(1, 11) == "apar_poner_" then
+    local ranura, set = id:match("^apar_poner_(%a+)_(.+)$")
+    if ranura then app.actuar("apariencia_poner", { ranura = ranura, set = set }) end
+    Interfaz.ropero = nil
+    return
+  end
+  if id == "apar_lista" then return end
   if id:sub(1, 7) == "compra_" then app.actuar("comprar", { id = id:sub(8) }) return end
   if id == "vender_sel" and Interfaz.sel then app.actuar("vender", { i = Interfaz.sel }) return end
   if id == "guerra_batalla" then app.actuar("guerra", { modo = "batalla" }) Interfaz.panel = nil return end

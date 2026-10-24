@@ -164,7 +164,7 @@ end
 function I.persona(claseId, x, y, zoom, faccion, addon, genero, equipo)
   local Fao = require("src.presentacion.render.fao")
   -- (una apariencia de PD, ids "pd_...", se dibuja por capas como el equipo; los addons antiguos son aspectos aparte)
-  local apar = type(addon) == "string" and addon:sub(1, 3) == "pd_" and addon or nil
+  local apar = (type(addon) == "table" and addon) or (type(addon) == "string" and addon:sub(1, 3) == "pd_" and addon) or nil
   if (not addon or apar) and Fao.activo() then
     -- personaje por capas: se dibuja de frente, con su equipo (o el de escalón 1 si no hay)
     Fao.retrato(claseId or "guerrero", genero or "h", equipo, x, y, (zoom or 1) * 1.6, apar)
@@ -3045,7 +3045,11 @@ local function tarjetasMall(p, m, Mall, pestana)
     for _, id in ipairs(Mall.ORDEN_ADDONS) do
       local a = Mall.ADDONS[id]
       local puesto = m.addonActivo == id
-      if id:sub(1, 3) == "pd_" then lista[#lista + 1] = {
+      if id:sub(1, 3) == "pd_" then
+        local entero = m.aparienciaSlots ~= nil
+        for _, r in ipairs(Mall.RANURAS_APARIENCIA) do if not (m.aparienciaSlots and m.aparienciaSlots[r] == id) then entero = false end end
+        puesto = entero
+        lista[#lista + 1] = {
         nombre = a.nombre, texto = a.desc, precio = (not tengo[id]) and a.precio or nil,
         etiquetas = { { "6 ranuras", COL_MALL.morado }, { "Solo aspecto", COL_MALL.gris } },
         cinta = puesto and "PUESTO" or (tengo[id] and "TUYO" or nil),
@@ -3054,7 +3058,7 @@ local function tarjetasMall(p, m, Mall, pestana)
           -- tu personaje con el set puesto (tu oficio, tu género y tu arma)
           I.persona(p.clase, cx, pies + 4, 1.5, p.faccion, id, p.genero or p.gen, p.equipo)
         end,
-        boton = tengo[id] and { puesto and "Quitar" or "Poner", "mall_ad_" .. id }
+        boton = tengo[id] and { puesto and "Quitar" or "Poner entero", "mall_ad_" .. id }
           or { "Comprar", "mall_ad_buy_" .. id, (m.monedas or 0) >= a.precio, faltan(a.precio) },
       } end
     end
@@ -3960,7 +3964,13 @@ function I.panelEquipo(mundo, p, w, h)
   dato("Monedas Corona", Ayudas.num(p.mall and p.mall.monedas), { 1, 0.85, 0.3 })
   dato("Oficio", p.oficioElegido and (NOMBRES_OFICIO[p.oficioElegido] or p.oficioElegido) or "ninguno")
   local ad = addonAct and require("compartido.dominio.mall").ADDONS[addonAct]
-  dato("Apariencia", ad and ad.nombre or "ninguna")
+  do
+    local pu = p.apar or (p.mall and p.mall.aparienciaSlots)
+    local n, unico = 0, nil
+    for _, set in pairs(pu or {}) do n = n + 1 unico = (unico == nil or unico == set) and set or false end
+    local Mall = require("compartido.dominio.mall")
+    dato("Apariencia", ad and ad.nombre or (n == 0 and "ninguna") or (unico and Mall.ADDONS[unico] and Mall.ADDONS[unico].nombre) or ("mezcla de " .. n))
+  end
   dato("Gremio", p.gremioNombre or "ninguno")
   dato("Grupo", (p.grupo and p.grupo.miembros and (#p.grupo.miembros .. " miembros")) or "ninguno")
   dato("Zona", p.zona or "—")
@@ -3981,18 +3991,29 @@ function I.panelEquipo(mundo, p, w, h)
   if sobre(px + 14, py + 118, 200, 300) then
     I.pista = "Los golpes físicos se reducen con Defensa y los mágicos con Defensa mágica (Res)."
   end
-  -- muñeco (derecha): el personaje en el centro y una casilla por tipo de pieza a cada lado
+  -- muñeco (derecha): el personaje en el centro y una casilla por tipo de pieza a cada lado. Dos pestañas: el equipo que llevas y el ropero de apariencias.
   local zx, zw = px + 232, pw - 232 - 14
-  love.graphics.setFont(I.fuente)
-  love.graphics.setColor(0.95, 0.9, 0.75)
-  love.graphics.print("Equipo", zx, py + 46)
+  I.personajeTab = I.personajeTab or "equipo"
+  local apariencia = I.personajeTab == "apariencia"
+  if not apariencia then I.ropero = nil end
+  for k, t in ipairs({ { "equipo", "Equipo" }, { "apariencia", "Apariencia" } }) do
+    local tx, tw = zx + (k - 1) * 112, 106
+    local activa = I.personajeTab == t[1]
+    local hover = sobre(tx, py + 42, tw, 26)
+    relleno(tx, py + 42, tw, 26, 7, activa and { 0.45, 0.36, 0.14 } or (hover and { 0.24, 0.32, 0.6 } or { 0.15, 0.2, 0.4 }), { 0.08, 0.1, 0.22 }, 1)
+    love.graphics.setFont(I.fuente)
+    love.graphics.setColor(activa and 1 or 0.85, activa and 0.82 or 0.88, activa and 0.3 or 0.95)
+    love.graphics.printf(t[2], tx, py + 46, tw, "center")
+    I.registrar(tx, py + 42, tw, 26, "pj_tab_" .. t[1])
+  end
   love.graphics.setFont(f)
   love.graphics.setColor(0.62, 0.66, 0.78)
-  love.graphics.print("Pasa el ratón por una pieza para ver su ficha; clic para quitarla.", zx + 60, py + 50)
+  love.graphics.printf(apariencia and "Cada ranura puede llevar la pieza de un set distinto." or "Pasa el ratón por una pieza para ver su ficha; clic para quitarla.",
+    zx + 230, py + 48, zw - 230, "left")
   local S = 56
   local colIzq, colDer = zx + 2, zx + zw - S - 2
   local cx = zx + zw / 2
-  local topeY, baseY = py + 76, py + ph - 52
+  local topeY, baseY = py + 80, py + ph - 52
   local fx0, fw = colIzq + S + 10, colDer - colIzq - S - 20
   -- fondo del muñeco con el halo de la facción
   love.graphics.setColor(0.07, 0.1, 0.2, 0.9)
@@ -4009,11 +4030,20 @@ function I.panelEquipo(mundo, p, w, h)
   love.graphics.setStencilTest()
   love.graphics.setColor(0.4, 0.5, 0.8, 0.5)
   love.graphics.rectangle("line", fx0 + 0.5, topeY + 0.5, fw - 1, baseY - topeY - 1, 10, 10)
-  I.persona(p.clase, cx, baseY - 50, 2.5, p.faccion, addonAct, p.genero or p.gen, p.equipo)
+  -- lo que viste: las ranuras que tiene puestas (y, mientras eliges, la pieza que estás mirando)
+  local puestas = p.apar or (p.mall and p.mall.aparienciaSlots) or nil
+  local vista = puestas
+  if I.ropero and I.roperoVista ~= nil then
+    vista = {}
+    for r, v in pairs(puestas or {}) do vista[r] = v end
+    vista[I.ropero] = (I.roperoVista ~= false) and I.roperoVista or nil
+  end
+  I.persona(p.clase, cx, baseY - 50, 2.5, p.faccion, vista or addonAct, p.genero or p.gen, p.equipo)
   local mx0, my0 = love.mouse.getPosition()
   local es = I.escala or 1
   mx0, my0 = mx0 / es, my0 / es
   local fichaDe
+  local Mall = require("compartido.dominio.mall")
   local function casillaPieza(hueco, nombre, x, yy)
     local id = p.equipo[hueco]
     local it = id and Datos.item(id)
@@ -4050,17 +4080,98 @@ function I.panelEquipo(mundo, p, w, h)
     love.graphics.printf(nombre, x - 6, yy + S + 2, S + 12, "center")
     I.registrar(x, yy, S, S, "equip_" .. hueco)
   end
-  local izq = { { "cabeza", "Cabeza" }, { "pecho", "Pecho" }, { "piernas", "Manos" }, { "pies", "Pies" } }
-  local der = { { "arma", "Arma" }, { "escudo", "Escudo" }, { "anillo", "Anillo" }, { "amuleto", "Amuleto" }, { "mochila", "Mochila" } }
+  -- ranura del ropero: muestra el set cuya pieza lleva (su nombre) y abre la lista de sets que tienes
+  local function casillaApariencia(ranura, nombre, x, yy)
+    local set = puestas and puestas[ranura]
+    local ad = set and Mall.ADDONS[set]
+    local hover = sobre(x, yy, S, S)
+    local abierta = I.ropero == ranura
+    casilla(x, yy, S)
+    if hover or abierta then
+      love.graphics.setColor(0.98, 0.78, 0.36, abierta and 0.35 or 0.2)
+      love.graphics.rectangle("fill", x, yy, S, S, 5, 5)
+    end
+    love.graphics.setLineWidth(2)
+    if set then love.graphics.setColor(0.7, 0.55, 1, 0.95) else love.graphics.setColor(0.4, 0.45, 0.6, 0.7) end
+    love.graphics.rectangle("line", x + 0.5, yy + 0.5, S - 1, S - 1, 5, 5)
+    love.graphics.setLineWidth(1)
+    love.graphics.setFont(f)
+    if ad then
+      love.graphics.setColor(0.86, 0.8, 1)
+      love.graphics.printf(ad.nombre, x + 3, yy + 8, S - 6, "center")
+    else
+      love.graphics.setColor(0.45, 0.5, 0.62, 0.7)
+      love.graphics.printf("libre", x + 3, yy + 20, S - 6, "center")
+    end
+    love.graphics.setColor(0.72, 0.75, 0.85)
+    love.graphics.printf(nombre, x - 6, yy + S + 2, S + 12, "center")
+    I.registrar(x, yy, S, S, "apar_slot_" .. ranura)
+  end
+  local izq, der
+  if apariencia then
+    izq = { { "cabeza", "Cabeza" }, { "pecho", "Pecho" }, { "piernas", "Manos" }, { "pies", "Pies" } }
+    der = { { "arma", "Arma" }, { "espalda", "Espalda" } }
+  else
+    izq = { { "cabeza", "Cabeza" }, { "pecho", "Pecho" }, { "piernas", "Manos" }, { "pies", "Pies" } }
+    der = { { "arma", "Arma" }, { "escudo", "Escudo" }, { "anillo", "Anillo" }, { "amuleto", "Amuleto" }, { "mochila", "Mochila" } }
+  end
+  local dib = apariencia and casillaApariencia or casillaPieza
   local pasoI = (baseY - topeY - S) / (#izq - 1)
-  for i, hh in ipairs(izq) do casillaPieza(hh[1], hh[2], colIzq, topeY + (i - 1) * pasoI - 2) end
-  local pasoD = (baseY - topeY - S) / (#der - 1)
-  for i, hh in ipairs(der) do casillaPieza(hh[1], hh[2], colDer, topeY + (i - 1) * pasoD - 2) end
+  for i, hh in ipairs(izq) do dib(hh[1], hh[2], colIzq, topeY + (i - 1) * pasoI - 2) end
+  local pasoD = (baseY - topeY - S) / math.max(1, #der - 1)
+  for i, hh in ipairs(der) do dib(hh[1], hh[2], colDer, topeY + (i - 1) * (apariencia and (baseY - topeY - S) or pasoD) - 2) end
   love.graphics.setColor(0.7, 0.68, 0.6)
   love.graphics.setFont(f)
   love.graphics.printf("I abre la bolsa. K el árbol de poderes. Esc cierra este panel.", px + 14, py + ph - 24, pw - 28, "left")
   love.graphics.setFont(I.fuente)
-  if fichaDe then fichaPieza(fichaDe[1], fichaDe[2], fichaDe[3], mx0, my0, w, h, "Clic: quitar la pieza") end
+  -- lista de sets que tienes para la ranura elegida: pasar el ratón por uno lo prueba en el muñeco; un clic lo pone
+  I.roperoVista = nil
+  if apariencia and I.ropero then
+    local mias = {}
+    for _, id in ipairs((p.mall and p.mall.addons) or {}) do
+      if Mall.esApariencia(id) and Mall.ADDONS[id] then mias[#mias + 1] = id end
+    end
+    local filaH, anchoL = 26, 200
+    local alto = 40 + (#mias + 1) * filaH
+    local lx = math.min(px + pw - anchoL - 14, math.max(px + 14, cx - anchoL / 2))
+    local ly = topeY + 20
+    alto = math.min(alto, baseY - ly + 20)
+    love.graphics.setColor(0, 0, 0, 0.4)
+    love.graphics.rectangle("fill", lx + 3, ly + 4, anchoL, alto, 8, 8)
+    love.graphics.setColor(0.05, 0.07, 0.16, 0.98)
+    love.graphics.rectangle("fill", lx, ly, anchoL, alto, 8, 8)
+    love.graphics.setColor(0.93, 0.75, 0.28, 0.9)
+    love.graphics.rectangle("line", lx + 0.5, ly + 0.5, anchoL - 1, alto - 1, 8, 8)
+    I.registrar(lx, ly, anchoL, alto, "apar_lista")
+    love.graphics.setFont(I.fuente)
+    love.graphics.setColor(0.98, 0.88, 0.55)
+    love.graphics.print("Pieza de " .. ({ cabeza = "cabeza", pecho = "pecho", piernas = "manos", pies = "pies", espalda = "espalda", arma = "arma" })[I.ropero], lx + 10, ly + 8)
+    local fy = ly + 34
+    local function fila(texto2, id, actual, vistaId)
+      local hv = sobre(lx + 6, fy, anchoL - 12, filaH - 2)
+      love.graphics.setColor(hv and 0.2 or 0.1, hv and 0.28 or 0.14, hv and 0.5 or 0.26, 0.95)
+      love.graphics.rectangle("fill", lx + 6, fy, anchoL - 12, filaH - 2, 5, 5)
+      if actual then
+        love.graphics.setColor(0.7, 0.55, 1, 0.9)
+        love.graphics.rectangle("line", lx + 6.5, fy + 0.5, anchoL - 13, filaH - 3, 5, 5)
+      end
+      love.graphics.setColor(0.95, 0.92, 0.82)
+      love.graphics.setFont(f)
+      love.graphics.print(texto2, lx + 14, fy + 5)
+      I.registrar(lx + 6, fy, anchoL - 12, filaH - 2, id)
+      if hv then I.roperoVista = vistaId or false end
+      fy = fy + filaH
+    end
+    fila("Sin apariencia (ver el equipo)", "apar_quitar_" .. I.ropero, not (puestas and puestas[I.ropero]), nil)
+    for _, id in ipairs(mias) do
+      fila(Mall.ADDONS[id].nombre, "apar_poner_" .. I.ropero .. "_" .. id, puestas and puestas[I.ropero] == id, id)
+    end
+    if #mias == 0 then
+      love.graphics.setColor(0.7, 0.72, 0.8)
+      love.graphics.printf("Aún no tienes ningún set: se compran en el Item Mall (L), pestaña Apariencia.", lx + 10, fy + 4, anchoL - 20, "left")
+    end
+  end
+  if fichaDe and fichaDe[1] then fichaPieza(fichaDe[1], fichaDe[2], fichaDe[3], mx0, my0, w, h, "Clic: quitar la pieza") end
 end
 
 local ORDEN_HUECO = { arma = 1, escudo = 2, cabeza = 3, pecho = 4, piernas = 5, pies = 6, anillo = 7, amuleto = 8, mochila = 9 }
