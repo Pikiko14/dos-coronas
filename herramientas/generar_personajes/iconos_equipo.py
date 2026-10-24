@@ -110,6 +110,24 @@ def buscar_icono(items, ap, categorias):
     return None
 
 
+# Armas cuyo icono de inventario de FAO no es un arma (el objeto de esa apariencia trae el dibujo de otra cosa: una pechera, un sombrero, un pájaro...): su icono se
+# saca del propio dibujo del arma que lleva el personaje, así siempre se parece a lo que empuña.
+DESDE_SPRITE = {("lancero", 2), ("mago", 2), ("mago", 4), ("clerigo", 3), ("clerigo", 4), ("clerigo", 5), ("nigromante", 3), ("nigromante", 4), ("nigromante", 5)}
+
+
+def icono_desde_sprite(ap):
+    """Imagen del arma de la apariencia ap (versión masculina), recortada a sus píxeles, en la pose de frente."""
+    import equipo_altos as A
+    cap, cod = A.capa_de(ap, "b")
+    clave = "shape/chr/%s/%d_wait.spr" % (cap, cod)
+    for im, o in reversed(pak_fao.cuadros_spr(clave)):
+        if im is not None:
+            im = im.convert("RGBA")
+            caja = im.getchannel("A").point(lambda a: 255 if a > 20 else 0).getbbox()
+            return im.crop(caja) if caja else None
+    return None
+
+
 def main():
     looks = leer_looks()
     items = cargar_items()
@@ -129,13 +147,15 @@ def main():
             for slot, ap, cats in piezas:
                 if not ap:
                     continue
-                im = buscar_icono(items, ap, cats)
+                im = icono_desde_sprite(ap) if (slot == "arma" and (clase, t) in DESDE_SPRITE) else buscar_icono(items, ap, cats)
                 if im is None:
                     faltan.append((clase, slot, t, ap))
                     continue
                 i = casilla(clase, slot, t)
                 im = im.copy()
                 im.thumbnail((30, 30), Image.LANCZOS)
+                if slot == "arma" and (clase, t) in DESDE_SPRITE and max(im.size) < 28:
+                    im = im.resize((max(1, int(im.width * 28 / max(im.size))), max(1, int(im.height * 28 / max(im.size)))), Image.LANCZOS)
                 hoja.alpha_composite(im, ((i % 8) * 32 + (32 - im.width) // 2, (i // 8) * 32 + (32 - im.height) // 2))
                 listas[(clase, slot)][t - 1] = i
     hoja.save(HOJA, optimize=True)
