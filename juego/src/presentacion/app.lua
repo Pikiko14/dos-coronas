@@ -47,6 +47,7 @@ App.modoBot = bandera("--bot")
 App.modoAuto = bandera("--auto")
 App.modoWeb = bandera("--web")
 App.modoActualizar = bandera("--actualizar")   -- prueba: busca un parche, lo baja y escribe el resultado
+App.modoMonturas = bandera("--monturas")       -- editor visual del asiento del jinete en cada montura (estados/editor_monturas.lua)
 
 App.modulos = {
   menu = Menu,
@@ -55,6 +56,7 @@ App.modulos = {
   crear = Crear,
   juego = Juego,
   conectando = { actualizar = Juego.esperar, dibujar = Juego.dibujarEspera },
+  editor_monturas = { dibujar = function(app, w, h) require("src.presentacion.estados.editor_monturas").dibujar(app, w, h) end },
 }
 
 function App.actuar(nombre, datos)
@@ -116,6 +118,7 @@ function App.actualizar(dt)
     if App.modoBot then Pruebas.bot() return end
     if App.modoWeb then require("src.pruebas.exportar_web").correr() return end
     if App.modoFoto then Pruebas.prepararFoto(App) App.fase = 2 return end
+    if App.modoMonturas then require("src.presentacion.estados.editor_monturas").iniciar(App) App.fase = 2 return end
     if App.modoActualizar then Actualizacion.modoPrueba = true Actualizacion.iniciar() App.estado = "actualizando" App.fase = 2 return end
     -- los sprites generados y las mallas de los árboles se preparan ahora, antes de jugar (ver Propias.precalentar)
     pcall(function() require("src.presentacion.render.objetos").precalentar() end)

@@ -50,6 +50,8 @@ local function guardar()
   return "guardado en " .. ruta
 end
 
+M.guardar = guardar
+
 -- true si la tecla era de este ajuste
 function M.tecla(app, tecla)
   if not activo(app) then M.modo = false end

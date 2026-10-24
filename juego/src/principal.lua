@@ -17,19 +17,23 @@ function love.draw()
 end
 
 function love.mousepressed(x, y, boton)
+  if App.estado == "editor_monturas" then return require("src.presentacion.estados.editor_monturas").raton(x, y, boton) end
   if Actualizacion.bloquea() then return end
   Entrada.raton(App, x, y, boton)
 end
 
 function love.mousemoved(x, y, dx, dy)
+  if App.estado == "editor_monturas" then return require("src.presentacion.estados.editor_monturas").mover(x, y, dx, dy) end
   Entrada.moverRaton(App, x, y, dx, dy)
 end
 
 function love.mousereleased(x, y)
+  if App.estado == "editor_monturas" then return require("src.presentacion.estados.editor_monturas").soltar() end
   Entrada.soltarRaton(App, x, y)
 end
 
 function love.wheelmoved(_, dy)
+  if App.estado == "editor_monturas" then return require("src.presentacion.estados.editor_monturas").rueda(dy) end
   Entrada.rueda(App, dy)
 end
 
@@ -39,6 +43,7 @@ function love.textinput(t)
 end
 
 function love.keypressed(tecla)
+  if App.estado == "editor_monturas" then return require("src.presentacion.estados.editor_monturas").tecla(tecla) end
   if Actualizacion.bloquea() then return end
   Entrada.tecla(App, tecla)
 end

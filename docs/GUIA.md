@@ -189,6 +189,11 @@ solo enseña `main.lua`/`conf.lua` en bytecode, `datos.dat` y el arte ilegible:
   (`publicar_parche.ps1 -Completo`, que ya obliga a los clientes viejos a bajarlo).
 - Coste: construir tarda unos minutos más (cifra ~12 000 archivos) y el arranque descifra ~1 MB de código; el arte se descifra al cargarlo.
 
+#### Editor del asiento del jinete (monturas)
+`editor_monturas.bat` (o `love juego --monturas`, o `DosCoronas.exe --monturas`) abre un editor visual sin servidor: lista de todas las monturas, el jinete a gran tamaño
+(clase y género a elegir), las ocho direcciones, y se arrastra al jinete con el ratón. F9 guarda en `juego/src/presentacion/render/montura_ajustes.lua` (en un paquete,
+en la carpeta de datos). También se puede ajustar dentro de la partida (personal [GM]): F8 y flechas, ver `src/presentacion/ajuste_montura.lua`.
+
 ### 7.2 Web de descarga
 `web/publicar.ps1 -Construir -Servidor IP -Version "beta X.Y.Z"` reconstruye, comprime `DosCoronas-Windows.zip` en `web/descargas/` y escribe `version.json`
 (versión, tamaño, sha256). Se publica copiando `web/` al repo **dos-coronas-web** (GitHub Pages) y haciendo push; el zip va en `descargas/`.

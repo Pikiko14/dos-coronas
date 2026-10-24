@@ -1572,6 +1572,37 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
     end
     fallar(errores, "el carnero negro (mnt_901) está en los datos", anim.mnt_901 ~= nil and asiento.mnt_901 ~= nil)
   end)
+  -- Editor visual del asiento del jinete (love juego --monturas): se dibuja con todas las monturas y arrastrar al jinete cambia su ajuste. DC_PRUEBA_EDITOR=1 guarda
+  -- capturas/editor_monturas.png.
+  paso("editor de monturas: se dibuja y al arrastrar mueve al jinete", function()
+    local Ed = require("src.presentacion.estados.editor_monturas")
+    local MobAnim = require("src.presentacion.render.mob_anim")
+    local app = { estado = "x", fuente = love.graphics.getFont() }
+    Ed.iniciar(app)
+    fallar(errores, "el editor lista las monturas de FAO", #Ed.estado.lista > 100, tostring(#Ed.estado.lista))
+    Ed.estado.sel = 1
+    for i, m in ipairs(Ed.estado.lista) do if m.id == "mnt_296" then Ed.estado.sel = i end end
+    Ed.estado.oct = 4
+    local cv = love.graphics.newCanvas(1280, 720)
+    local function pintar()
+      love.graphics.push("all")
+      love.graphics.setCanvas({ cv, stencil = true })
+      Ed.dibujar(app, 1280, 720)
+      love.graphics.pop()
+    end
+    local ok, err = pcall(pintar)
+    fallar(errores, "el editor se dibuja: " .. tostring(err), ok)
+    local anim = Ed.estado.lista[Ed.estado.sel].anim
+    MobAnim.AJUSTES[anim] = nil
+    Ed.raton(700, 400, 1)
+    Ed.mover(708, 396, 8, -4)
+    Ed.soltar()
+    local a = MobAnim.AJUSTES[anim] and MobAnim.AJUSTES[anim][3]
+    fallar(errores, "arrastrar mueve al jinete (px de pantalla: pantalla / zoom)", a and math.abs(a[1] - 2) < 1e-6 and math.abs(a[2] + 1) < 1e-6, a and (a[1] .. "," .. a[2]) or "-")
+    pcall(pintar)
+    if os.getenv("DC_PRUEBA_EDITOR") then Log.volcar("capturas/editor_monturas.png", cv:newImageData():encode("png"):getString()) end
+    MobAnim.AJUSTES[anim] = nil
+  end)
   -- El ajuste a mano del asiento (personal) desplaza al jinete y es inactivo para un jugador normal.
   paso("monturas FAO: ajuste a mano del asiento del jinete", function()
     local MobAnim = require("src.presentacion.render.mob_anim")
