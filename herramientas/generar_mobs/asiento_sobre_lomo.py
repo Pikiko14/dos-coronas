@@ -23,6 +23,8 @@ ESCALA = 0.5
 FRAC_CUERPO = float(sys.argv[2]) if len(sys.argv) > 2 else 0.55      # fracción del ancho máximo (el del cuerpo) desde la que una fila cuenta como lomo
 ALTO_JINETE = 100               # (px) de su origen a la coronilla del jinete sentado, en las hojas Wait_m (99 a 106)
 SOBRESALE = float(sys.argv[3]) if len(sys.argv) > 3 else 0.3
+SUAVE_Y, TOPE_Y = 0.35, 8       # vaivén vertical que se conserva de la carrera (fracción y tope en px horneados: ±4 px de pantalla)
+SUAVE_X, TOPE_X = 0.35, 8
 MAX_MOV = 110                 # lo máximo que se mueve el asiento respecto al original (px horneados)
 PASOS = {"wait": 3, "run": 6}
 
@@ -37,6 +39,19 @@ def leer():
             anims[a] = [float(x) for x in linea.group(1).split(",")]
         res[m.group(1)] = anims
     return res
+
+
+def suavizar(plano, n):
+    """El jinete va sobre lo que mide la silueta de cada cuadro, y en la carrera esa medida salta con las patas, la cabeza y la cola (hasta decenas de px): se veía
+    al jinete brincar. Por cada dirección se deja la media de sus pasos y solo una parte de lo que se aleja de ella (con tope), que es el vaivén natural."""
+    for hoja in range(5):
+        cuadros = [i for i in range(n) if i % 5 == hoja]
+        for eje, factor, tope in ((0, SUAVE_X, TOPE_X), (1, SUAVE_Y, TOPE_Y)):
+            valores = [plano[2 * i + eje] for i in cuadros]
+            media = sum(valores) / len(valores)
+            for i, v in zip(cuadros, valores):
+                d = max(-tope, min(tope, (v - media) * factor))
+                plano[2 * i + eje] = round(media + d, 1)
 
 
 def recolocar(idn, anim, plano):
@@ -79,6 +94,7 @@ def recolocar(idn, anim, plano):
         # el jinete baja hasta que su cabeza queda como mucho SOBRESALE * alto por encima
         origen = max(origen, y0 + ALTO_JINETE - SOBRESALE * alto - base)
         nuevo[2 * i + 1] = round(max(dy - MAX_MOV, min(dy + MAX_MOV, origen)), 1)
+    suavizar(nuevo, n)
     return nuevo
 
 
