@@ -789,7 +789,7 @@ function I.crear(estado, w, h)
 
   -- ---- facciones (derecha, arriba)
   local fy = top
-  local fh = 132
+  local fh = 124
   local fgap = 14
   local fw = (derW - fgap) / 2
   love.graphics.setFont(fuentePortada("marca14", 14))
@@ -834,7 +834,7 @@ function I.crear(estado, w, h)
   local clases = Datos.clasesDe(facId)
   local cgap = 10
   local cwid = math.min(190, math.floor((derW - cgap * (#clases - 1)) / #clases))
-  local chei = 186
+  local chei = 132
   local ox = derX + math.floor((derW - (#clases * cwid + (#clases - 1) * cgap)) / 2)
   for i, id in ipairs(clases) do
     local c = Datos.clases[id]
@@ -870,7 +870,44 @@ function I.crear(estado, w, h)
       love.graphics.print(c.nombre, derX + 16, dy + 10)
       love.graphics.setFont(fuentePortada("mini14", 14))
       love.graphics.setColor(0.82, 0.85, 0.92)
-      love.graphics.printf(c.desc or c.rol or "", derX + 16, dy + 38, derW * 0.46 - 24, "left")
+      local colIzq = derW * 0.5 - 28
+      local fd = fuentePortada("mini14", 14)
+      local _, lineas = fd:getWrap(c.desc or c.rol or "", colIzq)
+      love.graphics.printf(c.desc or c.rol or "", derX + 16, dy + 38, colIzq, "left")
+      -- sus poderes, en una fila bajo la descripción y las características (de menor a mayor nivel)
+      local ids = {}
+      for _, pos in ipairs(Arbol.ordenBarra(claseId)) do ids[#ids + 1] = (Datos.barra[claseId] or {})[pos] end
+      local py0 = dy + 24 + math.max(#lineas * fd:getHeight() + 22, 100)
+      if #ids > 0 and dh - (py0 - dy) > 44 then
+        love.graphics.setFont(fuentePortada("marca13", 13))
+        love.graphics.setColor(0.93, 0.75, 0.28)
+        love.graphics.print("PODERES", derX + 16, py0 - 20)
+        local celdaW = math.floor((derW - 32) / #ids)
+        local lado = math.max(26, math.min(46, dh - (py0 - dy) - 34, celdaW - 14))
+        for i, id in ipairs(ids) do
+          local x = derX + 16 + (i - 1) * celdaW
+          local ix = x + (celdaW - lado) / 2
+          local y = py0
+          local h2 = Datos.habilidades[id]
+          local hover = sobre(ix, y, lado, lado)
+          love.graphics.setColor(0.04, 0.05, 0.12, 0.95)
+          love.graphics.circle("fill", ix + lado / 2, y + lado / 2, lado / 2)
+          love.graphics.stencil(function() love.graphics.circle("fill", ix + lado / 2, y + lado / 2, lado / 2 - 1.5) end, "replace", 1)
+          love.graphics.setStencilTest("greater", 0)
+          love.graphics.setColor(1, 1, 1, 1)
+          Efectos.icono(id, ix + 3, y + 3, lado - 6)
+          love.graphics.setStencilTest()
+          love.graphics.setColor(0.93, 0.75, 0.28, hover and 1 or 0.7)
+          love.graphics.setLineWidth(1.5)
+          love.graphics.circle("line", ix + lado / 2, y + lado / 2, lado / 2)
+          love.graphics.setLineWidth(1)
+          love.graphics.setFont(fuentePortada("mini11", 11))
+          love.graphics.setColor(0.86, 0.88, 0.94)
+          love.graphics.printf(h2 and h2.nombre or id, x - 1, y + lado + 3, celdaW + 2, "center")
+          if hover and h2 then I.tipPoder = { texto = h2.nombre .. ": " .. (h2.desc or ""), x = ix, y = y - 8 } end
+        end
+      end
+      love.graphics.setFont(fuentePortada("mini14", 14))
       -- características frente al mejor valor de todos los oficios
       local mx = { hp = 1, mp = 1, atk = 1, matk = 1, def = 1 }
       for _, o in pairs(Datos.clases) do
@@ -926,6 +963,21 @@ function I.crear(estado, w, h)
     love.graphics.setColor(1, 0.55, 0.5)
     love.graphics.setFont(fuentePortada("mini14", 14))
     love.graphics.printf(estado.error, derX, ny - 22, derW, "right")
+    love.graphics.setFont(I.fuente)
+  end
+  local tip = I.tipPoder
+  I.tipPoder = nil
+  if tip then
+    local f = fuentePortada("mini14", 14)
+    love.graphics.setFont(f)
+    local tw = math.min(420, f:getWidth(tip.texto) + 24)
+    local _, ln = f:getWrap(tip.texto, tw - 24)
+    local th = #ln * f:getHeight() + 14
+    local x = math.max(8, math.min(w - tw - 8, tip.x - tw / 2 + 20))
+    local y = tip.y - th
+    panelPJ(x, y, tw, th, { 0.93, 0.75, 0.28, 0.9 }, 0.97, 8)
+    love.graphics.setColor(0.95, 0.96, 1)
+    love.graphics.printf(tip.texto, x + 12, y + 7, tw - 24, "left")
     love.graphics.setFont(I.fuente)
   end
 end
