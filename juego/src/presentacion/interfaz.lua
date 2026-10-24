@@ -1067,7 +1067,7 @@ function I.nombreItem(it, enc)
   return ((enc or 0) > 0 and ("+" .. enc .. " ") or "") .. it.nombre
 end
 
-local function iconoItem(slot, x, y, lado, enc)
+local function iconoItem(slot, x, y, lado, enc, centrado)
   local it = slot and Datos.item(slot.id)
   if not it then return nil end
   local e = (lado - 4) / 32
@@ -1085,7 +1085,9 @@ local function iconoItem(slot, x, y, lado, enc)
     love.graphics.setLineWidth(1)
     love.graphics.setColor(1, 1, 1, 1)
   end
-  Atlas.dibujar(it.hoja, it.sprite, x + lado / 2, y + lado / 2 + 8 * e, e, 16, 16, it.tinte)
+  -- los iconos de FAO (hojas "fao" y "altos") vienen centrados en su casilla de 32 px; los de las láminas antiguas llevan el dibujo más abajo
+  local dy = (centrado or it.hoja == "fao" or it.hoja == "altos") and 0 or 8 * e
+  Atlas.dibujar(it.hoja, it.sprite, x + lado / 2, y + lado / 2 + dy, e, 16, 16, it.tinte)
   enc = enc or slot.enc
   if enc and enc > 0 then texto("+" .. enc, x + 2, y + 1, { 0.6, 0.95, 1 }) end
   return it
@@ -4056,7 +4058,7 @@ function I.panelEquipo(mundo, p, w, h)
     end
     if it then
       local enc = p.encantos and p.encantos[hueco]
-      iconoItem({ id = it.id }, x + 2, yy + 2, S - 4, enc)
+      iconoItem({ id = it.id }, x + 2, yy + 2, S - 4, enc, true)
       love.graphics.setLineWidth(2)
       if c then love.graphics.setColor(c[1], c[2], c[3], 0.95) else love.graphics.setColor(0.55, 0.6, 0.75, 0.8) end
       love.graphics.rectangle("line", x + 0.5, yy + 0.5, S - 1, S - 1, 5, 5)
