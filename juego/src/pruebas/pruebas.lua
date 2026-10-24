@@ -1603,6 +1603,35 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
       Log.volcar("capturas/montado_" .. clase .. ".png", cv:newImageData():encode("png"):getString())
     end)
   end
+  -- Jinete montado en las OCHO direcciones: DC_PRUEBA_MONTADO8=<clase> (DC_MONTURAS=mnt_001,mnt_198,... o, sin ella, una muestra; DC_GEN, DC_TIER) guarda
+  -- capturas/montado8_<clase>.png: una fila por montura, una columna por dirección (octante 0 derecha, y en el sentido de las agujas del reloj).
+  if os.getenv("DC_PRUEBA_MONTADO8") then
+    paso("equipo FAO: jinete montado en las ocho direcciones", function()
+      local Fao = require("src.presentacion.render.fao")
+      Fao.forzar(nil)
+      local I = require("compartido.dominio.items")
+      local Dibujo = require("src.presentacion.render.dibujo")
+      local clase, gen, tier = os.getenv("DC_PRUEBA_MONTADO8"), os.getenv("DC_GEN") or "h", tonumber(os.getenv("DC_TIER") or "8")
+      local monturas = {}
+      for m in (os.getenv("DC_MONTURAS") or "mnt_001,mnt_006,mnt_198,mnt_201,mnt_144,mnt_250,mnt_901,mnt_103,mnt_294,mnt_445"):gmatch("[^,]+") do monturas[#monturas + 1] = m end
+      local CW, CH = 100, 120
+      local cv = love.graphics.newCanvas(CW * 8, CH * #monturas)
+      love.graphics.push("all")
+      love.graphics.setCanvas({ cv, stencil = true })
+      love.graphics.clear(0.23, 0.27, 0.34, 1)
+      for fila, mid in ipairs(monturas) do
+        for oc = 0, 7 do
+          love.timer.sleep(0.02)
+          local e = { kind = "jugador", id = 7000 + fila * 10 + oc, clase = clase, gen = gen, equipo = I.equipoDe(clase, tier), x = 10, y = 10, dir = 1, _f8 = oc,
+                      montado = mid, mov = false, vivo = true, faccion = "albor", velx = 0, vely = 0 }
+          local ok, err = pcall(Dibujo.entidad, e, oc * CW + CW / 2, (fila - 1) * CH + CH - 22, nil, nil)
+          if not ok then fallar(errores, "montado8 " .. mid .. " octante " .. oc, false, tostring(err)) end
+        end
+      end
+      love.graphics.pop()
+      Log.volcar("capturas/montado8_" .. clase .. ".png", cv:newImageData():encode("png"):getString())
+    end)
+  end
   -- Validación completa del jinete montado: DC_PRUEBA_MONTADO_TODO=1. Recorre TODAS las monturas de FAO x 8 direcciones x 6 clases x 2 géneros x 2 escalones de
   -- equipo (el 1 y el 8) por el camino real de dibujo, comprobando que no falla y que en cada combinación se pinta algo en la casilla (el jinete y la montura).
   if os.getenv("DC_PRUEBA_MONTADO_TODO") then
