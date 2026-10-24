@@ -86,7 +86,7 @@ class Mapa:
                 x = 0.5 * ((2 * p1[0]) + (-p0[0] + p2[0]) * t + (2 * p0[0] - 5 * p1[0] + 4 * p2[0] - p3[0]) * t * t + (-p0[0] + 3 * p1[0] - 3 * p2[0] + p3[0]) * t ** 3)
                 y = 0.5 * ((2 * p1[1]) + (-p0[1] + p2[1]) * t + (2 * p0[1] - 5 * p1[1] + 4 * p2[1] - p3[1]) * t * t + (-p0[1] + 3 * p1[1] - 3 * p2[1] + p3[1]) * t ** 3)
                 x0, x1, y0, y1 = int(max(0, x - ancho)), int(min(W, x + ancho + 1)), int(max(0, y - ancho)), int(min(H, y + ancho + 1))
-                sub = np.hypot(xs[y0:y1, x0:x1] - x, ys[y0:y1, x0:x1] - y) < ancho / 2 + (ruido(self.sem + 3, 5)[y0:y1, x0:x1] - 0.5) * 1.6
+                sub = np.hypot(xs[y0:y1, x0:x1] - x, ys[y0:y1, x0:x1] - y) < ancho / 2 + (ruido(self.sem + 3, 8)[y0:y1, x0:x1] - 0.5) * 0.7
                 self.ts[y0:y1, x0:x1][sub] = ts
                 self.camino[y0:y1, x0:x1][sub] = True
 
@@ -229,7 +229,7 @@ def campamentos(m, lista, lejos_de, min_dist, n_max=14, separacion=22, zona=None
         cx, cy = int(xs[k]), int(ys[k])
         if cx < 12 or cy < 12 or cx > W - 12 or cy > H - 12:
             continue
-        if math.hypot(cx - lejos_de[0], cy - lejos_de[1]) < min_dist or math.hypot(cx - CX, cy - CY) < 24:
+        if math.hypot(cx - lejos_de[0], cy - lejos_de[1]) < min_dist or math.hypot(cx - CX, cy - CY) < 36:
             continue
         if any(math.hypot(cx - px, cy - py) < separacion for px, py in puestos):
             continue
@@ -287,14 +287,14 @@ def jardin():
         m.esparcir(arboles, 6, zona, 3.4, True, 2, 1)
     # ---- mobiliario de la plaza
     m.poner(12339, CX, CY + 5.5, 6, True, 8)                                     # fuente
-    for dx, dy, oid in ((-11, -3, 7212), (11, -3, 7213), (-11, 8, 7212), (11, 8, 7213)):
+    for dx, dy, oid in ((-14, -1, 7212), (14, -1, 7213), (-14, 9, 7212), (14, 9, 7213)):
         m.poner(oid, CX + dx, CY + dy, 2, True, 2)
     m.poner(8017, CX, CY - 12.5, 3, True, 3)                                      # emblema dorado
     for dx, dy in ((-6, 15), (6, 15), (-15, 5), (15, 5)):
         m.poner(7173, CX + dx, CY + dy, 2, False)
-    m.poner(5992, CX - 14, CY - 8, 3, True, 3)
-    m.poner(5993, CX + 14, CY - 8, 3, True, 3)
-    m.poner(10404, CX - 14, CY + 12, 3, True, 3)
+    m.poner(5992, CX - 8, CY - 12, 3, True, 3)
+    m.poner(5993, CX + 8, CY - 12, 3, True, 3)
+    m.poner(10404, CX - 12, CY + 15, 3, True, 3)
     m.poner(7179, CX - 3.5, CY - 5, 1, True)
     m.poner(7180, CX + 3.5, CY - 5, 1, True)
     # farolas con estandarte a lo largo de los caminos
