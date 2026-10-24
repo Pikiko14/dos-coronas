@@ -1617,6 +1617,33 @@ function Pruebas.correr()
     fallar(errores, "se restauran los valores", Balance.xpPara(1) == xp0 and Subastas.COMISION == 0.05 and Gremios.COSTE == 2500
       and Datos.JUGADORES_EVENTO == 3 and #Subastas.DURACIONES == 4 and Balance.XP_MULTIPLICADOR == 1)
   end)
+  paso("asedio programado: todos los días a las 17, con un jugador por corona", function()
+    local function hora(h, m, dia) return os.time({ year = 2030, month = 3, day = dia or 10, hour = h, min = m or 0, sec = 0 }) end
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local reloj = hora(15, 0)
+    mundo.relojEventos = function() return reloj end
+    mundo:programarEventos({ estandarteCadaHoras = 4, batallaHora = 21, batallaMinuto = 0, avisoMinutos = 5 })
+    fallar(errores, "asedio: antes de las 17 es hoy", mundo:proximaEdicion("moba", hora(15)) == hora(17))
+    fallar(errores, "asedio: después de las 17 es mañana", mundo:proximaEdicion("moba", hora(17, 1)) == hora(17, 0, 11))
+    fallar(errores, "el panel del asedio sabe la hora", mundo:programaDe("moba") and mundo:programaDe("moba").hora == "17:00")
+    fallar(errores, "el asedio pide uno por corona", mundo:minimoEvento("moba") == 1)
+    local a = mundo:crearPersonaje({ nombre = "AsAlbor", faccion = "albor", clase = "guerrero", nivel = 10 })
+    local u = mundo:crearPersonaje({ nombre = "AsUmbra", faccion = "umbra", clase = "mago", nivel = 10 })
+    a.ultimoGolpe, u.ultimoGolpe = -100, -100
+    fallar(errores, "se apuntan al asedio", mundo:entrarGuerra(a, "moba") == nil and mundo:entrarGuerra(u, "moba") == nil)
+    fallar(errores, "con horario no empieza solo", not mundo.instancia.moba.activa)
+    local res = mundo:resumenEvento("moba")
+    fallar(errores, "el panel cuenta los apuntados", res.cola.albor == 1 and res.cola.umbra == 1 and res.min == 1 and res.programa ~= nil)
+    fallar(errores, "la foto del servidor lleva el resumen del asedio", (function()
+      mundo._resumen = nil
+      local f = mundo:foto(a.id)
+      return f.resumen and f.resumen.moba and f.resumen.moba.cola.albor == 1
+    end)())
+    reloj = hora(17, 0)
+    for _ = 1, 3 do mundo:actualizar(1) end
+    fallar(errores, "a las 17 empieza el asedio", mundo.instancia.moba.activa and a.modo == "moba" and u.modo == "moba")
+  end)
   paso("mapas de facción: el jardín del Amanecer es de Albor y la necrópolis del Ocaso, de Umbra", function()
     local Mapa = require("compartido.dominio.mapa")
     local mundo = Mundo.nuevo()

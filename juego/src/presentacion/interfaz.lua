@@ -4344,7 +4344,7 @@ local EV_UI = {
     lema = "Roba la bandera enemiga y tráela a la tuya sin que te la quiten. Tres capturas ganan.",
   },
   moba = {
-    nombre = "Asedio", cuando = "Sin horario: empieza con jugadores de los dos equipos", color = { 0.72, 0.5, 1.0 },
+    nombre = "Asedio", cuando = "Todos los días a las 17:00 (con al menos 1 jugador por corona)", color = { 0.72, 0.5, 1.0 },
     lema = "Derriba las torres y destruye el nexo rival. Oleadas de esbirros avanzan solas, la fuente de tu base te cura y puedes reaparecer y volver.",
   },
 }

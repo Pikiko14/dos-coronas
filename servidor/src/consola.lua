@@ -31,7 +31,7 @@ function Consola.cargar()
   if estado.mundo.horarioEventos then
     local c = estado.mundo.horarioEventos
     nota("Eventos programados: estandarte cada " .. c.estandarteCadaHoras .. " h, batalla por cristales a las " ..
-      string.format("%02d:%02d", c.batallaHora, c.batallaMinuto))
+      string.format("%02d:%02d", c.batallaHora, c.batallaMinuto) .. ", asedio a las " .. string.format("%02d:%02d", c.asedioHora or 17, c.asedioMinuto or 0))
   end
   local srv, err = Red.escuchar(Config.red.puerto)
   if not srv then

@@ -96,7 +96,7 @@
   <addon id="skin_centinela" nombre="Centinela verde" desc="Yelmo verde y mirada fija." precio="350"/>
   <addon id="skin_caballero_oscuro" nombre="Caballero oscuro" desc="Armadura negra con cuernos." precio="500"/>
   <!-- ---- monturas exclusivas ---- -->
-  <montura id="mnt_039" nombre="Hámster tostado" desc="Física, nivel 5. Velocidad +38%. Se pelea montado." precio="700"/>
+  <montura id="mnt_039" nombre="Hámster tostado" desc="Mágica, nivel 5. Velocidad +38%. Se pelea montado." precio="700"/>
   <montura id="mnt_040" nombre="Lobo Aullador" desc="Física, nivel 5. Velocidad +38%. Se pelea montado." precio="700"/>
   <montura id="mnt_103" nombre="Tortuga viajera" desc="Física, nivel 5. Velocidad +42%. Se pelea montado." precio="750"/>
   <montura id="mnt_104" nombre="León dorado" desc="Mágica, nivel 5. Velocidad +42%. Se pelea montado." precio="750"/>

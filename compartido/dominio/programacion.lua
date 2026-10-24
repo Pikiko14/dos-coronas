@@ -1,6 +1,7 @@
 -- Programación de los eventos de guerra: los lanza el servidor, no los jugadores.
 --   * Captura del estandarte: cada N horas (por defecto 4) a horas en punto (0, 4, 8...).
 --   * Batalla por cristales: una vez al día, a la hora que diga la configuración (21:00).
+--   * Asedio (MOBA): una vez al día (17:00); basta con un jugador por corona.
 -- Unos minutos antes se abre la inscripción con un aviso; a la hora se juega si hay jugadores
 -- suficientes en cada corona y, si no, se cancela y se espera a la siguiente edición.
 -- Todos los jugadores pueden participar en cada edición. Sin programación (mundos locales y
@@ -39,9 +40,11 @@ function M.instalar(Mundo)
         h = h + c.estandarteCadaHoras
       end
     end
-    local t = os.time({ year = d.year, month = d.month, day = d.day, hour = c.batallaHora, min = c.batallaMinuto, sec = 0 })
+    local hora, minuto = c.batallaHora, c.batallaMinuto
+    if modo == "moba" then hora, minuto = c.asedioHora or 17, c.asedioMinuto or 0 end
+    local t = os.time({ year = d.year, month = d.month, day = d.day, hour = hora, min = minuto, sec = 0 })
     if t <= desde then
-      t = os.time({ year = d.year, month = d.month, day = d.day + 1, hour = c.batallaHora, min = c.batallaMinuto, sec = 0 })
+      t = os.time({ year = d.year, month = d.month, day = d.day + 1, hour = hora, min = minuto, sec = 0 })
     end
     return t
   end
@@ -49,7 +52,7 @@ function M.instalar(Mundo)
   -- Identificador de una edición: sirve para no repetir en la misma.
   local function claveDe(modo, t)
     if modo == "estandarte" then return "estandarte@" .. os.date("%Y%m%d%H", t) end
-    return "batalla@" .. os.date("%Y%m%d", t)
+    return (modo == "moba" and "moba@" or "batalla@") .. os.date("%Y%m%d", t)
   end
 
   local function estado(self, modo)
@@ -64,7 +67,7 @@ function M.instalar(Mundo)
 
   -- La edición en curso (si el evento está en marcha) o la siguiente.
   function Mundo:claveEdicion(modo)
-    if not self.horarioEventos or modo == "moba" then return modo end
+    if not self.horarioEventos then return modo end
     local ev = estado(self, modo)
     local inst = self.instancia[modo]
     if ev.activa and inst and inst.activa and not inst.fin then return ev.activa end
@@ -73,7 +76,7 @@ function M.instalar(Mundo)
 
   -- Datos de la próxima edición para el panel.
   function Mundo:programaDe(modo)
-    if not self.horarioEventos or modo == "moba" then return nil end         -- (el asedio no tiene horario: empieza cuando hay jugadores)
+    if not self.horarioEventos then return nil end
     local ev = estado(self, modo)
     return { proxima = ev.proxima, hora = os.date("%H:%M", ev.proxima), restan = math.max(0, ev.proxima - self:reloj()) }
   end
@@ -100,8 +103,8 @@ function M.instalar(Mundo)
     self._progT = 0
     local ahora = self:reloj()
     local c = self.horarioEventos
-    local min = Datos.JUGADORES_EVENTO
     for _, modo in ipairs(M.MODOS) do
+      local min = self:minimoEvento(modo)
       local ev = estado(self, modo)
       local inst = self.instancia[modo]
       if ev.activa and not (inst.activa and not inst.fin) then ev.activa = nil end

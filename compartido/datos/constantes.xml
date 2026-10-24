@@ -92,8 +92,8 @@
          la ciudad donde se entrega (0.004 = +40% a 100 casillas). DIST_BONO_MAX: tope de ese bono (1.5 = +150%). -->
   </oficios>
   <programacion>
-    <MODOS lista="estandarte,batalla"/>
-    <POR_DEFECTO avisoMinutos="5" batallaHora="21" batallaMinuto="0" estandarteCadaHoras="4"/>
+    <MODOS lista="estandarte,batalla,moba"/>
+    <POR_DEFECTO avisoMinutos="5" batallaHora="21" batallaMinuto="0" asedioHora="17" asedioMinuto="0" estandarteCadaHoras="4"/>
   </programacion>
   <subastas COMISION="0.05" IMPUESTO="0.08" MAX_POR_JUGADOR="8" POR_PAGINA="8" SUBIDA_MINIMA="0.05" TIEMPO_EXTRA="120">
     <!-- COMISION: por publicar (no se devuelve) -->

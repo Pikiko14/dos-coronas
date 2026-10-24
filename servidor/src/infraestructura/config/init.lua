@@ -68,6 +68,8 @@ return {
     estandarteCadaHoras = entero("DOSCORONAS_ESTANDARTE_CADA_HORAS", 4, 1, 24),
     batallaHora = entero("DOSCORONAS_BATALLA_HORA", 21, 0, 23),
     batallaMinuto = entero("DOSCORONAS_BATALLA_MINUTO", 0, 0, 59),
+    asedioHora = entero("DOSCORONAS_ASEDIO_HORA", 17, 0, 23),
+    asedioMinuto = entero("DOSCORONAS_ASEDIO_MINUTO", 0, 0, 59),
     avisoMinutos = entero("DOSCORONAS_EVENTOS_AVISO_MINUTOS", 5, 0, 60),
     -- jugadores por corona que hacen falta para que un evento empiece
     minJugadores = entero("DOSCORONAS_EVENTO_MIN_JUGADORES", 1, 1, 50),

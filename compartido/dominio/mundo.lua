@@ -2374,7 +2374,7 @@ end
 
 -- Jugadores por equipo que hacen falta para empezar un evento (el asedio es más pequeño).
 function Mundo:minimoEvento(modo)
-  if modo == "moba" then return Datos.JUGADORES_MOBA or 2 end
+  if modo == "moba" then return Datos.JUGADORES_MOBA or 1 end        -- (el asedio empieza con uno por corona)
   return Datos.JUGADORES_EVENTO
 end
 
@@ -3957,7 +3957,7 @@ function Mundo:foto(pid, indice)
   end
   if not self._resumen or self.tiempo - (self._resumenT or 0) > 0.5 then
     self._resumenT = self.tiempo
-    self._resumen = { batalla = self:resumenEvento("batalla"), estandarte = self:resumenEvento("estandarte") }
+    self._resumen = { batalla = self:resumenEvento("batalla"), estandarte = self:resumenEvento("estandarte"), moba = self:resumenEvento("moba") }
   end
   local duenos = {}
   for _, c in ipairs(self.mapas.mundo.ciudades) do
@@ -4106,7 +4106,7 @@ function Mundo:fotoDelta(pid, est, ronda)
     if not ronda.meta then
       if not self._resumen or self.tiempo - (self._resumenT or 0) > 0.5 then
         self._resumenT = self.tiempo
-        self._resumen = { batalla = self:resumenEvento("batalla"), estandarte = self:resumenEvento("estandarte") }
+        self._resumen = { batalla = self:resumenEvento("batalla"), estandarte = self:resumenEvento("estandarte"), moba = self:resumenEvento("moba") }
       end
       local duenos = {}
       for _, c in ipairs(self.mapas.mundo.ciudades) do
