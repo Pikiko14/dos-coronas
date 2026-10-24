@@ -343,7 +343,7 @@ function Entrada.manejar(app, id)
   end
   if id:sub(1, 6) == "equip_" then app.actuar("desequipar", { hueco = id:sub(7) }) return end
   -- ropero de apariencias (panel Personaje, pestaña Apariencia): una ranura abre la lista de sets, el set elegido se pone en esa ranura
-  if id == "pj_tab_equipo" or id == "pj_tab_apariencia" then Interfaz.personajeTab, Interfaz.ropero = id:sub(8), nil return end
+  if id == "ptab_equipo" or id == "ptab_apariencia" then Interfaz.personajeTab, Interfaz.ropero = id:sub(6), nil return end
   if id:sub(1, 10) == "apar_slot_" then
     local r = id:sub(11)
     Interfaz.ropero = (Interfaz.ropero ~= r) and r or nil

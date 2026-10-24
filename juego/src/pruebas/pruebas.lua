@@ -1323,6 +1323,10 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
       if hallada then ranuras = ranuras + 1 end
     end
     fallar(errores, "el ropero tiene seis ranuras", ranuras == 6, tostring(ranuras))
+    -- las pestañas del panel no se confunden con los botones "pj_<id>" del selector (entrar con ese personaje)
+    local tabApar
+    for yy = 130, 200, 3 do for xx = 500, 940, 3 do if not tabApar and (Interfaz.consumir(xx, yy) or ""):find("apariencia", 1, true) and Interfaz.consumir(xx, yy):sub(1, 3) ~= "pj_" then tabApar = Interfaz.consumir(xx, yy) end end end
+    fallar(errores, "la pestaña Apariencia no usa un id de personaje del selector", tabApar == "ptab_apariencia", tostring(tabApar))
     local fx, fy
     for yy = 130, 600, 3 do
       for xx = 500, 940, 3 do

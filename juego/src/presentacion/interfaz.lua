@@ -4006,7 +4006,7 @@ function I.panelEquipo(mundo, p, w, h)
     love.graphics.setFont(I.fuente)
     love.graphics.setColor(activa and 1 or 0.85, activa and 0.82 or 0.88, activa and 0.3 or 0.95)
     love.graphics.printf(t[2], tx, py + 46, tw, "center")
-    I.registrar(tx, py + 42, tw, 26, "pj_tab_" .. t[1])
+    I.registrar(tx, py + 42, tw, 26, "ptab_" .. t[1])
   end
   love.graphics.setFont(f)
   love.graphics.setColor(0.62, 0.66, 0.78)
