@@ -15,7 +15,7 @@ CELDA = 640
 
 
 def L(w, t0, ms, sc, modo="once", **k):
-    d = dict(s="fx", w=w, t0=t0, ms=ms, sc=sc, a=1.0, modo=modo)
+    d = dict(s="fx", w=w, t0=t0, ms=ms, sc=sc, a=1.0, modo=modo, mezcla="alpha")        # (mezcla normal: el arte trae sus colores y su transparencia; sumada se vería lavada)
     d.update(k)
     return d
 

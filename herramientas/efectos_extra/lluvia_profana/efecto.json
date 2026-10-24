@@ -35,6 +35,7 @@
     "sc": 0.9,
     "a": 1.0,
     "modo": "loop",
+    "mezcla": "alpha",
     "t1": 1.25
    }
   ]

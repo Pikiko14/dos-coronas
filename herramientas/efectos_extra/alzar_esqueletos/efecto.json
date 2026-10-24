@@ -30,7 +30,8 @@
     "ms": 0.13,
     "sc": 0.8,
     "a": 1.0,
-    "modo": "once"
+    "modo": "once",
+    "mezcla": "alpha"
    }
   ]
  },

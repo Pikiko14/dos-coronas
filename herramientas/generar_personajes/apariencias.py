@@ -48,6 +48,24 @@ SETS = [
     dict(id="pd_pasion", nombre="Pasión", precio=700, h=2684, m=2688, espalda=5344,
          armas=dict(espada=5084, hacha=4615, lanza=4959, arco=4338, baston=2771, maza=3466, baculo=4965)),
 ]
+# 20 sets más (mismos criterios: ninguna pieza es del equipo de los escalones ni de los 10 primeros sets; hombre y mujer llevan la misma apariencia). Las armas y las
+# espaldas se reparten por turnos entre las piezas de apariencia que se ven bien.
+_EXTRA = [  # (id, nombre, precio, apariencia del pecho)
+    ("pd_marfil", "Armadura de Marfil", 800, 1551), ("pd_nieve", "Túnica de Nieve", 700, 1554), ("pd_vikingo_acero", "Vikingo de Acero", 900, 1557),
+    ("pd_cobrizo", "Guerrero Cobrizo", 700, 1725), ("pd_sombras", "Cazador de Sombras", 800, 1728), ("pd_escarlata", "Guardia Escarlata", 800, 1732),
+    ("pd_barbaro_norte", "Bárbaro del Norte", 900, 1739), ("pd_zafiro", "Mago Zafiro", 700, 1960), ("pd_alado_plata", "Alado Plateado", 1000, 2435),
+    ("pd_escarcha", "Caballero de Escarcha", 900, 2439), ("pd_dorado", "Guerrero Dorado", 1100, 5360), ("pd_hechicero_azul", "Hechicero Azul", 700, 2695),
+    ("pd_lunar", "Sacerdote Lunar", 800, 3486), ("pd_brasa", "Brasa Ardiente", 800, 3490), ("pd_rey_vikingo", "Rey Vikingo", 1000, 3941),
+    ("pd_violeta", "Yelmo Violeta", 800, 4185), ("pd_cuernos_oro", "Cuernos de Oro", 900, 4399), ("pd_sombrio", "Cazacuernos Sombrío", 900, 4431),
+    ("pd_cristal_plata", "Cristal de Plata", 1000, 4434), ("pd_lobo_sombrio", "Lobo Sombrío", 800, 4568),
+]
+_ARMAS_POR_FAMILIA = dict(
+    espada=(2526, 5084, 4615, 3267, 2268, 3468, 4959), hacha=(3469, 2526, 4615, 3468), lanza=(4977, 4965, 4959, 3470), arco=(4338, 2021, 3469),
+    baston=(4105, 3466, 2771, 4965, 3468), maza=(3468, 4105, 3470, 3466), baculo=(3466, 4965, 2771, 4105))
+_ESPALDAS = (3010, 5344, 5643, 4556, 4558, 2812)
+for _i, (_id, _nombre, _precio, _n) in enumerate(_EXTRA):
+    SETS.append(dict(id=_id, nombre=_nombre, precio=_precio, h=_n, m=_n, espalda=_ESPALDAS[_i % len(_ESPALDAS)],
+                     armas={fam: lista[(_i + k) % len(lista)] for k, (fam, lista) in enumerate(_ARMAS_POR_FAMILIA.items())}))
 HUECOS = (("cabeza", -1), ("pecho", 0), ("piernas", 1), ("pies", 2))      # (hueco del juego, desplazamiento): piernas = las manos (guantes)
 
 

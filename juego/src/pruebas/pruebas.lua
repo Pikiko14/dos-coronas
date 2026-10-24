@@ -1169,7 +1169,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
     local datosAp = require("src.presentacion.render.fao_datos_apariencias")
     local ids = {}
     for _, id in ipairs(Mall.ORDEN_ADDONS) do if id:sub(1, 3) == "pd_" then ids[#ids + 1] = id end end
-    fallar(errores, "hay 10 sets de apariencia en el mall con precio", #ids == 10 and Mall.ADDONS[ids[1]].precio > 0, tostring(#ids))
+    fallar(errores, "hay 30 sets de apariencia en el mall con precio", #ids == 30 and Mall.ADDONS[ids[1]].precio > 0, tostring(#ids))
     local famil = { "espada", "hacha", "lanza", "arco", "baston", "maza", "baculo" }
     for _, id in ipairs(ids) do
       local set = datosAp.sets[id]
@@ -1233,7 +1233,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
     local cv = love.graphics.newCanvas(CW * 4, CH * #Datos.barra.nigromante)
     local ok, err = pcall(function()
       love.graphics.setCanvas(cv)
-      love.graphics.clear(0.16, 0.2, 0.16, 1)
+      love.graphics.clear(0.36, 0.52, 0.3, 1)
       for fila, id in ipairs(Datos.barra.nigromante) do
         fallar(errores, id .. " tiene capas de efecto", Poderes[id] ~= nil and #Poderes[id].capas >= 1)
         for k, frac in ipairs({ 0.15, 0.3, 0.5, 0.75 }) do

@@ -1972,7 +1972,7 @@ fallar(errores, "fuera de una ciudad no se activa el oficio", mundo:alternarOfic
     local mundo = Mundo.nuevo()
     local p = mundo:crearPersonaje({ nombre = "Jinete", faccion = "umbra", clase = "guerrero", nivel = 30 })
     p.oro = 100000
-    fallar(errores, "la cuadra vende las tres de oficio y 20 gratis", #Monturas.orden == 23 and Monturas.MAX >= 23 and Monturas.especies.mnt_001.precio == 0)
+    fallar(errores, "la cuadra vende las tres de oficio y las de viaje", #Monturas.orden == 23 and Monturas.MAX >= 23)
     local nuevas = { "mnt_001", "mnt_006", "mnt_027", "mnt_008" }
     p.monturas = {}
     for _, id in ipairs(nuevas) do

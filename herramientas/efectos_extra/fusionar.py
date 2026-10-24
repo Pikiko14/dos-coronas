@@ -28,7 +28,7 @@ for pid in IDS:
         for k in ('t1', 'off', 'giro', 'flip'):
             if k in l: capa[k] = l[k]
         capa['dir'] = False
-        capa['mezcla'] = 'add'
+        capa['mezcla'] = l.get('mezcla', 'add')
         capas.append(capa)
     newdat[pid] = dict(clase=j['clase'], dur=round(c['duracion_s'], 3), golpes=[round(x, 3) for x in c.get('golpes_s', [])], capas=capas)
 num, lv = G['num'], G['lua_valor']
