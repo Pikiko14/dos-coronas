@@ -1,38 +1,40 @@
 {
  "id_dos_coronas": "muro_lanzas",
  "clase": "lancero",
- "nombre": "Muro de lanzas",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Guardia del lancero",
+ "poder_fao": "(secuencia propia: paquete lancero)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    360,
+    377
    ],
    "origin": [
-    128,
-    128
+    180,
+    188
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.15,
+  "inferida": false,
+  "duracion_s": 1.6,
   "golpes_s": [],
   "capas": [
    {
     "s": "fx",
-    "w": "GC",
+    "w": "C",
     "t0": 0.0,
-    "ms": 0.07,
-    "sc": 0.85,
+    "ms": 0.12,
+    "sc": 0.8,
     "a": 1.0,
-    "modo": "once"
+    "modo": "hold",
+    "mezcla": "alpha",
+    "t1": 1.6
    }
   ]
  },
- "nota": "lancero/guardia_imperial del paquete de poderes."
+ "nota": "lancero/09_guardia_lancero (640x640, recortado a 360x377)."
 }

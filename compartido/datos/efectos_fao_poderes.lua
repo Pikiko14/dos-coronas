@@ -6,8 +6,8 @@ return {
   alzar_esqueletos = { clase = "nigromante", dur = 1.15, golpes = {  }, capas = {
     { s = "alzar_esqueletos__fx", w = "GC", t0 = 0, ms = 0.13, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
-  barrido = { clase = "lancero", dur = 0.95, golpes = { 0.3 }, capas = {
-    { s = "barrido__fx", w = "GC", t0 = 0.05, ms = 0.055, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "add" },
+  barrido = { clase = "lancero", dur = 0.9, golpes = { 0.3 }, capas = {
+    { s = "barrido__fx", w = "C", t0 = 0, ms = 0.1, sc = 1.3, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
   bendicion = { clase = "clerigo", dur = 0.55, golpes = { 0.45 }, capas = {
     { s = "bendicion__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.7, a = 1, modo = "vuelo", t1 = 0.45, giro = "libre", dir = false, mezcla = "alpha" },
@@ -45,8 +45,8 @@ return {
   ejecucion = { clase = "guerrero", dur = 1.1, golpes = { 0.5 }, capas = {
     { s = "ejecucion__fx", w = "GT", t0 = 0, ms = 0.11, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
-  embestida = { clase = "lancero", dur = 0.8, golpes = { 0.4 }, capas = {
-    { s = "embestida__fx", w = "T", t0 = 0, ms = 0.03, sc = 0.9, a = 1, modo = "estela", t1 = 0.4, dir = false, mezcla = "add" },
+  embestida = { clase = "lancero", dur = 0.55, golpes = { 0.35 }, capas = {
+    { s = "embestida__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.75, a = 1, modo = "vuelo", t1 = 0.35, giro = "libre", dir = false, mezcla = "alpha" },
   } },
   escudo = { clase = "mago", dur = 1.1, golpes = {  }, capas = {
     { s = "escudo__fx", w = "GT", t0 = 0, ms = 0.12, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "alpha" },
@@ -60,8 +60,8 @@ return {
   espinas = { clase = "nigromante", dur = 1, golpes = { 0.35 }, capas = {
     { s = "espinas__fx", w = "GT", t0 = 0, ms = 0.1, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
-  estocada = { clase = "lancero", dur = 0.55, golpes = { 0.2 }, capas = {
-    { s = "estocada__fx", w = "T", t0 = 0, ms = 0.025, sc = 0.8, a = 1, modo = "estela", t1 = 0.3, dir = false, mezcla = "add" },
+  estocada = { clase = "lancero", dur = 0.5, golpes = { 0.28 }, capas = {
+    { s = "estocada__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.7, a = 1, modo = "vuelo", t1 = 0.28, giro = "libre", dir = false, mezcla = "alpha" },
   } },
   estocada_lineal = { clase = "guerrero", dur = 0.95, golpes = { 0.3 }, capas = {
     { s = "estocada_lineal__fx", w = "T", t0 = 0.1, ms = 0.09, sc = 0.7, a = 1, modo = "once", dir = false, mezcla = "alpha" },
@@ -69,8 +69,8 @@ return {
   explosion_cadaverica = { clase = "nigromante", dur = 0.9, golpes = { 0.4 }, capas = {
     { s = "explosion_cadaverica__fx", w = "GT", t0 = 0, ms = 0.1, sc = 0.9, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
-  fisura_del_lancero = { clase = "lancero", dur = 1, golpes = { 0.4 }, capas = {
-    { s = "fisura_del_lancero__fx", w = "GT", t0 = 0, ms = 0.06, sc = 0.95, a = 1, modo = "once", dir = false, mezcla = "add" },
+  fisura_del_lancero = { clase = "lancero", dur = 1, golpes = { 0.35 }, capas = {
+    { s = "fisura_del_lancero__fx", w = "GT", t0 = 0, ms = 0.11, sc = 0.95, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
   flecha_veneno = { clase = "cazador", dur = 0.6, golpes = { 0.45 }, capas = {
     { s = "flecha_veneno__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.6, a = 1, modo = "vuelo", t1 = 0.45, giro = "libre", dir = false, mezcla = "alpha" },
@@ -90,14 +90,14 @@ return {
   grito = { clase = "guerrero", dur = 1.3, golpes = {  }, capas = {
     { s = "grito__fx", w = "C", t0 = 0, ms = 0.13, sc = 0.75, a = 1, modo = "hold", t1 = 1.3, dir = false, mezcla = "alpha" },
   } },
-  jabalina = { clase = "lancero", dur = 1.1, golpes = { 0.5 }, capas = {
-    { s = "jabalina__fx", w = "GT", t0 = 0.1, ms = 0.06, sc = 0.8, a = 1, modo = "once", dir = false, mezcla = "add" },
+  jabalina = { clase = "lancero", dur = 0.55, golpes = { 0.45 }, capas = {
+    { s = "jabalina__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.7, a = 1, modo = "vuelo", t1 = 0.45, giro = "libre", dir = false, mezcla = "alpha" },
   } },
   juicio = { clase = "clerigo", dur = 1, golpes = { 0.5 }, capas = {
     { s = "juicio__fx", w = "GT", t0 = 0, ms = 0.11, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
-  juicio_final = { clase = "lancero", dur = 1.3, golpes = { 0.5, 0.8, 1.1 }, capas = {
-    { s = "juicio_final__fx", w = "GT", t0 = 0.05, ms = 0.075, sc = 1, a = 1, modo = "once", dir = false, mezcla = "add" },
+  juicio_final = { clase = "lancero", dur = 1.7, golpes = { 0.4, 0.75, 1.1 }, capas = {
+    { s = "juicio_final__fx", w = "GT", t0 = 0, ms = 0.12, sc = 1, a = 1, modo = "loop", t1 = 1.5, dir = false, mezcla = "alpha" },
   } },
   lanza_osea = { clase = "nigromante", dur = 0.55, golpes = { 0.36 }, capas = {
     { s = "lanza_osea__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.65, a = 1, modo = "vuelo", t1 = 0.36, giro = "libre", dir = false, mezcla = "alpha" },
@@ -124,8 +124,8 @@ return {
   misil = { clase = "mago", dur = 0.55, golpes = { 0.45 }, capas = {
     { s = "misil__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.5, a = 1, modo = "vuelo", t1 = 0.45, dir = false, mezcla = "alpha" },
   } },
-  muro_lanzas = { clase = "lancero", dur = 1.15, golpes = {  }, capas = {
-    { s = "muro_lanzas__fx", w = "GC", t0 = 0, ms = 0.07, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "add" },
+  muro_lanzas = { clase = "lancero", dur = 1.6, golpes = {  }, capas = {
+    { s = "muro_lanzas__fx", w = "C", t0 = 0, ms = 0.12, sc = 0.8, a = 1, modo = "hold", t1 = 1.6, dir = false, mezcla = "alpha" },
   } },
   nova = { clase = "mago", dur = 1, golpes = { 0.4 }, capas = {
     { s = "nova__fx", w = "GT", t0 = 0, ms = 0.11, sc = 1, a = 1, modo = "once", dir = false, mezcla = "alpha" },
@@ -142,8 +142,9 @@ return {
   preciso = { clase = "cazador", dur = 0.6, golpes = { 0.45 }, capas = {
     { s = "preciso__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.7, a = 1, modo = "vuelo", t1 = 0.45, giro = "libre", dir = false, mezcla = "alpha" },
   } },
-  pulso_terrestre = { clase = "lancero", dur = 1, golpes = { 0.35 }, capas = {
-    { s = "pulso_terrestre__fx", w = "GC", t0 = 0, ms = 0.06, sc = 0.95, a = 1, modo = "once", dir = false, mezcla = "add" },
+  pulso_terrestre = { clase = "lancero", dur = 0.9, golpes = { 0.4 }, capas = {
+    { s = "pulso_terrestre__fx", w = "C", t0 = 0, ms = 0.1, sc = 1.1, a = 1, modo = "once", dir = false, mezcla = "alpha" },
+    { s = "pulso_terrestre__fx", w = "C", t0 = 0, ms = 0.1, sc = 1.1, a = 1, modo = "once", flip = true, dir = false, mezcla = "alpha" },
   } },
   rayo_arcano = { clase = "mago", dur = 0.9, golpes = { 0.3 }, capas = {
     { s = "rayo_arcano__fx", w = "GT", t0 = 0, ms = 0.1, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "alpha" },
@@ -172,14 +173,16 @@ return {
   torbellino = { clase = "mago", dur = 1.6, golpes = { 0.45, 0.8, 1.15, 1.5 }, capas = {
     { s = "torbellino__fx", w = "GT", t0 = 0, ms = 0.12, sc = 1.2, a = 1, modo = "loop", t1 = 1.3, off = { 0, -20 }, dir = false, mezcla = "alpha" },
   } },
-  torbellino_lanzas = { clase = "lancero", dur = 1.7, golpes = { 0.4, 0.8, 1.2, 1.6 }, capas = {
-    { s = "torbellino_lanzas__fx", w = "GC", t0 = 0, ms = 0.1, sc = 0.85, a = 1, modo = "once", dir = false, mezcla = "add" },
+  torbellino_lanzas = { clase = "lancero", dur = 1.7, golpes = { 0.45, 0.8, 1.15, 1.5 }, capas = {
+    { s = "torbellino_lanzas__fx", w = "C", t0 = 0, ms = 0.12, sc = 1.3, a = 1, modo = "loop", t1 = 1.5, dir = false, mezcla = "alpha" },
   } },
   tormenta_divina = { clase = "clerigo", dur = 1.6, golpes = { 0.1, 0.45, 0.8 }, capas = {
     { s = "tormenta_divina__fx", w = "GT", t0 = 0, ms = 0.12, sc = 1, a = 1, modo = "loop", t1 = 1.4, dir = false, mezcla = "alpha" },
   } },
-  tormenta_lanzas = { clase = "lancero", dur = 1.2, golpes = { 0.5 }, capas = {
-    { s = "tormenta_lanzas__fx", w = "GT", t0 = 0.05, ms = 0.07, sc = 0.95, a = 1, modo = "once", dir = false, mezcla = "add" },
+  tormenta_lanzas = { clase = "lancero", dur = 0.9, golpes = { 0.4, 0.52, 0.64 }, capas = {
+    { s = "tormenta_lanzas__fx", w = "T", t0 = 0, ms = 0.1, sc = 0.8, a = 1, modo = "caida", t1 = 0.4, off = { -50, -320 }, dir = false, mezcla = "alpha" },
+    { s = "tormenta_lanzas__fx", w = "T", t0 = 0.12, ms = 0.1, sc = 0.8, a = 1, modo = "caida", t1 = 0.52, off = { 0, -340 }, dir = false, mezcla = "alpha" },
+    { s = "tormenta_lanzas__fx", w = "T", t0 = 0.24, ms = 0.1, sc = 0.8, a = 1, modo = "caida", t1 = 0.64, off = { 50, -320 }, dir = false, mezcla = "alpha" },
   } },
   trampa = { clase = "cazador", dur = 1.2, golpes = {  }, capas = {
     { s = "trampa__fx", w = "GC", t0 = 0.05, ms = 0.14, sc = 0.7, a = 1, modo = "once", dir = false, mezcla = "alpha" },

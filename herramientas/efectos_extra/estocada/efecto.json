@@ -1,41 +1,43 @@
 {
  "id_dos_coronas": "estocada",
  "clase": "lancero",
- "nombre": "Estocada",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Estocada perforante",
+ "poder_fao": "(secuencia propia: paquete lancero)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 13,
+   "frames": 8,
    "cell": [
-    233,
-    256
+    428,
+    297
    ],
    "origin": [
-    0,
-    128
+    214,
+    148
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.55,
+  "inferida": false,
+  "duracion_s": 0.5,
   "golpes_s": [
-   0.2
+   0.28
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "T",
+    "w": "C",
     "t0": 0.0,
-    "ms": 0.025,
-    "sc": 0.8,
+    "ms": 0.05,
+    "sc": 0.7,
     "a": 1.0,
-    "modo": "estela",
-    "t1": 0.3
+    "modo": "vuelo",
+    "mezcla": "alpha",
+    "t1": 0.28,
+    "giro": "libre"
    }
   ]
  },
- "nota": "lancero/avance_implacable del paquete de poderes."
+ "nota": "lancero/01_estocada_perforante (640x640, recortado a 428x297)."
 }

@@ -1,40 +1,41 @@
 {
  "id_dos_coronas": "barrido",
  "clase": "lancero",
- "nombre": "Barrido",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Barrido lunar",
+ "poder_fao": "(secuencia propia: paquete lancero)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    426,
+    275
    ],
    "origin": [
-    128,
-    128
+    213,
+    137
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.95,
+  "inferida": false,
+  "duracion_s": 0.9,
   "golpes_s": [
    0.3
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "GC",
-    "t0": 0.05,
-    "ms": 0.055,
-    "sc": 0.85,
+    "w": "C",
+    "t0": 0.0,
+    "ms": 0.1,
+    "sc": 1.3,
     "a": 1.0,
-    "modo": "once"
+    "modo": "once",
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "lancero/lanza_giratoria del paquete de poderes."
+ "nota": "lancero/05_barrido_lunar (640x640, recortado a 426x275)."
 }

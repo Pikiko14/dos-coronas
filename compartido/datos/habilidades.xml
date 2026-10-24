@@ -90,22 +90,22 @@
   <habilidad id="tormenta_divina" nombre="Juicio celestial" clase="clerigo" tipo="punto" aoe="3.2" pulsos="3" cd="24" coef="1.2" dano="magico" cura="14" curaN="2" desc="Una espada celestial castiga tres veces la zona y cura a tus aliados dentro." mana="70" rango="7.5"/>
   <habilidad id="resurreccion" nombre="Resurrección" clase="clerigo" tipo="resucitar" cd="90" desc="Devuelve a la vida a un aliado caído cerca de ti, con la mitad de su vida." mana="100" rango="6"/>
   <!--  lancero  -->
-  <habilidad id="estocada" nombre="Estocada" clase="lancero" tipo="enemigo" cd="1.3" coef="1.12" desc="Una estocada larga con la lanza." mana="9" rango="2.5">
+  <habilidad id="estocada" nombre="Estocada perforante" clase="lancero" tipo="enemigo" cd="1.3" coef="1.12" desc="Una estocada larga y perforante con la lanza." mana="9" rango="2.5">
     <estado tipo="sangrar" prob="0.1"/>
   </habilidad>
-  <habilidad id="barrido" nombre="Barrido" clase="lancero" tipo="alrededor" cd="8" coef="1.6" lentitud="0.3" desc="Barres con el asta a todos los enemigos cercanos y los frenas." mana="16" rango="3.1"/>
-  <habilidad id="muro_lanzas" nombre="Muro de lanzas" clase="lancero" tipo="propio" buff="escudo" cd="18" desc="Levantas un muro de lanzas que absorbe parte del daño." dur="9" mana="22"/>
-  <habilidad id="embestida" nombre="Embestida" clase="lancero" tipo="enemigo" aturde="0.7" cd="11" coef="0.85" dash="true" desc="Cargas con la lanza por delante y aturdes un instante." mana="14" rango="6"/>
-  <habilidad id="jabalina" nombre="Jabalina" clase="lancero" tipo="enemigo" cd="6" coef="1.55" desc="Lanzas una jabalina a distancia que deja una herida." mana="18" proyectil="lanza" rango="7.2">
+  <habilidad id="barrido" nombre="Barrido lunar" clase="lancero" tipo="alrededor" cd="8" coef="1.6" lentitud="0.3" desc="Un arco de luz de luna barre a todos los enemigos cercanos y los frena." mana="16" rango="3.1"/>
+  <habilidad id="muro_lanzas" nombre="Guardia del lancero" clase="lancero" tipo="propio" buff="escudo" cd="18" desc="Cruzas las lanzas y una esfera de energía te rodea: absorbe parte del daño." dur="9" mana="22"/>
+  <habilidad id="embestida" nombre="Estocada relámpago" clase="lancero" tipo="enemigo" aturde="0.7" cd="11" coef="0.85" dash="true" desc="Cargas con la lanza cargada de rayos y aturdes un instante." mana="14" rango="6"/>
+  <habilidad id="jabalina" nombre="Lanza ígnea" clase="lancero" tipo="enemigo" cd="6" coef="1.55" desc="Lanzas una lanza en llamas a distancia que deja una herida." mana="18" proyectil="lanza" rango="7.2">
     <estado tipo="sangrar" dur="5" prob="0.5"/>
   </habilidad>
-  <habilidad id="tormenta_lanzas" nombre="Tormenta de lanzas" clase="lancero" tipo="punto" aoe="2.6" cd="22" coef="2.2" desc="Una lluvia de lanzas cae sobre la zona." mana="40" rango="7.5">
+  <habilidad id="tormenta_lanzas" nombre="Lluvia de lanzas dragón" clase="lancero" tipo="punto" aoe="2.6" cd="22" coef="2.2" desc="Lanzas de fuego de dragón caen sobre la zona." mana="40" rango="7.5">
     <estado tipo="sangrar" dur="5" prob="0.5"/>
   </habilidad>
-  <habilidad id="fisura_del_lancero" nombre="Fisura del lancero" clase="lancero" tipo="punto" aoe="2.6" cd="12" coef="1.8" lentitud="0.4" desc="Clavas la lanza y abres una fisura que daña y frena a los de la zona." mana="30" rango="6"/>
-  <habilidad id="pulso_terrestre" nombre="Pulso terrestre" clase="lancero" tipo="alrededor" cd="14" coef="1.7" aturde="0.9" desc="Una onda de choque a tu alrededor daña y aturde." mana="28" rango="3.4"/>
-  <habilidad id="torbellino_lanzas" nombre="Torbellino de lanzas" clase="lancero" tipo="alrededor" pulsos="4" seguir="true" cd="20" coef="0.9" lentitud="0.3" desc="Giras la lanza sin parar: golpeas cuatro veces a los que te rodean." mana="45" rango="3.2"/>
-  <habilidad id="juicio_final" nombre="Juicio final" clase="lancero" tipo="punto" aoe="3.4" pulsos="3" cd="30" coef="1.5" aturde="0.6" desc="Una lluvia de lanzas de luz cae tres veces sobre la zona." mana="70" rango="7.5"/>
+  <habilidad id="fisura_del_lancero" nombre="Impacto sísmico" clase="lancero" tipo="punto" aoe="2.6" cd="12" coef="1.8" lentitud="0.4" desc="Clavas la lanza y el suelo estalla: daña y frena a los de la zona." mana="30" rango="6"/>
+  <habilidad id="pulso_terrestre" nombre="Pulso glacial" clase="lancero" tipo="alrededor" cd="14" coef="1.7" aturde="0.9" desc="Una onda de lanzas de hielo a tu alrededor daña y aturde." mana="28" rango="3.4"/>
+  <habilidad id="torbellino_lanzas" nombre="Torbellino de lanzas" clase="lancero" tipo="alrededor" pulsos="4" seguir="true" cd="20" coef="0.9" lentitud="0.3" desc="Giras las lanzas sin parar: golpeas cuatro veces a los que te rodean." mana="45" rango="3.2"/>
+  <habilidad id="juicio_final" nombre="Descenso celestial" clase="lancero" tipo="punto" aoe="3.4" pulsos="3" cd="30" coef="1.5" aturde="0.6" desc="Una lanza de luz desciende del cielo y castiga tres veces la zona." mana="70" rango="7.5"/>
   <!--  nigromante  -->
   <habilidad id="toque_necro" nombre="Calavera espectral" clase="nigromante" tipo="enemigo" cd="2" coef="1.2" dano="magico" desc="Una calavera de fuego espectral vuela hasta el objetivo, lo hiere y a veces le drena la vida." mana="7" proyectil="necro" rango="7.2">
     <estado tipo="drenar_vida" prob="0.1"/>

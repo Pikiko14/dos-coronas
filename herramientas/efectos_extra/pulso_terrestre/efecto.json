@@ -1,40 +1,52 @@
 {
  "id_dos_coronas": "pulso_terrestre",
  "clase": "lancero",
- "nombre": "Pulso terrestre",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Pulso glacial",
+ "poder_fao": "(secuencia propia: paquete lancero)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    414,
+    280
    ],
    "origin": [
-    128,
-    128
+    207,
+    140
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.0,
+  "inferida": false,
+  "duracion_s": 0.9,
   "golpes_s": [
-   0.35
+   0.4
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "GC",
+    "w": "C",
     "t0": 0.0,
-    "ms": 0.06,
-    "sc": 0.95,
+    "ms": 0.1,
+    "sc": 1.1,
     "a": 1.0,
-    "modo": "once"
+    "modo": "once",
+    "mezcla": "alpha"
+   },
+   {
+    "s": "fx",
+    "w": "C",
+    "t0": 0.0,
+    "ms": 0.1,
+    "sc": 1.1,
+    "a": 1.0,
+    "modo": "once",
+    "mezcla": "alpha",
+    "flip": true
    }
   ]
  },
- "nota": "lancero/pulso_terrestre del paquete de poderes."
+ "nota": "lancero/03_lanza_glacial (640x640, recortado a 414x280)."
 }

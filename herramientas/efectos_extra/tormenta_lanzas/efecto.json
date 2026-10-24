@@ -1,40 +1,78 @@
 {
  "id_dos_coronas": "tormenta_lanzas",
  "clase": "lancero",
- "nombre": "Tormenta de lanzas",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Lluvia de lanzas dragón",
+ "poder_fao": "(secuencia propia: paquete lancero)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    288,
+    402
    ],
    "origin": [
-    128,
-    128
+    144,
+    201
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.2,
+  "inferida": false,
+  "duracion_s": 0.9,
   "golpes_s": [
-   0.5
+   0.4,
+   0.52,
+   0.64
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "GT",
-    "t0": 0.05,
-    "ms": 0.07,
-    "sc": 0.95,
+    "w": "T",
+    "t0": 0.0,
+    "ms": 0.1,
+    "sc": 0.8,
     "a": 1.0,
-    "modo": "once"
+    "modo": "caida",
+    "mezcla": "alpha",
+    "t1": 0.4,
+    "off": [
+     -50,
+     -320
+    ]
+   },
+   {
+    "s": "fx",
+    "w": "T",
+    "t0": 0.12,
+    "ms": 0.1,
+    "sc": 0.8,
+    "a": 1.0,
+    "modo": "caida",
+    "mezcla": "alpha",
+    "t1": 0.52,
+    "off": [
+     0,
+     -340
+    ]
+   },
+   {
+    "s": "fx",
+    "w": "T",
+    "t0": 0.24,
+    "ms": 0.1,
+    "sc": 0.8,
+    "a": 1.0,
+    "modo": "caida",
+    "mezcla": "alpha",
+    "t1": 0.64,
+    "off": [
+     50,
+     -320
+    ]
    }
   ]
  },
- "nota": "lancero/lluvia_de_lanzas del paquete de poderes."
+ "nota": "lancero/08_lanza_dragon (640x640, recortado a 288x402)."
 }

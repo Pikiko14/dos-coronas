@@ -1224,7 +1224,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
   end)
   -- Los diez efectos de las clases con paquete HD (nigromante, guerrero, mago y cazador) sobre un fondo liso, con el lanzador a la izquierda y un blanco a la
   -- derecha. Con DC_PRUEBA_NECRO=1 guarda juego/capturas/<clase>_poderes.png (una fila por poder, cuatro instantes).
-  for _, clase in ipairs({ "nigromante", "guerrero", "mago", "cazador", "clerigo" }) do
+  for _, clase in ipairs({ "nigromante", "guerrero", "mago", "cazador", "clerigo", "lancero" }) do
   paso(clase .. ": los diez efectos de capas se dibujan", function()
     local Capas = require("src.presentacion.render.efectos_fao_capas")
     local Poderes = require("compartido.datos.efectos_fao_poderes")

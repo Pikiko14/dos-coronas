@@ -1,41 +1,43 @@
 {
  "id_dos_coronas": "embestida",
  "clase": "lancero",
- "nombre": "Embestida",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Estocada relámpago",
+ "poder_fao": "(secuencia propia: paquete lancero)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 13,
+   "frames": 8,
    "cell": [
-    232,
-    256
+    371,
+    262
    ],
    "origin": [
-    0,
-    128
+    185,
+    131
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.8,
+  "inferida": false,
+  "duracion_s": 0.55,
   "golpes_s": [
-   0.4
+   0.35
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "T",
+    "w": "C",
     "t0": 0.0,
-    "ms": 0.03,
-    "sc": 0.9,
+    "ms": 0.05,
+    "sc": 0.75,
     "a": 1.0,
-    "modo": "estela",
-    "t1": 0.4
+    "modo": "vuelo",
+    "mezcla": "alpha",
+    "t1": 0.35,
+    "giro": "libre"
    }
   ]
  },
- "nota": "lancero/embestida_perforante del paquete de poderes."
+ "nota": "lancero/04_estocada_relampago (640x640, recortado a 371x262)."
 }

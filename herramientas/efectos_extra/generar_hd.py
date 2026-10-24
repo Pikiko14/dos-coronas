@@ -50,6 +50,20 @@ EFECTOS = [
     ("mago", "mago_sprites", "meteoro", "Meteorito", "04_meteorito", "partido",
      [L("T", 0.0, 0.1, 0.9, "caida", t1=0.45, off=[-260, -260], s="caida"), L("GT", 0.45, 0.1, 1.1, s="impacto")], 1.2, [0.45]),
 
+    # lancero: las lanzas que vuelan apuntan hacia donde van; la lluvia de lanzas gira el sprite 90° para que caiga con la punta hacia abajo ("_rot90")
+    ("lancero", "lancero", "estocada", "Estocada perforante", "01_estocada_perforante", "centro", vuelo(0.7, 0.28), 0.5, [0.28]),
+    ("lancero", "lancero", "barrido", "Barrido lunar", "05_barrido_lunar", "centro", [L("C", 0.0, 0.1, 1.3)], 0.9, [0.3]),
+    ("lancero", "lancero", "muro_lanzas", "Guardia del lancero", "09_guardia_lancero", "centro", [L("C", 0.0, 0.12, 0.8, "hold", t1=1.6)], 1.6, []),
+    ("lancero", "lancero", "embestida", "Estocada relámpago", "04_estocada_relampago", "centro", vuelo(0.75, 0.35), 0.55, [0.35]),
+    ("lancero", "lancero", "jabalina", "Lanza ígnea", "02_lanza_ignea", "centro", vuelo(0.7, 0.45), 0.55, [0.45]),
+    ("lancero", "lancero", "tormenta_lanzas", "Lluvia de lanzas dragón", "08_lanza_dragon_rot90", "centro",
+     [L("T", 0.0, 0.1, 0.8, "caida", t1=0.4, off=[-50, -320]), L("T", 0.12, 0.1, 0.8, "caida", t1=0.52, off=[0, -340]), L("T", 0.24, 0.1, 0.8, "caida", t1=0.64, off=[50, -320])],
+     0.9, [0.4, 0.52, 0.64]),
+    ("lancero", "lancero", "fisura_del_lancero", "Impacto sísmico", "07_impacto_sismico", "suelo", [L("GT", 0.0, 0.11, 0.95)], 1.0, [0.35]),
+    ("lancero", "lancero", "pulso_terrestre", "Pulso glacial", "03_lanza_glacial", "centro", [L("C", 0.0, 0.1, 1.1), L("C", 0.0, 0.1, 1.1, flip=True)], 0.9, [0.4]),
+    ("lancero", "lancero", "torbellino_lanzas", "Torbellino de lanzas", "06_torbellino_lanzas", "centro", [L("C", 0.0, 0.12, 1.3, "loop", t1=1.5)], 1.7, [0.45, 0.8, 1.15, 1.5]),
+    ("lancero", "lancero", "juicio_final", "Descenso celestial", "10_descenso_celestial", "suelo", [L("GT", 0.0, 0.12, 1.0, "loop", t1=1.5)], 1.7, [0.4, 0.75, 1.1]),
+
     # clérigo: los instantáneos (proyectiles, golpes) duran lo que su secuencia; los que se quedan (escudo, santuario, tormenta) mantienen o repiten sus cuadros mientras duran
     ("clerigo", "clerigo_sprites", "curar", "Cura divina", "01_cura_divina", "suelo", [L("GT", 0.0, 0.12, 0.8)], 1.1, [0.3]),
     ("clerigo", "clerigo_sprites", "bendicion", "Lanza de serafín", "09_lanza_serafin", "centro", vuelo(0.7, 0.45), 0.55, [0.45]),
@@ -83,7 +97,11 @@ for paquete in sorted(PRESENTES):
         ANCLAS[(paquete, s["name"])] = s["anchor"]
 
 for clase, paquete, pid, nombre, carpeta, origen, capas, dur, golpes in EFECTOS:
+    girar = carpeta.endswith("_rot90")
+    carpeta = carpeta[:-6] if girar else carpeta
     fr = [Image.open(os.path.join(FUENTE, paquete, carpeta, "%02d.png" % (i + 1))).convert("RGBA") for i in range(8)]
+    if girar:
+        fr = [f.rotate(-90) for f in fr]
     cajas = [f.getchannel("A").point(lambda v: 255 if v > 12 else 0).getbbox() for f in fr]
     cajas = [c for c in cajas if c]
     x0, y0 = max(0, min(c[0] for c in cajas) - 4), max(0, min(c[1] for c in cajas) - 4)

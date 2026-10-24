@@ -1,40 +1,41 @@
 {
  "id_dos_coronas": "fisura_del_lancero",
  "clase": "lancero",
- "nombre": "Fisura del lancero",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Impacto sísmico",
+ "poder_fao": "(secuencia propia: paquete lancero)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    333,
+    392
    ],
    "origin": [
-    128,
-    128
+    167,
+    388
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
+  "inferida": false,
   "duracion_s": 1.0,
   "golpes_s": [
-   0.4
+   0.35
   ],
   "capas": [
    {
     "s": "fx",
     "w": "GT",
     "t0": 0.0,
-    "ms": 0.06,
+    "ms": 0.11,
     "sc": 0.95,
     "a": 1.0,
-    "modo": "once"
+    "modo": "once",
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "lancero/fisura_del_lancero del paquete de poderes."
+ "nota": "lancero/07_impacto_sismico (640x640, recortado a 333x392)."
 }

@@ -1,40 +1,43 @@
 {
  "id_dos_coronas": "jabalina",
  "clase": "lancero",
- "nombre": "Jabalina",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Lanza ígnea",
+ "poder_fao": "(secuencia propia: paquete lancero)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    423,
+    217
    ],
    "origin": [
-    128,
-    128
+    211,
+    108
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.1,
+  "inferida": false,
+  "duracion_s": 0.55,
   "golpes_s": [
-   0.5
+   0.45
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "GT",
-    "t0": 0.1,
-    "ms": 0.06,
-    "sc": 0.8,
+    "w": "C",
+    "t0": 0.0,
+    "ms": 0.05,
+    "sc": 0.7,
     "a": 1.0,
-    "modo": "once"
+    "modo": "vuelo",
+    "mezcla": "alpha",
+    "t1": 0.45,
+    "giro": "libre"
    }
   ]
  },
- "nota": "lancero/estocada_celestial del paquete de poderes."
+ "nota": "lancero/02_lanza_ignea (640x640, recortado a 423x217)."
 }
