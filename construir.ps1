@@ -7,12 +7,20 @@ param(
   [string]$Servidor = "",
   [int]$Puerto = 0,
   [string]$Actualizaciones = "",      # dirección de los parches (por defecto http://<Servidor>/actualizacion/)
-  [string]$Love = ""
+  [string]$Love = "",
+  [switch]$SinCifrar                  # solo para depurar: deja el juego sin proteger (código y arte a la vista dentro del .love)
 )
 $ErrorActionPreference = "Stop"
 $raiz = Split-Path -Parent $MyInvocation.MyCommand.Path
 $dist = Join-Path $raiz "dist"
 New-Item -ItemType Directory -Force $dist | Out-Null
+
+# carpeta de LÖVE: hace falta para pegar el .exe y para compilar el Lua a bytecode al proteger el paquete
+if (-not $Love) {
+  foreach ($c in @((Join-Path $raiz "..\love"), "C:\Program Files\LOVE")) {
+    if (Test-Path (Join-Path $c "love.exe")) { $Love = (Resolve-Path $c).Path; break }
+  }
+}
 
 function Vaciar($ruta) {
   if (Test-Path $ruta) { Get-ChildItem $ruta -Recurse -Force | Remove-Item -Recurse -Force; Remove-Item $ruta -Force }
@@ -32,6 +40,12 @@ function Empaquetar($nombre) {
     $lua = "-- Generado por construir.ps1: servidor al que se conecta este juego y de dónde baja las actualizaciones.`r`nreturn { host = `"$Servidor`", puerto = $Puerto, actualizaciones = `"$urlAct`" }`r`n"
     [System.IO.File]::WriteAllText((Join-Path $stage "src\infraestructura\destino.lua"), $lua, (New-Object System.Text.UTF8Encoding $false))
   }
+  if ($nombre -eq "juego" -and -not $SinCifrar) {
+    # bytecode + código y datos cifrados en datos.dat + arte cifrado archivo a archivo (ver herramientas\empaquetar.py)
+    if (-not $Love) { throw "Para proteger el juego hace falta LÖVE (-Love 'C:\ruta\a\love'), o usa -SinCifrar." }
+    python -I -X utf8 (Join-Path $raiz "herramientas\empaquetar.py") $stage --love $Love
+    if ($LASTEXITCODE -ne 0) { throw "herramientas\empaquetar.py falló (¿está Python instalado?)" }
+  }
   $zip = Join-Path $dist ($nombre + ".zip")
   $love = Join-Path $dist ($nombre + ".love")
   if (Test-Path $zip) { Remove-Item $zip -Force }
@@ -46,11 +60,6 @@ Empaquetar "servidor"
 Empaquetar "juego"
 
 # --- Juego para Windows: love.exe + juego.love fusionados en un solo .exe ---
-if (-not $Love) {
-  foreach ($c in @((Join-Path $raiz "..\love"), "C:\Program Files\LOVE")) {
-    if (Test-Path (Join-Path $c "love.exe")) { $Love = (Resolve-Path $c).Path; break }
-  }
-}
 if (-not $Love) {
   "No encontré la carpeta de LÖVE: no se genera el .exe. Usa -Love 'C:\ruta\a\love'."
 } else {

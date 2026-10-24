@@ -174,6 +174,21 @@ UPDATE cuentas SET rol='gm' WHERE usuario='nombre';   -- 'cm' o NULL para quitar
 - `dist/DosCoronas-Windows/` — `DosCoronas.exe` (love.exe con el icono de la corona + `juego.love`) y las DLL de LÖVE.
   La dirección del servidor y de las actualizaciones va **dentro** del paquete (`src/infraestructura/destino.lua`), sin `.env` visible.
 
+#### Protección del cliente
+`construir.ps1` (y `publicar_parche.ps1`) pasan el cliente por `herramientas/empaquetar.py`, de modo que abrir el `.exe` o el parche con WinRAR/7-Zip
+solo enseña `main.lua`/`conf.lua` en bytecode, `datos.dat` y el arte ilegible:
+- todo el `.lua` se compila a bytecode con el LuaJIT de LÖVE (`herramientas/compilar_lua`; conserva archivo:línea en los errores);
+- el código y los datos (xml, mpc…) van en un zip cifrado, `datos.dat` (`parche.dat` en un parche); `main.lua` es un cargador mínimo que lo descifra y monta
+  en memoria, y el `main.lua` de `juego/` pasa a ser `arranque.lua` dentro de él;
+- el arte (png, jpg, ttf) se cifra archivo a archivo y se descifra al vuelo en `love.graphics.newImage`, `love.image.newImageData`, `newFont` y
+  `love.filesystem.newFileData` (envoltorio al principio de `juego/main.lua`). `arte/icono.png` queda en claro (lo lee `conf.lua`).
+- La clave está en `recursos/clave_cifrado.txt` (**se versiona**: los parches tienen que usar la misma que el paquete instalado; si la cambias, todos los
+  jugadores necesitan un paquete completo nuevo). Va dentro del cliente, así que frena el copiado casual, no a quien depure el juego con paciencia.
+- En desarrollo (`love juego`) nada de esto se usa. `construir.ps1 -SinCifrar` genera un paquete sin proteger para depurar.
+- Un parche protegido solo lo entiende un cliente que ya trae este cargador: **el primer lanzamiento tras este cambio debe ser un paquete completo**
+  (`publicar_parche.ps1 -Completo`, que ya obliga a los clientes viejos a bajarlo).
+- Coste: construir tarda unos minutos más (cifra ~12 000 archivos) y el arranque descifra ~1 MB de código; el arte se descifra al cargarlo.
+
 ### 7.2 Web de descarga
 `web/publicar.ps1 -Construir -Servidor IP -Version "beta X.Y.Z"` reconstruye, comprime `DosCoronas-Windows.zip` en `web/descargas/` y escribe `version.json`
 (versión, tamaño, sha256). Se publica copiando `web/` al repo **dos-coronas-web** (GitHub Pages) y haciendo push; el zip va en `descargas/`.

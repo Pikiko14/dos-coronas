@@ -110,20 +110,38 @@ function Incluir($rel, $ruta) {
   return $true
 }
 
-$zip = [System.IO.Compression.ZipFile]::Open($rutaZip, "Create")
+# 1) se copia a una carpeta temporal lo que lleva el parche; 2) herramientas\empaquetar.py lo protege (bytecode, código y datos cifrados en
+# parche.dat, arte cifrado); 3) se comprime esa carpeta. Con el mismo formato y la misma clave (recursos\clave_cifrado.txt) que el paquete completo.
+$loveDir = ""
+foreach ($c in @((Join-Path $raiz "..\love"), "C:\Program Files\LOVE")) { if (Test-Path (Join-Path $c "love.exe")) { $loveDir = (Resolve-Path $c).Path; break } }
+if (-not $loveDir) { throw "No encontré la carpeta de LÖVE (se necesita para compilar el parche a bytecode): ponla en ..\love junto al proyecto." }
+$stageParche = Join-Path $raiz "dist\parche-stage"
+if (Test-Path $stageParche) { Remove-Item $stageParche -Recurse -Force }
+New-Item -ItemType Directory -Force $stageParche | Out-Null
 $n = 0; $nArte = 0
+foreach ($par in @(@{ dir = (Join-Path $raiz "juego"); pre = "" }, @{ dir = (Join-Path $raiz "compartido"); pre = "compartido/" })) {
+  $base = $par.dir.TrimEnd("\") + "\"
+  foreach ($f in Get-ChildItem $par.dir -Recurse -File) {
+    $rel = $f.FullName.Substring($base.Length).Replace("\", "/")
+    if ($par.pre -eq "" -and -not (Incluir $rel $f.FullName)) { continue }
+    $dest = Join-Path $stageParche ($par.pre + $rel)
+    New-Item -ItemType Directory -Force (Split-Path $dest) | Out-Null
+    Copy-Item $f.FullName $dest
+    $n++
+    if ($rel -match "^arte/") { $nArte++ }
+  }
+}
+python -I -X utf8 (Join-Path $raiz "herramientas\empaquetar.py") $stageParche --love $loveDir --parche
+if ($LASTEXITCODE -ne 0) { throw "herramientas\empaquetar.py falló (¿está Python instalado?)" }
+$zip = [System.IO.Compression.ZipFile]::Open($rutaZip, "Create")
 try {
-  foreach ($par in @(@{ dir = (Join-Path $raiz "juego"); pre = "" }, @{ dir = (Join-Path $raiz "compartido"); pre = "compartido/" })) {
-    $base = $par.dir.TrimEnd("\") + "\"
-    foreach ($f in Get-ChildItem $par.dir -Recurse -File) {
-      $rel = $f.FullName.Substring($base.Length).Replace("\", "/")
-      if ($par.pre -eq "" -and -not (Incluir $rel $f.FullName)) { continue }
-      [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $f.FullName, ($par.pre + $rel), [System.IO.Compression.CompressionLevel]::Optimal)
-      $n++
-      if ($rel -match "^arte/") { $nArte++ }
-    }
+  $baseStage = $stageParche.TrimEnd("\") + "\"
+  foreach ($f in Get-ChildItem $stageParche -Recurse -File) {
+    $rel = $f.FullName.Substring($baseStage.Length).Replace("\", "/")
+    [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $f.FullName, $rel, [System.IO.Compression.CompressionLevel]::Optimal)
   }
 } finally { $zip.Dispose() }
+Remove-Item $stageParche -Recurse -Force
 
 $sha = (Get-FileHash $rutaZip -Algorithm SHA256).Hash.ToLower()
 $minimo = if ($previo.ContainsKey("minimo")) { $previo["minimo"] } else { "0" }

@@ -1,3 +1,30 @@
+-- Paquete cifrado: el arte (png, jpg, ttf) viaja cifrado archivo a archivo y el código y los datos van dentro de datos.dat (lo monta el
+-- main.lua que genera herramientas/empaquetar.py, que además deja DC_DESCIFRAR). Aquí los cargadores de imágenes y fuentes descifran al
+-- vuelo lo que lleva la marca DCX1; en desarrollo (love juego) no hay DC_DESCIFRAR y todo funciona como siempre.
+if DC_DESCIFRAR then
+  local descifrar = DC_DESCIFRAR
+  local leer, nuevoDatos = love.filesystem.read, love.filesystem.newFileData
+  local function claro(ruta)
+    if type(ruta) ~= "string" or #ruta > 260 then return nil end
+    local ext = ruta:match("%.(%w+)$")
+    if ext ~= "png" and ext ~= "jpg" and ext ~= "ttf" then return nil end
+    local bytes = leer(ruta)
+    local plano = bytes and descifrar(bytes)
+    return plano and nuevoDatos(plano, ruta) or nil
+  end
+  local function envolver(tabla, nombre)
+    local orig = tabla[nombre]
+    tabla[nombre] = function(a, ...) return orig(claro(a) or a, ...) end
+  end
+  envolver(love.graphics, "newImage")
+  envolver(love.image, "newImageData")
+  envolver(love.graphics, "newFont")
+  love.filesystem.newFileData = function(a, ...)
+    if select("#", ...) == 0 then return claro(a) or nuevoDatos(a) end
+    return nuevoDatos(a, ...)
+  end
+end
+
 -- Carga el código compartido. Primero busca una copia dentro de este proyecto
 -- (compartido/, la deja construir.bat al empaquetar) y, si no hay, usa la
 -- carpeta hermana ../compartido del repositorio.
@@ -52,7 +79,14 @@ do
       end)
       if okH and hash == datos.sha256 then
         fs.write("actualizacion_intento", tostring(n))
-        if not fs.mount(zip, "", false) then fs.remove("actualizacion_intento") end
+        if not fs.mount(zip, "", false) then
+          fs.remove("actualizacion_intento")
+        elseif DC_DESCIFRAR and fs.getInfo("parche.dat") then
+          -- el código y los datos del parche van cifrados dentro de parche.dat: se montan por delante de todo
+          local plano = DC_DESCIFRAR(fs.read("parche.dat"))
+          DC_PARCHE = plano and fs.newFileData(plano, "parche.zip")
+          if not (DC_PARCHE and fs.mount(DC_PARCHE, "", false)) then fs.remove("actualizacion_intento") end
+        end
       else
         descartar()
       end
