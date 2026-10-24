@@ -1,0 +1,44 @@
+Todo lo pedido ya está subido. Lo último fue el otro 30 % menos de criaturas en los continentes (commit 13be5eb), que está en GitHub (main) y en el servidor, activo. No republiqué el parche del cliente porque este cambio solo afecta al servidor.
+
+El ajuste deja la densidad de criaturas de los continentes en 0,49, que es la anterior (0,7) por 0,7. Los mapas de FAO, los jefes, las mazmorras y la isla de la Cicatriz no cambian. Si prefieres que sea un 30 % menos respecto al original y no respecto a lo que había, el valor sería 0,7 y ya estaba así. La cifra está en compartido/datos/constantes.xml (DENSIDAD_CRIATURAS). Las pruebas del servidor pasan, salvo el fallo de DPS que ya existía.
+
+Cómo subir a mano al servidor
+
+Hay dos cosas distintas que subir: el servidor y el cliente. Las dos se hacen desde PowerShell, en C:\Users\User\juegos\dos-coronas, con SSH ya configurado hacia root@77.42.52.122.
+
+1. Servidor (lógica, mapas, datos, horarios de eventos)
+
+.\despliegue\ubuntu\desplegar.ps1 -Servidor 77.42.52.122
+
+Ese script hace tres cosas:
+
+Construye dist\servidor.love.
+Lo copia por scp a /opt/doscoronas/servidor.love en el VPS.
+Reinicia el servicio doscoronas.
+
+No toca el .env ni la base de datos. Para comprobar que quedó bien:
+
+ssh root@77.42.52.122 "systemctl is-active doscoronas"
+
+Para ver los logs en vivo: ssh root@77.42.52.122 journalctl -u doscoronas -f.
+
+2. Cliente (lo que reciben los jugadores al abrir el juego: pantallas, arte, mapas)
+
+.\despliegue\ubuntu\publicar_parche.ps1 -Servidor 77.42.52.122
+Sube en 1 el build de juego\version.lua y publica un parche con todo el código y el arte nuevo o cambiado.
+Después commitea juego\version.lua y haz git push.
+Para reconstruir el juego entero (cuando cambia main.lua, conf.lua o el .exe) añade -Completo. Son unos 85 MB.
+Con -SinSubir solo genera el parche en dist\parche\ para probarlo en local.
+
+3. Código en GitHub
+
+git add -A
+git commit -m "mensaje"
+git push origin HEAD
+
+Cuándo usar cada uno
+
+Solo reglas del servidor, horarios, densidad de criaturas, mapas: basta el paso 1.
+Cambios de pantallas, arte, mapas nuevos o textos del cliente: pasos 1 y 2.
+
+Ajustes sin código: se cambian en /opt/doscoronas/.env del VPS (por ejemplo DOSCORONAS_ASEDIO_HORA=17) y se aplican con ssh root@77.42.52.122 systemctl restart doscoronas.
