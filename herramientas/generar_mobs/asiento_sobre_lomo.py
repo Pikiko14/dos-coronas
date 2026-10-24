@@ -56,6 +56,13 @@ def recolocar(idn, anim, plano):
         ventana = celda[:, max(0, xh - 4):xh + 5]
         f = np.where(ventana.any(1))[0]
         ytop = f.min() if len(f) else y0
+        # el lomo es la primera fila (de arriba abajo) en que la silueta ya es ancha como el cuerpo: así un cuello, unos cuernos o una cola que
+        # sobresalen justo en la columna del asiento no suben al jinete por encima del animal
+        anchos = celda.sum(1)
+        ancho_cuerpo = np.percentile(anchos[anchos > 0], 85)
+        cuerpo = np.where(anchos >= 0.55 * ancho_cuerpo)[0]
+        if len(cuerpo):
+            ytop = max(ytop, cuerpo.min())
         lomo = LOMO_PEQUENA if (np.where(alfa[:, :].any(1))[0].size and alto * ESCALA <= PEQUENA) else LOMO
         cadera = ytop + lomo * alto - base               # (px respecto a la base, hacia abajo)
         origen = cadera + PELVIS

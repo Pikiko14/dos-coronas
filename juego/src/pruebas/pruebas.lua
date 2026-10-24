@@ -1613,23 +1613,35 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
       local Dibujo = require("src.presentacion.render.dibujo")
       local clase, gen, tier = os.getenv("DC_PRUEBA_MONTADO8"), os.getenv("DC_GEN") or "h", tonumber(os.getenv("DC_TIER") or "8")
       local monturas = {}
-      for m in (os.getenv("DC_MONTURAS") or "mnt_001,mnt_006,mnt_198,mnt_201,mnt_144,mnt_250,mnt_901,mnt_103,mnt_294,mnt_445"):gmatch("[^,]+") do monturas[#monturas + 1] = m end
-      local CW, CH = 100, 120
-      local cv = love.graphics.newCanvas(CW * 8, CH * #monturas)
-      love.graphics.push("all")
-      love.graphics.setCanvas({ cv, stencil = true })
-      love.graphics.clear(0.23, 0.27, 0.34, 1)
-      for fila, mid in ipairs(monturas) do
-        for oc = 0, 7 do
-          love.timer.sleep(0.02)
-          local e = { kind = "jugador", id = 7000 + fila * 10 + oc, clase = clase, gen = gen, equipo = I.equipoDe(clase, tier), x = 10, y = 10, dir = 1, _f8 = oc,
-                      montado = mid, mov = false, vivo = true, faccion = "albor", velx = 0, vely = 0 }
-          local ok, err = pcall(Dibujo.entidad, e, oc * CW + CW / 2, (fila - 1) * CH + CH - 22, nil, nil)
-          if not ok then fallar(errores, "montado8 " .. mid .. " octante " .. oc, false, tostring(err)) end
-        end
+      local lista = os.getenv("DC_MONTURAS")
+      if lista == "todas" then
+        local anim = require("src.presentacion.render.montura_anim_datos")
+        local ids = {}
+        for id in pairs(anim) do ids[#ids + 1] = id end
+        table.sort(ids)
+        lista = table.concat(ids, ",")
       end
-      love.graphics.pop()
-      Log.volcar("capturas/montado8_" .. clase .. ".png", cv:newImageData():encode("png"):getString())
+      for m in (lista or "mnt_001,mnt_006,mnt_198,mnt_201,mnt_144,mnt_250,mnt_901,mnt_103,mnt_294,mnt_445"):gmatch("[^,]+") do monturas[#monturas + 1] = m end
+      local CW, CH, POR_HOJA = 100, 120, 12
+      for hoja = 1, math.ceil(#monturas / POR_HOJA) do
+        local desde = (hoja - 1) * POR_HOJA + 1
+        local filas = math.min(POR_HOJA, #monturas - desde + 1)
+        local cv = love.graphics.newCanvas(CW * 8, CH * filas)
+        love.graphics.push("all")
+        love.graphics.setCanvas({ cv, stencil = true })
+        love.graphics.clear(0.23, 0.27, 0.34, 1)
+        for fila = 1, filas do
+          local mid = monturas[desde + fila - 1]
+          for oc = 0, 7 do
+            local e = { kind = "jugador", id = 7000 + (desde + fila) * 10 + oc, clase = clase, gen = gen, equipo = I.equipoDe(clase, tier), x = 10, y = 10, dir = 1, _f8 = oc,
+                        montado = mid, mov = false, vivo = true, faccion = "albor", velx = 0, vely = 0 }
+            local ok, err = pcall(Dibujo.entidad, e, oc * CW + CW / 2, (fila - 1) * CH + CH - 22, nil, nil)
+            if not ok then fallar(errores, "montado8 " .. mid .. " octante " .. oc, false, tostring(err)) end
+          end
+        end
+        love.graphics.pop()
+        Log.volcar("capturas/montado8_" .. clase .. (#monturas > POR_HOJA and ("_" .. hoja) or "") .. ".png", cv:newImageData():encode("png"):getString())
+      end
     end)
   end
   -- Validación completa del jinete montado: DC_PRUEBA_MONTADO_TODO=1. Recorre TODAS las monturas de FAO x 8 direcciones x 6 clases x 2 géneros x 2 escalones de
