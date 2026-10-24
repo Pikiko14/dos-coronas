@@ -844,6 +844,7 @@ function Entrada.texto(app, t)
 end
 
 function Entrada.tecla(app, tecla)
+  if require("src.presentacion.ajuste_montura").tecla(app, tecla) then return end      -- (personal: ajustar el asiento del jinete montado)
   -- RePág / AvPág recorren el chat; Fin vuelve a lo último
   if app.estado == "juego" then
     if tecla == "pageup" then Interfaz.chatScroll = (Interfaz.chatScroll or 0) + 4 return end

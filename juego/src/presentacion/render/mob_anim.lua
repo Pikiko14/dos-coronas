@@ -21,6 +21,17 @@ for _, d in pairs(M.DEFS) do d.mira = d.mira or "izq" end
 -- asiento del jinete de cada montura de FAO por cuadro (herramientas/generar_mobs/monturas.py)
 local ASIENTO = require("src.presentacion.render.montura_asiento_datos")
 local ultimoPaso = {}       -- nombre -> { estado, paso } del último cuadro dibujado (para colocar al jinete)
+-- ajustes hechos a mano del asiento (montura_ajustes.lua; los guardados desde el juego en la carpeta de datos mandan sobre los del paquete)
+local AJUSTES = require("src.presentacion.render.montura_ajustes")
+do
+  local ok, f = pcall(love.filesystem.load, "montura_ajustes.lua")
+  if ok and f then
+    local ok2, t = pcall(f)
+    if ok2 and type(t) == "table" then for k, v in pairs(t) do AJUSTES[k] = v end end
+  end
+end
+M.AJUSTES = AJUSTES
+function M.ultimo(nombre) return ultimoPaso[nombre] end
 
 local cache = {}
 
@@ -198,7 +209,9 @@ function M.asiento(nombre, dir)
   local dx, dy = datos[u.estado][k + 1], datos[u.estado][k + 2]
   if not dx then return nil end
   local e = d.escala
-  return (flip and -dx or dx) * e - (u.corrido or 0), 2 + dy * e, u.paso, u.estado, hoja, flip
+  local aj = AJUSTES[nombre] and AJUSTES[nombre][hoja]
+  local ax, ay = aj and aj[1] or 0, aj and aj[2] or 0
+  return (flip and -dx or dx) * e - (u.corrido or 0) + (flip and -ax or ax), 2 + dy * e + ay, u.paso, u.estado, hoja, flip
 end
 
 -- Cadáver: la animación de muerte y, al terminar, el último cuadro que se va apagando. transcurrido: segundos desde que murió.

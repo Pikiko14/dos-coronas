@@ -167,6 +167,7 @@ function App.dibujar()
   local mod = App.modulos[App.estado]
   if mod and mod.dibujar then mod.dibujar(App, w, h) end
   if App.estado == "menu" then Actualizacion.dibujar(w, h) end
+  require("src.presentacion.ajuste_montura").dibujar(App, w, h)
   require("src.presentacion.ayudas").cursor(Interfaz)
 end
 

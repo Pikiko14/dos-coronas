@@ -1572,6 +1572,18 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
     end
     fallar(errores, "el carnero negro (mnt_901) está en los datos", anim.mnt_901 ~= nil and asiento.mnt_901 ~= nil)
   end)
+  -- El ajuste a mano del asiento (personal) desplaza al jinete y es inactivo para un jugador normal.
+  paso("monturas FAO: ajuste a mano del asiento del jinete", function()
+    local MobAnim = require("src.presentacion.render.mob_anim")
+    local Ajuste = require("src.presentacion.ajuste_montura")
+    fallar(errores, "sin partida ni personal no hace nada", Ajuste.tecla({ estado = "juego", jugador = { montado = "mnt_001" } }, "kp4") == false)
+    MobAnim.dibujar("mnt_001", "wait", 0, 100, 100, 1, nil, 0, nil)
+    local dx0, dy0 = MobAnim.asiento("mnt_001", 1)
+    MobAnim.AJUSTES.mnt_001 = { [0] = { 3, -4 }, [1] = { 3, -4 }, [2] = { 3, -4 }, [3] = { 3, -4 }, [4] = { 3, -4 } }
+    local dx1, dy1 = MobAnim.asiento("mnt_001", 1)
+    MobAnim.AJUSTES.mnt_001 = nil
+    fallar(errores, "el ajuste mueve al jinete respecto al asiento", dx0 and dx1 and math.abs(math.abs(dx1 - dx0) - 3) < 1e-6 and math.abs(dy1 - dy0 + 4) < 1e-6, tostring(dx1 and dx1 - dx0) .. "," .. tostring(dy1 and dy1 - dy0))
+  end)
   -- Jinete sentado sobre las monturas de FAO por el camino real del juego (Dibujo.entidad): DC_PRUEBA_MONTADO=<clase> (DC_GEN, DC_TIER) guarda
   -- capturas/montado_<clase>.png: una fila por montura, cuatro direcciones del mundo y tres instantes de la carrera en cada una.
   if os.getenv("DC_PRUEBA_MONTADO") then
