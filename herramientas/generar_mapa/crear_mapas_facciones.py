@@ -405,7 +405,6 @@ def necropolis():
     m.poner(10420, CX, 17, 7, True, 8)
     for dx in (-12, 12):
         m.poner(6026, CX + dx, 22, 2.5, True, 2)
-        m.poner(6064, CX + dx * 1.25, 27, 2.5, False)
     m.poner(8250, CX - 6, 26, 3, True, 3)
     m.poner(8250, CX + 6, 26, 3, True, 3)
     m.poner(12117, CX - 20, 22, 5, True, 5)
@@ -436,7 +435,6 @@ def necropolis():
         m.poner(m.rng.choice([9748, 9749, 9753]), xe[k] + 0.5, ye[k] + 0.5)
     # ---- detalles por el campo
     libre = ~(m.camino | m.agua | m.occ)
-    m.esparcir([6047, 6051, 6059, 6063, 6064, 6065], 16, libre & (n1 > 0.3), 1.6)
     m.esparcir([8205, 8206], 16, libre, 1.2, False, 1, 0)
     m.esparcir([6644, 6648, 6652, 6656], 14, libre & (n3 > 0.55), 2, True, 2)
     m.esparcir([9750, 9751], 40, libre, 0.8)

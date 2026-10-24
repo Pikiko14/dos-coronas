@@ -5,85 +5,85 @@ return {
     monstruo = "esqueleto",
     cantidad = 3,
     radio = 4,
-    x = 84.75,
-    y = 55.75
+    x = 6.25,
+    y = 22.25
   },
   {
     monstruo = "murcielago_purpura",
     cantidad = 3,
     radio = 5,
-    x = 87.75,
-    y = 11.75
+    x = 89.75,
+    y = 18.25
   },
   {
     monstruo = "esqueleto_soldado",
     cantidad = 3,
     radio = 4,
-    x = 34.75,
-    y = 10.25
+    x = 78.75,
+    y = 11.75
   },
   {
     monstruo = "espiritu_velo",
     cantidad = 2,
     radio = 4,
-    x = 9.75,
-    y = 15.75
+    x = 75.75,
+    y = 44.75
   },
   {
     monstruo = "momia",
     cantidad = 2,
     radio = 4,
-    x = 69.25,
-    y = 52.25
+    x = 8.25,
+    y = 34.25
   },
   {
     monstruo = "dama_velo",
     cantidad = 2,
     radio = 4,
-    x = 91.75,
-    y = 41.25
+    x = 70.25,
+    y = 23.75
   },
   {
     monstruo = "esqueleto_arquero",
     cantidad = 3,
     radio = 5,
-    x = 54.75,
-    y = 8.25
+    x = 63.75,
+    y = 47.25
   },
   {
     monstruo = "vampiro",
     cantidad = 2,
     radio = 4,
-    x = 73.25,
-    y = 8.75
+    x = 29.75,
+    y = 40.25
   },
   {
     monstruo = "esqueleto",
     cantidad = 3,
     radio = 4,
-    x = 19.25,
-    y = 29.25
+    x = 36.25,
+    y = 16.75
   },
   {
     monstruo = "murcielago_purpura",
     cantidad = 3,
     radio = 5,
-    x = 72.25,
-    y = 22.25
+    x = 6.75,
+    y = 9.75
   },
   {
     monstruo = "esqueleto_soldado",
     cantidad = 3,
     radio = 4,
-    x = 22.75,
-    y = 48.25
+    x = 15.25,
+    y = 48.75
   },
   {
     monstruo = "espiritu_velo",
     cantidad = 2,
     radio = 4,
-    x = 69.25,
-    y = 39.75
+    x = 63.75,
+    y = 8.25
   },
   {
     monstruo = "jefe_rey_esqueleto",

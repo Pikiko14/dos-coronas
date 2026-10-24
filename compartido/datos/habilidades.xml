@@ -7,7 +7,7 @@
   estado: lo que aplica al golpear (tipo, prob, dur, pct).
 -->
 <habilidades>
-  <!-- ---- guerrero ---- -->
+  <!-- guerrero -->
   <habilidad id="golpe" nombre="Golpe" clase="guerrero" tipo="enemigo" cd="1.5" coef="1.10" desc="Un golpe firme con el arma." mana="10" rango="1.45">
     <estado tipo="sangrar" prob="0.12"/>
   </habilidad>
@@ -28,7 +28,7 @@
     <estado tipo="sangrar" dur="6" prob="0.6"/>
   </habilidad>
   <habilidad id="ejecucion" nombre="Ejecución" clase="guerrero" tipo="enemigo" cd="22" coef="1.8" ejecuta="2.4" desc="Remata a su presa: daña mucho más a un enemigo con poca vida." mana="40" rango="1.8"/>
-  <!-- ---- mago ---- -->
+  <!--  mago  -->
   <habilidad id="misil" nombre="Misil arcano" clase="mago" tipo="enemigo" cd="2" coef="1.25" dano="magico" desc="Un dardo de energía." mana="8" proyectil="misil" rango="7.2">
     <estado tipo="lentitud" dur="3" pct="0.3" prob="0.15"/>
   </habilidad>
@@ -49,7 +49,7 @@
   <habilidad id="meteoro" nombre="Meteoro" clase="mago" tipo="punto" aoe="2.6" cd="22" coef="2.5" dano="magico" desc="Una roca en llamas cae sobre la zona." mana="45" rango="8">
     <estado tipo="quemar" dur="5" prob="0.6"/>
   </habilidad>
-  <!-- ---- cazador ---- -->
+  <!--  cazador  -->
   <habilidad id="disparo" nombre="Disparo" clase="cazador" tipo="enemigo" cd="1.05" coef="1.15" desc="Una flecha rápida." mana="6" proyectil="flecha" rango="7.4">
     <estado tipo="sangrar" prob="0.12"/>
   </habilidad>
@@ -74,7 +74,7 @@
     <estado tipo="lentitud" dur="4" pct="0.5" prob="1"/>
   </habilidad>
   <habilidad id="marca_cazador" nombre="Marca del cazador" clase="cazador" tipo="enemigo" cd="20" coef="0.5" marca="0.25" dur="8" desc="Marcas a tu presa: recibe un 25% más de daño de cualquiera durante unos segundos." mana="22" proyectil="flecha" rango="8"/>
-  <!-- ---- clerigo ---- -->
+  <!--  clerigo  -->
   <habilidad id="curar" nombre="Curación" clase="clerigo" tipo="aliado" cd="2.1" cura="28" curaN="5" desc="Restaura vida a un aliado o a ti." mana="16" rango="6.5"/>
   <habilidad id="bendicion" nombre="Rayo bendito" clase="clerigo" tipo="enemigo" cd="4" coef="1.5" dano="magico" desc="Un rayo bendito que hiere al enemigo. Se aprende al nivel 5." mana="16" proyectil="sagrado" rango="6.4"/>
   <habilidad id="castigo" nombre="Castigo" clase="clerigo" tipo="enemigo" cd="1.35" coef="1.12" dano="magico" desc="Luz que hiere. El clérigo también ataca." mana="10" proyectil="sagrado" rango="6.4">
@@ -89,7 +89,7 @@
   <habilidad id="cadena_sanacion" nombre="Cadena de sanación" clase="clerigo" tipo="aliado" rebotes="2" cura="20" curaN="3" cd="9" desc="Cura a un aliado y la luz salta a otros dos cercanos." mana="36" rango="6.5"/>
   <habilidad id="tormenta_divina" nombre="Tormenta divina" clase="clerigo" tipo="punto" aoe="3.2" pulsos="3" cd="24" coef="1.2" dano="magico" cura="14" curaN="2" desc="Una tormenta de luz castiga tres veces la zona y cura a tus aliados dentro." mana="70" rango="7.5"/>
   <habilidad id="resurreccion" nombre="Resurrección" clase="clerigo" tipo="resucitar" cd="90" desc="Devuelve a la vida a un aliado caído cerca de ti, con la mitad de su vida." mana="100" rango="6"/>
-  <!-- ---- lancero ---- -->
+  <!--  lancero  -->
   <habilidad id="estocada" nombre="Estocada" clase="lancero" tipo="enemigo" cd="1.3" coef="1.12" desc="Una estocada larga con la lanza." mana="9" rango="2.5">
     <estado tipo="sangrar" prob="0.1"/>
   </habilidad>
@@ -106,7 +106,7 @@
   <habilidad id="pulso_terrestre" nombre="Pulso terrestre" clase="lancero" tipo="alrededor" cd="14" coef="1.7" aturde="0.9" desc="Una onda de choque a tu alrededor daña y aturde." mana="28" rango="3.4"/>
   <habilidad id="torbellino_lanzas" nombre="Torbellino de lanzas" clase="lancero" tipo="alrededor" pulsos="4" seguir="true" cd="20" coef="0.9" lentitud="0.3" desc="Giras la lanza sin parar: golpeas cuatro veces a los que te rodean." mana="45" rango="3.2"/>
   <habilidad id="juicio_final" nombre="Juicio final" clase="lancero" tipo="punto" aoe="3.4" pulsos="3" cd="30" coef="1.5" aturde="0.6" desc="Una lluvia de lanzas de luz cae tres veces sobre la zona." mana="70" rango="7.5"/>
-  <!-- ---- nigromante ---- -->
+  <!--  nigromante  -->
   <habilidad id="toque_necro" nombre="Toque necrótico" clase="nigromante" tipo="enemigo" cd="2" coef="1.2" dano="magico" desc="Una bola de energía muerta que hiere y a veces drena vida." mana="7" proyectil="necro" rango="7.2">
     <estado tipo="drenar_vida" prob="0.1"/>
   </habilidad>
@@ -129,7 +129,7 @@
     <estado tipo="veneno" dur="5" prob="0.6"/>
   </habilidad>
   <habilidad id="apocalipsis_necromantico" nombre="Apocalipsis necromántico" clase="nigromante" tipo="punto" aoe="3.8" pulsos="2" cd="40" coef="2.6" dano="magico" desc="La muerte misma barre la zona dos veces." mana="95" rango="7.5"/>
-  <!-- ---- orden de los poderes en la barra (teclas 1 a 6; todas las clases tienen 10) ---- -->
+  <!--  orden de los poderes en la barra (teclas 1 a 6; todas las clases tienen 10)  -->
   <barra>
     <cazador lista="disparo,lluvia,trampa,preciso,flecha_veneno,paso_agil,disparo_multiple,disparo_explosivo,disparo_helado,marca_cazador"/>
     <clerigo lista="curar,bendicion,castigo,consagrar,sanacion,juicio,escudo_divino,cadena_sanacion,tormenta_divina,resurreccion"/>

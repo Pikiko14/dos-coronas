@@ -587,7 +587,7 @@ end
 
 -- Suelo de las mazmorras con texturas FAO: cada mazmorra tiene la suya (arte/ciudad/terreno/mz1..mz3.png); la roca maciza se pinta oscura
 -- y sus bordes los dibujan los muros de render/mapa_fao.lua. Sobre el suelo se reparten restos (huesos, brasas, grietas) de cada una.
-local DECOR_MZ = { mz1 = { "restos" }, mz2 = { "brasas", "mancha" }, mz3 = { "grietita", "guijarros" }, mz4 = { "brasas", "mancha" }, mz5 = { "grietita", "guijarros" } }
+local DECOR_MZ = { mz1 = { "guijarros" }, mz2 = { "brasas", "mancha" }, mz3 = { "grietita", "guijarros" }, mz4 = { "brasas", "mancha" }, mz5 = { "grietita", "guijarros" } }
 local function sueloMazmorra(mapa, x, y, px, py, tipo)
   if not mapa.mazmorra or not Iso.activo() or not MapaFao.activo() then return false end
   local nombre = (tipo == "muralla" and "vacio") or (tipo == "mazmorra" and mapa.mazmorra) or nil
