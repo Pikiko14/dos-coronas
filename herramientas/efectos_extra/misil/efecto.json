@@ -1,63 +1,42 @@
 {
  "id_dos_coronas": "misil",
  "clase": "mago",
- "nombre": "Misil arcano",
- "poder_fao": "(secuencia propia: paquete del mago)",
+ "nombre": "Orbe arcano",
+ "poder_fao": "(secuencia propia: paquete mago_sprites)",
  "secuencias": {
-  "orbe": {
-   "sheet": "sheets/orbe.png",
-   "frames": 6,
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 8,
    "cell": [
-    128,
-    128
+    347,
+    331
    ],
    "origin": [
-    64,
-    64
+    173,
+    165
    ],
-   "ms_per_frame": 70.0
-  },
-  "impacto": {
-   "sheet": "sheets/impacto.png",
-   "frames": 5,
-   "cell": [
-    128,
-    128
-   ],
-   "origin": [
-    64,
-    64
-   ],
-   "ms_per_frame": 70.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.8,
+  "inferida": false,
+  "duracion_s": 0.55,
   "golpes_s": [
-   0.42
+   0.45
   ],
   "capas": [
    {
-    "s": "orbe",
+    "s": "fx",
     "w": "C",
-    "t0": 0.05,
-    "ms": 0.07,
-    "sc": 0.8,
+    "t0": 0.0,
+    "ms": 0.05,
+    "sc": 0.5,
     "a": 1.0,
-    "modo": "proj",
-    "t1": 0.42
-   },
-   {
-    "s": "impacto",
-    "w": "T",
-    "t0": 0.42,
-    "ms": 0.07,
-    "sc": 1.1,
-    "a": 1.0,
-    "modo": "once"
+    "modo": "vuelo",
+    "mezcla": "alpha",
+    "t1": 0.45
    }
   ]
  },
- "nota": "orbe_arcano: el orbe viaja y estalla."
+ "nota": "mago_sprites/06_orbe_arcano (640x640, recortado a 347x331)."
 }

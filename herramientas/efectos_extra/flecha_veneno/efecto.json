@@ -1,41 +1,43 @@
 {
  "id_dos_coronas": "flecha_veneno",
  "clase": "cazador",
- "nombre": "Flecha envenenada",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Disparo venenoso",
+ "poder_fao": "(secuencia propia: paquete arquero_hd)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 11,
+   "frames": 8,
    "cell": [
-    250,
-    256
+    405,
+    223
    ],
    "origin": [
-    0,
-    128
+    202,
+    111
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.8,
+  "inferida": false,
+  "duracion_s": 0.6,
   "golpes_s": [
    0.45
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "T",
+    "w": "C",
     "t0": 0.0,
-    "ms": 0.04,
-    "sc": 0.8,
+    "ms": 0.05,
+    "sc": 0.6,
     "a": 1.0,
-    "modo": "estela",
-    "t1": 0.45
+    "modo": "vuelo",
+    "mezcla": "alpha",
+    "t1": 0.45,
+    "giro": "libre"
    }
   ]
  },
- "nota": "arquero/flecha_envenenada del paquete de poderes."
+ "nota": "arquero_hd/04_disparo_venenoso (640x640, recortado a 405x223)."
 }

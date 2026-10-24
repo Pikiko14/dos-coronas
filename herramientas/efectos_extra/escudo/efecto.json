@@ -1,42 +1,39 @@
 {
  "id_dos_coronas": "escudo",
  "clase": "mago",
- "nombre": "Escudo arcano",
- "poder_fao": "(secuencia propia: paquete del mago)",
+ "nombre": "Sanación",
+ "poder_fao": "(secuencia propia: paquete mago_sprites)",
  "secuencias": {
-  "cupula": {
-   "sheet": "sheets/cupula.png",
-   "frames": 9,
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 8,
    "cell": [
-    128,
-    128
+    362,
+    386
    ],
    "origin": [
-    64,
-    64
+    180,
+    383
    ],
-   "ms_per_frame": 90.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.9,
+  "inferida": false,
+  "duracion_s": 1.1,
   "golpes_s": [],
   "capas": [
    {
-    "s": "cupula",
-    "w": "C",
+    "s": "fx",
+    "w": "GT",
     "t0": 0.0,
-    "ms": 0.09,
-    "sc": 1.2,
+    "ms": 0.12,
+    "sc": 0.8,
     "a": 1.0,
     "modo": "once",
-    "off": [
-     0,
-     4
-    ]
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "escudo_magico: la cúpula se forma alrededor del mago (sin el cuadro 5, que trae tres cúpulas sueltas)."
+ "nota": "mago_sprites/07_sanacion (640x640, recortado a 362x386)."
 }

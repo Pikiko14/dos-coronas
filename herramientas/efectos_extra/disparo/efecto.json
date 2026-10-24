@@ -1,41 +1,43 @@
 {
  "id_dos_coronas": "disparo",
  "clase": "cazador",
- "nombre": "Disparo",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Flecha de viento",
+ "poder_fao": "(secuencia propia: paquete arquero_hd)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 11,
+   "frames": 8,
    "cell": [
-    250,
-    256
+    319,
+    181
    ],
    "origin": [
-    0,
-    128
+    159,
+    90
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.75,
+  "inferida": false,
+  "duracion_s": 0.6,
   "golpes_s": [
    0.4
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "T",
+    "w": "C",
     "t0": 0.0,
-    "ms": 0.035,
-    "sc": 0.7,
+    "ms": 0.05,
+    "sc": 0.6,
     "a": 1.0,
-    "modo": "estela",
-    "t1": 0.4
+    "modo": "vuelo",
+    "mezcla": "alpha",
+    "t1": 0.4,
+    "giro": "libre"
    }
   ]
  },
- "nota": "arquero/flecha_penetrante del paquete de poderes."
+ "nota": "arquero_hd/05_flecha_viento (640x640, recortado a 319x181)."
 }

@@ -1,41 +1,41 @@
 {
  "id_dos_coronas": "pantera",
  "clase": "guerrero",
- "nombre": "Pantera asesina",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Corte glacial",
+ "poder_fao": "(secuencia propia: paquete guerrero_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 13,
+   "frames": 8,
    "cell": [
-    248,
-    256
+    358,
+    292
    ],
    "origin": [
-    0,
-    128
+    179,
+    146
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
+  "inferida": false,
   "duracion_s": 0.9,
   "golpes_s": [
-   0.5
+   0.3
   ],
   "capas": [
    {
     "s": "fx",
     "w": "T",
-    "t0": 0.1,
-    "ms": 0.04,
-    "sc": 0.9,
+    "t0": 0.05,
+    "ms": 0.09,
+    "sc": 0.7,
     "a": 1.0,
-    "modo": "estela",
-    "t1": 0.5
+    "modo": "once",
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "guerrero/lanza_fuego del paquete de poderes."
+ "nota": "guerrero_sprites/02_corte_glacial (640x640, recortado a 358x292)."
 }

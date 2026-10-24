@@ -1,26 +1,26 @@
 {
  "id_dos_coronas": "salto_impacto",
  "clase": "guerrero",
- "nombre": "Salto de impacto",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Pisotón sísmico",
+ "poder_fao": "(secuencia propia: paquete guerrero_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    402,
+    251
    ],
    "origin": [
-    128,
-    128
+    202,
+    247
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.15,
+  "inferida": false,
+  "duracion_s": 1.4,
   "golpes_s": [
    0.6
   ],
@@ -28,13 +28,14 @@
    {
     "s": "fx",
     "w": "GT",
-    "t0": 0.0,
-    "ms": 0.07,
-    "sc": 0.9,
+    "t0": 0.35,
+    "ms": 0.1,
+    "sc": 1.0,
     "a": 1.0,
-    "modo": "once"
+    "modo": "once",
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "guerrero/salto_impacto del paquete de poderes."
+ "nota": "guerrero_sprites/08_pisoton_sismico (640x640, recortado a 402x251)."
 }

@@ -2,41 +2,38 @@
  "id_dos_coronas": "teletransporte",
  "clase": "mago",
  "nombre": "Teletransporte",
- "poder_fao": "(secuencia propia: paquete del mago)",
+ "poder_fao": "(secuencia propia: paquete mago_sprites)",
  "secuencias": {
-  "portal": {
-   "sheet": "sheets/portal.png",
-   "frames": 12,
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 8,
    "cell": [
-    128,
-    128
+    338,
+    374
    ],
    "origin": [
-    64,
-    64
+    169,
+    362
    ],
-   "ms_per_frame": 70.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.85,
+  "inferida": false,
+  "duracion_s": 0.9,
   "golpes_s": [],
   "capas": [
    {
-    "s": "portal",
+    "s": "fx",
     "w": "GT",
     "t0": 0.0,
-    "ms": 0.07,
-    "sc": 1.3,
+    "ms": 0.1,
+    "sc": 0.8,
     "a": 1.0,
     "modo": "once",
-    "off": [
-     0,
-     -10
-    ]
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "teletransporte: se juega en el origen y en el destino."
+ "nota": "mago_sprites/08_teletransporte (640x640, recortado a 338x374)."
 }

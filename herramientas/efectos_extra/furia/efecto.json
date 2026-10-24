@@ -1,38 +1,39 @@
 {
  "id_dos_coronas": "furia",
  "clase": "guerrero",
- "nombre": "Furia",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Furia carmesí",
+ "poder_fao": "(secuencia propia: paquete guerrero_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    385,
+    381
    ],
    "origin": [
-    128,
-    128
+    192,
+    377
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.0,
+  "inferida": false,
+  "duracion_s": 1.1,
   "golpes_s": [],
   "capas": [
    {
     "s": "fx",
-    "w": "C",
+    "w": "GC",
     "t0": 0.0,
-    "ms": 0.06,
-    "sc": 0.7,
+    "ms": 0.12,
+    "sc": 0.75,
     "a": 1.0,
-    "modo": "once"
+    "modo": "once",
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "guerrero/golpe_multiple del paquete de poderes."
+ "nota": "guerrero_sprites/06_furia_carmesi (640x640, recortado a 385x381)."
 }

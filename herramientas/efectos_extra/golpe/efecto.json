@@ -1,44 +1,41 @@
 {
  "id_dos_coronas": "golpe",
  "clase": "guerrero",
- "nombre": "Golpe",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Corte ígneo",
+ "poder_fao": "(secuencia propia: paquete guerrero_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    398,
+    261
    ],
    "origin": [
-    128,
-    128
+    199,
+    130
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.95,
+  "inferida": false,
+  "duracion_s": 0.9,
   "golpes_s": [
-   0.35
+   0.3
   ],
   "capas": [
    {
     "s": "fx",
     "w": "T",
-    "t0": 0.1,
-    "ms": 0.05,
-    "sc": 0.8,
+    "t0": 0.05,
+    "ms": 0.09,
+    "sc": 0.65,
     "a": 1.0,
     "modo": "once",
-    "off": [
-     0,
-     -8
-    ]
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "guerrero/corte_poderoso del paquete de poderes."
+ "nota": "guerrero_sprites/01_corte_igneo (640x640, recortado a 398x261)."
 }

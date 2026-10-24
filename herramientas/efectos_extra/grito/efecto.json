@@ -1,38 +1,40 @@
 {
  "id_dos_coronas": "grito",
  "clase": "guerrero",
- "nombre": "Grito de guerra",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Barrera de escudo",
+ "poder_fao": "(secuencia propia: paquete guerrero_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    354,
+    358
    ],
    "origin": [
-    128,
-    128
+    177,
+    179
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.1,
+  "inferida": false,
+  "duracion_s": 1.3,
   "golpes_s": [],
   "capas": [
    {
     "s": "fx",
-    "w": "GC",
-    "t0": 0.05,
-    "ms": 0.065,
-    "sc": 0.95,
+    "w": "C",
+    "t0": 0.0,
+    "ms": 0.13,
+    "sc": 0.75,
     "a": 1.0,
-    "modo": "once"
+    "modo": "hold",
+    "mezcla": "alpha",
+    "t1": 1.3
    }
   ]
  },
- "nota": "guerrero/rugido_guerra del paquete de poderes."
+ "nota": "guerrero_sprites/05_barrera_escudo (640x640, recortado a 354x358)."
 }

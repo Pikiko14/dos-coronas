@@ -4836,19 +4836,15 @@ mundo.tiempo = 100
     end
     local sano, bajo = ocho(1), ocho(0.2)
     fallar(errores, "la ejecución daña mucho más a quien tiene poca vida", bajo > sano * 1.5, sano .. " vs " .. bajo)
-    -- cazador: la marca aumenta el daño recibido
+    -- cazador: la flecha ígnea hiere y prende al objetivo
     mundo, p = nuevo("cazador")
     m = mundo:spawnMonstruo("pinguino_aprendiz", p.x + 3, p.y, { x = p.x, y = p.y })
     m.hp, m.hpMax = 1e6, 1e6
     p.objetivo, p.cds = m.id, {}
-    fallar(errores, "la marca del cazador se lanza", mundo:usarHabilidad(p, slotDe("cazador", "marca_cazador")) == nil and (m.marcaHasta or 0) > mundo.tiempo)
     local h0 = m.hp
-    mundo:danar(m, 1000, p, false)
-    local conMarca = h0 - m.hp
-    m.marcaHasta = nil
-    h0 = m.hp
-    mundo:danar(m, 1000, p, false)
-    fallar(errores, "el marcado recibe un 25% más de daño", conMarca > (h0 - m.hp) * 1.2, conMarca .. " vs " .. (h0 - m.hp))
+    fallar(errores, "la flecha ígnea se lanza", mundo:usarHabilidad(p, slotDe("cazador", "marca_cazador")) == nil)
+    for _ = 1, 20 do mundo:actualizar(0.1) end
+    fallar(errores, "la flecha ígnea hiere al objetivo", m.hp < h0, h0 - m.hp)
     -- clérigo: escudo, cadena de sanación, tormenta y resurrección
     mundo, p = nuevo("clerigo")
     local a1 = mundo:crearPersonaje({ nombre = "Aliado1", faccion = "albor", clase = "guerrero", nivel = 10 })
@@ -5258,17 +5254,17 @@ mundo.tiempo = 100
     local mundo = Mundo.nuevo()
     mundo.entidades = {}
     local pu = mundo.mapas.mundo.puestos[1]
-    local mago = mundo:crearPersonaje({ nombre = "Buffo", faccion = "albor", clase = "mago", nivel = 20 })
+    local mago = mundo:crearPersonaje({ nombre = "Buffo", faccion = "albor", clase = "guerrero", nivel = 20 })
     mago.x, mago.y, mago.z, mago.modo = pu.x + 8.5, pu.y + 8.5, 0, "mundo"
-    mago.habilidades.escudo = 1
+    mago.habilidades.grito = 1
     mago.mp, mago.mpMax = 9999, 9999
     local slot
-    for i, h in ipairs(Datos.barra.mago) do if h == "escudo" then slot = i end end
-    fallar(errores, "lanza el escudo arcano", mundo:usarHabilidad(mago, slot) == nil)
+    for i, h in ipairs(Datos.barra.guerrero) do if h == "grito" then slot = i end end
+    fallar(errores, "lanza la barrera de escudo", mundo:usarHabilidad(mago, slot) == nil)
     for _ = 1, 20 do mundo:actualizar(0.1) end
     local tu = mundo:foto(mago.id).tu
     local b = tu.buffsResta and tu.buffsResta[1]
-    fallar(errores, "el escudo llega al cliente", b ~= nil and b.id == "escudo" and b.hab == "escudo", tostring(b and b.id))
+    fallar(errores, "el escudo llega al cliente", b ~= nil and b.id == "escudo" and b.hab == "grito", tostring(b and b.id))
     fallar(errores, "con lo que queda y lo que duraba", b and b.max >= 6 and b.resta < b.max and b.resta > 0, b and (b.resta .. "/" .. b.max) or "-")
     for _ = 1, 100 do mundo:actualizar(0.1) end
     fallar(errores, "al acabar desaparece", #(mundo:foto(mago.id).tu.buffsResta) == 0)

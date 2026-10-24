@@ -1,25 +1,25 @@
 {
  "id_dos_coronas": "trampa",
  "clase": "cazador",
- "nombre": "Trampa",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Trampa de espinas",
+ "poder_fao": "(secuencia propia: paquete arquero_hd)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    266,
+    226
    ],
    "origin": [
-    128,
-    128
+    133,
+    225
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
+  "inferida": false,
   "duracion_s": 1.2,
   "golpes_s": [],
   "capas": [
@@ -27,12 +27,13 @@
     "s": "fx",
     "w": "GC",
     "t0": 0.05,
-    "ms": 0.07,
-    "sc": 0.8,
+    "ms": 0.14,
+    "sc": 0.7,
     "a": 1.0,
-    "modo": "once"
+    "modo": "once",
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "arquero/trampa_raices del paquete de poderes."
+ "nota": "arquero_hd/08_trampa_espinas (640x640, recortado a 266x226)."
 }

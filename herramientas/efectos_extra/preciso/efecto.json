@@ -1,41 +1,43 @@
 {
  "id_dos_coronas": "preciso",
  "clase": "cazador",
- "nombre": "Tiro preciso",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Flecha lunar",
+ "poder_fao": "(secuencia propia: paquete arquero_hd)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 11,
+   "frames": 8,
    "cell": [
-    250,
-    256
+    311,
+    255
    ],
    "origin": [
-    0,
-    128
+    155,
+    127
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.8,
+  "inferida": false,
+  "duracion_s": 0.6,
   "golpes_s": [
    0.45
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "T",
+    "w": "C",
     "t0": 0.0,
-    "ms": 0.04,
-    "sc": 0.9,
+    "ms": 0.05,
+    "sc": 0.7,
     "a": 1.0,
-    "modo": "estela",
-    "t1": 0.45
+    "modo": "vuelo",
+    "mezcla": "alpha",
+    "t1": 0.45,
+    "giro": "libre"
    }
   ]
  },
- "nota": "arquero/disparo_triple del paquete de poderes."
+ "nota": "arquero_hd/06_flecha_lunar (640x640, recortado a 311x255)."
 }

@@ -1,38 +1,43 @@
 {
  "id_dos_coronas": "paso_agil",
  "clase": "cazador",
- "nombre": "Paso ágil",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Flecha relámpago",
+ "poder_fao": "(secuencia propia: paquete arquero_hd)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    278,
+    233
    ],
    "origin": [
-    128,
-    128
+    139,
+    116
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.0,
-  "golpes_s": [],
+  "inferida": false,
+  "duracion_s": 0.6,
+  "golpes_s": [
+   0.4
+  ],
   "capas": [
    {
     "s": "fx",
     "w": "C",
     "t0": 0.0,
-    "ms": 0.06,
-    "sc": 0.8,
+    "ms": 0.05,
+    "sc": 0.6,
     "a": 1.0,
-    "modo": "once"
+    "modo": "vuelo",
+    "mezcla": "alpha",
+    "t1": 0.4,
+    "giro": "libre"
    }
   ]
  },
- "nota": "arquero/flecha_viento del paquete de poderes."
+ "nota": "arquero_hd/03_flecha_relampago (640x640, recortado a 278x233)."
 }

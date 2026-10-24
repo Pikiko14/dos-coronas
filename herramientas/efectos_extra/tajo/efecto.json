@@ -1,40 +1,41 @@
 {
  "id_dos_coronas": "tajo",
  "clase": "guerrero",
- "nombre": "Tajo",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Torbellino de acero",
+ "poder_fao": "(secuencia propia: paquete guerrero_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    330,
+    310
    ],
    "origin": [
-    128,
-    128
+    165,
+    155
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.05,
+  "inferida": false,
+  "duracion_s": 1.0,
   "golpes_s": [
-   0.35
+   0.3
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "GC",
-    "t0": 0.05,
-    "ms": 0.06,
-    "sc": 0.8,
+    "w": "C",
+    "t0": 0.0,
+    "ms": 0.1,
+    "sc": 1.4,
     "a": 1.0,
-    "modo": "once"
+    "modo": "once",
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "guerrero/torbellino del paquete de poderes."
+ "nota": "guerrero_sprites/04_torbellino_acero (640x640, recortado a 330x310)."
 }

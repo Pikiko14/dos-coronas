@@ -8,72 +8,72 @@
 -->
 <habilidades>
   <!-- guerrero -->
-  <habilidad id="golpe" nombre="Golpe" clase="guerrero" tipo="enemigo" cd="1.5" coef="1.10" desc="Un golpe firme con el arma." mana="10" rango="1.45">
-    <estado tipo="sangrar" prob="0.12"/>
+  <habilidad id="golpe" nombre="Corte ígneo" clase="guerrero" tipo="enemigo" cd="1.5" coef="1.10" desc="Un tajo de fuego con el arma que a veces prende al enemigo." mana="10" rango="1.45">
+    <estado tipo="quemar" prob="0.15"/>
   </habilidad>
-  <habilidad id="tajo" nombre="Tajo" clase="guerrero" tipo="alrededor" cd="7" coef="1.8" desc="Golpea a todos los enemigos cercanos." mana="14" rango="2.5">
+  <habilidad id="tajo" nombre="Torbellino de acero" clase="guerrero" tipo="alrededor" cd="7" coef="1.8" desc="Una espiral de acero corta a todos los enemigos cercanos." mana="14" rango="2.5">
     <estado tipo="sangrar" prob="0.3"/>
   </habilidad>
-  <habilidad id="grito" nombre="Grito de guerra" clase="guerrero" tipo="buff_alrededor" buff="grito" cd="16" desc="Aumenta el ataque de los aliados cercanos." dur="8" mana="18" rango="4.5"/>
-  <habilidad id="carga" nombre="Carga" clase="guerrero" tipo="enemigo" aturde="0.8" cd="11" coef="0.75" dash="true" desc="Te lanzas al objetivo y lo aturdes un instante." mana="12" rango="5.5"/>
-  <habilidad id="pantera" nombre="Pantera asesina" clase="guerrero" tipo="enemigo" cd="9" coef="1.7" desc="Lanzas una pantera de fuego que embiste al enemigo y lo prende." mana="22" rango="6">
-    <estado tipo="quemar" prob="0.6"/>
+  <habilidad id="grito" nombre="Barrera de escudo" clase="guerrero" tipo="propio" buff="escudo" cd="16" desc="Una barrera de escudo te rodea y absorbe parte del daño." dur="9" mana="18"/>
+  <habilidad id="carga" nombre="Estocada de trueno" clase="guerrero" tipo="enemigo" aturde="0.8" cd="11" coef="0.75" dash="true" desc="Te lanzas con una estocada de rayo y aturdes un instante al objetivo." mana="12" rango="5.5"/>
+  <habilidad id="pantera" nombre="Corte glacial" clase="guerrero" tipo="enemigo" cd="9" coef="1.7" desc="Un tajo de cristales de hielo que hiere y ralentiza al enemigo." mana="22" rango="1.8">
+    <estado tipo="lentitud" dur="4" pct="0.4" prob="0.8"/>
   </habilidad>
-  <habilidad id="furia" nombre="Furia" clase="guerrero" tipo="propio" buff="furia" cd="32" desc="Tu ataque crece mucho durante un rato." dur="10" mana="28">
+  <habilidad id="furia" nombre="Furia carmesí" clase="guerrero" tipo="propio" buff="furia" cd="32" desc="El espíritu del león te posee: tu ataque crece mucho durante un rato." dur="10" mana="28">
     <efecto atk="0.3"/>
   </habilidad>
-  <habilidad id="golpe_terrestre" nombre="Golpe terrestre" clase="guerrero" tipo="punto" aoe="2.4" cd="12" coef="1.9" aturde="1.2" desc="Golpeas el suelo: daña y aturde a los enemigos de la zona." mana="30" rango="5"/>
-  <habilidad id="salto_impacto" nombre="Salto de impacto" clase="guerrero" tipo="punto" salto="true" aoe="2.2" cd="14" coef="1.6" lentitud="0.4" desc="Saltas hasta un punto y lo aplastas al caer: daña y ralentiza." mana="28" rango="6"/>
-  <habilidad id="estocada_lineal" nombre="Estocada lineal" clase="guerrero" tipo="enemigo" cd="6" coef="2.2" desc="Una estocada larga y certera que hace sangrar." mana="20" rango="3.2">
+  <habilidad id="golpe_terrestre" nombre="Golpe titán" clase="guerrero" tipo="punto" aoe="2.4" cd="12" coef="1.9" aturde="1.2" desc="Golpeas el suelo y brota una erupción de roca: daña y aturde a los enemigos de la zona." mana="30" rango="5"/>
+  <habilidad id="salto_impacto" nombre="Pisotón sísmico" clase="guerrero" tipo="punto" salto="true" aoe="2.2" cd="14" coef="1.6" lentitud="0.4" desc="Saltas hasta un punto y lo aplastas al caer: una onda sísmica daña y ralentiza." mana="28" rango="6"/>
+  <habilidad id="estocada_lineal" nombre="Hachas gemelas" clase="guerrero" tipo="enemigo" cd="6" coef="2.2" desc="Un doble hachazo cruzado que hace sangrar." mana="20" rango="1.8">
     <estado tipo="sangrar" dur="6" prob="0.6"/>
   </habilidad>
-  <habilidad id="ejecucion" nombre="Ejecución" clase="guerrero" tipo="enemigo" cd="22" coef="1.8" ejecuta="2.4" desc="Remata a su presa: daña mucho más a un enemigo con poca vida." mana="40" rango="1.8"/>
+  <habilidad id="ejecucion" nombre="Espada celestial" clase="guerrero" tipo="enemigo" cd="22" coef="1.8" ejecuta="2.4" desc="Una espada de luz cae sobre su presa: daña mucho más a un enemigo con poca vida." mana="40" rango="1.8"/>
   <!--  mago  -->
-  <habilidad id="misil" nombre="Misil arcano" clase="mago" tipo="enemigo" cd="2" coef="1.25" dano="magico" desc="Un dardo de energía." mana="8" proyectil="misil" rango="7.2">
+  <habilidad id="misil" nombre="Orbe arcano" clase="mago" tipo="enemigo" cd="2" coef="1.25" dano="magico" desc="Un orbe de energía arcana." mana="8" proyectil="misil" rango="7.2">
     <estado tipo="lentitud" dur="3" pct="0.3" prob="0.15"/>
   </habilidad>
   <habilidad id="fuego" nombre="Bola de fuego" clase="mago" tipo="enemigo" aoe="1.8" cd="3" coef="1.55" dano="magico" desc="Estalla al impactar." mana="24" proyectil="fuego" rango="7.2">
     <estado tipo="quemar" prob="0.4"/>
   </habilidad>
-  <habilidad id="escudo" nombre="Escudo arcano" clase="mago" tipo="propio" buff="escudo" cd="15" desc="Absorbe parte del daño." dur="9" mana="50"/>
+  <habilidad id="escudo" nombre="Sanación" clase="mago" tipo="aliado" cd="12" cura="30" curaN="5" desc="Una flor de luz restaura la vida de un aliado o la tuya." mana="30" rango="6.5"/>
   <habilidad id="nova" nombre="Ventisca" clase="mago" tipo="punto" aoe="3" cd="8" coef="1.5" dano="magico" desc="Eliges una zona: una ventisca de cristales de hielo cae sobre ella, la daña y ralentiza." lentitud="0.45" mana="50" rango="8"/>
-  <habilidad id="rayo_hielo" nombre="Rayo de hielo" clase="mago" tipo="enemigo" cd="6" coef="1.6" dano="magico" desc="Una lanza de hielo que ralentiza al objetivo." mana="34" proyectil="misil" rango="7.4">
+  <habilidad id="rayo_hielo" nombre="Lanza de hielo" clase="mago" tipo="enemigo" cd="6" coef="1.6" dano="magico" desc="Una lanza de hielo que ralentiza al objetivo." mana="34" proyectil="misil" rango="7.4">
     <estado tipo="lentitud" dur="4" pct="0.4" prob="0.9"/>
   </habilidad>
-  <habilidad id="rayo_arcano" nombre="Rayo arcano" clase="mago" tipo="enemigo" cd="9" coef="2.3" dano="magico" desc="Un haz de energía pura que atraviesa las defensas." mana="42" proyectil="misil" rango="7.6"/>
-  <habilidad id="lluvia_fuego" nombre="Lluvia de fuego" clase="mago" tipo="punto" aoe="3.2" cd="16" coef="1.9" dano="magico" desc="Una lluvia de fuego cae sobre la zona." mana="58" rango="8">
-    <estado tipo="quemar" dur="5" prob="0.7"/>
-  </habilidad>
+  <habilidad id="rayo_arcano" nombre="Rayo arcano" clase="mago" tipo="enemigo" cd="9" coef="2.3" dano="magico" desc="Un rayo de energía pura cae sobre el objetivo y atraviesa sus defensas." mana="42" proyectil="misil" rango="7.6"/>
+  <habilidad id="lluvia_fuego" nombre="Dragón de agua" clase="mago" tipo="punto" aoe="3.2" cd="16" coef="1.9" dano="magico" lentitud="0.3" desc="Un dragón de agua se lanza sobre la zona: la daña y ralentiza a los enemigos." mana="58" rango="8"/>
   <habilidad id="teletransporte" nombre="Teletransporte" clase="mago" tipo="punto" blink="true" cd="14" desc="Te desplazas al instante al punto elegido." mana="30" rango="7"/>
-  <habilidad id="torbellino" nombre="Torbellino arcano" clase="mago" tipo="punto" aoe="2.6" pulsos="4" cd="26" coef="1.1" dano="magico" desc="Un torbellino de energía que castiga la zona varias veces y ralentiza." lentitud="0.35" mana="75" rango="7.5"/>
-  <habilidad id="meteoro" nombre="Meteoro" clase="mago" tipo="punto" aoe="2.6" cd="22" coef="2.5" dano="magico" desc="Una roca en llamas cae sobre la zona." mana="45" rango="8">
+  <habilidad id="torbellino" nombre="Pozo de gravedad" clase="mago" tipo="punto" aoe="2.6" pulsos="4" cd="26" coef="1.1" dano="magico" desc="Un pozo de gravedad castiga la zona varias veces y ralentiza a los enemigos." lentitud="0.5" mana="75" rango="7.5"/>
+  <habilidad id="meteoro" nombre="Meteorito" clase="mago" tipo="punto" aoe="2.6" cd="22" coef="2.5" dano="magico" desc="Un meteorito en llamas cae sobre la zona." mana="45" rango="8">
     <estado tipo="quemar" dur="5" prob="0.6"/>
   </habilidad>
   <!--  cazador  -->
-  <habilidad id="disparo" nombre="Disparo" clase="cazador" tipo="enemigo" cd="1.05" coef="1.15" desc="Una flecha rápida." mana="6" proyectil="flecha" rango="7.4">
+  <habilidad id="disparo" nombre="Flecha de viento" clase="cazador" tipo="enemigo" cd="1.05" coef="1.15" desc="Una flecha rápida envuelta en viento." mana="6" proyectil="flecha" rango="7.4">
     <estado tipo="sangrar" prob="0.12"/>
   </habilidad>
   <habilidad id="lluvia" nombre="Lluvia de flechas" clase="cazador" tipo="punto" aoe="2.2" cd="8" coef="1.3" desc="Flechas sobre una zona." mana="22" rango="7.4">
     <estado tipo="lentitud" dur="3" pct="0.35" prob="0.25"/>
   </habilidad>
-  <habilidad id="trampa" nombre="Trampa" clase="cazador" tipo="suelo" cd="14" desc="Inmoviliza al primer enemigo que la pisa." mana="16" rango="1.2"/>
-  <habilidad id="preciso" nombre="Tiro preciso" clase="cazador" tipo="enemigo" cd="8" coef="2.05" desc="Un disparo devastador." mana="18" proyectil="flecha" rango="8.2">
+  <habilidad id="trampa" nombre="Trampa de espinas" clase="cazador" tipo="suelo" cd="14" desc="Una trampa de espinas inmoviliza al primer enemigo que la pisa." mana="16" rango="1.2"/>
+  <habilidad id="preciso" nombre="Flecha lunar" clase="cazador" tipo="enemigo" cd="8" coef="2.05" desc="Una flecha de luz lunar: un disparo devastador." mana="18" proyectil="flecha" rango="8.2">
     <estado tipo="sangrar" dur="6" prob="0.4"/>
   </habilidad>
-  <habilidad id="flecha_veneno" nombre="Flecha envenenada" clase="cazador" tipo="enemigo" cd="7" coef="1" desc="Una flecha untada que envenena." mana="16" proyectil="flecha" rango="7.4">
+  <habilidad id="flecha_veneno" nombre="Disparo venenoso" clase="cazador" tipo="enemigo" cd="7" coef="1" desc="Una flecha cubierta de espinas y veneno." mana="16" proyectil="flecha" rango="7.4">
     <estado tipo="veneno" dur="7" prob="1"/>
   </habilidad>
-  <habilidad id="paso_agil" nombre="Paso ágil" clase="cazador" tipo="propio" buff="agil" cd="18" desc="Corres mucho más rápido un momento." dur="5" mana="14">
-    <efecto vel="0.5"/>
+  <habilidad id="paso_agil" nombre="Flecha relámpago" clase="cazador" tipo="enemigo" aturde="0.8" cd="10" coef="1.5" desc="Una flecha cargada de rayos que hiere y aturde un instante al objetivo." mana="24" proyectil="flecha" rango="7.4"/>
+  <habilidad id="disparo_multiple" nombre="Flecha fénix" clase="cazador" tipo="enemigo" aoe="2.2" cd="18" coef="2.4" desc="Una flecha de fuego renacido: arrasa con el objetivo y prende a los que lo rodean." mana="38" proyectil="flecha" rango="7.4">
+    <estado tipo="quemar" dur="6" prob="0.8"/>
   </habilidad>
-  <habilidad id="disparo_multiple" nombre="Disparo múltiple" clase="cazador" tipo="enemigo" aoe="2" cd="6" coef="1.25" desc="Una andanada que alcanza también a los que rodean al objetivo." mana="24" proyectil="flecha" rango="7.4"/>
   <habilidad id="disparo_explosivo" nombre="Disparo explosivo" clase="cazador" tipo="enemigo" aoe="2.4" cd="12" coef="1.7" desc="Una flecha que estalla al impactar y prende a los cercanos." mana="34" proyectil="flecha" rango="7.4">
     <estado tipo="quemar" dur="5" prob="0.6"/>
   </habilidad>
-  <habilidad id="disparo_helado" nombre="Disparo helado" clase="cazador" tipo="enemigo" cd="9" coef="1.3" desc="Una flecha de hielo que ralentiza mucho al objetivo." mana="26" proyectil="flecha" rango="7.4">
+  <habilidad id="disparo_helado" nombre="Flecha glacial" clase="cazador" tipo="enemigo" cd="9" coef="1.3" desc="Una flecha de hielo que ralentiza mucho al objetivo." mana="26" proyectil="flecha" rango="7.4">
     <estado tipo="lentitud" dur="4" pct="0.5" prob="1"/>
   </habilidad>
-  <habilidad id="marca_cazador" nombre="Marca del cazador" clase="cazador" tipo="enemigo" cd="20" coef="0.5" marca="0.25" dur="8" desc="Marcas a tu presa: recibe un 25% más de daño de cualquiera durante unos segundos." mana="22" proyectil="flecha" rango="8"/>
+  <habilidad id="marca_cazador" nombre="Flecha ígnea" clase="cazador" tipo="enemigo" cd="8" coef="1.4" desc="Una flecha en llamas que prende al objetivo." mana="18" proyectil="flecha" rango="7.4">
+    <estado tipo="quemar" dur="5" prob="1"/>
+  </habilidad>
   <!--  clerigo  -->
   <habilidad id="curar" nombre="Curación" clase="clerigo" tipo="aliado" cd="2.1" cura="28" curaN="5" desc="Restaura vida a un aliado o a ti." mana="16" rango="6.5"/>
   <habilidad id="bendicion" nombre="Rayo bendito" clase="clerigo" tipo="enemigo" cd="4" coef="1.5" dano="magico" desc="Un rayo bendito que hiere al enemigo. Se aprende al nivel 5." mana="16" proyectil="sagrado" rango="6.4"/>

@@ -2,43 +2,40 @@
  "id_dos_coronas": "nova",
  "clase": "mago",
  "nombre": "Ventisca",
- "poder_fao": "(secuencia propia: paquete del mago)",
+ "poder_fao": "(secuencia propia: paquete mago_sprites)",
  "secuencias": {
-  "hielo": {
-   "sheet": "sheets/hielo.png",
-   "frames": 10,
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 8,
    "cell": [
-    128,
-    128
+    396,
+    375
    ],
    "origin": [
-    64,
-    64
+    199,
+    372
    ],
-   "ms_per_frame": 90.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.95,
+  "inferida": false,
+  "duracion_s": 1.0,
   "golpes_s": [
-   0.35
+   0.4
   ],
   "capas": [
    {
-    "s": "hielo",
+    "s": "fx",
     "w": "GT",
     "t0": 0.0,
-    "ms": 0.09,
-    "sc": 1.4,
+    "ms": 0.11,
+    "sc": 1.0,
     "a": 1.0,
     "modo": "once",
-    "off": [
-     0,
-     -6
-    ]
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "nova_hielo: el anillo de hielo se abre en cristales sobre la zona."
+ "nota": "mago_sprites/05_ventisca (640x640, recortado a 396x375)."
 }

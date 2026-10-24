@@ -1,41 +1,43 @@
 {
  "id_dos_coronas": "carga",
  "clase": "guerrero",
- "nombre": "Carga",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Estocada de trueno",
+ "poder_fao": "(secuencia propia: paquete guerrero_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 13,
+   "frames": 8,
    "cell": [
-    249,
-    256
+    399,
+    271
    ],
    "origin": [
-    0,
-    128
+    199,
+    135
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 0.9,
+  "inferida": false,
+  "duracion_s": 0.6,
   "golpes_s": [
-   0.45
+   0.35
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "T",
+    "w": "C",
     "t0": 0.0,
-    "ms": 0.035,
-    "sc": 0.7,
+    "ms": 0.05,
+    "sc": 0.65,
     "a": 1.0,
-    "modo": "estela",
-    "t1": 0.45
+    "modo": "vuelo",
+    "mezcla": "alpha",
+    "t1": 0.35,
+    "giro": "libre"
    }
   ]
  },
- "nota": "guerrero/embestida del paquete de poderes."
+ "nota": "guerrero_sprites/07_estocada_trueno (640x640, recortado a 399x271)."
 }

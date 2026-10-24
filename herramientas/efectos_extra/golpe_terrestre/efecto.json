@@ -1,40 +1,41 @@
 {
  "id_dos_coronas": "golpe_terrestre",
  "clase": "guerrero",
- "nombre": "Golpe terrestre",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Golpe titán",
+ "poder_fao": "(secuencia propia: paquete guerrero_sprites)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    372,
+    356
    ],
    "origin": [
-    128,
-    128
+    185,
+    352
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.05,
+  "inferida": false,
+  "duracion_s": 1.0,
   "golpes_s": [
-   0.5
+   0.4
   ],
   "capas": [
    {
     "s": "fx",
     "w": "GT",
-    "t0": 0.05,
-    "ms": 0.06,
+    "t0": 0.0,
+    "ms": 0.1,
     "sc": 0.9,
     "a": 1.0,
-    "modo": "once"
+    "modo": "once",
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "guerrero/golpe_terrestre del paquete de poderes."
+ "nota": "guerrero_sprites/03_golpe_titan (640x640, recortado a 372x356)."
 }

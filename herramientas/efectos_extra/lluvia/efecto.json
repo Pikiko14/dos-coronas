@@ -2,24 +2,24 @@
  "id_dos_coronas": "lluvia",
  "clase": "cazador",
  "nombre": "Lluvia de flechas",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "poder_fao": "(secuencia propia: paquete arquero_hd)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    367,
+    332
    ],
    "origin": [
-    128,
-    128
+    182,
+    334
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
+  "inferida": false,
   "duracion_s": 1.2,
   "golpes_s": [
    0.5,
@@ -30,12 +30,13 @@
     "s": "fx",
     "w": "GT",
     "t0": 0.05,
-    "ms": 0.07,
+    "ms": 0.13,
     "sc": 0.9,
     "a": 1.0,
-    "modo": "once"
+    "modo": "once",
+    "mezcla": "alpha"
    }
   ]
  },
- "nota": "arquero/lluvia_flechas del paquete de poderes."
+ "nota": "arquero_hd/07_lluvia_flechas (640x640, recortado a 367x332)."
 }

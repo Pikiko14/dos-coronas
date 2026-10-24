@@ -1222,19 +1222,20 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
     if vista then Log.volcar("capturas/apariencias_mall.png", pan:newImageData():encode("png"):getString()) end
     Interfaz.panel = nil
   end)
-  -- Los diez efectos del nigromante (paquete necromante_10_poderes) sobre un fondo liso, con el lanzador a la izquierda y un blanco a la derecha. Con
-  -- DC_PRUEBA_NECRO=1 guarda juego/capturas/necromante_poderes.png (una fila por poder, cuatro instantes).
-  paso("nigromante: los diez efectos de capas se dibujan", function()
+  -- Los diez efectos de las clases con paquete HD (nigromante, guerrero, mago y cazador) sobre un fondo liso, con el lanzador a la izquierda y un blanco a la
+  -- derecha. Con DC_PRUEBA_NECRO=1 guarda juego/capturas/<clase>_poderes.png (una fila por poder, cuatro instantes).
+  for _, clase in ipairs({ "nigromante", "guerrero", "mago", "cazador" }) do
+  paso(clase .. ": los diez efectos de capas se dibujan", function()
     local Capas = require("src.presentacion.render.efectos_fao_capas")
     local Poderes = require("compartido.datos.efectos_fao_poderes")
     local Fao = require("src.presentacion.render.fao")
     local vista = os.getenv("DC_PRUEBA_NECRO") ~= nil
     local CW, CH = 380, 250
-    local cv = love.graphics.newCanvas(CW * 4, CH * #Datos.barra.nigromante)
+    local cv = love.graphics.newCanvas(CW * 4, CH * #Datos.barra[clase])
     local ok, err = pcall(function()
       love.graphics.setCanvas(cv)
       love.graphics.clear(0.36, 0.52, 0.3, 1)
-      for fila, id in ipairs(Datos.barra.nigromante) do
+      for fila, id in ipairs(Datos.barra[clase]) do
         fallar(errores, id .. " tiene capas de efecto", Poderes[id] ~= nil and #Poderes[id].capas >= 1)
         for k, frac in ipairs({ 0.15, 0.3, 0.5, 0.75 }) do
           local ox, oy = (k - 1) * CW, (fila - 1) * CH
@@ -1246,7 +1247,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
           local t = Poderes[id].dur * frac
           Capas.dibujar(id, fx, t, sx, sy, "suelo")
           love.graphics.setColor(1, 1, 1, 1)
-          Fao.retrato("nigromante", "h", nil, 90, 190, 1.6)
+          Fao.retrato(clase, "h", nil, 90, 190, 1.6)
           love.graphics.setColor(0.8, 0.4, 0.4, 1)
           love.graphics.ellipse("fill", sx, sy - 14, 12, 18)
           Capas.dibujar(id, fx, t, sx, sy, "cuerpo")
@@ -1256,9 +1257,10 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
       love.graphics.setCanvas()
     end)
     love.graphics.setCanvas()
-    fallar(errores, "los efectos del nigromante se dibujan: " .. tostring(err), ok)
-    if vista then Log.volcar("capturas/necromante_poderes.png", cv:newImageData():encode("png"):getString()) end
+    fallar(errores, "los efectos de " .. clase .. " se dibujan: " .. tostring(err), ok)
+    if vista then Log.volcar("capturas/" .. clase .. "_poderes.png", cv:newImageData():encode("png"):getString()) end
   end)
+  end
   -- Panel Personaje con el muñeco: una casilla por tipo de pieza y la ficha de la pieza bajo el ratón. Con DC_PRUEBA_PERSONAJE=1 guarda juego/capturas/personaje_panel.png
   -- (con la ficha del arma de calidad definitiva) y personaje_panel_sin_ficha.png.
   paso("panel del personaje: casillas por tipo de pieza y ficha al pasar el ratón", function()
@@ -2305,7 +2307,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
     local Mapa = require("compartido.dominio.mapa")
     local vista = os.getenv("DC_PRUEBA_EFECTOS_FAO") ~= nil
     local mosaico = vista and love.graphics.newCanvas(1920, 810) or nil
-    for fila, caso in ipairs({ { clase = "guerrero", poder = "pantera", dist = 5, ts = { 0.15, 0.3, 0.5, 0.7 } }, { clase = "guerrero", poder = "tajo", dist = 1.6, ts = { 0.1, 0.3, 0.6, 0.9 }, extra = { { 2.2, -1 }, { -1.5, 1.2 } }, fuera = { { 3.6, 0.5 }, { -3.2, -2 } } },
+    for fila, caso in ipairs({ { clase = "guerrero", poder = "pantera", dist = 0.8, ts = { 0.15, 0.3, 0.5, 0.7 } }, { clase = "guerrero", poder = "tajo", dist = 1.6, ts = { 0.1, 0.3, 0.6, 0.9 }, extra = { { 2.2, -1 }, { -1.5, 1.2 } }, fuera = { { 3.6, 0.5 }, { -3.2, -2 } } },
       { clase = "mago", poder = "nova", dist = 4, ts = { 0.3, 0.6, 0.9, 1.2 } } }) do
       local mundo = Mundo.nuevo()
       local pj = mundo:crearPersonaje({ nombre = "Lanzador", faccion = "albor", clase = caso.clase, nivel = 30 })
