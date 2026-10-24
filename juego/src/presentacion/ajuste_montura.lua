@@ -32,10 +32,12 @@ local function guardar()
     local filas = {}
     for h = 0, 4 do
       local a = MobAnim.AJUSTES[id][h]
-      if a and (a[1] ~= 0 or a[2] ~= 0) then filas[#filas + 1] = string.format("[%d] = { %g, %g }", h, a[1], a[2]) end
+      if a and (a[1] ~= 0 or a[2] ~= 0 or a[3]) then filas[#filas + 1] = string.format("[%d] = { %g, %g%s }", h, a[1], a[2], a[3] and (", " .. a[3]) or "") end
     end
     local esc = MobAnim.AJUSTES[id].escala
     if esc and math.abs(esc - 1) > 1e-6 then filas[#filas + 1] = string.format("escala = %g", esc) end
+    local jin = MobAnim.AJUSTES[id].jinete
+    if jin and math.abs(jin - 1) > 1e-6 then filas[#filas + 1] = string.format("jinete = %g", jin) end
     if #filas > 0 then t[#t + 1] = string.format("  %s = { %s },\n", id, table.concat(filas, ", ")) end
   end
   t[#t + 1] = "}\n"
@@ -90,7 +92,7 @@ function M.tecla(app, tecla)
     -- el desplazamiento se da como se ve en pantalla: en las hojas volteadas el dx se invierte al guardarse
     local u = MobAnim.ultimo(id)
     if u and u.flip then dx = -dx end
-    a[hoja] = { v[1] + dx, v[2] + dy }
+    a[hoja] = { v[1] + dx, v[2] + dy, v[3] }
     return true
   end
   if tecla == "kp0" then

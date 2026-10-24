@@ -48,8 +48,8 @@ end
 local function tieneAjustes(anim)
   local a = MobAnim.AJUSTES[anim]
   if not a then return false end
-  for h = 0, 4 do if a[h] and (a[h][1] ~= 0 or a[h][2] ~= 0) then return true end end
-  return a.escala ~= nil and math.abs(a.escala - 1) > 1e-6
+  for h = 0, 4 do if a[h] and (a[h][1] ~= 0 or a[h][2] ~= 0 or a[h][3]) then return true end end
+  return (a.escala ~= nil and math.abs(a.escala - 1) > 1e-6) or (a.jinete ~= nil and math.abs(a.jinete - 1) > 1e-6)
 end
 
 local function avisar(t) E.aviso, E.avisoHasta = t, love.timer.getTime() + 4 end
@@ -144,8 +144,8 @@ function M.dibujar(app, w, h)
     local hoja, flip = hojaActual()
     local aj = ajusteDe(a.anim, hoja)
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.print(string.format("%s  %s   hoja %d%s   ajuste dx %g  dy %g   tamaño x%g", a.id, a.nombre, hoja, flip and " (volteada)" or "", aj[1], aj[2],
-      (MobAnim.AJUSTES[a.anim] and MobAnim.AJUSTES[a.anim].escala) or 1), x0, h - 96)
+    love.graphics.print(string.format("%s  %s   hoja %d%s   ajuste dx %g  dy %g   tamaño x%g  jinete x%g", a.id, a.nombre, hoja, flip and " (volteada)" or "", aj[1], aj[2],
+      (MobAnim.AJUSTES[a.anim] and MobAnim.AJUSTES[a.anim].escala) or 1, (MobAnim.AJUSTES[a.anim] and MobAnim.AJUSTES[a.anim].jinete) or 1), x0, h - 96)
     love.graphics.setColor(0.7, 0.75, 0.9, 1)
     love.graphics.printf("Arrastra al jinete con el ratón. ←/→ cambian de dirección y ↑/↓ de montura. Cada dirección base se ajusta por separado (las volteadas comparten con su simétrica).",
       x0, h - 74, w - x0 - 10, "left")
@@ -156,7 +156,16 @@ function M.dibujar(app, w, h)
     boton(x0 + 460, y, 190, 28, "Copiar a las 5 direcciones", function()
       local t = MobAnim.AJUSTES[a.anim] or {}
       MobAnim.AJUSTES[a.anim] = t
-      for hh = 0, 4 do t[hh] = { aj[1], aj[2] } end
+      for hh = 0, 4 do t[hh] = { aj[1], aj[2], aj[3] } end
+    end)
+    local TEXTOS = { [0] = "montura detrás del jinete", [1] = "montura delante (entera)", [2] = "montura delante (de la cintura abajo)" }
+    boton(x0 + 460, y - 34, 330, 28, "Capa: " .. (TEXTOS[aj[3]] or "automática"), function()
+      local t = MobAnim.AJUSTES[a.anim] or {}
+      MobAnim.AJUSTES[a.anim] = t
+      local v = t[hoja] or { 0, 0 }
+      local sig = ({ [0] = 1, [1] = 2 })[v[3] or -1]            -- automática -> detrás -> delante entera -> delante de la cintura abajo -> automática
+      if v[3] == nil then sig = 0 elseif v[3] == 2 then sig = nil end
+      t[hoja] = { v[1], v[2], sig }
     end)
     boton(x0 + 920, y - 34, 90, 28, "Tamaño -", function()
       local t = MobAnim.AJUSTES[a.anim] or {}
@@ -167,6 +176,16 @@ function M.dibujar(app, w, h)
       local t = MobAnim.AJUSTES[a.anim] or {}
       MobAnim.AJUSTES[a.anim] = t
       t.escala = math.min(3, math.floor(((t.escala or 1) + 0.05) * 100 + 0.5) / 100)
+    end)
+    boton(x0 + 920, y, 90, 28, "Jinete -", function()
+      local t = MobAnim.AJUSTES[a.anim] or {}
+      MobAnim.AJUSTES[a.anim] = t
+      t.jinete = math.max(0.4, math.floor(((t.jinete or 1) - 0.05) * 100 + 0.5) / 100)
+    end)
+    boton(x0 + 1016, y, 90, 28, "Jinete +", function()
+      local t = MobAnim.AJUSTES[a.anim] or {}
+      MobAnim.AJUSTES[a.anim] = t
+      t.jinete = math.min(1.5, math.floor(((t.jinete or 1) + 0.05) * 100 + 0.5) / 100)
     end)
     boton(x0 + 660, y, 120, 28, "Anterior", function() E.sel = math.max(1, E.sel - 1) end)
     boton(x0 + 790, y, 120, 28, "Siguiente", function() E.sel = math.min(#E.lista, E.sel + 1) end)
@@ -200,7 +219,7 @@ function M.mover(x, y, dx, dy)
   MobAnim.AJUSTES[a.anim] = t
   local v = t[hoja] or { 0, 0 }
   local ddx, ddy = dx / ZOOM, dy / ZOOM
-  t[hoja] = { v[1] + (flip and -ddx or ddx), v[2] + ddy }
+  t[hoja] = { v[1] + (flip and -ddx or ddx), v[2] + ddy, v[3] }
 end
 
 function M.soltar()

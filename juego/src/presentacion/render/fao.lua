@@ -457,7 +457,9 @@ function M.dibujarMontado(e, nomMontura, sx, pies, tinte, alfa, subir)
   local col = tinte or { 1, 1, 1 }
   love.graphics.setColor(col[1], col[2], col[3], alfa or 1)
   -- El jinete conserva siempre su tamaño original (también sobre las monturas pequeñas): lo que se ajusta es dónde se sienta (monturas.py).
-  local x, y, k = sx + dx, pies + dy - (subir or 0), ESCALA_JUEGO
+  -- tamaño del jinete en esa montura (ajustes de montura_ajustes.lua: `jinete`, 1 por defecto; las muy pequeñas lo reducen un poco)
+  local aj = MobAnim.AJUSTES[nomMontura]
+  local x, y, k = sx + dx, pies + dy - (subir or 0), ESCALA_JUEGO * ((aj and aj.jinete) or 1)
   local orden = ordenDe(c, d5)
   if orden[1] == "espalda" then capaAnim(c.espalda, anim, paso, d5, false, flip, x, y, k, "m") end
   capaAnim(c.cuerpo, anim, paso, d5, false, flip, x, y, k, "m")

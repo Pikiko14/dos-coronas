@@ -17,7 +17,7 @@ ARTE = os.path.join(RAIZ, "juego", "arte", "monstruos")
 PAD = 3
 ABAJO = 28                   # el punto más bajo del jinete sentado (rodillas y botas) queda 28 px sobre su origen: medido en las hojas Wait_m del cuerpo (23 a 34)
 LOMO = float(sys.argv[1]) if len(sys.argv) > 1 else 0.42      # cuánto bajo el lomo (fracción del alto de la montura) llegan las piernas del jinete (cuelgan por el costado)
-LOMO_PEQUENA = 0.65          # en las monturas pequeñas (alto en pantalla <= PEQUENA) el jinete es más grande que ellas: las piernas llegan más abajo
+LOMO_PEQUENA = 0.5          # en las monturas pequeñas (alto en pantalla <= PEQUENA) el jinete es más grande que ellas: las piernas llegan más abajo
 PEQUENA = 40                 # (px de pantalla; render/dibujo.lua repinta entonces la montura sobre las piernas del jinete en todas las direcciones)
 ESCALA = 0.5
 FRAC_CUERPO = float(sys.argv[2]) if len(sys.argv) > 2 else 0.55      # fracción del ancho máximo (el del cuerpo) desde la que una fila cuenta como lomo

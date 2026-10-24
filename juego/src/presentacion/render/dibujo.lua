@@ -1064,11 +1064,15 @@ function entidadBase(e, sx, sy, mundo, jugador)
         -- el pecho de la montura tapan su cintura y sus piernas, y el torso, la cara y el arma siguen viéndose por encima.
         local _, sdy, _, _, hojaM = require("src.presentacion.render.mob_anim").asiento(jineteSentado.anim, e.dir)
         local dm = require("src.presentacion.render.mob_anim").DEFS[jineteSentado.anim]
-        if sdy and hojaM == 0 then
-          Personajes.dibujar(jineteSentado, e.dir or 1, anda, reloj, sx, pies, nil, nil, e, true, pies + sdy - 30)
-        elseif sdy and dm and (dm.alto or 99) <= 40 then
-          -- las monturas pequeñas tapan las piernas del jinete en todas las direcciones (es más grande que ellas)
-          Personajes.dibujar(jineteSentado, e.dir or 1, anda, reloj, sx, pies, nil, nil, e, true, pies + sdy - 30)
+        -- orden de capas ajustable (montura_ajustes.lua, tercer valor de cada dirección): 0 montura detrás, 1 montura delante (entera), 2 delante de la cintura abajo
+        local ajM = require("src.presentacion.render.mob_anim").AJUSTES[jineteSentado.anim]
+        local orden = ajM and hojaM and ajM[hojaM] and ajM[hojaM][3]
+        if sdy then
+          if orden == 1 then
+            Personajes.dibujar(jineteSentado, e.dir or 1, anda, reloj, sx, pies, nil, nil, e, true)
+          elseif orden == 2 or (orden == nil and hojaM == 0) then
+            Personajes.dibujar(jineteSentado, e.dir or 1, anda, reloj, sx, pies, nil, nil, e, true, pies + sdy - 30)
+          end
         end
       else
         alto = Personajes.dibujar(def, e.dir or 1, anda and not e.montado, reloj, sx, piesJinete, tint)

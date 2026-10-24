@@ -1606,6 +1606,11 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
     local a
     for h = 0, 4 do if MobAnim.AJUSTES[anim] and MobAnim.AJUSTES[anim][h] then a = MobAnim.AJUSTES[anim][h] end end
     fallar(errores, "arrastrar mueve al jinete (px de pantalla: pantalla / zoom)", a and math.abs(a[1] - 2) < 1e-6 and math.abs(a[2] + 1) < 1e-6, a and (a[1] .. "," .. a[2]) or "-")
+    for _, orden in ipairs({ 0, 1, 2 }) do                  -- orden de capas de la montura (0 detrás, 1 delante entera, 2 delante de la cintura abajo)
+      MobAnim.AJUSTES[anim] = { [0] = { 0, 0, orden }, [1] = { 0, 0, orden }, [2] = { 0, 0, orden }, [3] = { 0, 0, orden }, [4] = { 0, 0, orden } }
+      local okO, errO = pcall(pintar)
+      fallar(errores, "el editor dibuja con orden de capas " .. orden .. ": " .. tostring(errO), okO)
+    end
     MobAnim.AJUSTES[anim] = previo
     pcall(pintar)
     if os.getenv("DC_PRUEBA_EDITOR") then Log.volcar("capturas/editor_monturas.png", cv:newImageData():encode("png"):getString()) end
