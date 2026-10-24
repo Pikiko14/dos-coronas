@@ -6,126 +6,126 @@
   magico = inteligencia (defensa magica), ataque magico y mana. El tamano del bono depende del nivel (monturas.lua, M.bono).
 -->
 <monturas>
-  <montura id="buey" nombre="Buey de carga" nivel="5" carga="22" desc="Lento pero fuerte: carga mucho más. Solo con el oficio activo." precio="900" requiereOficio="true" vel="0.1" vida="500"/>
-  <montura id="caballo" nombre="Caballo" nivel="10" carga="6" desc="El más rápido para cruzar el mapa. Solo con el oficio activo." precio="1000" requiereOficio="true" vel="0.4" vida="350"/>
-  <montura id="carreta" nombre="Carreta cubierta" nivel="14" carga="90" desc="Una carreta de mercader: carga enorme. Solo para comerciantes con el oficio activo." oficio="trader" precio="4500" requiereOficio="true" vel="0.06" vida="1100"/>
-  <montura id="mnt_001" nombre="Corcel blanco" nivel="20" tipo="fisico" carga="0" desc="Un corcel real que corre a toda velocidad,." precio="0" vel="0.4" vida="600"/>
-  <montura id="mnt_002" nombre="Gallo de monta" nivel="20" tipo="magico" carga="0" desc="Un gallo de pelea que tambien corre rapido, mejora la magia." precio="0" vel="0.38" vida="600"/>
-  <montura id="mnt_005" nombre="Burro" nivel="20" tipo="fisico" carga="0" desc="Un burro de carga, que mejora tus estadisticas fisica por su aguante." precio="0" vel="0.4" vida="600"/>
-  <montura id="mnt_006" nombre="Lobo blanco" nivel="10" tipo="fisico" carga="0" desc="." precio="25000" vel="0.3" vida="600"/>
-  <montura id="mnt_007" nombre="Hámster de cofia" nivel="10" tipo="magico" carga="0" desc="." precio="25000" vel="0.38" vida="600"/>
-  <montura id="mnt_008" nombre="Zorro rojo" nivel="20" tipo="fisico" carga="0" desc="." precio="0" vel="0.4" vida="600"/>
-  <montura id="mnt_009" nombre="Jabalí ámbar" nivel="20" tipo="fisico" carga="0" desc="." precio="0" vel="0.4" vida="600"/>
-  <montura id="mnt_026" nombre="Corcel granate" nivel="1" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_027" nombre="Bisonte pardo" nivel="1" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_028" nombre="Hámster pardo" nivel="1" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_029" nombre="Corcel de nieve" nivel="5" tipo="magico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_030" nombre="Caballo castaño" nivel="5" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_031" nombre="Rana azul" nivel="5" tipo="magico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_032" nombre="Conejo escarlata" nivel="5" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_033" nombre="Jabalí dorado" nivel="10" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_034" nombre="Hámster del huevo" nivel="10" tipo="magico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_035" nombre="Lobo de melena" nivel="10" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_036" nombre="Gallo rojo" nivel="10" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_037" nombre="Cerdito rosa" nivel="15" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_038" nombre="Corcel borgoña" nivel="15" tipo="fisico" carga="0" desc="." precio="0" vel="0.38" vida="600"/>
-  <montura id="mnt_039" nombre="Hámster tostado" nivel="5" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.38" vida="600"/>
-  <montura id="mnt_040" nombre="Lobo Aullador" nivel="5" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.38" vida="600"/>
-  <montura id="mnt_103" nombre="Tortuga viajera" nivel="20" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_104" nombre="León dorado" nivel="20" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_105" nombre="Autómata azul" nivel="5" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_143" nombre="Escarabajo real" nivel="10" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_144" nombre="Escarabajo de acero" nivel="10" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_145" nombre="Foca blanca" nivel="10" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_146" nombre="Foca madre" nivel="10" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_167" nombre="Mono frutal" nivel="10" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_176" nombre="Vagoneta dorada" nivel="10" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_197" nombre="Avestruz gris" nivel="15" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.44" vida="600"/>
-  <montura id="mnt_198" nombre="Avestruz violeta" nivel="10" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_199" nombre="Genio de oro" nivel="10" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_200" nombre="Genio dorado" nivel="50" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_201" nombre="Barco de nubes" nivel="15" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.44" vida="600"/>
-  <montura id="mnt_202" nombre="Tiburón submarino" nivel="15" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.44" vida="600"/>
-  <montura id="mnt_203" nombre="Águila parda" nivel="15" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.44" vida="600"/>
-  <montura id="mnt_204" nombre="Águila blanca" nivel="15" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.44" vida="600"/>
-  <montura id="mnt_225" nombre="Oca gigante" nivel="25" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.48" vida="600"/>
-  <montura id="mnt_226" nombre="Espíritus de la noche" nivel="20" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.46" vida="600"/>
-  <montura id="mnt_227" nombre="Oso polar" nivel="25" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.48" vida="600"/>
-  <montura id="mnt_239" nombre="Centauro dorado" nivel="10" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_250" nombre="Carnero lanudo" nivel="25" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.5" vida="600"/>
-  <montura id="mnt_253" nombre="Carro de guerra" nivel="15" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
-  <montura id="mnt_260" nombre="Behemot rojizo" nivel="20" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.46" vida="600"/>
-  <montura id="mnt_261" nombre="Pterodáctilo verde" nivel="15" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.44" vida="600"/>
-  <montura id="mnt_264" nombre="Lobo de carga" nivel="15" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.44" vida="600"/>
-  <montura id="mnt_269" nombre="Tortuga estrella" nivel="20" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.46" vida="600"/>
-  <montura id="mnt_270" nombre="Raptor rojo" nivel="15" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.44" vida="600"/>
-  <montura id="mnt_271" nombre="Raptor carmesí" nivel="20" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.46" vida="600"/>
-  <montura id="mnt_284" nombre="Oso boxeador" nivel="15" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.44" vida="600"/>
-  <montura id="mnt_294" nombre="Dragoncito azul" nivel="40" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.5" vida="600"/>
-  <montura id="mnt_295" nombre="Dragón negro y azul" nivel="45" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.5" vida="600"/>
-  <montura id="mnt_296" nombre="Alpaca rosa" nivel="30" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.52" vida="600"/>
-  <montura id="mnt_297" nombre="Alpaca navideña" nivel="20" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.44" vida="600"/>
-  <montura id="mnt_298" nombre="Dragón dorado" nivel="50" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.48" vida="600"/>
-  <montura id="mnt_299" nombre="Dragón de jade" nivel="45" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.48" vida="600"/>
-  <montura id="mnt_300" nombre="Mantarraya blanca" nivel="25" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.48" vida="600"/>
-  <montura id="mnt_301" nombre="Mantarraya real" nivel="20" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.46" vida="600"/>
-  <montura id="mnt_306" nombre="Pingüino viajero" nivel="25" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.48" vida="600"/>
-  <montura id="mnt_308" nombre="Pez globo buceador" nivel="20" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.46" vida="600"/>
-  <montura id="mnt_309" nombre="Pez globo acorazado" nivel="25" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.48" vida="600"/>
-  <montura id="mnt_310" nombre="Elefante naval" nivel="25" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.48" vida="600"/>
-  <montura id="mnt_311" nombre="Elefante real" nivel="30" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.5" vida="600"/>
-  <montura id="mnt_312" nombre="Hámster soldado" nivel="35" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_313" nombre="Hámster aviador" nivel="35" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_314" nombre="Luciérnaga" nivel="35" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_335" nombre="Nave dorada" nivel="20" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.46" vida="600"/>
-  <montura id="mnt_356" nombre="Mapache" nivel="20" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.46" vida="600"/>
-  <montura id="mnt_357" nombre="Mapache de cristal" nivel="30" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.52" vida="600"/>
-  <montura id="mnt_358" nombre="Husky gris" nivel="35" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_359" nombre="Husky festivo" nivel="30" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.52" vida="600"/>
-  <montura id="mnt_373" nombre="Delfín azul" nivel="35" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_374" nombre="Delfín capitán" nivel="30" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.53" vida="600"/>
-  <montura id="mnt_375" nombre="Sandía guerrera" nivel="35" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_376" nombre="Conejo del bosque" nivel="35" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_377" nombre="Peluche gris" nivel="35" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_378" nombre="Peluche de feria" nivel="35" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_392" nombre="Peluche rosa" nivel="30" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.51" vida="600"/>
-  <montura id="mnt_393" nombre="Peluche de caramelo" nivel="20" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.46" vida="600"/>
-  <montura id="mnt_403" nombre="Cerdo alado" nivel="35" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_404" nombre="Cerdo platillo" nivel="40" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_405" nombre="Cerdo de fuego" nivel="40" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_406" nombre="Cerdo nabo" nivel="40" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_407" nombre="Cerdo turquesa" nivel="40" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_416" nombre="Gato buhonero" nivel="40" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_445" nombre="Cabra montesa" nivel="40" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_448" nombre="Ciervo rosa" nivel="40" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_449" nombre="Oveja dorada" nivel="40" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_450" nombre="Oveja florida" nivel="5" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.3" vida="600"/>
-  <montura id="mnt_451" nombre="Lobo de espinas" nivel="5" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.3" vida="600"/>
-  <montura id="mnt_452" nombre="Bestia de lava" nivel="40" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_472" nombre="Pollito blanco" nivel="40" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_473" nombre="Pollito mago" nivel="45" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_474" nombre="Yeti" nivel="5" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.3" vida="600"/>
-  <montura id="mnt_475" nombre="Yeti nevado" nivel="5" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.3" vida="600"/>
-  <montura id="mnt_476" nombre="Cachorro refrescante" nivel="45" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_477" nombre="Perro aviador" nivel="45" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_494" nombre="Gato de ensueño" nivel="30" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.52" vida="600"/>
-  <montura id="mnt_495" nombre="Gata hechicera" nivel="30" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.52" vida="600"/>
-  <montura id="mnt_496" nombre="Orbe rojo" nivel="30" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.52" vida="600"/>
-  <montura id="mnt_497" nombre="Orbe violeta" nivel="45" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_498" nombre="Jabalí del nido" nivel="45" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_499" nombre="Jabalí del nido violeta" nivel="45" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_571" nombre="Mecha azul" nivel="45" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_572" nombre="Mecha cañón" nivel="45" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_573" nombre="Espíritu de hielo" nivel="5" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.38" vida="600"/>
-  <montura id="mnt_574" nombre="Pingüino rey" nivel="45" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_584" nombre="Gato morado" nivel="45" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_619" nombre="Cangrejo ermitaño" nivel="50" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_620" nombre="Cangrejo turquesa" nivel="50" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_621" nombre="Burro azul" nivel="50" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_622" nombre="Burro sheriff" nivel="50" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_649" nombre="Conejo orejudo" nivel="50" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_650" nombre="Conejo explorador" nivel="50" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_651" nombre="Búfalo azul" nivel="50" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
-  <montura id="mnt_652" nombre="Búfalo de hielo" nivel="50" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.56" vida="600"/>
-  <montura id="mnt_734" nombre="Tortuga turquesa" nivel="50" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="buey" nombre="Buey de carga" nivel="5" carga="22" desc="Paso lento y lomo fuerte para transportar tus mercancías." precio="900" requiereOficio="true" vel="0.1" vida="500"/>
+  <montura id="caballo" nombre="Caballo" nivel="10" carga="6" desc="Un compañero veloz para recorrer las rutas comerciales." precio="1000" requiereOficio="true" vel="0.4" vida="350"/>
+  <montura id="carreta" nombre="Carreta cubierta" nivel="14" carga="90" desc="Un almacén sobre ruedas para comerciantes de grandes ambiciones." oficio="trader" precio="4500" requiereOficio="true" vel="0.06" vida="1100"/>
+  <montura id="mnt_001" nombre="Corcel blanco" nivel="20" tipo="fisico" carga="0" desc="Noble corcel de pelaje blanco y espíritu indomable." precio="500000" vel="0.35" vida="600"/>
+  <montura id="mnt_002" nombre="Gallo de monta" nivel="20" tipo="magico" carga="0" desc="Un orgulloso compañero que anuncia cada nueva aventura." precio="500000" vel="0.35" vida="600"/>
+  <montura id="mnt_005" nombre="Burro" nivel="20" tipo="fisico" carga="0" desc="Terco, fiel y siempre dispuesto a dar otro paso." precio="50000" vel="0.4" vida="600"/>
+  <montura id="mnt_006" nombre="Lobo blanco" nivel="10" tipo="fisico" carga="0" desc="Un cazador de pelaje níveo y mirada desafiante." precio="25000" vel="0.2" vida="600"/>
+  <montura id="mnt_007" nombre="Hámster de cofia" nivel="10" tipo="magico" carga="0" desc="Un compañero adorable vestido para una gran aventura." precio="25000" vel="0.20" vida="600"/>
+  <montura id="mnt_008" nombre="Zorro rojo" nivel="20" tipo="fisico" carga="0" desc="Astuto viajero de pelaje rojizo y espíritu inquieto." precio="0" vel="0.4" vida="600"/>
+  <montura id="mnt_009" nombre="Jabalí ámbar" nivel="20" tipo="fisico" carga="0" desc="Una montura bravía de tonos cálidos y firmes colmillos." precio="0" vel="0.4" vida="600"/>
+  <montura id="mnt_026" nombre="Corcel granate" nivel="1" tipo="fisico" carga="0" desc="Elegante corcel cuyo pelaje recuerda al vino oscuro." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_027" nombre="Bisonte pardo" nivel="1" tipo="fisico" carga="0" desc="Un gigante de las praderas de porte imponente." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_028" nombre="Hámster pardo" nivel="1" tipo="fisico" carga="0" desc="Una bola de pelo con corazón de aventurero." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_029" nombre="Corcel de nieve" nivel="5" tipo="magico" carga="0" desc="La elegancia del invierno hecha montura." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_030" nombre="Caballo castaño" nivel="5" tipo="fisico" carga="0" desc="Un compañero leal para caminos y aventuras sin fin." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_031" nombre="Rana azul" nivel="5" tipo="magico" carga="0" desc="Una peculiar compañera de piel azul y mirada curiosa." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_032" nombre="Conejo escarlata" nivel="5" tipo="fisico" carga="0" desc="Un inquieto viajero de llamativo pelaje escarlata." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_033" nombre="Jabalí dorado" nivel="10" tipo="fisico" carga="0" desc="Orgullosa bestia de pelaje dorado y carácter salvaje." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_034" nombre="Hámster del huevo" nivel="10" tipo="magico" carga="0" desc="Un pequeño aventurero con un refugio muy peculiar." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_035" nombre="Lobo de melena" nivel="10" tipo="fisico" carga="0" desc="Su abundante melena enmarca una mirada feroz." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_036" nombre="Gallo rojo" nivel="10" tipo="fisico" carga="0" desc="Un gallo de vivos colores y orgullo inquebrantable." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_037" nombre="Cerdito rosa" nivel="15" tipo="fisico" carga="0" desc="Un compañero regordete que convierte cada viaje en alegría." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_038" nombre="Corcel borgoña" nivel="15" tipo="fisico" carga="0" desc="Un distinguido corcel de profundo pelaje rojizo." precio="0" vel="0.38" vida="600"/>
+  <montura id="mnt_039" nombre="Hámster tostado" nivel="5" tipo="magico" carga="0" desc="Un compañero de tonos cálidos y encanto irresistible." mall="true" precio="0" vel="0.38" vida="600"/>
+  <montura id="mnt_040" nombre="Lobo Aullador" nivel="5" tipo="fisico" carga="0" desc="Su aullido anuncia el comienzo de una nueva travesía." mall="true" precio="0" vel="0.38" vida="600"/>
+  <montura id="mnt_103" nombre="Tortuga viajera" nivel="20" tipo="fisico" carga="0" desc="Lleva en su caparazón el espíritu de mil aventuras." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_104" nombre="León dorado" nivel="20" tipo="magico" carga="0" desc="Una montura majestuosa digna de un verdadero soberano." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_105" nombre="Autómata azul" nivel="5" tipo="magico" carga="0" desc="Un singular compañero mecánico de acabado azul." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_143" nombre="Escarabajo real" nivel="10" tipo="fisico" carga="0" desc="Un majestuoso escarabajo de porte digno de la realeza." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_144" nombre="Escarabajo de acero" nivel="10" tipo="fisico" carga="0" desc="Una montura de aspecto metálico y presencia formidable." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_145" nombre="Foca blanca" nivel="10" tipo="fisico" carga="0" desc="Una simpática compañera de suave pelaje blanco." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_146" nombre="Foca madre" nivel="10" tipo="fisico" carga="0" desc="Una compañera de mirada dulce y espíritu protector." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_167" nombre="Mono frutal" nivel="10" tipo="magico" carga="0" desc="Un viajero travieso que nunca olvida su merienda." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_176" nombre="Vagoneta dorada" nivel="10" tipo="fisico" carga="0" desc="Cada aventura merece un viaje con un toque de oro." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_197" nombre="Avestruz gris" nivel="15" tipo="fisico" carga="0" desc="Patas largas y espíritu inquieto para descubrir nuevos caminos." mall="true" precio="0" vel="0.44" vida="600"/>
+  <montura id="mnt_198" nombre="Avestruz violeta" nivel="10" tipo="fisico" carga="0" desc="Una corredora de plumaje violeta que nunca pasa desapercibida." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_199" nombre="Genio de oro" nivel="10" tipo="magico" carga="0" desc="Un misterioso compañero envuelto en esplendor dorado." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_200" nombre="Genio dorado" nivel="50" tipo="magico" carga="0" desc="La grandeza de las leyendas en una montura encantada." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_201" nombre="Barco de nubes" nivel="15" tipo="magico" carga="0" desc="Una embarcación de ensueño para viajeros de alma libre." mall="true" precio="0" vel="0.44" vida="600"/>
+  <montura id="mnt_202" nombre="Tiburón submarino" nivel="15" tipo="fisico" carga="0" desc="El aspecto feroz de los mares acompaña tu travesía." mall="true" precio="0" vel="0.44" vida="600"/>
+  <montura id="mnt_203" nombre="Águila parda" nivel="15" tipo="magico" carga="0" desc="Una orgullosa compañera de mirada atenta y plumaje terroso." mall="true" precio="0" vel="0.44" vida="600"/>
+  <montura id="mnt_204" nombre="Águila blanca" nivel="15" tipo="magico" carga="0" desc="Majestuosa ave de plumaje blanco y espíritu libre." mall="true" precio="0" vel="0.44" vida="600"/>
+  <montura id="mnt_225" nombre="Oca gigante" nivel="25" tipo="fisico" carga="0" desc="Una enorme compañera con carácter y mucho que graznar." mall="true" precio="0" vel="0.48" vida="600"/>
+  <montura id="mnt_226" nombre="Espíritus de la noche" nivel="20" tipo="magico" carga="0" desc="Presencias misteriosas que acompañan tu viaje entre sombras." mall="true" precio="0" vel="0.46" vida="600"/>
+  <montura id="mnt_227" nombre="Oso polar" nivel="25" tipo="fisico" carga="0" desc="Un coloso blanco con toda la presencia del invierno." mall="true" precio="0" vel="0.48" vida="600"/>
+  <montura id="mnt_239" nombre="Centauro dorado" nivel="10" tipo="magico" carga="0" desc="Un compañero legendario de porte noble y esplendor dorado." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_250" nombre="Carnero lanudo" nivel="25" tipo="fisico" carga="0" desc="Abundante lana y un carácter difícil de doblegar." mall="true" precio="0" vel="0.5" vida="600"/>
+  <montura id="mnt_253" nombre="Carro de guerra" nivel="15" tipo="fisico" carga="0" desc="Recorre los caminos con la presencia de un conquistador." mall="true" precio="0" vel="0.42" vida="600"/>
+  <montura id="mnt_260" nombre="Behemot rojizo" nivel="20" tipo="fisico" carga="0" desc="Una bestia colosal de tonos rojos y aspecto temible." mall="true" precio="0" vel="0.46" vida="600"/>
+  <montura id="mnt_261" nombre="Pterodáctilo verde" nivel="15" tipo="magico" carga="0" desc="Un compañero prehistórico que despierta asombro a cada paso." mall="true" precio="0" vel="0.44" vida="600"/>
+  <montura id="mnt_264" nombre="Lobo de carga" nivel="15" tipo="fisico" carga="0" desc="Un lobo de aspecto curtido por largos viajes." mall="true" precio="0" vel="0.44" vida="600"/>
+  <montura id="mnt_269" nombre="Tortuga estrella" nivel="20" tipo="magico" carga="0" desc="Una tranquila compañera con el encanto del firmamento." mall="true" precio="0" vel="0.46" vida="600"/>
+  <montura id="mnt_270" nombre="Raptor rojo" nivel="15" tipo="fisico" carga="0" desc="Un depredador escarlata de mirada inquieta y porte feroz." mall="true" precio="0" vel="0.44" vida="600"/>
+  <montura id="mnt_271" nombre="Raptor carmesí" nivel="20" tipo="fisico" carga="0" desc="Una bestia de intenso color y salvaje elegancia." mall="true" precio="0" vel="0.46" vida="600"/>
+  <montura id="mnt_284" nombre="Oso boxeador" nivel="15" tipo="fisico" carga="0" desc="Siempre listo para el siguiente asalto de la aventura." mall="true" precio="0" vel="0.44" vida="600"/>
+  <montura id="mnt_294" nombre="Dragoncito azul" nivel="40" tipo="fisico" carga="0" desc="Un pequeño dragón con orgullo de gigante." mall="true" precio="0" vel="0.5" vida="600"/>
+  <montura id="mnt_295" nombre="Dragón negro y azul" nivel="45" tipo="fisico" carga="0" desc="Oscuras escamas y tonos azules dibujan su imponente figura." mall="true" precio="0" vel="0.5" vida="600"/>
+  <montura id="mnt_296" nombre="Alpaca rosa" nivel="30" tipo="fisico" carga="0" desc="Suave, curiosa y orgullosa de su pelaje rosa." mall="true" precio="0" vel="0.52" vida="600"/>
+  <montura id="mnt_297" nombre="Alpaca navideña" nivel="20" tipo="fisico" carga="0" desc="Una compañera que lleva la alegría festiva a cada camino." mall="true" precio="0" vel="0.44" vida="600"/>
+  <montura id="mnt_298" nombre="Dragón dorado" nivel="50" tipo="fisico" carga="0" desc="Una majestuosa criatura de esplendor digno de leyendas." mall="true" precio="0" vel="0.48" vida="600"/>
+  <montura id="mnt_299" nombre="Dragón de jade" nivel="45" tipo="magico" carga="0" desc="La serenidad del jade y la grandeza de un dragón." mall="true" precio="0" vel="0.48" vida="600"/>
+  <montura id="mnt_300" nombre="Mantarraya blanca" nivel="25" tipo="magico" carga="0" desc="Una elegante compañera de silueta suave y tonos nacarados." mall="true" precio="0" vel="0.48" vida="600"/>
+  <montura id="mnt_301" nombre="Mantarraya real" nivel="20" tipo="magico" carga="0" desc="Su distinguida presencia convierte cualquier viaje en un desfile." mall="true" precio="0" vel="0.46" vida="600"/>
+  <montura id="mnt_306" nombre="Pingüino viajero" nivel="25" tipo="fisico" carga="0" desc="Un pequeño explorador siempre preparado para partir." mall="true" precio="0" vel="0.48" vida="600"/>
+  <montura id="mnt_308" nombre="Pez globo buceador" nivel="20" tipo="fisico" carga="0" desc="Un curioso aventurero vestido para explorar lo desconocido." mall="true" precio="0" vel="0.46" vida="600"/>
+  <montura id="mnt_309" nombre="Pez globo acorazado" nivel="25" tipo="fisico" carga="0" desc="Una montura redonda con un aspecto nada indefenso." mall="true" precio="0" vel="0.48" vida="600"/>
+  <montura id="mnt_310" nombre="Elefante naval" nivel="25" tipo="fisico" carga="0" desc="Un gigante con espíritu marinero y ganas de aventura." mall="true" precio="0" vel="0.48" vida="600"/>
+  <montura id="mnt_311" nombre="Elefante real" nivel="30" tipo="fisico" carga="0" desc="Su majestuoso porte hace honor a las grandes cortes." mall="true" precio="0" vel="0.5" vida="600"/>
+  <montura id="mnt_312" nombre="Hámster soldado" nivel="35" tipo="fisico" carga="0" desc="Pequeño de apariencia, enorme en disciplina y valor." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_313" nombre="Hámster aviador" nivel="35" tipo="fisico" carga="0" desc="Un intrépido compañero que sueña con nuevos horizontes." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_314" nombre="Luciérnaga" nivel="35" tipo="magico" carga="0" desc="Un pequeño destello que da encanto a tus aventuras." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_335" nombre="Nave dorada" nivel="20" tipo="magico" carga="0" desc="Una extraordinaria nave de elegante acabado dorado." mall="true" precio="0" vel="0.46" vida="600"/>
+  <montura id="mnt_356" nombre="Mapache" nivel="20" tipo="fisico" carga="0" desc="Un compañero astuto que siempre parece tramar algo." mall="true" precio="0" vel="0.46" vida="600"/>
+  <montura id="mnt_357" nombre="Mapache de cristal" nivel="30" tipo="magico" carga="0" desc="Un viajero de apariencia cristalina y encanto misterioso." mall="true" precio="0" vel="0.52" vida="600"/>
+  <montura id="mnt_358" nombre="Husky gris" nivel="35" tipo="fisico" carga="0" desc="Un fiel compañero de pelaje gris y mirada vivaz." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_359" nombre="Husky festivo" nivel="30" tipo="fisico" carga="0" desc="La lealtad de siempre, vestida para celebrar." mall="true" precio="0" vel="0.52" vida="600"/>
+  <montura id="mnt_373" nombre="Delfín azul" nivel="35" tipo="fisico" carga="0" desc="Un alegre compañero inspirado en la belleza del océano." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_374" nombre="Delfín capitán" nivel="30" tipo="magico" carga="0" desc="Un distinguido aventurero con alma de capitán." mall="true" precio="0" vel="0.53" vida="600"/>
+  <montura id="mnt_375" nombre="Sandía guerrera" nivel="35" tipo="fisico" carga="0" desc="Una peculiar montura con frescura y espíritu combativo." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_376" nombre="Conejo del bosque" nivel="35" tipo="fisico" carga="0" desc="Un compañero de largas orejas y alma silvestre." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_377" nombre="Peluche gris" nivel="35" tipo="fisico" carga="0" desc="Un abrazo de felpa convertido en compañero de aventuras." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_378" nombre="Peluche de feria" nivel="35" tipo="fisico" carga="0" desc="La alegría de una feria te acompaña en cada viaje." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_392" nombre="Peluche rosa" nivel="30" tipo="fisico" carga="0" desc="Una tierna montura de felpa y encanto rosado." mall="true" precio="0" vel="0.51" vida="600"/>
+  <montura id="mnt_393" nombre="Peluche de caramelo" nivel="20" tipo="fisico" carga="0" desc="Dulce apariencia para una aventura llena de fantasía." mall="true" precio="0" vel="0.46" vida="600"/>
+  <montura id="mnt_403" nombre="Cerdo alado" nivel="35" tipo="fisico" carga="0" desc="Una criatura que se toma muy en serio soñar en grande." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_404" nombre="Cerdo platillo" nivel="40" tipo="fisico" carga="0" desc="Un viajero peculiar con un estilo de otro mundo." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_405" nombre="Cerdo de fuego" nivel="40" tipo="fisico" carga="0" desc="Un compañero de aspecto ardiente y carácter impetuoso." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_406" nombre="Cerdo nabo" nivel="40" tipo="fisico" carga="0" desc="Un simpático viajero con un curioso toque de huerta." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_407" nombre="Cerdo turquesa" nivel="40" tipo="fisico" carga="0" desc="Un compañero regordete de llamativo color turquesa." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_416" nombre="Gato buhonero" nivel="40" tipo="fisico" carga="0" desc="Un felino de caminos, historias y curiosidades." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_445" nombre="Cabra montesa" nivel="40" tipo="fisico" carga="0" desc="Una compañera de espíritu libre y carácter decidido." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_448" nombre="Ciervo rosa" nivel="40" tipo="fisico" carga="0" desc="La elegancia del bosque teñida de un suave rosa." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_449" nombre="Oveja dorada" nivel="40" tipo="fisico" carga="0" desc="Un mullido tesoro de aspecto dorado y mirada tranquila." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_450" nombre="Oveja florida" nivel="5" tipo="fisico" carga="0" desc="Una compañera que lleva la primavera en su apariencia." mall="true" precio="0" vel="0.3" vida="600"/>
+  <montura id="mnt_451" nombre="Lobo de espinas" nivel="5" tipo="fisico" carga="0" desc="Una bestia de silueta espinosa y mirada salvaje." mall="true" precio="0" vel="0.3" vida="600"/>
+  <montura id="mnt_452" nombre="Bestia de lava" nivel="40" tipo="fisico" carga="0" desc="Una imponente criatura de apariencia volcánica." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_472" nombre="Pollito blanco" nivel="40" tipo="fisico" carga="0" desc="Un compañero de plumón blanco y valentía inesperada." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_473" nombre="Pollito mago" nivel="45" tipo="magico" carga="0" desc="Un pequeño aprendiz con grandes sueños de magia." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_474" nombre="Yeti" nivel="5" tipo="fisico" carga="0" desc="Un gigante peludo con espíritu de las montañas." mall="true" precio="0" vel="0.3" vida="600"/>
+  <montura id="mnt_475" nombre="Yeti nevado" nivel="5" tipo="fisico" carga="0" desc="Una criatura de pelaje blanco y presencia imponente." mall="true" precio="0" vel="0.3" vida="600"/>
+  <montura id="mnt_476" nombre="Cachorro refrescante" nivel="45" tipo="fisico" carga="0" desc="Un alegre compañero con todo el encanto del verano." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_477" nombre="Perro aviador" nivel="45" tipo="fisico" carga="0" desc="Un fiel copiloto para aventuras de altos vuelos." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_494" nombre="Gato de ensueño" nivel="30" tipo="magico" carga="0" desc="Un felino que parece salido de un sueño encantado." mall="true" precio="0" vel="0.52" vida="600"/>
+  <montura id="mnt_495" nombre="Gata hechicera" nivel="30" tipo="magico" carga="0" desc="Elegancia felina y misterio en una misma compañera." mall="true" precio="0" vel="0.52" vida="600"/>
+  <montura id="mnt_496" nombre="Orbe rojo" nivel="30" tipo="magico" carga="0" desc="Una esfera de intenso carmesí y presencia arcana." mall="true" precio="0" vel="0.52" vida="600"/>
+  <montura id="mnt_497" nombre="Orbe violeta" nivel="45" tipo="magico" carga="0" desc="Un misterioso orbe de tonos violetas y encanto sobrenatural." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_498" nombre="Jabalí del nido" nivel="45" tipo="fisico" carga="0" desc="Un peculiar jabalí que lleva un toque de bosque consigo." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_499" nombre="Jabalí del nido violeta" nivel="45" tipo="fisico" carga="0" desc="Una curiosa bestia de encanto silvestre y tonos violetas." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_571" nombre="Mecha azul" nivel="45" tipo="magico" carga="0" desc="Una montura mecánica de imponente diseño azul." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_572" nombre="Mecha cañón" nivel="45" tipo="magico" carga="0" desc="Una máquina de aspecto bélico y presencia intimidante." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_573" nombre="Espíritu de hielo" nivel="5" tipo="magico" carga="0" desc="Una misteriosa presencia que evoca el silencio del invierno." mall="true" precio="0" vel="0.38" vida="600"/>
+  <montura id="mnt_574" nombre="Pingüino rey" nivel="45" tipo="fisico" carga="0" desc="Un pequeño soberano de andar orgulloso y porte distinguido." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_584" nombre="Gato morado" nivel="45" tipo="magico" carga="0" desc="Un felino de pelaje violeta y mirada enigmática." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_619" nombre="Cangrejo ermitaño" nivel="50" tipo="magico" carga="0" desc="Un viajero reservado que nunca deja su hogar atrás." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_620" nombre="Cangrejo turquesa" nivel="50" tipo="magico" carga="0" desc="Un peculiar compañero de tonos marinos y grandes pinzas." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_621" nombre="Burro azul" nivel="50" tipo="fisico" carga="0" desc="Un fiel compañero con un color fuera de lo común." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_622" nombre="Burro sheriff" nivel="50" tipo="fisico" carga="0" desc="Un guardián del camino con orejas largas y mucha autoridad." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_649" nombre="Conejo orejudo" nivel="50" tipo="fisico" carga="0" desc="Grandes orejas y una curiosidad que no conoce límites." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_650" nombre="Conejo explorador" nivel="50" tipo="fisico" carga="0" desc="Siempre atento al próximo sendero por descubrir." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_651" nombre="Búfalo azul" nivel="50" tipo="fisico" carga="0" desc="Una poderosa figura de pelaje azul y porte salvaje." mall="true" precio="0" vel="0.54" vida="600"/>
+  <montura id="mnt_652" nombre="Búfalo de hielo" nivel="50" tipo="fisico" carga="0" desc="Un coloso de apariencia helada y presencia imponente." mall="true" precio="0" vel="0.56" vida="600"/>
+  <montura id="mnt_734" nombre="Tortuga turquesa" nivel="50" tipo="fisico" carga="0" desc="Una compañera de hermosos tonos turquesa y espíritu sereno." mall="true" precio="0" vel="0.54" vida="600"/>
 </monturas>
