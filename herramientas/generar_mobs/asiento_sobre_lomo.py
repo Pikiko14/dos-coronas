@@ -52,7 +52,13 @@ def recolocar(idn, anim, plano):
         y0, y1, x0, x1 = filas.min(), filas.max(), cols.min(), cols.max()
         alto = max(1, y1 - y0)
         dx, dy = plano[2 * i], plano[2 * i + 1]
-        xh = int(round(min(max(cw / 2 + dx, x0 + 0.15 * (x1 - x0)), x1 - 0.15 * (x1 - x0))))
+        # a lo largo del lomo el jinete va sobre el centro del cuerpo (la mediana de la masa de la silueta en su mitad de arriba, sin cola ni cabeza
+        # que la arrastren): los dx de FAO lo dejaban junto al cuello en varias monturas
+        mitad = celda[y0:y0 + max(2, int(0.7 * (y1 - y0))), :]
+        masa = mitad.sum(0).cumsum()
+        xc = int(np.searchsorted(masa, masa[-1] / 2)) if masa[-1] else int(cw / 2 + dx)
+        xh = int(round(min(max(xc, x0 + 0.15 * (x1 - x0)), x1 - 0.15 * (x1 - x0))))
+        nuevo[2 * i] = round(xh - cw / 2, 1)
         ventana = celda[:, max(0, xh - 4):xh + 5]
         f = np.where(ventana.any(1))[0]
         ytop = f.min() if len(f) else y0

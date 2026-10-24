@@ -1064,9 +1064,8 @@ function entidadBase(e, sx, sy, mundo, jugador)
         -- el pecho de la montura tapan su cintura y sus piernas, y el torso, la cara y el arma siguen viéndose por encima.
         local _, sdy, _, _, hojaM = require("src.presentacion.render.mob_anim").asiento(jineteSentado.anim, e.dir)
         local dm = require("src.presentacion.render.mob_anim").DEFS[jineteSentado.anim]
-        if sdy and (hojaM == 0 or hojaM == 4) then
-          -- de frente y de tres cuartos de frente la cabeza, el cuello y el pecho de la montura están más cerca de la cámara que el jinete: se repinta entera
-          Personajes.dibujar(jineteSentado, e.dir or 1, anda, reloj, sx, pies, nil, nil, e, true)
+        if sdy and hojaM == 0 then
+          Personajes.dibujar(jineteSentado, e.dir or 1, anda, reloj, sx, pies, nil, nil, e, true, pies + sdy - 30)
         elseif sdy and dm and (dm.alto or 99) <= 40 then
           -- las monturas pequeñas tapan las piernas del jinete en todas las direcciones (es más grande que ellas)
           Personajes.dibujar(jineteSentado, e.dir or 1, anda, reloj, sx, pies, nil, nil, e, true, pies + sdy - 30)
