@@ -16,12 +16,14 @@ def indice_original(paso, hoja, n):
     return paso * 5 - 1 if paso >= 1 else n - 1
 
 
-def hornear(im, pasos, bake, pad, anclas=None):
+def hornear(im, pasos, bake, pad, anclas=None, directo=False):
     """im: hoja original RGBA. bake: tamaño del horneado respecto al original. anclas: lista [w, h, ox, oy] por cuadro original (opcional).
     Devuelve (tira, cw, ch, alto, asiento): la tira con cuadro = paso * 5 + hoja, el tamaño de casilla, el alto del cuadro de espera de frente
     (en píxeles horneados) y, si hay anclajes, la lista plana [dx, dy, ...] por cuadro con el origen del arte original respecto al centro y la
-    base de la casilla."""
+    base de la casilla. directo: la hoja ya viene ordenada como cuadro = paso * 5 + hoja (las monturas en alta resolución nuevas), sin el corrimiento
+    de los originales de FAO."""
     n = pasos * 5
+    indice_original = (lambda paso, hoja, n_: paso * 5 + hoja) if directo else globals()["indice_original"]
     w, h = im.width // n, im.height
     alfa = np.asarray(im)[:, :, 3] > 10
     # suelo por dirección: se recorta el hueco bajo los pies (cada hoja tiene su línea del suelo)

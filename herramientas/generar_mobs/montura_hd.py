@@ -57,7 +57,7 @@ def main():
     alto = None
     for anim, pasos in PASOS.items():
         im = Image.open(os.path.join(a.carpeta, anim.capitalize() + ".png")).convert("RGBA")
-        tira, cw, ch, alto_c, _ = fao_hojas.hornear(im, pasos, a.bake, PAD, None)
+        tira, cw, ch, alto_c, _ = fao_hojas.hornear(im, pasos, a.bake, PAD, None, directo=True)
         fao_hojas.guardar(tira, os.path.join(sal, anim + ".png"))
         if anim == "wait":
             alto = alto_c
