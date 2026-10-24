@@ -4757,10 +4757,11 @@ mundo.tiempo = 100
       local mundo, p = nuevo("nigromante", "umbra")
       local m = mundo:spawnMonstruo("pinguino_aprendiz", p.x + 2, p.y, { x = p.x, y = p.y })
       m.hp, m.hpMax = 1e6, 1e6
-      for _, id in ipairs({ "nova_oscura", "explosion_cadaverica", "lluvia_profana", "apocalipsis_necromantico" }) do
+      for _, id in ipairs({ "nova_oscura", "explosion_cadaverica", "lluvia_profana", "lanza_osea" }) do
         m.hp = m.hpMax
         p.cds, p.mp, p.objetivo = {}, 9999, m.id
         local e = mundo:usarHabilidad(p, slotDe("nigromante", id), m.x, m.y)
+        for _ = 1, 20 do mundo:actualizar(0.1) end        -- (los poderes de proyectil hieren cuando llega)
         fallar(errores, id .. " se lanza y daña", e == nil and m.hp < m.hpMax, tostring(e))
       end
     end
@@ -5168,7 +5169,7 @@ mundo.tiempo = 100
     nec.mp, nec.mpMax = 99999, 99999
     local function slotNec(id) for i, h in ipairs(Datos.barra.nigromante) do if h == id then return i end end end
     for i, id in ipairs(Datos.barra.nigromante) do
-      if Datos.habilidades[id].tipo ~= "invocar" then
+      if Datos.habilidades[id].tipo ~= "invocar" and Datos.habilidades[id].tipo ~= "propio" then
         local m = troll(nec.x + 2.5, nec.y)
         nec.cds, nec.objetivo = { auto = 1e9 }, m.id
         local err = mundo:usarHabilidad(nec, i, m.x, m.y)
@@ -5190,15 +5191,15 @@ mundo.tiempo = 100
     nec.cds = { auto = 1e9 }
     avanzar(6)
     fallar(errores, "los esqueletos hieren al objetivo", m.hp < m.hpMax, m.hp .. "/" .. m.hpMax)
-    -- el espectro dispara de lejos y hay un máximo de esbirros a la vez
+    -- el escudo de huesos absorbe daño y hay un máximo de esbirros a la vez
     local hp0 = m.hp
     nec.cds = { auto = 1e9 }
     mundo:usarHabilidad(nec, slotNec("alzar_esqueletos"))
-    nec.cds = { auto = 1e9 }
-    mundo:usarHabilidad(nec, slotNec("espectro"))
+    nec.cds, nec.mp = { auto = 1e9 }, 9999
+    fallar(errores, "el escudo de huesos se lanza", mundo:usarHabilidad(nec, slotNec("escudo_huesos")) == nil)
+    fallar(errores, "el escudo de huesos pone el escudo", mundo:tieneBuff(nec, "escudo") ~= nil)
     local todos = mundo:esbirrosDe(nec)
     fallar(errores, "hay un máximo de esbirros", #todos <= require("compartido.dominio.esbirros").MAX, tostring(#todos))
-    fallar(errores, "el espectro sigue vivo entre los esbirros", todos[#todos].especie == "espectro")
     avanzar(4)
     fallar(errores, "siguen hiriendo", m.hp < hp0)
     -- desaparecen con el tiempo y si su dueño cae

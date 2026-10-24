@@ -25,7 +25,7 @@ for pid in IDS:
     for l in c['capas']:
         s0 = newsecs['%s__%s' % (pid, l['s'])][0]
         capa = dict(s='%s__%s' % (pid, l['s']), w=l['w'], t0=round(l['t0'], 4), ms=round(l['ms'], 4), sc=l.get('sc', 1.0), a=l.get('a', 1.0), modo=l.get('modo', 'once'))
-        for k in ('t1', 'off'):
+        for k in ('t1', 'off', 'giro', 'flip'):
             if k in l: capa[k] = l[k]
         capa['dir'] = False
         capa['mezcla'] = 'add'

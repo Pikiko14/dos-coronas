@@ -163,6 +163,10 @@ function M.dibujar(id, fx, t, sx, sy, pasada)
             if u <= (c.dur or 0.05) then k = 0 end
           elseif modo == "proj" then
             if t <= (c.t1 or c.t0 + 0.3) then k = 0 end
+          elseif modo == "vuelo" then
+            -- vuela del lanzador al objetivo repartiendo los cuadros a lo largo del trayecto (se forma al salir, se deshace al llegar)
+            local fin = c.t1 or c.t0 + 0.4
+            if t <= fin then k = math.min(d.n - 1, math.floor(limitar(u / math.max(0.01, fin - c.t0), 0, 1) * d.n)) end
           elseif modo == "caida" then
             -- cae desde el desplazamiento `off` (arriba, en el cielo) hasta el suelo del objetivo, acelerando; los cuadros van creciendo
             local fin = c.t1 or c.t0 + 0.5
@@ -203,6 +207,22 @@ function M.dibujar(id, fx, t, sx, sy, pasada)
           local ox, oy = 0, 0
           if c.off then ox, oy = c.off[1] * K * (suelo and area or 1), c.off[2] * K * (suelo and area or 1) end
           local espejo = c.flip or false
+          local rotar = 0
+          if modo == "vuelo" then
+            local uu = limitar((t - c.t0) / math.max(0.01, (c.t1 or c.t0 + 0.4) - c.t0), 0, 1)
+            bx = cx + (sx - cx) * uu
+            by = (cy - PECHO) + ((sy - PECHO * 0.62) - (cy - PECHO)) * uu
+            if c.giro == "libre" then
+              rotar = math.rad(ang)                                   -- (apunta hacia donde va: lanzas, flechas)
+            elseif c.giro == "espejo" then
+              -- mira a izquierda o derecha según hacia dónde vuela y se inclina con la pendiente del tiro
+              local izq = math.cos(math.rad(ang)) < 0
+              local tilt = izq and (ang - 180) or ang
+              tilt = ((tilt + 180) % 360) - 180
+              rotar = math.rad(limitar(tilt, -60, 60))
+              espejo = izq
+            end
+          end
           if c.dir then
             local n = d.n
             local frame, mir = cuadroDir(ang, n)
@@ -234,7 +254,7 @@ function M.dibujar(id, fx, t, sx, sy, pasada)
           if espejo then ax = d.w - ax sxe = -esc end
           if c.mezcla == "add" then love.graphics.setBlendMode("add") end
           love.graphics.setColor(1, 1, 1, limitar(alfa, 0, 1))
-          love.graphics.draw(img, quad(c.s, k), bx + ox, by + oy, 0, sxe, esc, ax, ay)
+          love.graphics.draw(img, quad(c.s, k), bx + ox, by + oy, rotar, sxe, esc, ax, ay)
           if c.mezcla == "add" then love.graphics.setBlendMode("alpha") end
         end
       end

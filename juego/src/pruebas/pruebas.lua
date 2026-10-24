@@ -64,7 +64,7 @@ function Pruebas.correr()
       "lluvia", "trampa", "preciso", "curar", "bendicion", "castigo", "consagrar", "pantera", "furia",
       "meteoro", "flecha_veneno", "paso_agil", "sanacion", "juicio", "rayo_hielo", "rayo_arcano", "lluvia_fuego", "teletransporte", "torbellino",
       "estocada", "barrido", "muro_lanzas", "embestida", "jabalina", "tormenta_lanzas",
-      "toque_necro", "espinas", "maldecir", "alzar_esqueletos", "drenar", "espectro" }) do
+      "toque_necro", "espinas", "maldecir", "alzar_esqueletos", "drenar" }) do
       fallar(errores, "efecto del poder " .. id, Efectos.def[id] ~= nil)
     end
   end)
@@ -1185,7 +1185,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
     fallar(errores, "las capas de FAO están activas", Fao.activo())
     local clases = { "guerrero", "lancero", "cazador", "mago", "clerigo", "nigromante" }
     local vista = os.getenv("DC_PRUEBA_APARIENCIAS") ~= nil
-    local CW, CH = 120, 150
+    local CW, CH = 220, 260
     local cv = love.graphics.newCanvas(CW * #clases, CH * #ids)
     local ok, err = pcall(function()
       love.graphics.setCanvas({ cv, stencil = true })
@@ -1195,7 +1195,9 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
           local e = { id = "ap", kind = "jugador", clase = clase, genero = (c % 2 == 0) and "m" or "h", addon = id, x = 5, y = 5, vivo = true, dir = 1, equipo = {} }
           e._f8 = (c % 3 == 0) and 6 or 2          -- (algunos de espaldas, para ver las alas y la capa por delante)
           love.graphics.push()
-          Fao.dibujar(e, false, (c - 0.5) * CW, r * CH - 20, nil, 1, { anim = "wait", paso = 0, d5 = (c % 3 == 0) and 1 or 0 })
+          love.graphics.translate((c - 0.5) * CW, r * CH - 20)
+          love.graphics.scale(2.4, 2.4)
+          Fao.dibujar(e, false, 0, 0, nil, 1, { anim = "wait", paso = 0, d5 = (c % 3 == 0) and 1 or 0 })
           love.graphics.pop()
         end
       end
@@ -1219,6 +1221,43 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
     fallar(errores, "la pestaña Apariencia se dibuja: " .. tostring(errm), okm)
     if vista then Log.volcar("capturas/apariencias_mall.png", pan:newImageData():encode("png"):getString()) end
     Interfaz.panel = nil
+  end)
+  -- Los diez efectos del nigromante (paquete necromante_10_poderes) sobre un fondo liso, con el lanzador a la izquierda y un blanco a la derecha. Con
+  -- DC_PRUEBA_NECRO=1 guarda juego/capturas/necromante_poderes.png (una fila por poder, cuatro instantes).
+  paso("nigromante: los diez efectos de capas se dibujan", function()
+    local Capas = require("src.presentacion.render.efectos_fao_capas")
+    local Poderes = require("compartido.datos.efectos_fao_poderes")
+    local Fao = require("src.presentacion.render.fao")
+    local vista = os.getenv("DC_PRUEBA_NECRO") ~= nil
+    local CW, CH = 380, 250
+    local cv = love.graphics.newCanvas(CW * 4, CH * #Datos.barra.nigromante)
+    local ok, err = pcall(function()
+      love.graphics.setCanvas(cv)
+      love.graphics.clear(0.16, 0.2, 0.16, 1)
+      for fila, id in ipairs(Datos.barra.nigromante) do
+        fallar(errores, id .. " tiene capas de efecto", Poderes[id] ~= nil and #Poderes[id].capas >= 1)
+        for k, frac in ipairs({ 0.15, 0.3, 0.5, 0.75 }) do
+          local ox, oy = (k - 1) * CW, (fila - 1) * CH
+          love.graphics.push("all")
+          love.graphics.setScissor(ox, oy, CW, CH)
+          love.graphics.translate(ox, oy)
+          local sx, sy = 270, 190
+          local fx = { x = 14, y = 10, x0 = 9, y0 = 10 }
+          local t = Poderes[id].dur * frac
+          Capas.dibujar(id, fx, t, sx, sy, "suelo")
+          love.graphics.setColor(1, 1, 1, 1)
+          Fao.retrato("nigromante", "h", nil, 90, 190, 1.6)
+          love.graphics.setColor(0.8, 0.4, 0.4, 1)
+          love.graphics.ellipse("fill", sx, sy - 14, 12, 18)
+          Capas.dibujar(id, fx, t, sx, sy, "cuerpo")
+          love.graphics.pop()
+        end
+      end
+      love.graphics.setCanvas()
+    end)
+    love.graphics.setCanvas()
+    fallar(errores, "los efectos del nigromante se dibujan: " .. tostring(err), ok)
+    if vista then Log.volcar("capturas/necromante_poderes.png", cv:newImageData():encode("png"):getString()) end
   end)
   paso("skins exclusivas dibujadas por código", function()
     local P = require("src.presentacion.render.personajes")

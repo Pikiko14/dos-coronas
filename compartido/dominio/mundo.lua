@@ -1451,7 +1451,7 @@ Mundo.SONIDO_PODER = {
   golpe = "corte", tajo = "corte", carga = "corte", grito = "grito",
   misil = "magia", fuego = "fuego", escudo = "magia", nova = "hielo",
   fisura_del_lancero = "lanza", pulso_terrestre = "lanza", torbellino_lanzas = "lanza", juicio_final = "lanza",
-  explosion_cadaverica = "oscuro", nova_oscura = "oscuro", lluvia_profana = "oscuro", apocalipsis_necromantico = "oscuro",
+  explosion_cadaverica = "oscuro", nova_oscura = "oscuro", lluvia_profana = "oscuro", lanza_osea = "oscuro",
   golpe_terrestre = "corte", salto_impacto = "corte", estocada_lineal = "corte", ejecucion = "corte",
   disparo_multiple = "flecha", disparo_explosivo = "fuego", disparo_helado = "hielo", marca_cazador = "flecha",
   escudo_divino = "sagrado", cadena_sanacion = "cura", tormenta_divina = "sagrado", resurreccion = "sagrado",
@@ -1462,7 +1462,7 @@ Mundo.SONIDO_PODER = {
   flecha_veneno = "flecha", paso_agil = "flecha", sanacion = "cura", juicio = "sagrado",
   estocada = "lanza", barrido = "lanza", embestida = "lanza", jabalina = "flecha", tormenta_lanzas = "lanza",
   muro_lanzas = "grito", toque_necro = "oscuro", espinas = "oscuro", maldecir = "oscuro", alzar_esqueletos = "oscuro",
-  drenar = "oscuro", espectro = "oscuro",
+  drenar = "oscuro", escudo_huesos = "oscuro",
 }
 
 function Mundo:usarHabilidad(p, slot, tx, ty)
@@ -3719,6 +3719,13 @@ function Mundo:aplicarGuardado(p, data)
   if p.kind == "jugador" then
     -- guardados anteriores al árbol: solo el poder inicial y todos los puntos por gastar
     p.habilidades = data.habilidades or Arbol.iniciales(p.clase)
+    -- poderes del nigromante que cambiaron de id al estrenar los diez efectos nuevos: conservan sus rangos
+    for viejo, nuevo in pairs({ espectro = "escudo_huesos", apocalipsis_necromantico = "lanza_osea" }) do
+      if p.habilidades[viejo] then
+        p.habilidades[nuevo] = math.max(p.habilidades[nuevo] or 0, p.habilidades[viejo])
+        p.habilidades[viejo] = nil
+      end
+    end
   end
   -- Una posición guardada solo vale si sigue siendo tierra firme de tu continente (o de la isla de la
   -- Cicatriz a partir del nivel 20): así los personajes de un mundo anterior no aparecen en el mar.

@@ -1,26 +1,26 @@
 {
  "id_dos_coronas": "explosion_cadaverica",
  "clase": "nigromante",
- "nombre": "Explosión cadavérica",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Erupción necrótica",
+ "poder_fao": "(secuencia propia: paquete de poderes del nigromante)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    327,
+    341
    ],
    "origin": [
-    128,
-    128
+    160,
+    340
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.0,
+  "inferida": false,
+  "duracion_s": 0.9,
   "golpes_s": [
    0.4
   ],
@@ -29,12 +29,12 @@
     "s": "fx",
     "w": "GT",
     "t0": 0.0,
-    "ms": 0.06,
-    "sc": 0.95,
+    "ms": 0.1,
+    "sc": 0.9,
     "a": 1.0,
     "modo": "once"
    }
   ]
  },
- "nota": "nigromante/explosion_cadaverica del paquete de poderes."
+ "nota": "necromante_10_poderes/06_erupcion_necrotica (640x640, recortado a 327x341)."
 }

@@ -1,0 +1,42 @@
+{
+ "id_dos_coronas": "lanza_osea",
+ "clase": "nigromante",
+ "nombre": "Lanza ósea",
+ "poder_fao": "(secuencia propia: paquete de poderes del nigromante)",
+ "secuencias": {
+  "fx": {
+   "sheet": "sheets/fx.png",
+   "frames": 8,
+   "cell": [
+    387,
+    181
+   ],
+   "origin": [
+    193,
+    90
+   ],
+   "ms_per_frame": 102.5
+  }
+ },
+ "composicion": {
+  "inferida": false,
+  "duracion_s": 0.55,
+  "golpes_s": [
+   0.36
+  ],
+  "capas": [
+   {
+    "s": "fx",
+    "w": "C",
+    "t0": 0.0,
+    "ms": 0.05,
+    "sc": 0.65,
+    "a": 1.0,
+    "modo": "vuelo",
+    "t1": 0.36,
+    "giro": "libre"
+   }
+  ]
+ },
+ "nota": "necromante_10_poderes/08_lanza_osea (640x640, recortado a 387x181)."
+}

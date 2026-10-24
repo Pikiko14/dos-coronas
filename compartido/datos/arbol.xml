@@ -265,7 +265,7 @@
       <i id="drenar" nivel="15" tipo="activa" slot="5">
         <requiere lista="toque_necro,3"/>
       </i>
-      <i id="espectro" nivel="20" tipo="activa" slot="6">
+      <i id="escudo_huesos" nivel="20" tipo="activa" slot="6">
         <requiere lista="alzar_esqueletos,2"/>
       </i>
       <i id="explosion_cadaverica" nivel="22" tipo="activa" slot="7">
@@ -277,8 +277,8 @@
       <i id="lluvia_profana" nivel="26" tipo="activa" slot="9">
         <requiere lista="drenar,2"/>
       </i>
-      <i id="apocalipsis_necromantico" nivel="28" tipo="activa" slot="10">
-        <requiere lista="espectro,1"/>
+      <i id="lanza_osea" nivel="28" tipo="activa" slot="10">
+        <requiere lista="escudo_huesos,1"/>
       </i>
       <i id="mente_oscura" nombre="Mente oscura" nivel="1" tipo="pasiva" desc="Más ataque mágico.">
         <icono hoja="extra" sprite="25"/>
@@ -330,7 +330,7 @@
     <explosion_cadaverica cd="0.04" mana="0.03" pot="0.12"/>
     <nova_oscura cd="0.04" mana="0.03" pot="0.12"/>
     <lluvia_profana cd="0.04" mana="0.03" pot="0.1"/>
-    <apocalipsis_necromantico cd="0.04" mana="0.03" pot="0.12"/>
+    <lanza_osea cd="0.04" mana="0.03" pot="0.12"/>
     <golpe_terrestre cd="0.04" mana="0.03" pot="0.12"/>
     <salto_impacto cd="0.04" mana="0.03" pot="0.12"/>
     <estocada_lineal cd="0.04" mana="0.03" pot="0.12"/>
@@ -361,6 +361,6 @@
     <maldecir cd="0.04" mana="0.03" pot="0.1"/>
     <alzar_esqueletos cd="0.03" mana="0.03" dur="3" pot="0.12"/>
     <drenar cd="0.04" mana="0.03" pot="0.1"/>
-    <espectro cd="0.03" mana="0.03" dur="3" pot="0.12"/>
+    <escudo_huesos cd="0.04" mana="0.03" dur="1" pot="0.15"/>
   </mejoras>
 </arbol>

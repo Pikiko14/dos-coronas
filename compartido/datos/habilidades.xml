@@ -107,28 +107,30 @@
   <habilidad id="torbellino_lanzas" nombre="Torbellino de lanzas" clase="lancero" tipo="alrededor" pulsos="4" seguir="true" cd="20" coef="0.9" lentitud="0.3" desc="Giras la lanza sin parar: golpeas cuatro veces a los que te rodean." mana="45" rango="3.2"/>
   <habilidad id="juicio_final" nombre="Juicio final" clase="lancero" tipo="punto" aoe="3.4" pulsos="3" cd="30" coef="1.5" aturde="0.6" desc="Una lluvia de lanzas de luz cae tres veces sobre la zona." mana="70" rango="7.5"/>
   <!--  nigromante  -->
-  <habilidad id="toque_necro" nombre="Toque necrótico" clase="nigromante" tipo="enemigo" cd="2" coef="1.2" dano="magico" desc="Una bola de energía muerta que hiere y a veces drena vida." mana="7" proyectil="necro" rango="7.2">
+  <habilidad id="toque_necro" nombre="Calavera espectral" clase="nigromante" tipo="enemigo" cd="2" coef="1.2" dano="magico" desc="Una calavera de fuego espectral vuela hasta el objetivo, lo hiere y a veces le drena la vida." mana="7" proyectil="necro" rango="7.2">
     <estado tipo="drenar_vida" prob="0.1"/>
   </habilidad>
-  <habilidad id="espinas" nombre="Espinas de hueso" clase="nigromante" tipo="punto" aoe="2.2" cd="8" coef="1.5" dano="magico" desc="Brotan huesos afilados del suelo y desgarran la zona." mana="22" rango="7.5">
+  <habilidad id="espinas" nombre="Manos de ultratumba" clase="nigromante" tipo="punto" aoe="2.2" cd="8" coef="1.5" dano="magico" desc="Manos esqueléticas surgen del suelo, agarran y desgarran la zona." mana="22" rango="7.5">
     <estado tipo="sangrar" dur="5" prob="0.5"/>
   </habilidad>
-  <habilidad id="maldecir" nombre="Maldición" clase="nigromante" tipo="enemigo" cd="12" coef="0.7" dano="magico" desc="Un sello maldito frena y debilita al objetivo." mana="20" rango="7">
+  <habilidad id="maldecir" nombre="Flor de maldición" clase="nigromante" tipo="enemigo" cd="12" coef="0.7" dano="magico" desc="Una flor sombría brota bajo el objetivo: lo frena y lo debilita." mana="20" rango="7">
     <estado tipo="lentitud" dur="6" pct="0.5" prob="1"/>
   </habilidad>
-  <habilidad id="alzar_esqueletos" nombre="Alzar esqueletos" clase="nigromante" tipo="invocar" esbirro="esqueleto" cantidad="2" dur="32" cd="20" desc="Dos esqueletos salen de la tierra y luchan a tu lado un buen rato." mana="38"/>
-  <habilidad id="drenar" nombre="Drenar vida" clase="nigromante" tipo="enemigo" cd="8" coef="1.4" dano="magico" desc="Un torbellino que roba la vida del objetivo." mana="26" rango="7">
+  <habilidad id="alzar_esqueletos" nombre="Portal sombrío" clase="nigromante" tipo="invocar" esbirro="esqueleto" cantidad="2" dur="32" cd="20" desc="Abres un portal de sombras del que salen dos esqueletos que luchan a tu lado un buen rato." mana="38"/>
+  <habilidad id="drenar" nombre="Torbellino de almas" clase="nigromante" tipo="enemigo" cd="8" coef="1.4" dano="magico" desc="Un torbellino de almas envuelve al objetivo y le roba la vida." mana="26" rango="7">
     <estado tipo="drenar_vida" dur="4" prob="1"/>
   </habilidad>
-  <habilidad id="espectro" nombre="Alma en pena" clase="nigromante" tipo="invocar" esbirro="espectro" cantidad="1" dur="38" cd="34" desc="Un espectro fiel dispara descargas de sombra a tus enemigos." mana="60"/>
-  <habilidad id="explosion_cadaverica" nombre="Explosión cadavérica" clase="nigromante" tipo="punto" aoe="2.8" cd="14" coef="2" dano="magico" desc="Un cadáver estalla y desgarra a todos los de la zona." mana="40" rango="7.5">
+  <habilidad id="escudo_huesos" nombre="Escudo de huesos" clase="nigromante" tipo="propio" buff="escudo" cd="22" dur="10" desc="Una esfera de huesos y almas te rodea y absorbe parte del daño." mana="55"/>
+  <habilidad id="explosion_cadaverica" nombre="Erupción necrótica" clase="nigromante" tipo="punto" aoe="2.8" cd="14" coef="2" dano="magico" desc="Una erupción de energía necrótica brota del suelo y desgarra a todos los de la zona." mana="40" rango="7.5">
     <estado tipo="veneno" dur="5" prob="0.5"/>
   </habilidad>
-  <habilidad id="nova_oscura" nombre="Nova oscura" clase="nigromante" tipo="alrededor" cd="12" coef="1.8" dano="magico" lentitud="0.4" desc="Una onda de oscuridad a tu alrededor daña y frena a los enemigos." mana="38" rango="3.6"/>
-  <habilidad id="lluvia_profana" nombre="Lluvia profana" clase="nigromante" tipo="punto" aoe="3.2" pulsos="4" cd="24" coef="0.95" dano="magico" desc="Llueven almas envenenadas durante un rato sobre la zona." mana="65" rango="7.5">
+  <habilidad id="nova_oscura" nombre="Guadaña de sombras" clase="nigromante" tipo="alrededor" cd="12" coef="1.8" dano="magico" lentitud="0.4" desc="Una guadaña de sombras gira a tu alrededor, daña y frena a los enemigos." mana="38" rango="3.6"/>
+  <habilidad id="lluvia_profana" nombre="Cadenas condenadas" clase="nigromante" tipo="punto" aoe="3.2" pulsos="3" cd="24" coef="1" dano="magico" lentitud="0.5" desc="Cadenas de almas atrapan la zona: dañan tres veces y frenan a los enemigos." mana="65" rango="7.5">
     <estado tipo="veneno" dur="5" prob="0.6"/>
   </habilidad>
-  <habilidad id="apocalipsis_necromantico" nombre="Apocalipsis necromántico" clase="nigromante" tipo="punto" aoe="3.8" pulsos="2" cd="40" coef="2.6" dano="magico" desc="La muerte misma barre la zona dos veces." mana="95" rango="7.5"/>
+  <habilidad id="lanza_osea" nombre="Lanza ósea" clase="nigromante" tipo="enemigo" cd="30" coef="3.2" dano="magico" desc="Una lanza de hueso imbuida de almas atraviesa al objetivo con un daño enorme." mana="80" proyectil="necro" rango="8">
+    <estado tipo="sangrar" dur="6" prob="0.8"/>
+  </habilidad>
   <!--  orden de los poderes en la barra (teclas 1 a 6; todas las clases tienen 10)  -->
   <barra>
     <cazador lista="disparo,lluvia,trampa,preciso,flecha_veneno,paso_agil,disparo_multiple,disparo_explosivo,disparo_helado,marca_cazador"/>
@@ -136,6 +138,6 @@
     <guerrero lista="golpe,tajo,grito,carga,pantera,furia,golpe_terrestre,salto_impacto,estocada_lineal,ejecucion"/>
     <mago lista="misil,fuego,escudo,nova,rayo_hielo,meteoro,rayo_arcano,lluvia_fuego,teletransporte,torbellino"/>
     <lancero lista="estocada,barrido,muro_lanzas,embestida,jabalina,tormenta_lanzas,fisura_del_lancero,pulso_terrestre,torbellino_lanzas,juicio_final"/>
-    <nigromante lista="toque_necro,espinas,maldecir,alzar_esqueletos,drenar,espectro,explosion_cadaverica,nova_oscura,lluvia_profana,apocalipsis_necromantico"/>
+    <nigromante lista="toque_necro,espinas,maldecir,alzar_esqueletos,drenar,escudo_huesos,explosion_cadaverica,nova_oscura,lluvia_profana,lanza_osea"/>
   </barra>
 </habilidades>

@@ -28,37 +28,37 @@ FAMILIAS = ("espada", "hacha", "lanza", "arco", "baston", "maza", "baculo")
 # id, nombre, precio en Monedas Corona, número del pecho para cada género (cabeza n-1, manos n+1, pies n+2), espalda y armas
 SETS = [
     dict(id="pd_ciudad_demoniaca", nombre="Ciudad Demoníaca", precio=900, h=3473, m=3473, espalda=5344,
-         armas=dict(espada=3476, hacha=3477, lanza=3478, arco=3479, baston=3480, maza=3480, baculo=3480)),
+         armas=dict(espada=2526, hacha=3469, lanza=4977, arco=4338, baston=3466, maza=3468, baculo=4965)),
     dict(id="pd_espacio_tiempo", nombre="Espacio-Tiempo", precio=900, h=3688, m=3688, espalda=4556,
-         armas=dict(espada=3691, hacha=3692, lanza=4617, arco=5985, baston=4557, maza=4557, baculo=4557)),
-    dict(id="pd_noche_brujas", nombre="Noche de Brujas", precio=700, h=3277, m=3281, espalda=5344,
-         armas=dict(espada=2268, hacha=5836, lanza=3478, arco=3479, baston=4404, maza=4404, baculo=4404)),
-    dict(id="pd_armadura_dorada", nombre="Armadura Dorada", precio=1000, h=4560, m=4560, espalda=4556,
-         armas=dict(espada=4555, hacha=3477, lanza=4617, arco=3479, baston=4557, maza=4557, baculo=4557)),
-    dict(id="pd_sacerdote_sagrado", nombre="Sacerdote Sagrado", precio=800, h=5636, m=5640, espalda=3010,
-         armas=dict(espada=3271, hacha=5836, lanza=3828, arco=3829, baston=4834, maza=4834, baculo=4834)),
-    dict(id="pd_esperanza", nombre="Esperanza", precio=800, h=5658, m=5662, espalda=4558,
-         armas=dict(espada=4407, hacha=3692, lanza=4840, arco=5666, baston=5667, maza=5667, baculo=5667)),
-    dict(id="pd_rey_guerra", nombre="Rey de la Guerra", precio=1100, h=6012, m=6016, espalda=4556,
-         armas=dict(espada=5363, hacha=5836, lanza=4617, arco=5666, baston=4834, maza=4834, baculo=4834)),
-    dict(id="pd_lobo_nevado", nombre="Lobo Nevado", precio=700, h=1753, m=1757, espalda=4558,
-         armas=dict(espada=2268, hacha=3477, lanza=4840, arco=5985, baston=4105, maza=4105, baculo=4105)),
+         armas=dict(espada=4615, hacha=2526, lanza=4959, arco=2021, baston=4105, maza=3470, baculo=3466)),
     dict(id="pd_imperial", nombre="Imperial", precio=800, h=1949, m=1953, espalda=4558,
-         armas=dict(espada=4407, hacha=3692, lanza=3478, arco=3479, baston=4557, maza=4557, baculo=4557)),
+         armas=dict(espada=3267, hacha=2526, lanza=4965, arco=2021, baston=4105, maza=3469, baculo=3466)),
+    dict(id="pd_armadura_dorada", nombre="Armadura Dorada", precio=1000, h=4560, m=4560, espalda=4556,
+         armas=dict(espada=5084, hacha=3469, lanza=4977, arco=4338, baston=4965, maza=4105, baculo=3466)),
+    dict(id="pd_sacerdote_sagrado", nombre="Sacerdote Sagrado", precio=800, h=5636, m=5640, espalda=3010,
+         armas=dict(espada=3267, hacha=2526, lanza=4959, arco=2021, baston=4105, maza=3466, baculo=4965)),
+    dict(id="pd_esperanza", nombre="Esperanza", precio=800, h=5658, m=5662, espalda=4558,
+         armas=dict(espada=4615, hacha=5084, lanza=4977, arco=4338, baston=3466, maza=4105, baculo=4965)),
+    dict(id="pd_gala_esmeralda", nombre="Gala Esmeralda", precio=700, h=2676, m=2680, espalda=4556,
+         armas=dict(espada=5084, hacha=2526, lanza=4977, arco=4338, baston=2771, maza=3468, baculo=3466)),
+    dict(id="pd_lobo_nevado", nombre="Lobo Nevado", precio=700, h=1753, m=1757, espalda=4558,
+         armas=dict(espada=2268, hacha=4615, lanza=4977, arco=2021, baston=4105, maza=3468, baculo=4965)),
+    dict(id="pd_lobo_gris", nombre="Lobo Gris", precio=700, h=1745, m=1749, espalda=4556,
+         armas=dict(espada=4615, hacha=3469, lanza=4959, arco=4338, baston=3466, maza=3470, baculo=2771)),
     dict(id="pd_pasion", nombre="Pasión", precio=700, h=2684, m=2688, espalda=5344,
-         armas=dict(espada=3274, hacha=5836, lanza=3828, arco=3829, baston=3747, maza=3747, baculo=3747)),
+         armas=dict(espada=5084, hacha=4615, lanza=4959, arco=4338, baston=2771, maza=3466, baculo=4965)),
 ]
 HUECOS = (("cabeza", -1), ("pecho", 0), ("piernas", 1), ("pies", 2))      # (hueco del juego, desplazamiento): piernas = las manos (guantes)
 
 
 def capa(n, letra, suf=""):
-    """(carpeta, código) de la apariencia n; con suf = 'l' prueba la versión de arco y si no existe, la normal."""
-    if suf:
+    """(carpeta, código) de la apariencia n; con suf = 'l' prueba antes la versión de arco. Si la pieza solo existe en una de las dos versiones (normal o 'l'), se usa esa."""
+    for sufijo in ((suf, "", "l") if suf else ("", "l")):
         try:
-            return A.capa_de(n, letra + suf)
+            return A.capa_de(n, letra + sufijo)
         except SystemExit:
             pass
-    return A.capa_de(n, letra)
+    raise SystemExit("no existe la capa de la apariencia %d (%s)" % (n, letra))
 
 
 def piezas_de(s, gen):
@@ -111,8 +111,9 @@ def previa():
             capas = [("p001" + ("b" if gen == "h" else "g"), codp["p001" + ("b" if gen == "h" else "g")])]
             orden = ["espalda", "pies", "pecho", "piernas", "cabeza"]
             lista = [p[k] for k in orden if k in p]
-            if p["arma"].get("espada"):
-                lista.append(p["arma"]["espada"])
+            arma = p["arma"].get("espada" if gen == "h" else "baston")
+            if arma:
+                lista.append(arma)
             cv = Image.new("RGBA", (W, H), (60, 70, 90, 255))
             for cap, cod in capas + lista:
                 r = frente(cap, cod)
@@ -144,6 +145,9 @@ def main():
     if "--previa" in sys.argv:
         previa()
         return
+    previas = set()
+    if os.path.exists(LUA):
+        previas = set(re.findall(r'^    (i\d+\w*) = \{', open(LUA, encoding="utf-8").read(), re.M))
     meta, total, sets = {}, 0, {}
     for s in SETS:
         sets[s["id"]] = {"nombre": s["nombre"], "precio": s["precio"], "h": {}, "m": {}}
@@ -164,6 +168,15 @@ def main():
             sets[s["id"]][gen] = fila
         print("set", s["id"], "listo")
     print("tamaño total", total // 1024, "KB")
+    # capas de una versión anterior de los sets que ya no usa nadie (ni el equipo de los escalones): se borran
+    ajenos = ""
+    for n in ("fao_datos.lua", "fao_datos_altos.lua", "fao_datos_medios.lua"):
+        ajenos += open(os.path.join(os.path.dirname(LUA), n), encoding="utf-8").read()
+    import shutil
+    for cap in sorted(previas - set(meta)):
+        if '"%s"' % cap not in ajenos and ("    %s = {" % cap) not in ajenos:
+            shutil.rmtree(os.path.join(A.SALIDA, cap), ignore_errors=True)
+            print("capa antigua borrada", cap)
     with open(LUA, "w", encoding="utf-8", newline="\n") as f:
         f.write("-- GENERADO por herramientas/generar_personajes/apariencias.py: capas y sets de apariencia (PD de FAO). No editar a mano.\n")
         f.write("return " + lua({"capas": meta, "sets": sets}) + "\n")

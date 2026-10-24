@@ -1,43 +1,43 @@
 {
  "id_dos_coronas": "lluvia_profana",
  "clase": "nigromante",
- "nombre": "Lluvia profana",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Cadenas condenadas",
+ "poder_fao": "(secuencia propia: paquete de poderes del nigromante)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    311,
+    318
    ],
    "origin": [
-    128,
-    128
+    154,
+    317
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.25,
+  "inferida": false,
+  "duracion_s": 1.45,
   "golpes_s": [
-   0.5,
-   0.75,
-   1.0,
-   1.25
+   0.4,
+   0.8,
+   1.2
   ],
   "capas": [
    {
     "s": "fx",
     "w": "GT",
-    "t0": 0.05,
-    "ms": 0.07,
-    "sc": 1.0,
+    "t0": 0.0,
+    "ms": 0.13,
+    "sc": 0.9,
     "a": 1.0,
-    "modo": "once"
+    "modo": "loop",
+    "t1": 1.25
    }
   ]
  },
- "nota": "nigromante/lluvia_profana del paquete de poderes."
+ "nota": "necromante_10_poderes/07_cadenas_condenadas (640x640, recortado a 311x318)."
 }

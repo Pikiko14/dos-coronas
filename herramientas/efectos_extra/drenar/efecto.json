@@ -1,40 +1,40 @@
 {
  "id_dos_coronas": "drenar",
  "clase": "nigromante",
- "nombre": "Drenar vida",
- "poder_fao": "(secuencia propia: paquete de clases)",
+ "nombre": "Torbellino de almas",
+ "poder_fao": "(secuencia propia: paquete de poderes del nigromante)",
  "secuencias": {
   "fx": {
    "sheet": "sheets/fx.png",
-   "frames": 16,
+   "frames": 8,
    "cell": [
-    256,
-    256
+    277,
+    313
    ],
    "origin": [
-    128,
-    128
+    137,
+    310
    ],
-   "ms_per_frame": 55.0
+   "ms_per_frame": 102.5
   }
  },
  "composicion": {
-  "inferida": true,
-  "duracion_s": 1.2,
+  "inferida": false,
+  "duracion_s": 1.0,
   "golpes_s": [
-   0.5
+   0.45
   ],
   "capas": [
    {
     "s": "fx",
-    "w": "T",
-    "t0": 0.05,
-    "ms": 0.07,
-    "sc": 0.7,
+    "w": "GT",
+    "t0": 0.0,
+    "ms": 0.11,
+    "sc": 0.85,
     "a": 1.0,
     "modo": "once"
    }
   ]
  },
- "nota": "nigromante/sifon_de_almas del paquete de poderes."
+ "nota": "necromante_10_poderes/04_torbellino_almas (640x640, recortado a 277x313)."
 }

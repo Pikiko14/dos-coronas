@@ -97,15 +97,15 @@
   <addon id="skin_caballero_oscuro" nombre="Caballero oscuro" desc="Armadura negra con cuernos." precio="500"/>
   <!-- ---- apariencias: sets completos de PD de FAO (ids pd_...); se compran y se ponen como un addon, pero se ven por capas (fao.lua) ---- -->
   <addon id="pd_ciudad_demoniaca" nombre="Ciudad Demoníaca" desc="Armadura infernal con alas de murciélago y armas de la ciudad maldita." precio="900"/>
-  <addon id="pd_espacio_tiempo" nombre="Espacio-Tiempo" desc="Armadura de viajero del tiempo con capa y armas de reloj." precio="900"/>
-  <addon id="pd_noche_brujas" nombre="Noche de Brujas" desc="Calabaza y brujería: disfraz completo con alas oscuras." precio="700"/>
+  <addon id="pd_espacio_tiempo" nombre="Espacio-Tiempo" desc="Atuendo de viajero del tiempo con capa y armas de otra época." precio="900"/>
+  <addon id="pd_imperial" nombre="Imperial" desc="Armadura imperial plateada con capa y armas de la corte." precio="800"/>
   <addon id="pd_armadura_dorada" nombre="Armadura Dorada" desc="Coraza dorada de caballero con capa y arma a juego." precio="1000"/>
   <addon id="pd_sacerdote_sagrado" nombre="Sacerdote Sagrado" desc="Túnica sagrada con alas de ángel y armas blancas." precio="800"/>
   <addon id="pd_esperanza" nombre="Esperanza" desc="Túnica de la esperanza con capa y báculo de corazón." precio="800"/>
-  <addon id="pd_rey_guerra" nombre="Rey de la Guerra" desc="Atuendo real de guerra, dorado y azul, con capa." precio="1100"/>
+  <addon id="pd_gala_esmeralda" nombre="Gala Esmeralda" desc="Traje de gala verde con peto de plata y armas elegantes." precio="700"/>
   <addon id="pd_lobo_nevado" nombre="Lobo Nevado" desc="Traje de lobo de las nieves con armas de hielo." precio="700"/>
-  <addon id="pd_imperial" nombre="Imperial" desc="Vestido imperial con capa y armas de la corte." precio="800"/>
-  <addon id="pd_pasion" nombre="Pasión" desc="Traje de gala rojo con alas oscuras y armas elegantes." precio="700"/>
+  <addon id="pd_lobo_gris" nombre="Lobo Gris" desc="Armadura de lobo gris de la pradera con capa y armas a juego." precio="700"/>
+  <addon id="pd_pasion" nombre="Pasión" desc="Traje de gala oscuro con alas y armas elegantes." precio="700"/>
   <!-- ---- monturas exclusivas ---- -->
   <montura id="mnt_039" nombre="Hámster tostado" desc="Mágica, nivel 5. Velocidad +38%. Se pelea montado." precio="700"/>
   <montura id="mnt_040" nombre="Lobo Aullador" desc="Física, nivel 5. Velocidad +38%. Se pelea montado." precio="700"/>

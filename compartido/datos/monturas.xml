@@ -9,26 +9,26 @@
   <montura id="buey" nombre="Buey de carga" nivel="5" carga="22" desc="Lento pero fuerte: carga mucho más. Solo con el oficio activo." precio="900" requiereOficio="true" vel="0.1" vida="500"/>
   <montura id="caballo" nombre="Caballo" nivel="10" carga="6" desc="El más rápido para cruzar el mapa. Solo con el oficio activo." precio="1000" requiereOficio="true" vel="0.4" vida="350"/>
   <montura id="carreta" nombre="Carreta cubierta" nivel="14" carga="90" desc="Una carreta de mercader: carga enorme. Solo para comerciantes con el oficio activo." oficio="trader" precio="4500" requiereOficio="true" vel="0.06" vida="1100"/>
-  <montura id="mnt_001" nombre="Corcel blanco" nivel="20" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.4" vida="600"/>
-  <montura id="mnt_002" nombre="Gallo de monta" nivel="15" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.38" vida="600"/>
-  <montura id="mnt_005" nombre="Burro" nivel="20" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.4" vida="600"/>
-  <montura id="mnt_006" nombre="Lobo blanco" nivel="1" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.3" vida="600"/>
-  <montura id="mnt_007" nombre="Hámster de cofia" nivel="15" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.38" vida="600"/>
-  <montura id="mnt_008" nombre="Zorro rojo" nivel="20" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.4" vida="600"/>
-  <montura id="mnt_009" nombre="Jabalí ámbar" nivel="20" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.4" vida="600"/>
-  <montura id="mnt_026" nombre="Corcel granate" nivel="1" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_027" nombre="Bisonte pardo" nivel="1" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_028" nombre="Hámster pardo" nivel="1" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_029" nombre="Corcel de nieve" nivel="5" tipo="magico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_030" nombre="Caballo castaño" nivel="5" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_031" nombre="Rana azul" nivel="5" tipo="magico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_032" nombre="Conejo escarlata" nivel="5" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_033" nombre="Jabalí dorado" nivel="10" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_034" nombre="Hámster del huevo" nivel="10" tipo="magico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_035" nombre="Lobo de melena" nivel="10" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_036" nombre="Gallo rojo" nivel="10" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_037" nombre="Cerdito rosa" nivel="15" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.34" vida="600"/>
-  <montura id="mnt_038" nombre="Corcel borgoña" nivel="15" tipo="fisico" carga="0" desc="Montura de viaje gratuita: sin oficio y se pelea montado." precio="0" vel="0.38" vida="600"/>
+  <montura id="mnt_001" nombre="Corcel blanco" nivel="20" tipo="fisico" carga="0" desc="Un corcel real que corre a toda velocidad,." precio="0" vel="0.4" vida="600"/>
+  <montura id="mnt_002" nombre="Gallo de monta" nivel="20" tipo="magico" carga="0" desc="Un gallo de pelea que tambien corre rapido, mejora la magia." precio="0" vel="0.38" vida="600"/>
+  <montura id="mnt_005" nombre="Burro" nivel="20" tipo="fisico" carga="0" desc="Un burro de carga, que mejora tus estadisticas fisica por su aguante." precio="0" vel="0.4" vida="600"/>
+  <montura id="mnt_006" nombre="Lobo blanco" nivel="10" tipo="fisico" carga="0" desc="." precio="25000" vel="0.3" vida="600"/>
+  <montura id="mnt_007" nombre="Hámster de cofia" nivel="10" tipo="magico" carga="0" desc="." precio="25000" vel="0.38" vida="600"/>
+  <montura id="mnt_008" nombre="Zorro rojo" nivel="20" tipo="fisico" carga="0" desc="." precio="0" vel="0.4" vida="600"/>
+  <montura id="mnt_009" nombre="Jabalí ámbar" nivel="20" tipo="fisico" carga="0" desc="." precio="0" vel="0.4" vida="600"/>
+  <montura id="mnt_026" nombre="Corcel granate" nivel="1" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_027" nombre="Bisonte pardo" nivel="1" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_028" nombre="Hámster pardo" nivel="1" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_029" nombre="Corcel de nieve" nivel="5" tipo="magico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_030" nombre="Caballo castaño" nivel="5" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_031" nombre="Rana azul" nivel="5" tipo="magico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_032" nombre="Conejo escarlata" nivel="5" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_033" nombre="Jabalí dorado" nivel="10" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_034" nombre="Hámster del huevo" nivel="10" tipo="magico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_035" nombre="Lobo de melena" nivel="10" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_036" nombre="Gallo rojo" nivel="10" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_037" nombre="Cerdito rosa" nivel="15" tipo="fisico" carga="0" desc="." precio="0" vel="0.34" vida="600"/>
+  <montura id="mnt_038" nombre="Corcel borgoña" nivel="15" tipo="fisico" carga="0" desc="." precio="0" vel="0.38" vida="600"/>
   <montura id="mnt_039" nombre="Hámster tostado" nivel="5" tipo="magico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.38" vida="600"/>
   <montura id="mnt_040" nombre="Lobo Aullador" nivel="5" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.38" vida="600"/>
   <montura id="mnt_103" nombre="Tortuga viajera" nivel="20" tipo="fisico" carga="0" desc="Montura exclusiva del Item Mall." mall="true" precio="0" vel="0.42" vida="600"/>
