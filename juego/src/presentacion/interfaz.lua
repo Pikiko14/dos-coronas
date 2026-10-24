@@ -3875,7 +3875,64 @@ function I.panelBolsa(mundo, p, w, h)
   love.graphics.printf("Un clic elige. Otro clic en la misma casilla equipa.\nUn clic en otra casilla intercambia.", px + 24, py + ph - 48, pw - 48, "center")
 end
 
--- Panel Personaje (tecla C): resumen del personaje, su equipo (con cifras de cada pieza) y estadísticas.
+-- Panel Personaje (tecla C): a la izquierda el resumen y las estadísticas; a la derecha el muñeco con una casilla para cada tipo de pieza (cabeza, pecho, manos,
+-- pies, arma, escudo, anillo, amuleto y mochila). Pasar el ratón por una pieza enseña su ficha (calidad, escalón, nivel y cifras); un clic la quita.
+local COLOR_CALIDAD = { definitiva = { 1, 0.82, 0.3 }, buena = { 0.45, 0.72, 1 } }
+local NOMBRE_CALIDAD = { definitiva = "Definitiva", buena = "Buena" }
+local ESCALONES_NOMBRE = { "Tosco", "de Soldado", "de Veterano", "de Capitán", "de Campeón", "de Élite", "Legendario", "de Corona", "Mítico", "Eterno" }
+
+-- Ficha de una pieza junto al ratón: nombre con el color de su calidad, escalón y nivel, cifras de cada característica y qué hacer con ella.
+local function fichaPieza(it, enc, nombreHueco, mx, my, w, h, accion)
+  local f = pequena()
+  local lineas = {}
+  local calidad = it.calidad
+  local col = COLOR_CALIDAD[calidad] or { 0.92, 0.9, 0.82 }
+  lineas[#lineas + 1] = { I.nombreItem(it, enc), col, I.fuente }
+  local sub = nombreHueco
+  if it.armadura then sub = sub .. " · armadura " .. it.armadura end
+  lineas[#lineas + 1] = { sub, { 0.7, 0.74, 0.85 }, f }
+  lineas[#lineas + 1] = { "Calidad: " .. (NOMBRE_CALIDAD[calidad] or "Normal"), COLOR_CALIDAD[calidad] or { 0.75, 0.75, 0.75 }, f }
+  if it.tier then lineas[#lineas + 1] = { "Escalón " .. it.tier .. (ESCALONES_NOMBRE[it.tier] and (" · " .. ESCALONES_NOMBRE[it.tier]) or ""), { 0.85, 0.8, 0.6 }, f } end
+  if it.nivel and it.nivel > 1 then lineas[#lineas + 1] = { "Nivel necesario: " .. it.nivel, { 0.85, 0.8, 0.6 }, f } end
+  if (enc or 0) > 0 then lineas[#lineas + 1] = { "Encantamiento +" .. enc, { 0.55, 0.9, 0.6 }, f } end
+  for _, k in ipairs({ { "atk", "Ataque", { 1, 0.78, 0.5 } }, { "matk", "Ataque mágico", { 0.75, 0.65, 1 } }, { "def", "Defensa", { 1, 0.78, 0.5 } },
+    { "mdef", "Defensa mágica", { 0.75, 0.65, 1 } }, { "hp", "Vida", { 0.5, 0.9, 0.5 } }, { "mp", "Maná", { 0.5, 0.7, 1 } } }) do
+    if it[k[1]] then
+      local v = math.floor(Encanto.valor(it, k[1], enc) + 0.5)
+      if v ~= 0 then lineas[#lineas + 1] = { k[2] .. "  " .. (v > 0 and "+" or "") .. v, k[3], f } end
+    end
+  end
+  if it.spd and it.spd ~= 0 then lineas[#lineas + 1] = { "Velocidad  " .. (it.spd > 0 and "+" or "") .. string.format("%.2f", it.spd), { 0.9, 0.9, 0.7 }, f } end
+  if it.slots then lineas[#lineas + 1] = { it.slots .. " espacios en la bolsa", { 0.9, 0.9, 0.7 }, f } end
+  lineas[#lineas + 1] = { accion, { 0.6, 0.62, 0.7 }, f }
+  local ancho, alto = 0, 12
+  for _, l in ipairs(lineas) do
+    ancho = math.max(ancho, l[3]:getWidth(l[1]))
+    alto = alto + l[3]:getHeight() + 2
+  end
+  ancho = ancho + 28
+  local x = math.max(6, math.min(w - ancho - 6, mx + 18))
+  local y = math.max(6, math.min(h - alto - 6, my + 12))
+  love.graphics.setColor(0, 0, 0, 0.35)
+  love.graphics.rectangle("fill", x + 3, y + 4, ancho, alto, 8, 8)
+  love.graphics.setColor(0.04, 0.06, 0.14, 0.97)
+  love.graphics.rectangle("fill", x, y, ancho, alto, 8, 8)
+  love.graphics.setLineWidth(1.5)
+  love.graphics.setColor(col[1], col[2], col[3], calidad and 0.95 or 0.6)
+  love.graphics.rectangle("line", x + 0.5, y + 0.5, ancho - 1, alto - 1, 8, 8)
+  love.graphics.setLineWidth(1)
+  local yy = y + 8
+  for _, l in ipairs(lineas) do
+    love.graphics.setFont(l[3])
+    love.graphics.setColor(0, 0, 0, 0.7)
+    love.graphics.print(l[1], x + 15, yy + 1)
+    love.graphics.setColor(l[2][1], l[2][2], l[2][3])
+    love.graphics.print(l[1], x + 14, yy)
+    yy = yy + l[3]:getHeight() + 2
+  end
+  love.graphics.setFont(I.fuente)
+end
+
 function I.panelEquipo(mundo, p, w, h)
   local px, py, pw, ph = w / 2 - 340, h / 2 - 260, 680, 520
   caja(px, py, pw, ph, "Personaje")
@@ -3883,19 +3940,17 @@ function I.panelEquipo(mundo, p, w, h)
   local f = pequena()
   local fac = Datos.facciones[p.faccion]
   local clase = Datos.clases[p.clase]
-  -- retrato y datos
-  love.graphics.setColor(0.10, 0.13, 0.25)
-  love.graphics.rectangle("fill", px + 14, py + 44, 200, 150, 6, 6)
-  local addonAct = (p.mall and p.mall.addonActivo) or p.addon
-  I.persona(p.clase, px + 114, py + 160, 1.7, p.faccion, addonAct, p.genero or p.gen, p.equipo)
+  local col = fac and fac.color or { 0.8, 0.74, 0.5 }
+  -- datos del personaje (izquierda)
   love.graphics.setFont(I.fuente)
   love.graphics.setColor(0.98, 0.93, 0.78)
-  love.graphics.printf(p.nombre or "", px + 14, py + 198, 200, "center")
-  texto((clase and clase.nombre or "") .. " de " .. (fac and fac.nombre or ""), px + 14, py + 218, fac and fac.color or { 1, 1, 1 })
+  love.graphics.printf(p.nombre or "", px + 14, py + 46, 200, "center")
+  texto((clase and clase.nombre or "") .. " de " .. (fac and fac.nombre or ""), px + 14, py + 68, col)
   local xpN = p.xpSig or Datos.xpPara(p.nivel)
-  barra(px + 14, py + 238, 200, 14, (p.xp or 0) / xpN, 0.85, 0.7, 0.2)
-  texto("Nivel " .. p.nivel .. "   exp " .. math.floor(p.xp or 0) .. " / " .. xpN, px + 20, py + 238, { 1, 1, 1 })
-  local y = py + 262
+  barra(px + 14, py + 90, 200, 14, (p.xp or 0) / xpN, 0.85, 0.7, 0.2)
+  texto("Nivel " .. p.nivel .. "   exp " .. math.floor(p.xp or 0) .. " / " .. xpN, px + 20, py + 90, { 1, 1, 1 })
+  local addonAct = (p.mall and p.mall.addonActivo) or p.addon
+  local y = py + 118
   local function dato(etiqueta, valor, color)
     texto(etiqueta, px + 16, y, { 0.75, 0.7, 0.55 })
     texto(valor, px + 120, y, color or { 1, 0.95, 0.85 })
@@ -3905,7 +3960,7 @@ function I.panelEquipo(mundo, p, w, h)
   dato("Monedas Corona", Ayudas.num(p.mall and p.mall.monedas), { 1, 0.85, 0.3 })
   dato("Oficio", p.oficioElegido and (NOMBRES_OFICIO[p.oficioElegido] or p.oficioElegido) or "ninguno")
   local ad = addonAct and require("compartido.dominio.mall").ADDONS[addonAct]
-  dato("Addon", ad and ad.nombre or "ninguno")
+  dato("Apariencia", ad and ad.nombre or "ninguna")
   dato("Gremio", p.gremioNombre or "ninguno")
   dato("Grupo", (p.grupo and p.grupo.miembros and (#p.grupo.miembros .. " miembros")) or "ninguno")
   dato("Zona", p.zona or "—")
@@ -3923,43 +3978,89 @@ function I.panelEquipo(mundo, p, w, h)
   dato("Defensa mágica", tostring(math.floor(p.mdef or 0)), MAG)
   dato("Daño básico", dmin .. " - " .. dmax, magico and MAG or FIS)
   dato("Velocidad", string.format("%.1f", p.spd or 0))
-  if sobre(px + 14, py + 262, 200, 200) then
+  if sobre(px + 14, py + 118, 200, 300) then
     I.pista = "Los golpes físicos se reducen con Defensa y los mágicos con Defensa mágica (Res)."
   end
-  -- equipo
+  -- muñeco (derecha): el personaje en el centro y una casilla por tipo de pieza a cada lado
+  local zx, zw = px + 232, pw - 232 - 14
   love.graphics.setFont(I.fuente)
   love.graphics.setColor(0.95, 0.9, 0.75)
-  love.graphics.print("Equipo (clic en una pieza para quitarla)", px + 236, py + 46)
-  local huecos = { { "arma", "Arma" }, { "escudo", "Escudo" }, { "cabeza", "Cabeza" }, { "pecho", "Pecho" }, { "piernas", "Piernas" },
-    { "pies", "Pies" }, { "anillo", "Anillo" }, { "amuleto", "Amuleto" }, { "mochila", "Mochila" } }
-  for i, hh in ipairs(huecos) do
-    local hueco = hh[1]
-    local yy = py + 70 + (i - 1) * 46
-    local it = p.equipo[hueco] and Datos.item(p.equipo[hueco])
-    local ancho = pw - 236 - 16
-    local hover = sobre(px + 236, yy, ancho, 42)
-    love.graphics.setColor(hover and 0.15 or 0.1, hover and 0.2 or 0.13, hover and 0.36 or 0.25)
-    love.graphics.rectangle("fill", px + 236, yy, ancho, 42, 4, 4)
-    casilla(px + 240, yy + 3, 36)
+  love.graphics.print("Equipo", zx, py + 46)
+  love.graphics.setFont(f)
+  love.graphics.setColor(0.62, 0.66, 0.78)
+  love.graphics.print("Pasa el ratón por una pieza para ver su ficha; clic para quitarla.", zx + 60, py + 50)
+  local S = 56
+  local colIzq, colDer = zx + 2, zx + zw - S - 2
+  local cx = zx + zw / 2
+  local topeY, baseY = py + 76, py + ph - 52
+  local fx0, fw = colIzq + S + 10, colDer - colIzq - S - 20
+  -- fondo del muñeco con el halo de la facción
+  love.graphics.setColor(0.07, 0.1, 0.2, 0.9)
+  love.graphics.rectangle("fill", fx0, topeY, fw, baseY - topeY, 10, 10)
+  love.graphics.stencil(function() love.graphics.rectangle("fill", fx0, topeY, fw, baseY - topeY, 10, 10) end, "replace", 1)
+  love.graphics.setStencilTest("greater", 0)
+  love.graphics.setBlendMode("add")
+  for k = 1, 6 do
+    local r = 1.05 - k * 0.14
+    love.graphics.setColor(col[1], col[2], col[3], 0.07)
+    love.graphics.ellipse("fill", cx, topeY + (baseY - topeY) * 0.5, 100 * r, 150 * r)
+  end
+  love.graphics.setBlendMode("alpha")
+  love.graphics.setStencilTest()
+  love.graphics.setColor(0.4, 0.5, 0.8, 0.5)
+  love.graphics.rectangle("line", fx0 + 0.5, topeY + 0.5, fw - 1, baseY - topeY - 1, 10, 10)
+  I.persona(p.clase, cx, baseY - 50, 2.5, p.faccion, addonAct, p.genero or p.gen, p.equipo)
+  local mx0, my0 = love.mouse.getPosition()
+  local es = I.escala or 1
+  mx0, my0 = mx0 / es, my0 / es
+  local fichaDe
+  local function casillaPieza(hueco, nombre, x, yy)
+    local id = p.equipo[hueco]
+    local it = id and Datos.item(id)
+    local hover = sobre(x, yy, S, S)
+    local c = it and it.calidad and COLOR_CALIDAD[it.calidad]
+    casilla(x, yy, S)
+    if hover then
+      love.graphics.setColor(0.98, 0.78, 0.36, 0.25)
+      love.graphics.rectangle("fill", x, yy, S, S, 5, 5)
+    end
     if it then
       local enc = p.encantos and p.encantos[hueco]
-      iconoItem({ id = it.id }, px + 240, yy + 3, 36, enc)
-      love.graphics.setFont(I.fuente)
-      love.graphics.setColor(0.95, 0.9, 0.75)
-      love.graphics.print(I.nombreItem(it, enc), px + 284, yy + 3)
-      love.graphics.setColor(0.7, 0.75, 0.65)
-      love.graphics.print(I.statsTexto(it, enc), px + 284, yy + 22)
+      iconoItem({ id = it.id }, x + 2, yy + 2, S - 4, enc)
+      love.graphics.setLineWidth(2)
+      if c then love.graphics.setColor(c[1], c[2], c[3], 0.95) else love.graphics.setColor(0.55, 0.6, 0.75, 0.8) end
+      love.graphics.rectangle("line", x + 0.5, yy + 0.5, S - 1, S - 1, 5, 5)
+      love.graphics.setLineWidth(1)
+      if (enc or 0) > 0 then
+        local t = "+" .. enc
+        love.graphics.setFont(f)
+        love.graphics.setColor(0.04, 0.05, 0.08, 0.88)
+        love.graphics.rectangle("fill", x + S - f:getWidth(t) - 8, yy + S - 17, f:getWidth(t) + 6, 15, 3, 3)
+        love.graphics.setColor(0.6, 1, 0.65)
+        love.graphics.print(t, x + S - f:getWidth(t) - 5, yy + S - 16)
+      end
+      if hover then fichaDe = { it, enc, nombre } end
     else
-      love.graphics.setFont(I.fuente)
-      love.graphics.setColor(0.55, 0.5, 0.42)
-      love.graphics.print(hh[2] .. " — vacío", px + 284, yy + 12)
+      love.graphics.setFont(f)
+      love.graphics.setColor(0.45, 0.5, 0.62, 0.7)
+      love.graphics.printf(nombre, x, yy + S / 2 - 8, S, "center")
     end
-    I.registrar(px + 236, yy, ancho, 42, "equip_" .. hueco)
+    love.graphics.setFont(f)
+    love.graphics.setColor(0.72, 0.75, 0.85)
+    love.graphics.printf(nombre, x - 6, yy + S + 2, S + 12, "center")
+    I.registrar(x, yy, S, S, "equip_" .. hueco)
   end
+  local izq = { { "cabeza", "Cabeza" }, { "pecho", "Pecho" }, { "piernas", "Manos" }, { "pies", "Pies" } }
+  local der = { { "arma", "Arma" }, { "escudo", "Escudo" }, { "anillo", "Anillo" }, { "amuleto", "Amuleto" }, { "mochila", "Mochila" } }
+  local pasoI = (baseY - topeY - S) / (#izq - 1)
+  for i, hh in ipairs(izq) do casillaPieza(hh[1], hh[2], colIzq, topeY + (i - 1) * pasoI - 2) end
+  local pasoD = (baseY - topeY - S) / (#der - 1)
+  for i, hh in ipairs(der) do casillaPieza(hh[1], hh[2], colDer, topeY + (i - 1) * pasoD - 2) end
   love.graphics.setColor(0.7, 0.68, 0.6)
   love.graphics.setFont(f)
   love.graphics.printf("I abre la bolsa. K el árbol de poderes. Esc cierra este panel.", px + 14, py + ph - 24, pw - 28, "left")
   love.graphics.setFont(I.fuente)
+  if fichaDe then fichaPieza(fichaDe[1], fichaDe[2], fichaDe[3], mx0, my0, w, h, "Clic: quitar la pieza") end
 end
 
 local ORDEN_HUECO = { arma = 1, escudo = 2, cabeza = 3, pecho = 4, piernas = 5, pies = 6, anillo = 7, amuleto = 8, mochila = 9 }

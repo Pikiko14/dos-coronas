@@ -1259,6 +1259,57 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
     fallar(errores, "los efectos del nigromante se dibujan: " .. tostring(err), ok)
     if vista then Log.volcar("capturas/necromante_poderes.png", cv:newImageData():encode("png"):getString()) end
   end)
+  -- Panel Personaje con el muñeco: una casilla por tipo de pieza y la ficha de la pieza bajo el ratón. Con DC_PRUEBA_PERSONAJE=1 guarda juego/capturas/personaje_panel.png
+  -- (con la ficha del arma de calidad definitiva) y personaje_panel_sin_ficha.png.
+  paso("panel del personaje: casillas por tipo de pieza y ficha al pasar el ratón", function()
+    local Interfaz = require("src.presentacion.interfaz")
+    local mundo = Mundo.nuevo()
+    local pj = mundo:crearPersonaje({ nombre = "Hullalok", faccion = "umbra", clase = "cazador", nivel = 14 })
+    pj.mall = { monedas = 1682, addons = {} }
+    for hueco, id in pairs({ arma = "cazador_arma_3_s", cabeza = "cazador_cabeza_3", pecho = "cazador_pecho_3_b", piernas = "cazador_piernas_3", pies = "cazador_pies_3",
+      anillo = "anillo_1", amuleto = "amuleto_1", mochila = "mochila_2" }) do
+      if Datos.item(id) then pj.equipo[hueco] = id end
+    end
+    pj.encantos = { arma = 3 }
+    mundo:recalcular(pj)
+    local vista = os.getenv("DC_PRUEBA_PERSONAJE") ~= nil
+    local viejo = love.mouse.getPosition
+    local function foto(nombre, mx, my)
+      love.mouse.getPosition = function() return mx, my end
+      local cv = love.graphics.newCanvas(1280, 720)
+      love.graphics.push("all")
+      love.graphics.setCanvas({ cv, stencil = true })
+      love.graphics.clear(0.18, 0.2, 0.16, 1)
+      Interfaz.escala, Interfaz.panel = 1, "equipo"
+      local ok, err = pcall(Interfaz.hud, mundo, pj, 1280, 720)
+      love.graphics.pop()
+      love.mouse.getPosition = viejo
+      fallar(errores, "el panel del personaje se dibuja (" .. nombre .. "): " .. tostring(err), ok)
+      if vista then Log.volcar("capturas/" .. nombre .. ".png", cv:newImageData():encode("png"):getString()) end
+    end
+    foto("personaje_panel_sin_ficha", 5, 5)
+    -- las casillas del muñeco: 9 y cada una quita su pieza
+    local n = 0
+    for _, hueco in ipairs({ "cabeza", "pecho", "piernas", "pies", "arma", "escudo", "anillo", "amuleto", "mochila" }) do
+      local hallada = false
+      for yy = 130, 600, 6 do
+        for xx = 480, 940, 6 do
+          if Interfaz.consumir(xx, yy) == "equip_" .. hueco then hallada = true end
+        end
+      end
+      if hallada then n = n + 1 end
+    end
+    fallar(errores, "el muñeco ofrece una casilla por cada tipo de pieza", n == 9, tostring(n))
+    -- el ratón sobre la casilla del arma (derecha, arriba)
+    local armaX, armaY
+    for yy = 130, 460, 4 do
+      for xx = 700, 940, 4 do
+        if not armaX and Interfaz.consumir(xx, yy) == "equip_arma" then armaX, armaY = xx, yy end
+      end
+    end
+    foto("personaje_panel", armaX or 800, armaY or 160)
+    Interfaz.panel = nil
+  end)
   paso("skins exclusivas dibujadas por código", function()
     local P = require("src.presentacion.render.personajes")
     local Propias = require("src.presentacion.render.propias")
