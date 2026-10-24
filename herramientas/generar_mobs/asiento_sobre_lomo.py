@@ -20,6 +20,9 @@ LOMO = float(sys.argv[1]) if len(sys.argv) > 1 else 0.42      # cuánto bajo el 
 LOMO_PEQUENA = 0.65          # en las monturas pequeñas (alto en pantalla <= PEQUENA) el jinete es más grande que ellas: las piernas llegan más abajo
 PEQUENA = 40                 # (px de pantalla; render/dibujo.lua repinta entonces la montura sobre las piernas del jinete en todas las direcciones)
 ESCALA = 0.5
+FRAC_CUERPO = float(sys.argv[2]) if len(sys.argv) > 2 else 0.55      # fracción del ancho máximo (el del cuerpo) desde la que una fila cuenta como lomo
+ALTO_JINETE = 100               # (px) de su origen a la coronilla del jinete sentado, en las hojas Wait_m (99 a 106)
+SOBRESALE = float(sys.argv[3]) if len(sys.argv) > 3 else 0.3
 MAX_MOV = 110                 # lo máximo que se mueve el asiento respecto al original (px horneados)
 PASOS = {"wait": 3, "run": 6}
 
@@ -66,12 +69,15 @@ def recolocar(idn, anim, plano):
         # sobresalen justo en la columna del asiento no suben al jinete por encima del animal
         anchos = celda.sum(1)
         ancho_cuerpo = np.percentile(anchos[anchos > 0], 85)
-        cuerpo = np.where(anchos >= 0.55 * ancho_cuerpo)[0]
+        cuerpo = np.where(anchos >= FRAC_CUERPO * ancho_cuerpo)[0]
         if len(cuerpo):
             ytop = max(ytop, cuerpo.min())
         lomo = LOMO_PEQUENA if (np.where(alfa[:, :].any(1))[0].size and alto * ESCALA <= PEQUENA) else LOMO
         piernas = ytop + lomo * alto - base              # dónde acaban las piernas del jinete (px respecto a la base, hacia abajo)
         origen = piernas + ABAJO
+        # la cabeza del jinete (ALTO_JINETE sobre su origen) no debe quedar muy por encima de lo más alto de la montura: en las altas (alpacas, avestruces)
+        # el jinete baja hasta que su cabeza queda como mucho SOBRESALE * alto por encima
+        origen = max(origen, y0 + ALTO_JINETE - SOBRESALE * alto - base)
         nuevo[2 * i + 1] = round(max(dy - MAX_MOV, min(dy + MAX_MOV, origen)), 1)
     return nuevo
 
