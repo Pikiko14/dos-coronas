@@ -1562,6 +1562,16 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
       Log.volcar("capturas/caminar_" .. clase .. ".png", cv:newImageData():encode("png"):getString())
     end)
   end
+  -- Los datos de las monturas (tamaño y asiento del jinete) cargan y cada montura de monturas.xml con arte tiene asiento para sus cuadros de espera y de carrera.
+  paso("monturas FAO: datos de tamaño y asiento completos", function()
+    local anim = require("src.presentacion.render.montura_anim_datos")
+    local asiento = require("src.presentacion.render.montura_asiento_datos")
+    for id in pairs(anim) do
+      local a = asiento[id]
+      fallar(errores, id .. " tiene asiento de espera y carrera", a and #a.wait == 30 and #a.run == 60, id)
+    end
+    fallar(errores, "el carnero negro (mnt_901) está en los datos", anim.mnt_901 ~= nil and asiento.mnt_901 ~= nil)
+  end)
   -- Jinete sentado sobre las monturas de FAO por el camino real del juego (Dibujo.entidad): DC_PRUEBA_MONTADO=<clase> (DC_GEN, DC_TIER) guarda
   -- capturas/montado_<clase>.png: una fila por montura, cuatro direcciones del mundo y tres instantes de la carrera en cada una.
   if os.getenv("DC_PRUEBA_MONTADO") then

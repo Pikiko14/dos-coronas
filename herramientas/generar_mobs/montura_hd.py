@@ -40,7 +40,10 @@ def alto_de(como):
 
 def reemplazar(ruta, idn, bloque):
     texto = open(ruta, encoding="utf-8", newline="").read().replace("\r\n", "\n")
-    texto = re.sub(r"  %s = \{.*?(?:\n  \},|\},)\n" % idn, "", texto, flags=re.S) if re.search(r"  %s = \{" % idn, texto) else texto
+    # se quita la entrada anterior: una línea ("  id = { ... },") en montura_anim_datos o un bloque que acaba en "  }," en montura_asiento_datos
+    m = re.search(r"^  %s = \{[^\n]*\},\n" % idn, texto, re.M) or re.search(r"^  %s = \{\n.*?\n  \},\n" % idn, texto, re.M | re.S)
+    if m:
+        texto = texto[:m.start()] + texto[m.end():]
     i = texto.rindex("}")
     open(ruta, "w", encoding="utf-8", newline="\n").write(texto[:i] + bloque + texto[i:])
 
