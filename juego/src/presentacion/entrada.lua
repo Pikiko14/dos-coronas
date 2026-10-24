@@ -18,6 +18,7 @@ end
 
 function Entrada.deseo()
   if Entrada.auto then return Entrada.auto.x, Entrada.auto.y end
+  if require("src.presentacion.ajuste_montura").modo then return 0, 0 end      -- (ajustando el asiento del jinete: las flechas no mueven al personaje)
   if Interfaz.foco then return 0, 0 end
   local x, y = 0, 0
   if love.keyboard.isDown("w", "up") then y = y - 1 end

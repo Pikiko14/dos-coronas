@@ -1,5 +1,5 @@
 -- Ajuste del asiento del jinete montado, desde el juego. Solo para personal (staff "gm") o con DC_AJUSTE_MONTURAS=1.
--- Montado en una montura de FAO: teclado numérico 4 / 6 / 8 / 2 mueven al jinete 1 px (Mayús: 5 px) a izquierda / derecha / arriba / abajo en la
+-- Montado en una montura de FAO: teclado numérico 4 / 6 / 8 / 2 (y 9 / 7: adelante / atrás) mueven al jinete 1 px (Mayús: 5 px) a izquierda / derecha / arriba / abajo en la
 -- dirección que está mirando la montura (cada una de las cinco hojas se ajusta por separado; las volteadas comparten), 0 reinicia esa dirección y
 -- F9 guarda: en desarrollo escribe src/presentacion/render/montura_ajustes.lua y en un paquete montura_ajustes.lua en la carpeta de datos.
 local MobAnim = require("src.presentacion.render.mob_anim")
@@ -8,6 +8,7 @@ local Interfaz = require("src.presentacion.interfaz")
 
 local M = {}
 local aviso, avisoHasta = nil, 0
+M.modo = false          -- F8: las flechas y RePág / AvPág ajustan al jinete en vez de mover al personaje (para teclados sin teclado numérico)
 
 local function activo(app)
   local p = app.jugador
@@ -51,12 +52,31 @@ end
 
 -- true si la tecla era de este ajuste
 function M.tecla(app, tecla)
+  if not activo(app) then M.modo = false end
   if Interfaz.foco or not activo(app) then return false end
   local id, hoja = actual(app)
   if not id or not hoja then return false end
+  if tecla == "f8" then
+    M.modo = not M.modo
+    return true
+  end
+  if M.modo then
+    tecla = ({ left = "kp4", right = "kp6", up = "kp8", down = "kp2", pageup = "kp9", pagedown = "kp7", ["0"] = "kp0", delete = "kp0" })[tecla] or tecla
+  end
   local paso = (love.keyboard.isDown("lshift", "rshift") and 5 or 1)
   local dx, dy = 0, 0
-  if tecla == "kp4" then dx = -paso elseif tecla == "kp6" then dx = paso elseif tecla == "kp8" then dy = -paso elseif tecla == "kp2" then dy = paso end
+  local u0 = MobAnim.ultimo(id)
+  local volteada = u0 and u0.flip
+  if tecla == "kp4" then dx = -paso elseif tecla == "kp6" then dx = paso elseif tecla == "kp8" then dy = -paso elseif tecla == "kp2" then dy = paso
+  elseif tecla == "kp9" or tecla == "kp7" then
+    -- adelante / atrás: hacia donde mira la montura. Las hojas de lado miran a la izquierda (volteadas, a la derecha); de frente es hacia abajo en pantalla y
+    -- de espalda hacia arriba; las diagonales mezclan las dos cosas.
+    local m = tecla == "kp9" and 1 or -1
+    local ADELANTE = { [0] = { 0, 1 }, [1] = { 0, -1 }, [2] = { -1, -0.5 }, [3] = { -1, 0 }, [4] = { -1, 0.5 } }
+    local v = ADELANTE[hoja]
+    dx, dy = v[1] * paso * m, v[2] * paso * m
+    if volteada then dx = -dx end         -- (abajo se vuelve a invertir al guardar: se pide en pantalla)
+  end
   if dx ~= 0 or dy ~= 0 then
     local a = MobAnim.AJUSTES[id] or {}
     MobAnim.AJUSTES[id] = a
@@ -83,13 +103,13 @@ function M.dibujar(app, w, h)
   local id, hoja = actual(app)
   if not id then return end
   local a = MobAnim.AJUSTES[id] and hoja and MobAnim.AJUSTES[id][hoja]
-  local texto = string.format("Ajuste de montura %s  hoja %s  dx %g  dy %g   [teclado numérico 4/6/8/2: mover (Mayús x5), 0: reiniciar esta dirección, F9: guardar]",
-    id, tostring(hoja), a and a[1] or 0, a and a[2] or 0)
+  local texto = string.format("Ajuste de montura %s  hoja %s  dx %g  dy %g   [F8 %s: flechas = izquierda/derecha/arriba/abajo, RePág/AvPág = adelante/atrás (o numérico 4/6/8/2 y 9/7), Mayús x5, 0 reinicia, F9 guarda]",
+    id, tostring(hoja), a and a[1] or 0, a and a[2] or 0, M.modo and "ACTIVO" or "apagado")
   if aviso and love.timer.getTime() < avisoHasta then texto = texto .. "\n" .. aviso end
   love.graphics.push("all")
   love.graphics.origin()
   love.graphics.setColor(0, 0, 0, 0.6)
-  love.graphics.rectangle("fill", 6, h - 52, math.min(w - 12, 900), aviso and love.timer.getTime() < avisoHasta and 44 or 26)
+  love.graphics.rectangle("fill", 6, h - 52, w - 12, aviso and love.timer.getTime() < avisoHasta and 44 or 26)
   love.graphics.setColor(1, 0.9, 0.5, 1)
   love.graphics.print(texto, 12, h - 48)
   love.graphics.pop()
