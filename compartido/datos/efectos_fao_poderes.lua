@@ -117,8 +117,9 @@ return {
   marca_cazador = { clase = "cazador", dur = 0.6, golpes = { 0.45 }, capas = {
     { s = "marca_cazador__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.6, a = 1, modo = "vuelo", t1 = 0.45, giro = "libre", dir = false, mezcla = "alpha" },
   } },
-  meteoro = { clase = "mago", dur = 0.9, golpes = { 0.5 }, capas = {
-    { s = "meteoro__fx", w = "T", t0 = 0, ms = 0.1, sc = 0.9, a = 1, modo = "caida", t1 = 0.5, off = { -120, -320 }, dir = false, mezcla = "alpha" },
+  meteoro = { clase = "mago", dur = 1.2, golpes = { 0.45 }, capas = {
+    { s = "meteoro__caida", w = "T", t0 = 0, ms = 0.1, sc = 0.9, a = 1, modo = "caida", t1 = 0.45, off = { -260, -260 }, dir = false, mezcla = "alpha" },
+    { s = "meteoro__impacto", w = "GT", t0 = 0.45, ms = 0.1, sc = 1.1, a = 1, modo = "once", dir = false, mezcla = "alpha" },
   } },
   misil = { clase = "mago", dur = 0.55, golpes = { 0.45 }, capas = {
     { s = "misil__fx", w = "C", t0 = 0, ms = 0.05, sc = 0.5, a = 1, modo = "vuelo", t1 = 0.45, dir = false, mezcla = "alpha" },

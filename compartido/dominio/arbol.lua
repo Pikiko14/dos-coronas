@@ -116,7 +116,7 @@ function A.efectiva(id, rango)
   if not base then return nil end
   local m = MEJORA[id] or {}
   local k = rango - 1
-  e = {}
+  e = { id = id }
   for campo, v in pairs(base) do e[campo] = v end
   e.pot = 1 + (m.pot or 0.1) * k
   if base.coef then e.coef = base.coef * e.pot end

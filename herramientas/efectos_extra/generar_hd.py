@@ -46,7 +46,9 @@ EFECTOS = [
     ("mago", "mago_sprites", "lluvia_fuego", "Dragón de agua", "10_dragon_agua", "centro", [L("GT", 0.0, 0.12, 1.3, off=[0, -30])], 1.1, [0.4]),
     ("mago", "mago_sprites", "teletransporte", "Teletransporte", "08_teletransporte", "base", [L("GT", 0.0, 0.1, 0.8)], 0.9, []),
     ("mago", "mago_sprites", "torbellino", "Pozo de gravedad", "09_pozo_gravedad", "centro", [L("GT", 0.0, 0.12, 1.2, "loop", t1=1.3, off=[0, -20])], 1.6, [0.45, 0.8, 1.15, 1.5]),
-    ("mago", "mago_sprites", "meteoro", "Meteorito", "04_meteorito", "centro", [L("T", 0.0, 0.1, 0.9, "caida", t1=0.5, off=[-120, -320])], 0.9, [0.5]),
+    # el meteorito trae dos mitades en una hoja: cuadros 1-4 la roca cayendo en diagonal (cae desde arriba a la izquierda) y 5-8 la explosión en el suelo
+    ("mago", "mago_sprites", "meteoro", "Meteorito", "04_meteorito", "partido",
+     [L("T", 0.0, 0.1, 0.9, "caida", t1=0.45, off=[-260, -260], s="caida"), L("GT", 0.45, 0.1, 1.1, s="impacto")], 1.2, [0.45]),
 
     ("cazador", "arquero_hd", "disparo", "Flecha de viento", "05_flecha_viento", "centro", vuelo(0.6, 0.4), 0.6, [0.4]),
     ("cazador", "arquero_hd", "lluvia", "Lluvia de flechas", "07_lluvia_flechas", "suelo", [L("GT", 0.05, 0.13, 0.9)], 1.2, [0.5, 0.8]),
@@ -73,13 +75,32 @@ for clase, paquete, pid, nombre, carpeta, origen, capas, dur, golpes in EFECTOS:
     x0, y0 = max(0, min(c[0] for c in cajas) - 4), max(0, min(c[1] for c in cajas) - 4)
     x1, y1 = min(CELDA, max(c[2] for c in cajas) + 4), min(CELDA, max(c[3] for c in cajas) + 4)
     w, h = x1 - x0, y1 - y0
-    hoja = Image.new("RGBA", (w * 8, h), (0, 0, 0, 0))
-    for i, f in enumerate(fr):
-        hoja.paste(f.crop((x0, y0, x1, y1)), (i * w, 0))
     d = os.path.join(AQUI, pid, "sheets")
     os.makedirs(d, exist_ok=True)
     for viejo in os.listdir(d):                                  # (se borra el arte antiguo del poder: solo queda la hoja nueva)
         os.remove(os.path.join(d, viejo))
+    if origen == "partido":
+        secs = {}
+        for nombre_s, rango_f in (("caida", range(0, 4)), ("impacto", range(4, 8))):
+            cj = [c for c in (fr[i].getchannel("A").point(lambda v: 255 if v > 12 else 0).getbbox() for i in rango_f) if c]
+            sx0, sy0 = max(0, min(c[0] for c in cj) - 4), max(0, min(c[1] for c in cj) - 4)
+            sx1, sy1 = min(CELDA, max(c[2] for c in cj) + 4), min(CELDA, max(c[3] for c in cj) + 4)
+            sw, sh = sx1 - sx0, sy1 - sy0
+            hj = Image.new("RGBA", (sw * 4, sh), (0, 0, 0, 0))
+            for k, i in enumerate(rango_f):
+                hj.paste(fr[i].crop((sx0, sy0, sx1, sy1)), (k * sw, 0))
+            hj.save(os.path.join(d, nombre_s + ".png"), optimize=True)
+            secs[nombre_s] = dict(sheet="sheets/%s.png" % nombre_s, frames=4, cell=[sw, sh], origin=[sw // 2, sh // 2 if nombre_s == "caida" else int(sh * 0.62)],
+                                  ms_per_frame=float(sum(MS[paquete]) / 8))
+        j = dict(id_dos_coronas=pid, clase=clase, nombre=nombre, poder_fao="(secuencia propia: paquete %s)" % paquete, secuencias=secs,
+                 composicion=dict(inferida=False, duracion_s=dur, golpes_s=golpes, capas=capas),
+                 nota="%s/%s (cuadros 1-4 caída, 5-8 impacto)." % (paquete, carpeta))
+        json.dump(j, open(os.path.join(AQUI, pid, "efecto.json"), "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+        print(pid, "caida+impacto")
+        continue
+    hoja = Image.new("RGBA", (w * 8, h), (0, 0, 0, 0))
+    for i, f in enumerate(fr):
+        hoja.paste(f.crop((x0, y0, x1, y1)), (i * w, 0))
     hoja.save(os.path.join(d, "fx.png"), optimize=True)
     ax, ay = ANCLAS[(paquete, carpeta)]
     if origen == "suelo":

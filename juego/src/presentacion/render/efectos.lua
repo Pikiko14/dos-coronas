@@ -161,7 +161,7 @@ end
 -- Capa de suelo de los compuestos de FAO (la que va bajo los personajes): el dibujo la llama antes de la cola de entidades.
 function E.suelo(tipo, fx, sx, sy)
   local f = EfectosFao.suelo[tipo]
-  if f then f(fx, fx.t, sx, sy - 6) end
+  if f and not (E.def[tipo] and E.def[tipo].capas) then f(fx, fx.t, sx, sy - 6) end      -- (el tajo viejo ya no se dibuja debajo del nuevo)
   if E.def[tipo] and E.def[tipo].capas then EfectosCapas.dibujar(tipo, fx, fx.t, sx, sy - 6, "suelo") end
 end
 
