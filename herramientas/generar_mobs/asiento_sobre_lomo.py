@@ -17,6 +17,9 @@ ARTE = os.path.join(RAIZ, "juego", "arte", "monstruos")
 PAD = 3
 PELVIS = 36                  # altura de la cadera del jinete sentado sobre su origen (px horneados; medida en la hoja montada)
 LOMO = float(sys.argv[1]) if len(sys.argv) > 1 else 0.18      # cuánto bajo el lomo (fracción del alto de la montura) queda la cadera
+LOMO_PEQUENA = 0.5           # en las monturas pequeñas (alto en pantalla <= PEQUENA) el jinete es más grande que ellas: la cadera baja hasta la mitad del cuerpo
+PEQUENA = 40                 # (px de pantalla; render/dibujo.lua repinta entonces la montura sobre las piernas del jinete en todas las direcciones)
+ESCALA = 0.5
 MAX_MOV = 70                 # lo máximo que se mueve el asiento respecto al original (px horneados)
 PASOS = {"wait": 3, "run": 6}
 
@@ -53,7 +56,8 @@ def recolocar(idn, anim, plano):
         ventana = celda[:, max(0, xh - 4):xh + 5]
         f = np.where(ventana.any(1))[0]
         ytop = f.min() if len(f) else y0
-        cadera = ytop + LOMO * alto - base               # (px respecto a la base, hacia abajo)
+        lomo = LOMO_PEQUENA if (np.where(alfa[:, :].any(1))[0].size and alto * ESCALA <= PEQUENA) else LOMO
+        cadera = ytop + lomo * alto - base               # (px respecto a la base, hacia abajo)
         origen = cadera + PELVIS
         nuevo[2 * i + 1] = round(max(dy - MAX_MOV, min(dy + MAX_MOV, origen)), 1)
     return nuevo
