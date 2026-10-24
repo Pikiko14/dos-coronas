@@ -5,7 +5,7 @@
   experiencia, danos, limites...
 -->
 <constantes>
-  <balance CRITICO_MUL="1.5" CRITICO_PROB="0.08" DANO_MAX="0.9" DANO_MIN="0.45" MUERTE_NIVEL_MIN="10" MUERTE_XP_PERDIDA="0.1" NIVEL_MOD_MAX="1.8" NIVEL_MOD_MIN="0.3" NIVEL_PASO="0.04" POLVO_NIVEL_MIN="10" POLVO_PROB="0.05" XP_BASE="40" XP_CORTE="7" XP_DIFICULTAD="1.8" XP_MULTIPLICADOR="1" XP_POR_NIVEL="32">
+  <balance CRITICO_MUL="1.5" CRITICO_PROB="0.05" DANO_MAX="0.9" DANO_MIN="0.45" MUERTE_NIVEL_MIN="10" MUERTE_XP_PERDIDA="0.1" NIVEL_MOD_MAX="1.8" NIVEL_MOD_MIN="0.3" NIVEL_PASO="0.04" POLVO_NIVEL_MIN="10" POLVO_PROB="0.05" XP_BASE="40" XP_CORTE="7" XP_DIFICULTAD="1.8" XP_MULTIPLICADOR="1" XP_POR_NIVEL="32">
     <!-- XP_DIFICULTAD: Cuánta experiencia pide cada nivel respecto a la curva base (subir de nivel cuesta el doble, casi). -->
     <!-- XP_MULTIPLICADOR: Multiplicador de la experiencia ganada (el servidor lo toma del .env: 2 = experiencia doble). -->
     <!-- MUERTE_NIVEL_MIN: Muerte: por encima de este nivel se pierde esa fraccion de la experiencia que pide el nivel actual. -->
