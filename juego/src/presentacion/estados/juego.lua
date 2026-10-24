@@ -250,6 +250,15 @@ function Juego.tickCliente(app, dt)
   end
   if err then
     Log.warn("conexion cerrada codigo " .. tostring(codigo or "?"))
+    -- si se cae la conexión (el servidor se reinicia para actualizarse, un corte de red...) se intenta volver solo con el mismo personaje; la sesión sigue
+    -- válida en el servidor, así que basta pedir entrar otra vez. Solo se rinde tras varios intentos.
+    if app.rol == "cliente" and app.sesion and app.sesion.token and app.personajeRed and (app.reconexiones or 0) < 20 then
+      Juego.soltar(app)
+      app.reconexiones = (app.reconexiones or 0) + 1
+      app.espera, app.estado, app.reintentoEn = "reconectar", "conectando", love.timer.getTime() + 2
+      app.rol = "cliente"
+      return
+    end
     cortar(app, "Se cortó la conexión con el servidor.")
     return
   end
@@ -424,6 +433,23 @@ end
 local pedirHola
 
 function Juego.esperar(app, dt)
+  if app.espera == "reconectar" then
+    -- sin conexión: cada pocos segundos se vuelve a abrir y se pide entrar con el mismo personaje
+    if love.timer.getTime() >= (app.reintentoEn or 0) then
+      if (app.reconexiones or 0) >= 20 then
+        app.reconexiones = 0
+        cortar(app, "Se cortó la conexión con el servidor.")
+        return
+      end
+      if Juego.abrir(app, app.ipUnirse) then
+        pedirHola(app)
+      else
+        app.reconexiones = (app.reconexiones or 0) + 1
+        app.reintentoEn = love.timer.getTime() + 3
+      end
+    end
+    return
+  end
   if not app.cliente then
     cortar(app, "No se pudo conectar con el servidor. Cierra el juego y vuelve a abrirlo con jugar.bat.")
     return
@@ -435,6 +461,15 @@ function Juego.esperar(app, dt)
   end
   for _, msg in ipairs(msgs or {}) do
     if msg.t == "no" then
+      -- tras una caída el servidor tarda unos segundos en soltar al personaje anterior: se espera y se vuelve a intentar
+      if (app.reconexiones or 0) > 0 and (app.reconexiones or 0) < 20 and (msg.error or ""):find("ya está en el mundo", 1, true) then
+        Juego.soltar(app)
+        app.reconexiones = app.reconexiones + 1
+        app.espera, app.estado, app.reintentoEn = "reconectar", "conectando", love.timer.getTime() + 3
+        app.rol = "cliente"
+        return
+      end
+      app.reconexiones = 0
       cortar(app, msg.error or "El servidor rechazó la entrada.")
       return
     end
@@ -463,6 +498,7 @@ function Juego.esperar(app, dt)
       return
     end
     if msg.t == "ok" then
+      app.reconexiones = 0
       app.miId = msg.id
       if not app.mundo then app.mundo = require("compartido.dominio.mundo").nuevo() end
       app.estado = "juego"
@@ -472,13 +508,14 @@ function Juego.esperar(app, dt)
       mezclar(app, msg.snap)
     end
   end
-  if app.estado == "conectando" and love.timer.getTime() - (app.conectaDesde or 0) > 3 then
+  if app.estado == "conectando" and app.espera ~= "reconectar" and love.timer.getTime() - (app.conectaDesde or 0) > 3 then
     cortar(app, "No se pudo conectar con el servidor. Cierra el juego y vuelve a abrirlo con jugar.bat.")
   end
 end
 
 function Juego.dibujarEspera(app, w, h)
   local texto = app.espera == "mundo" and "Entrando al mundo…" or "El servidor está comprobando la cuenta…"
+  if app.espera == "reconectar" then texto = "Se perdió la conexión. Reconectando… (" .. (app.reconexiones or 1) .. ")" end
   love.graphics.setColor(0.07, 0.06, 0.09)
   love.graphics.rectangle("fill", 0, 0, w, h)
   love.graphics.setColor(0.95, 0.86, 0.55)

@@ -211,6 +211,13 @@ end
 local CLASES_BOTIN = {}
 for clase in pairs(ARMAS) do CLASES_BOTIN[#CLASES_BOTIN + 1] = clase end
 table.sort(CLASES_BOTIN)
+-- Una pieza al azar del oficio dado (el botín de las criaturas es del oficio de quien las mata: un cazador no recibe báculos). Sin oficio válido, de cualquiera.
+function M.aleatorioParaClase(D, clase, tier, azar)
+  azar = azar or math.random
+  if clase and ARMAS[clase] then return M.aleatorio(D, clase, tier, azar) end
+  return M.aleatorioCualquiera(D, tier, azar)
+end
+
 function M.aleatorioCualquiera(D, tier, azar)
   azar = azar or math.random
   return M.aleatorio(D, CLASES_BOTIN[azar(#CLASES_BOTIN)], tier, azar)

@@ -1617,6 +1617,31 @@ function Pruebas.correr()
     fallar(errores, "se restauran los valores", Balance.xpPara(1) == xp0 and Subastas.COMISION == 0.05 and Gremios.COSTE == 2500
       and Datos.JUGADORES_EVENTO == 3 and #Subastas.DURACIONES == 4 and Balance.XP_MULTIPLICADOR == 1)
   end)
+  paso("botín de equipo del oficio de quien mata a la criatura", function()
+    local mundo = Mundo.nuevo()
+    mundo.entidades = {}
+    local clases = { "cazador", "mago", "guerrero" }
+    for _, clase in ipairs(clases) do
+      local p = mundo:crearPersonaje({ nombre = "Bt" .. clase, faccion = "albor", clase = clase, nivel = 30 })
+      local ajenas, propias = 0, 0
+      for _ = 1, 400 do
+        local m = mundo:spawnMonstruo("ent", p.x + 1, p.y, { x = p.x, y = p.y })
+        if m then
+          m.oro = 0
+          mundo:soltarBotin(m, p)
+        end
+        for id, e in pairs(mundo.entidades) do
+          if e.kind == "loot" and e.item then
+            local c = tostring(e.item):match("^(%a+)_")
+            if c == clase then propias = propias + 1
+            elseif c == "cazador" or c == "mago" or c == "guerrero" or c == "clerigo" or c == "lancero" or c == "nigromante" then ajenas = ajenas + 1 end
+            mundo.entidades[id] = nil
+          elseif e.kind == "monstruo" then mundo.entidades[id] = nil end
+        end
+      end
+      fallar(errores, clase .. " recibe equipo de su oficio y de ninguno ajeno", propias > 0 and ajenas == 0, propias .. " propias, " .. ajenas .. " ajenas")
+    end
+  end)
   paso("asedio programado: todos los días a las 17, con un jugador por corona", function()
     local function hora(h, m, dia) return os.time({ year = 2030, month = 3, day = dia or 10, hour = h, min = m or 0, sec = 0 }) end
     local mundo = Mundo.nuevo()

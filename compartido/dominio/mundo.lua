@@ -1132,7 +1132,7 @@ function Mundo:soltarBotin(m, asesino)
       loot.items[#loot.items + 1] = { id = "polvo_arcano", cant = math.random(2, 4) }
     end
     if m.categoria == "gigante" and math.random() < 0.5 then
-      loot.items[#loot.items + 1] = { id = Items.aleatorioCualquiera(Datos, math.min(#Items.TIER, Items.tierPara(m.nivel) + 1)), cant = 1 }
+      loot.items[#loot.items + 1] = { id = Items.aleatorioParaClase(Datos, asesino.clase, math.min(#Items.TIER, Items.tierPara(m.nivel) + 1)), cant = 1 }
     end
   end
   -- equipo: una tirada por calidad (normal 5-8 %, buena 2-4 %, definitiva 0,1-1 % según el nivel de la criatura); las de grupo y los gigantes sueltan más
@@ -1144,7 +1144,7 @@ function Mundo:soltarBotin(m, asesino)
       local tier = Items.tierPara(m.nivel)
       if m.categoria then tier = math.min(#Items.TIER, tier + 1)
       elseif tier > 1 and math.random() < 0.35 then tier = tier - 1 end
-      local id = Items.aleatorioCualquiera(Datos, tier)
+      local id = Items.aleatorioParaClase(Datos, asesino.clase, tier)
       if calidad ~= "normal" and Datos.item(id .. "_" .. calidad) then id = id .. "_" .. calidad end
       if Datos.item(id) then loot.items[#loot.items + 1] = { id = id, cant = 1 } end
     end
