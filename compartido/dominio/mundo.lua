@@ -426,7 +426,7 @@ function Mundo:poblar()
       self.entidades[e.id] = e
     end
   end
-  -- En los continentes hay menos criaturas por campamento (DENSIDAD_CRIATURAS, 0,7 = un 30 % menos): el recorte se reparte con un acumulador para que el total
+  -- En los continentes hay menos criaturas por campamento (DENSIDAD_CRIATURAS, 0,49 = 0,7 x 0,7: otro 30 % menos): el recorte se reparte con un acumulador para que el total
   -- baje justo esa fracción; los jefes, las mazmorras y la isla de la Cicatriz se quedan como estaban.
   local densidad, resto, mapaMundo = Datos.DENSIDAD_CRIATURAS or 1, 0, self.mapas.mundo
   for _, camp in ipairs(mapaMundo.campamentos) do
