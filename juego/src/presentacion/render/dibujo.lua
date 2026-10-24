@@ -1059,11 +1059,11 @@ function entidadBase(e, sx, sy, mundo, jugador)
       local tint = rojo and { 1, 0.6, 0.6 } or nil
       if require("src.presentacion.render.fao").dibujarMontado(def.fao, jineteSentado.anim, sx, pies, tint) then
         alto = 36
-        -- Montura de frente (solo de cara; de tres cuartos el jinete va sobre el lomo y no hay que taparle nada): su cabeza y su pecho quedan DELANTE del jinete. Se repinta la montura (el mismo
-        -- cuadro) solo por debajo del pecho del jinete: la cabeza y el pecho de la montura tapan su cintura y sus piernas, y el torso, la
+        -- En todas las direcciones el jinete va SENTADO en la montura, no encima: se repinta la montura (el mismo cuadro) solo por debajo del pecho del
+        -- jinete, de modo que el cuerpo de la montura tapa su cintura y sus piernas (de frente, también la cabeza y el pecho de ella), y el torso, la
         -- cara y el arma siguen viéndose por encima.
         local _, sdy, _, _, hojaM = require("src.presentacion.render.mob_anim").asiento(jineteSentado.anim, e.dir)
-        if sdy and hojaM == 0 then
+        if sdy then
           Personajes.dibujar(jineteSentado, e.dir or 1, anda, reloj, sx, pies, nil, nil, e, true, pies + sdy - 30)
         end
       else
