@@ -249,7 +249,6 @@ def jardin():
     m = Mapa("jardin_amanecer", 61, 0, 6101)
     n1, n2, n3 = ruido(6102, 14), ruido(6103, 9), ruido(6104, 5)
     # hierba: manchas de otro verde y de hojas
-    m.ts[n1 > 0.62] = 14
     # lago al noreste, con orilla de arena
     arena = np.zeros((H, W), bool)
     m.elipse(152, 32, 26, 17, 47, arena, 5, 1)
@@ -353,9 +352,6 @@ def necropolis():
     m = Mapa("necropolis_ocaso", 62, 21, 6201)
     n1, n2, n3 = ruido(6202, 14), ruido(6203, 9), ruido(6204, 5)
     ys, xs = np.mgrid[0:H, 0:W]
-    m.ts[n1 > 0.6] = 252                                      # manchas moradas
-    m.ts[(n2 > 0.72) & (n1 < 0.5)] = 20                       # piedra con círculos
-    m.ts[(n3 > 0.8) & (n1 > 0.3)] = 251
     # estanque espectral al este
     ori = np.zeros((H, W), bool)
     m.elipse(156, 64, 24, 15, 46, ori, 5, 1)
@@ -368,8 +364,7 @@ def necropolis():
     m.disco(CX, CY, 7, 227, None, 0.8, 3)
     # cementerio al oeste: terreno morado y caminos de losas
     cem = np.zeros((H, W), bool)
-    m.elipse(44, 62, 30, 28, 252, cem, 6, 5)
-    m.ts[cem & (ruido(6230, 4) > 0.62)] = 251
+    m.elipse(44, 62, 30, 28, 21, cem, 6, 5)
     # caminos
     m.sendero([(CX, CY + 15), (CX + 4, 84), (CX - 3, 98), (CX, 112), (CX, H - 2)], 6, 22)
     m.sendero([(CX + 17, CY), (126, 63), (134, 64)], 5, 22)
