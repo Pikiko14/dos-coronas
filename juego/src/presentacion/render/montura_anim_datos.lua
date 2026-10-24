@@ -119,4 +119,5 @@ return {
   mnt_651 = { carpeta = "mnt_651", alto = 38, escala = 0.5000, dirs5 = true, pad = 3, altura = 17 },
   mnt_652 = { carpeta = "mnt_652", alto = 42, escala = 0.5000, dirs5 = true, pad = 3, altura = 19 },
   mnt_734 = { carpeta = "mnt_734", alto = 64, escala = 0.5000, dirs5 = true, pad = 3, altura = 29 },
+  mnt_901 = { carpeta = "mnt_901", alto = 50, escala = 0.5000, dirs5 = true, pad = 3, altura = 22 },
 }

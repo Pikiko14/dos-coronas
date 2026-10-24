@@ -53,6 +53,7 @@
   <montura id="mnt_227" nombre="Oso polar" nivel="25" tipo="fisico" carga="0" desc="Un coloso blanco con toda la presencia del invierno." mall="true" precio="0" vel="0.48" vida="600"/>
   <montura id="mnt_239" nombre="Centauro dorado" nivel="10" tipo="magico" carga="0" desc="Un compañero legendario de porte noble y esplendor dorado." mall="true" precio="0" vel="0.42" vida="600"/>
   <montura id="mnt_250" nombre="Carnero lanudo" nivel="25" tipo="fisico" carga="0" desc="Abundante lana y un carácter difícil de doblegar." mall="true" precio="0" vel="0.5" vida="600"/>
+  <montura id="mnt_901" nombre="Carnero negro" nivel="50" tipo="magico" carga="0" desc="Un carnero de lana oscura y cuernos enroscados, ensillado para la batalla." mall="true" precio="0" vel="0.5" vida="600"/>
   <montura id="mnt_253" nombre="Carro de guerra" nivel="15" tipo="fisico" carga="0" desc="Recorre los caminos con la presencia de un conquistador." mall="true" precio="0" vel="0.42" vida="600"/>
   <montura id="mnt_260" nombre="Behemot rojizo" nivel="20" tipo="fisico" carga="0" desc="Una bestia colosal de tonos rojos y aspecto temible." mall="true" precio="0" vel="0.46" vida="600"/>
   <montura id="mnt_261" nombre="Pterodáctilo verde" nivel="15" tipo="magico" carga="0" desc="Un compañero prehistórico que despierta asombro a cada paso." mall="true" precio="0" vel="0.44" vida="600"/>

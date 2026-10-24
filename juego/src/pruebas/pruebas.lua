@@ -526,7 +526,7 @@ function Pruebas.correr()
     local mall = require("compartido.dominio.mall")
     local enMall = 0
     for _, id in ipairs(mall.ORDEN_MONTURAS) do enMall = enMall + 1 end
-    fallar(errores, "el mall tiene las 8 monturas de pago de FAO", enMall == 8, tostring(enMall))
+    fallar(errores, "el mall tiene las 9 monturas de pago de FAO", enMall == 9, tostring(enMall))
     -- recompensa diaria y etiqueta del personal
     local mundo = Mundo.nuevo()
     local pj = mundo:crearPersonaje({ nombre = "Gm", faccion = "albor", clase = "guerrero", nivel = 10 })
@@ -1572,7 +1572,7 @@ Interfaz.mallTab, Interfaz.mallScroll, Interfaz.panel = "addons", 1, "mall"    l
       local I = require("compartido.dominio.items")
       local Dibujo = require("src.presentacion.render.dibujo")
       local clase, gen, tier = os.getenv("DC_PRUEBA_MONTADO"), os.getenv("DC_GEN") or "h", tonumber(os.getenv("DC_TIER") or "8")
-      local monturas = { "mnt_001", "mnt_006", "mnt_002", "mnt_104", "mnt_198", "mnt_201", "mnt_144", "mnt_250" }
+      local monturas = { "mnt_001", "mnt_006", "mnt_002", "mnt_104", "mnt_198", "mnt_201", "mnt_144", "mnt_250", "mnt_901" }
       local CW, CH = 100, 120
       local cv = love.graphics.newCanvas(CW * 12, CH * #monturas)
       love.graphics.push("all")

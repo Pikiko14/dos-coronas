@@ -1837,7 +1837,7 @@ function Pruebas.correr()
     -- el dragon: solo en el Item Mall, con monedas, sin oficio
     fallar(errores, "el dragon esta en el mall y no en la cuadra", Mall.MONTURAS.mnt_104 and Mall.MONTURAS.mnt_104.precio > 0 and Monturas.especies.mnt_104.mall == true)
     for _, id in ipairs(Monturas.orden) do fallar(errores, "la cuadra no vende el dragon", id ~= "mnt_104") end
-    fallar(errores, "8 monturas FAO en el mall (las otras 20 son gratis en la cuadra)", #Mall.ORDEN_MONTURAS == 8)
+    fallar(errores, "9 monturas FAO en el mall (las otras 20 son gratis en la cuadra)", #Mall.ORDEN_MONTURAS == 9)
     -- niveles escalonados y stats por tipo: físicas dan fuerza/ataque/vida; mágicas, inteligencia/ataque mágico/maná
     local fis, mag = Monturas.especies.mnt_298, Monturas.especies.mnt_200
     fallar(errores, "montura de nivel 50 escalonada", fis.nivel == 50 and mag.nivel == 50 and fis.tipo == "fisico" and mag.tipo == "magico")

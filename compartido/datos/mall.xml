@@ -135,4 +135,5 @@
   <montura id="mnt_298" nombre="Dragón dorado" desc="Física, nivel 50. Velocidad +48%. Se pelea montado." precio="1200"/>
   <montura id="mnt_200" nombre="Genio dorado" desc="Mágica, nivel 50. Velocidad +42%. Se pelea montado." precio="1200"/>
   <montura id="mnt_295" nombre="Dragón negro y azul" desc="Física, nivel 45. Velocidad +50%. Se pelea montado." precio="1000"/>
+  <montura id="mnt_901" nombre="Carnero negro" desc="Mágica, nivel 50. Velocidad +50%. Se pelea montado." precio="1200"/>
 </mall>
