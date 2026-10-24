@@ -1306,7 +1306,7 @@ function I.hud(mundo, p, w, h)
     end
     local accesos = {
       { "hud_arbol", "poderes", "K", "Árbol de poderes (K): " .. puntos .. " punto(s) por gastar.", puntos > 0 },
-      { "hud_mall", "mall", "L", "Item Mall (L): monedas, addons, bonos y monturas exclusivas.", false },
+      { "hud_mall", "mall", "L", "Item Mall (L): monedas, bonos, forja, monturas y mascotas.", false },
       { "hud_monturas", "monturas", "U", p.montado and "Colección de monturas (U). Montado: O para bajar." or "Colección de monturas (U). O monta y desmonta.", p.montado ~= nil },
       { "hud_mascotas", "mascotas", "N", (p.mascotaActiva or p.recolectoraActiva) and "Tus mascotas (N): invócalas o guárdalas desde la lista; pueden salir a la vez una de ataque y una recolectora." or "Tus mascotas (N): invócalas, guárdalas y mira cómo evolucionan.", (p.mascotaActiva or p.recolectoraActiva) ~= nil },
       { "hud_autopocion", "autopocion", "R", "Autopoción (R): bebe sola la vida o el maná al bajar de un umbral.", (p.autoPocion or p.autoMana) and true or false },
@@ -3008,7 +3008,8 @@ local COL_MALL = {
 local TABS_MALL = {
   { "objetos", "Objetos", "mall_tab_obj", "Bonos, pociones y pergaminos para ir más rápido." },
   { "forja", "Forja", "mall_tab_forja", "Polvo arcano para encantar tu equipo." },
-  { "addons", "Addons", "mall_tab_add", "Aspectos de personaje únicos." },
+  -- (los addons están ocultos en el Item Mall por ahora; se reactivan descomentando esta línea)
+  -- { "addons", "Addons", "mall_tab_add", "Aspectos de personaje únicos." },
   { "monturas", "Monturas", "mall_tab_mont", "Monturas exclusivas: sin oficio y se pelea montado. Colección: U, montar: O." },
   { "mascotas", "Mascotas", "mall_tab_masc", "Mascotas de ataque que evolucionan solas y recolectoras de botín. Tus mascotas: N." },
 }
