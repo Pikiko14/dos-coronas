@@ -99,7 +99,7 @@ return {
     polvoProb = numero("DOSCORONAS_POLVO_PROB", 0.05, 0, 1),
     monturaVidaMult = numero("DOSCORONAS_MONTURA_VIDA_MULT", 1, 0.1, 50),
     monturaRecuperaSeg = numero("DOSCORONAS_MONTURA_RECUPERA_SEG", 300, 10, 86400),
-    monstruoVida = numero("DOSCORONAS_MONSTRUO_VIDA", 2.4, 0.1, 50),
+    monstruoVida = numero("DOSCORONAS_MONSTRUO_VIDA", 1.05, 0.1, 50),
     monstruoAtaque = numero("DOSCORONAS_MONSTRUO_ATAQUE", 1.05, 0.1, 20),
     nivelPaso = numero("DOSCORONAS_DIFERENCIA_NIVEL", 0.04, 0, 0.2),
     respawnMonstruo = numero("DOSCORONAS_RESPAWN_MONSTRUO_SEG", 22, 1, 3600),
